@@ -1872,7 +1872,7 @@ void AppendChoicesToNewItem(
 		return;
 
 	newStep = [LDrawStep emptyStep];
-	[self addDirective:newStep toParent:containingModel atIndex:highestIndex+1];
+	[self addDirective:newStep toParent:containingModel atIndex:highestIndex];
 	
 	for(id child in movedDirectives)
 	{
