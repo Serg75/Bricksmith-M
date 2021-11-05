@@ -3974,10 +3974,22 @@ void AppendChoicesToNewItem(
 		{
 			selectedStepIndex = [selectedModel indexOfDirective:selectedStep];
 			
-			if(selectedStepIndex > [selectedModel maxStepIndexToOutput])
-			{
-				[self setCurrentStep:selectedStepIndex]; // update document UI
-			}
+            if (selectedObjects.count == 1 && [selectedObjects[0] isMemberOfClass:[LDrawStep class]])
+            {
+                // when we select just one step in File Contents navigator
+                if(selectedStepIndex != [selectedModel maxStepIndexToOutput])
+                {
+                    [self setCurrentStep:selectedStepIndex]; // update document UI
+                }
+            }
+            else
+            {
+                // other cases (including selecting parts by mouse)
+                if(selectedStepIndex > [selectedModel maxStepIndexToOutput])
+                {
+                    [self setCurrentStep:selectedStepIndex]; // update document UI
+                }
+            }
 		}
 	}
 	[[self documentContents] noteNeedsDisplay];
