@@ -926,12 +926,14 @@ void AppendChoicesToNewItem(
 	RotationModeT	 rotationMode		= RotateAroundSelectionCenter;
 	Tuple3			 rotation			= {0};
 	float			 degreesToRotate	= 0;
-	
+	NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
+
 	//Determine magnitude of nudge.
 	switch([self gridSpacingMode])
 	{
 		case gridModeFine:
-			degreesToRotate = GRID_ROTATION_FINE;	//15 degrees
+			// was: degreesToRotate = GRID_ROTATION_FINE;	//15 degrees
+			degreesToRotate = [userDefaults floatForKey:GRID_SPACING_FINE];
 			break;
 		case gridModeMedium:
 			degreesToRotate = GRID_ROTATION_MEDIUM;	//45 degrees
