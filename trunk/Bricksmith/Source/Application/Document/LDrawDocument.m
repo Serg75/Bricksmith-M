@@ -669,6 +669,8 @@ void AppendChoicesToNewItem(
 		
 		// Update UI
 		
+		[self selectStep:requestedStepIndex];
+		
 		[self->stepField setIntegerValue:(requestedStepIndex + 1)]; // make 1-relative
 		
 		if([activeModel stepDisplay] == YES)
@@ -1166,6 +1168,37 @@ void AppendChoicesToNewItem(
 	}
 	
 }//end selectDirectives:
+
+
+//========== selectStep: =======================================================
+//
+// Purpose:		Selects the single step. This function deselects all other
+//				steps/directives.
+//
+//==============================================================================
+- (void) selectStep:(NSInteger)step
+{
+	LDrawModel  *activeModel    = [[self documentContents] activeModel];
+	NSArray *allSteps = activeModel.subdirectives;
+	if (step < allSteps.count)
+	{
+		LDrawDirective *directiveToSelect = allSteps[step];
+		NSInteger indexToSelect = 0;
+		
+		if(directiveToSelect == nil)
+			[fileContentsOutline deselectAll:nil];
+		else
+		{
+			indexToSelect = [fileContentsOutline rowForItem:directiveToSelect];
+			
+			[fileContentsOutline selectRowIndexes:[NSIndexSet indexSetWithIndex:indexToSelect]
+							 byExtendingSelection:NO];
+			
+			[fileContentsOutline scrollRowToVisible:indexToSelect];
+		}
+	}
+}//end selectStep:
+
 
 //========== setSelectionToHidden: =============================================
 //
