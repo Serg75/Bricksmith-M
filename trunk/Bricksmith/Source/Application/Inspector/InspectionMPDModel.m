@@ -115,6 +115,14 @@
 	NSString *oldValue			= [[self object] modelName];
 	NSString *compliantValue	= [LDrawMPDModel ldrawCompliantNameForName:newValue];
 	
+	//---------- Adding extension if user deleted it ---------------------------
+
+	NSString *correctedValue = [self fixExtensionForName:newValue oldName:oldValue];
+	if ([correctedValue isEqualToString:newValue] == NO) {
+		newValue = correctedValue;
+		[self->modelNameField setStringValue:newValue];
+	}
+	
 	//---------- Error Checking ------------------------------------------------
 	
 	// They may have entered a name the spec claims is invalid. #@$!@%!
@@ -155,6 +163,11 @@
 	// If the values really *did* change, then update.
 	if([newValue isEqualToString:oldValue] == NO)
 	{
+		NSString *oldDescription = [[self object] modelDescription];
+		if ([oldDescription isEqualToString:[self nameWithoutCopyAndExtension:oldValue]]) {
+			[self->descriptionField setStringValue:[newValue stringByDeletingPathExtension]];
+		}
+
 		[self finishedEditing:sender];
 	}
 		
@@ -194,5 +207,51 @@
 		
 }//end authorFieldChanged:
 
+
+//========== fixExtensionForName:oldName: ======================================
+//
+// Purpose:		Returns name with extension if the old name had extension but
+//				the new one - not.
+//
+//==============================================================================
+- (NSString *) fixExtensionForName:(NSString *)newName oldName:(NSString *)oldName
+{
+	NSString *oldExt = [oldName pathExtension];
+	if (oldExt.length == 0) {
+		return newName;
+	}
+	
+	NSString *newExt = [newName pathExtension];
+	if (newExt.length > 0) {
+		return newName;
+	}
+	
+	return [newName stringByAppendingPathExtension:oldExt];
+}
+
+//========== nameWithoutCopyAndExtension: ======================================
+//
+// Purpose:		Returns name without extension as well without "copy" suffix.
+//
+//==============================================================================
+- (NSString *) nameWithoutCopyAndExtension:(NSString *)fullName
+{
+	NSString *name = [fullName stringByDeletingPathExtension];
+	return [name stringByReplacingOccurrencesOfString:@" copy" withString:@""];
+}
+
+//========== changeSameDescriptionFrom:to: =====================================
+//
+// Purpose:		Changes description if it is similar to the name.
+//
+//==============================================================================
+- (void) changeSameDescriptionFrom:(NSString *)oldName to:(NSString *)newName
+{
+	NSString *description = [[self object] modelDescription];
+	if ([oldName isEqualToString:description]) {
+		[self->descriptionField setStringValue:newName];
+		[[self object] setModelDescription:newName];
+	}
+}
 
 @end
