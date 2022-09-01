@@ -583,6 +583,26 @@ float Matrix2x2Determinant( float a, float b, float c, float d)
 #pragma mark 3-D LIBRARY
 #pragma mark -
 
+//========== component =========================================================
+//
+// Purpose:		Returns point's component by index
+//
+//==============================================================================
+GLfloat component(Point3 point, int index)
+{
+	switch (index) {
+		case 0:
+			return point.x;
+		case 1:
+			return point.y;
+		case 2:
+			return point.z;
+		default:
+			return 0;
+	}
+}
+
+
 //========== V3Make ============================================================
 //
 // Purpose:		create, initialize, and return a new vector
@@ -709,6 +729,31 @@ bool V3PointsWithinTolerance(Point3 point1, Point3 point2)
 }//end V3PointsWithinTolerance
 
 
+//========== V3PointsWithinTolerance ===========================================
+//
+// Purpose:		Returns YES if point1 and point2 are sufficiently close to equal
+//				that we can call them equal.
+//
+// Notes:		Floating-point numbers often suffer weird rounding errors which
+//				make them ill-suited for == comparison.
+//
+//==============================================================================
+bool V3PointsWithinGivenTolerance(Point3 point1, Point3 point2, float tolerance)
+{
+	if (fabsf(point1.x - point2.x) > tolerance) {
+		return false;
+	}
+	if (fabsf(point1.y - point2.y) > tolerance) {
+		return false;
+	}
+	if (fabsf(point1.z - point2.z) > tolerance) {
+		return false;
+	}
+	return true;
+
+}//end V3PointsWithinTolerance
+
+
 //========== V3SquaredLength ===================================================
 //
 // Purpose:		returns squared length of input vector
@@ -789,6 +834,23 @@ Vector3 V3Normalize(Vector3 v)
 	return(v);
 	
 }//end V3Normalize
+
+
+//========== V3Val =============================================================
+//
+// Purpose:		Returns vector where each component = 1 if original one is not
+// 				near 0.
+//
+//==============================================================================
+Vector3 V3Val(Vector3 v)
+{
+	v.x = FloatsApproximatelyEqual(v.x, 0) ? 0 : 1;
+	v.y = FloatsApproximatelyEqual(v.y, 0) ? 0 : 1;
+	v.z = FloatsApproximatelyEqual(v.z, 0) ? 0 : 1;
+
+	return(v);
+	
+}//end V3Val
 
 
 //========== V3Scale ===========================================================
@@ -2387,6 +2449,22 @@ Matrix4 Matrix4Invert( Matrix4 in )
 	return out;
 	
 }//end Matrix4Invert
+
+
+//========== Matrix4ClearTranslation() =========================================
+//
+// Purpose:		remove translation components from a 4x4 matrix
+//
+//==============================================================================
+Matrix4 Matrix4ClearTranslation( Matrix4 m )
+{
+	m.element[3][0] = 0;
+	m.element[3][1] = 0;
+	m.element[3][2] = 0;
+
+	return m;
+	
+}//end Matrix4ClearTranslation
 
 
 //========== Matrix4Adjoint() ==================================================

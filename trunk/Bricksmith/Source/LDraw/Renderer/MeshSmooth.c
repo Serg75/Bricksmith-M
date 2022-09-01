@@ -163,7 +163,7 @@ struct RTree_leaf {
 // Since an LDU is about 0.4 mm we're talking about 1/50th of a mm.  I CAN'T SEE THAT KIND OF DETAIL!  MY EYES ARE OLD.  MY BACK
 // HURTS! WHEN I WAS A KID WE WALKED TO SCHOOL IN THE SNOW UP HILL BOTH WAYS and binary only had 0, the 1 hadn't been invented,
 // and all of our programs seg faulted...and we liked it, because it's all there was!
-#define EPSI 0.05
+#define EPSI 0.005
 #define EPSI2 (EPSI*EPSI)
 
 // Turn this on to do a whole bunch of expensive validation of the algorithm.  Good for one-time tests but almost unusable even

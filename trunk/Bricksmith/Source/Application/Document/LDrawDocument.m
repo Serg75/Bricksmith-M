@@ -38,6 +38,7 @@
 #import "LDrawFile.h"
 #import "LDrawFileOutlineView.h"
 #import "LDrawGLView.h"
+#import "LDrawHighResPrimitives.h"
 #import "LDrawLine.h"
 #import "LDrawLSynth.h"
 #import "LDrawLSynthDirective.h"
@@ -3295,6 +3296,143 @@ void AppendChoicesToNewItem(
 
     }
 }//end insertINSIDEOUTSIDELSynthDirective:
+
+
+//========== convertToHighResPrimitives: =======================================
+//
+// Purpose:		Changes low-res directives into high-res quality for "48" folder.
+//
+// Notes:		If nothing is selected, all directives are converted.
+//
+//==============================================================================
+- (IBAction) convertToHighResPrimitives:(id)sender
+{
+	NSUndoManager			*undoManager		= [self undoManager];
+	NSMutableArray			*directives			= [[self selectedObjects] mutableCopy];
+	NSMutableArray			*replacements		= [NSMutableArray array];
+	NSMutableArray			*unknownLines		= [NSMutableArray array];
+	NSString				*kOriginalDirective	= @"originalDirective";
+	NSString				*kHighResDirectives	= @"highResDirectives";
+	
+	[fileContentsOutline deselectAll:sender];
+	
+	if(directives.count == 0)
+	{
+		LDrawStep *step = self.documentContents.activeModel.steps.firstObject;
+		directives = step.subdirectives;
+	}
+	
+	for (int axis = 0; axis < 3; axis++)
+	{
+		if (![LDrawHighResPrimitives hasRotationByAxis:axis forPrimitives:directives]) {
+			continue;
+		}
+		
+		// do rotate
+		
+		for (LDrawDirective *directive in directives)
+		{
+			LDrawHighResPrimitives *newDirectives = [LDrawHighResPrimitives highResPrimitivesFor:directive axis:axis];
+			if (newDirectives.primitives.count > 0)
+			{
+				NSDictionary *replacement = @{ kOriginalDirective: directive, kHighResDirectives: newDirectives };
+				[replacements addObject:replacement];
+			}
+			else if ([directive isKindOfClass:[LDrawLine class]])
+			{
+				[unknownLines addObject:directive];
+			}
+		}
+		
+		if (unknownLines.count > 0 && replacements.count > 0)
+		{
+			NSMutableArray *extraReplacements = [NSMutableArray array];
+			NSMutableArray *allNewLines = [NSMutableArray array];
+			for (LDrawLine *line in unknownLines)
+			{
+				for (NSDictionary *replacement in replacements)
+				{
+					NSMutableArray *newLines = [NSMutableArray arrayWithObject:[line copy]];
+					LDrawDirective *originalDidective = replacement[kOriginalDirective];
+					RotationParameters rotation = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).rotation;
+					Matrix4 forvardMatrix = rotation.rotationMatrix;
+					Matrix4 oppositeMatrix = Matrix4Transpose(forvardMatrix);
+					
+					if ([LDrawHighResPrimitives isPrimitive:originalDidective includesLine:line])
+					{
+						LDrawLine *newLine = line;
+						LDrawLine *newLine2 = line;
+						for (int i = 0; i < 2; i++)
+						{
+							newLine = [newLine copy];
+							newLine2 = [newLine2 copy];
+							
+							[LDrawHighResPrimitives rotateLine:newLine byMatrix:forvardMatrix];
+							if (![LDrawHighResPrimitives isLine:newLine withinLines:allNewLines])
+							{
+								[newLines addObject:newLine];
+							}
+							
+							[LDrawHighResPrimitives rotateLine:newLine2 byMatrix:oppositeMatrix];
+							if (![LDrawHighResPrimitives isLine:newLine2 withinLines:allNewLines]) {
+								[newLines addObject:newLine2];
+							}
+						}
+						
+						for (int i = newLines.count - 1; i > 0; i--)
+						{
+							LDrawLine *newLine = newLines[i];
+							NSArray *newDirectives = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).primitives;
+							BOOL isInside = NO;
+							for (LDrawDirective *directive in newDirectives)
+							{
+								if ([LDrawHighResPrimitives isPrimitive:directive includesLine:newLine])
+								{
+									isInside = YES;
+									break;
+								}
+							}
+							if (!isInside)
+							{
+								[newLines removeObjectAtIndex:i];
+							}
+						}
+						if (newLines.count > 1)
+						{
+							[allNewLines addObjectsFromArray:newLines];
+							LDrawHighResPrimitives *newPrimitives = [[LDrawHighResPrimitives alloc] initWithPrimitives:newLines rotation:rotation];
+							NSDictionary *replacement = @{ kOriginalDirective: line, kHighResDirectives: newPrimitives };
+							[extraReplacements addObject:replacement];
+							break;
+						}
+					}
+				}
+			}
+			[replacements addObjectsFromArray:extraReplacements];
+		}
+		
+		for (NSDictionary *replacement in replacements)
+		{
+			LDrawDirective *originalDidective = replacement[kOriginalDirective];
+			NSArray *newDirectives = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).primitives;
+			LDrawContainer * parent = [originalDidective enclosingDirective];
+			if(parent)
+			{
+				int index = [parent indexOfDirective:originalDidective];
+				[self deleteDirective:originalDidective];
+				for (LDrawDirective *directive in newDirectives) {
+					[self addDirective:directive toParent:parent atIndex:index++];
+				}
+			}
+			[directives removeObjectIdenticalTo:originalDidective];
+		}
+		[replacements removeAllObjects];
+	}
+	
+	[undoManager setActionName:NSLocalizedString(@"UndoConvertPrimitives", nil)];
+	[[self documentContents] noteNeedsDisplay];
+}//end convertToHighResPrimitives:
+
 
 #pragma mark -
 #pragma mark UNDOABLE ACTIVITIES
