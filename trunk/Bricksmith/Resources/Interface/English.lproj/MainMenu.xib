@@ -658,7 +658,15 @@ CA
                                     <action selector="addCommentClicked:" target="-1" id="437"/>
                                 </connections>
                             </menuItem>
-                            <menuItem isSeparatorItem="YES" tag="602" id="232">
+                            <menuItem isSeparatorItem="YES" id="232">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                            </menuItem>
+                            <menuItem title="Convert to High-Res Primitives" id="4hI-gW-Ive">
+                                <connections>
+                                    <action selector="convertToHighResPrimitives:" target="-1" id="Bmg-WS-qtT"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" tag="602" id="wW2-q7-00T">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
                         </items>

@@ -260,17 +260,20 @@ extern Vector2 	V2MulScalar(Vector2 a, float scalar);
 extern float	Matrix2x2Determinant( float, float, float, float);
 
 // 3-D
+extern GLfloat	component(Point3 point, int index);
 extern Vector3	V3Make(float x, float y, float z);
 extern Vector3*	V3Duplicate(Vector3 *a);
 extern Vector3	V3FromV4(Vector4 originalVector);
 extern Vector3	V3FromV4Normalize(Vector4 originalVector);
 extern bool		V3EqualPoints(Point3 point1, Point3 point2);
 extern bool		V3PointsWithinTolerance(Point3 point1, Point3 point2);
+extern bool		V3PointsWithinGivenTolerance(Point3 point1, Point3 point2, float tolerance);
 extern float	V3SquaredLength(Vector3 v);
 extern float	V3Length(Vector3 v);
 extern Vector3	V3Negate(Vector3 v);
 extern Tuple3 	V3AntiEuler(Tuple3 v); // Return Euler that is opposite v
 extern Vector3	V3Normalize(Vector3 v);
+extern Vector3	V3Val(Vector3 v);
 extern Vector3	V3Scale(Vector3 v, float);
 extern Vector3	V3Add(Vector3 a, Vector3 b);
 extern Vector3	V3Sub(Vector3 a, Vector3 b);
@@ -322,6 +325,7 @@ extern Matrix4	Matrix4Scale(Matrix4 original, Tuple3 scaleFactors);
 extern Matrix4	Matrix4Translate(Matrix4 original, Vector3 displacement);
 extern Matrix4	Matrix4Transpose(Matrix4 a);
 extern Matrix4	Matrix4Invert(Matrix4 in);
+extern Matrix4	Matrix4ClearTranslation(Matrix4 m);
 extern void		Matrix4Adjoint( Matrix4 *, Matrix4 * );
 extern float	Matrix4x4Determinant( Matrix4 * );
 extern void		Matrix4Print(Matrix4 *matrix);
