@@ -2893,7 +2893,9 @@ static Box2 NSRectToBox2(NSRect rect)
 		{
 			glViewport(0,0, maxVisibleSize.width,maxVisibleSize.height);
 
-			[self->renderer setGraphicsSurfaceSize:V2MakeSize(maxVisibleSize.width, maxVisibleSize.height)];
+			if (self.window != nil) {
+				[self->renderer setGraphicsSurfaceSize:V2MakeSize(maxVisibleSize.width, maxVisibleSize.height)];
+			}
 		}
 	}
 	CGLUnlockContext([[self openGLContext] CGLContextObj]);

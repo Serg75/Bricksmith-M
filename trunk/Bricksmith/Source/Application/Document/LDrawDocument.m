@@ -5001,6 +5001,57 @@ void AppendChoicesToNewItem(
 }//end windowWillClose:
 
 
+//**** NSFilePresenter ****
+//========== presentedItemDidChange ============================================
+//
+// Purpose:		Tells that the presented item’s contents or attributes changed.
+//				Use this to inform user that someone ouside Bricksmith changed
+//				the opened file.
+//
+//==============================================================================
+- (void)presentedItemDidChange
+{
+	static BOOL alertIsPresenting = NO;
+	
+	if (alertIsPresenting) {
+		return;
+	}
+	
+	// last known by this app modification date
+	NSDate *innerDate = self.fileModificationDate;
+	
+	// file's real modification date
+	NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:self.fileURL.path error:nil];
+	NSDate *outerDate = attributes.fileModificationDate;
+	
+	if ([outerDate compare:innerDate] == NSOrderedDescending) {
+
+		if (self.isDocumentEdited) {
+			alertIsPresenting = YES;
+			dispatch_async(dispatch_get_main_queue(), ^{
+				NSAlert *alert = [NSAlert new];
+				alert.messageText = [NSString stringWithFormat:NSLocalizedString(@"UnsavedDocumentMessage", nil), [self displayName]];
+				alert.informativeText = NSLocalizedString(@"UnsavedDocumentInformative", nil);
+				[alert addButtonWithTitle:NSLocalizedString(@"UnsavedDocumentRevertButton", nil)];
+				[alert addButtonWithTitle:NSLocalizedString(@"UnsavedDocumentKeepButton", nil)];
+
+				NSInteger buttonReturned = [alert runModal];
+				if (buttonReturned == NSAlertFirstButtonReturn)
+				{
+					[self revertToContentsOfURL:self.fileURL ofType:self.fileType error:nil];
+				}
+				alertIsPresenting = NO;
+			});
+		} else {
+			// reload without any prompt
+			dispatch_async(dispatch_get_main_queue(), ^{
+				[self revertToContentsOfURL:self.fileURL ofType:self.fileType error:nil];
+			});
+		}
+	}
+}//end presentedItemDidChange
+
+
 #pragma mark -
 #pragma mark MENUS
 #pragma mark -
