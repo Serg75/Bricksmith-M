@@ -1230,6 +1230,69 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 }//end components:snappedToGrid:minimumAngle:
 
 
+//========== componentsSnappedToGrid:byAxis: ===================================
+//
+// Purpose:		Returns a copy of the part's current components, but snapped to
+//			    the grid. Kinda a weird legacy API.
+//
+//==============================================================================
+- (TransformComponents) componentsSnappedToGrid:(float) gridSpacing
+								   byAxis:(Vector3)axis
+{
+	TransformComponents	components = [self transformComponents];
+	
+	return [self components:components snappedToGrid:gridSpacing byAxis:axis];
+	
+}//end componentsSnappedToGrid:byAxis:
+
+
+//========== components:snappedToGrid:byAxis: ==================================
+//
+// Purpose:		Aligns the given components to an imaginary grid along lines
+//			    separated by a distance of gridSpacing. This version is for
+//			    Techich series without intelligently for snapping not cubical
+//			    bricks, as well without adjucting the part's rotation angles.
+//
+// Parameters:	components	- transform to adjust.
+//				gridSpacing	- the grid line interval.
+//				axis		- pass 1 to componet(s) which should be aligned.
+//
+//==============================================================================
+- (TransformComponents) components:(TransformComponents)components
+					 snappedToGrid:(float) gridSpacing
+							byAxis:(Vector3)axis
+{
+	float	gridX					= 0.0;
+	float	gridY					= 0.0;
+	float	gridZ					= 0.0;
+	
+	// set 1.0 for aligned components and small value for unchangeable ones
+	axis.x = axis.x > 0.5 ? 1.0 : 0.00000001;
+	axis.y = axis.y > 0.5 ? 1.0 : 0.00000001;
+	axis.z = axis.z > 0.5 ? 1.0 : 0.00000001;
+	
+	// The actual grid spacing, in world coordinates.
+	gridX = gridSpacing * axis.x;
+	gridY = gridSpacing * axis.y;
+	gridZ = gridSpacing * axis.z;
+	
+	// Snap to the Grid!
+	// Figure the closest grid line and bump the part to it.
+	// Logically, this is a rounding operation with a granularity of the grid
+	// size. So all we need to do is normalize, round, then expand back to the
+	// original size.
+	
+	components.translate.x = roundf(components.translate.x/gridX) * gridX;
+	components.translate.y = roundf(components.translate.y/gridY) * gridY;
+	components.translate.z = roundf(components.translate.z/gridZ) * gridZ;
+	
+	
+	//round-off errors here? Potential for trouble.
+	return components;
+	
+}//end components:snappedToGrid:byAxis:
+
+
 //========== moveBy: ===========================================================
 //
 // Purpose:		Moves the receiver in the specified direction.

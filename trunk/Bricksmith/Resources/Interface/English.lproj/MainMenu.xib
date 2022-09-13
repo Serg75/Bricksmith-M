@@ -542,6 +542,25 @@ CA
                                     <action selector="snapSelectionToGrid:" target="-1" id="302"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Snap By X" tag="503" keyEquivalent="x" id="u4T-B5-SCQ">
+                                <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
+                                <connections>
+                                    <action selector="snapSelectionToGridX:" target="-1" id="leV-In-7sl"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Snap By Y" tag="503" keyEquivalent="y" id="Pvo-wt-0OD">
+                                <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
+                                <connections>
+                                    <action selector="snapSelectionToGridY:" target="-1" id="MEd-jI-Shg"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Snap By Z" tag="503" keyEquivalent="z" id="6Ga-6A-t7a">
+                                <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
+                                <connections>
+                                    <action selector="snapSelectionToGridZ:" target="-1" id="AG1-Vb-zar"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="8b4-X5-qab"/>
                             <menuItem title="Go To Model" tag="504" keyEquivalent="G" id="Tj5-vw-GLl">
                                 <connections>
                                     <action selector="gotoModel:" target="-1" id="pqH-Cd-zc0"/>
