@@ -73,6 +73,7 @@ typedef enum PartType {
 - (void) applyToAllParts:(LDrawPartVisitor) visitor;
 
 - (TransformComponents) componentsSnappedToGrid:(float) gridSpacing minimumAngle:(float)degrees;
+- (TransformComponents) componentsSnappedToGrid:(float) gridSpacing byAxis:(Vector3)axis;
 - (TransformComponents) components:(TransformComponents)components snappedToGrid:(float)gridSpacing minimumAngle:(float)degrees;
 - (void) rotateByDegrees:(Tuple3)degreesToRotate;
 - (void) rotateByDegrees:(Tuple3)degreesToRotate centerPoint:(Point3)center;

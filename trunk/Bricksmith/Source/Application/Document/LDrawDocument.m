@@ -2653,6 +2653,89 @@ void AppendChoicesToNewItem(
 }//end snapSelectionToGrid
 
 
+//========== snapSelectionToGridX: =============================================
+//
+// Purpose:		Aligns by X all selected parts to the current grid setting.
+//
+//==============================================================================
+- (void) snapSelectionToGridX:(id)sender
+{
+	[self snapSelectionByAxis:V3Make(1.0, 0.0, 0.0)];
+}
+
+
+//========== snapSelectionToGridY: =============================================
+//
+// Purpose:		Aligns by Y all selected parts to the current grid setting.
+//
+//==============================================================================
+- (void) snapSelectionToGridY:(id)sender
+{
+	[self snapSelectionByAxis:V3Make(0.0, 1.0, 0.0)];
+}
+
+
+//========== snapSelectionToGridZ: =============================================
+//
+// Purpose:		Aligns by Z all selected parts to the current grid setting.
+//
+//==============================================================================
+- (void) snapSelectionToGridZ:(id)sender
+{
+	[self snapSelectionByAxis:V3Make(0.0, 0.0, 1.0)];
+}
+
+
+//========== snapSelectionByAxis: =============================================
+//
+// Purpose:		Aligns by axis all selected parts to the current grid setting.
+//
+//==============================================================================
+- (void) snapSelectionByAxis:(Vector3)axis
+{
+	NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
+	NSArray             *selectedObjects    = [self selectedObjects];
+	id                  currentObject       = nil;
+	float               gridSpacing         = 0;
+	NSInteger           counter             = 0;
+	TransformComponents snappedComponents   = IdentityComponents;
+	
+	//Determine granularity of grid.
+	switch([self gridSpacingMode])
+	{
+		case gridModeFine:
+			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_FINE];
+			break;
+			
+		case gridModeMedium:
+			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_MEDIUM];
+			break;
+			
+		case gridModeCoarse:
+			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_COARSE];
+			break;
+	}
+	
+	// nudge everything that can be moved. That would be parts and only parts.
+	for(counter = 0; counter < [selectedObjects count]; counter++)
+	{
+		currentObject = [selectedObjects objectAtIndex:counter];
+		
+		if([currentObject isKindOfClass:[LDrawPart class]])
+		{
+			snappedComponents = [currentObject componentsSnappedToGrid:gridSpacing
+																byAxis:axis];
+			
+			[self setTransformation:snappedComponents
+							forPart:currentObject];
+		}
+		
+	}
+	
+	[[self documentContents] noteNeedsDisplay];
+}//end snapSelectionByAxis
+
+
 #pragma mark -
 #pragma mark Models Menu
 

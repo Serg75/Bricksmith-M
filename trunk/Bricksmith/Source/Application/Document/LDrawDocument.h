@@ -170,7 +170,10 @@
 - (IBAction) hideParts:(id)sender;
 - (IBAction) showAllParts:(id)sender;
 - (IBAction) gotoModel:(id)sender;
-- (void) snapSelectionToGrid:(id)sender;
+- (IBAction) snapSelectionToGrid:(id)sender;
+- (IBAction) snapSelectionToGridX:(id)sender;
+- (IBAction) snapSelectionToGridY:(id)sender;
+- (IBAction) snapSelectionToGridZ:(id)sender;
 
 // - Models menu
 - (IBAction) addModelClicked:(id)sender;
