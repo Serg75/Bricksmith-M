@@ -355,6 +355,8 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 	NSString        *lineFormat         = @"%@\t%@\t%@\t%@\n";
 	NSDictionary    *partRecord         = nil;
 	NSUInteger      counter             = 0;
+	NSString		*partNumber			= nil;
+	NSString		*colorCode			= nil;
 	
 	//rely on someone outside us providing a sort order
 	if(sortDescriptors != nil)
@@ -364,18 +366,20 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 	[text appendFormat: lineFormat,
 									NSLocalizedString(@"PieceCountQuantityColumnName", nil),
 									NSLocalizedString(@"PieceCountPartNumberColumnName", nil),
-									NSLocalizedString(@"PieceCountDescriptionColumnName", nil),
-									NSLocalizedString(@"PieceCountColorColumnName", nil) ];
+									NSLocalizedString(@"PieceCountColorColumnName", nil),
+									NSLocalizedString(@"PieceCountDescriptionColumnName", nil) ];
 	//Part Rows
 	for(counter = 0; counter < [flattenedReport count]; counter++)
 	{
 		partRecord	= [flattenedReport objectAtIndex:counter];
+		partNumber 	= [[partRecord objectForKey:PART_REPORT_NUMBER_KEY] stringByDeletingPathExtension];
+		colorCode	= [@([[partRecord objectForKey:PART_REPORT_LDRAW_COLOR] colorCode]) stringValue];
 		
 		[text appendFormat: lineFormat,
 									[partRecord objectForKey:PART_REPORT_PART_QUANTITY],
-									[partRecord objectForKey:PART_REPORT_NUMBER_KEY],
-									[partRecord objectForKey:PART_REPORT_NAME_KEY],
-									[partRecord objectForKey:PART_REPORT_COLOR_NAME] ];
+									partNumber,
+									colorCode,
+									[partRecord objectForKey:PART_REPORT_NAME_KEY] ];
 	}
 	
 	return text;
