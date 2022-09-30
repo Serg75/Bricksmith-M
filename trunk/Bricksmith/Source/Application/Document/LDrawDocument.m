@@ -1747,8 +1747,8 @@ void AppendChoicesToNewItem(
 	NSPasteboard	*pasteboard			= [NSPasteboard generalPasteboard];
 	NSUndoManager	*undoManager		= [self undoManager];
 	
-	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:nil index:NSNotFound];
-	
+	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:[self selectedStep] index:NSNotFound];
+
 	[undoManager setActionName:NSLocalizedString(@"", nil)];
 	
 }//end paste:
@@ -6631,7 +6631,11 @@ void AppendChoicesToNewItem(
 			if([currentObject isKindOfClass:[LDrawModel class]])
                 [self addModel:currentObject atIndex:real_index preventNameCollisions:renameModels];
 			else if([currentObject isKindOfClass:[LDrawStep class]])
-				[self addStep:currentObject parent:(LDrawMPDModel*)parent index:real_index];
+				if ([parent isKindOfClass:[LDrawMPDModel class]]) {
+					[self addStep:currentObject parent:(LDrawMPDModel*)parent index:real_index];
+				} else {
+					[self addStep:currentObject parent:nil index:real_index];
+				}
 			else
 			{
 				[self addStepComponent:currentObject parent:parent index:real_index];
