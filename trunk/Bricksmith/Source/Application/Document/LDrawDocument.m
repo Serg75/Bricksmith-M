@@ -2853,9 +2853,16 @@ void AppendChoicesToNewItem(
 - (IBAction) addStepClicked:(id)sender
 {
 	LDrawStep		*newStep		= [LDrawStep emptyStep];
+	LDrawMPDModel 	*model 			= [self selectedModel];
+	NSInteger 		selectedStepIdx = [model indexOfDirective:[self selectedStep]];
+	NSInteger 		nextStepIdx 	= selectedStepIdx + 1;
 
-	[self addStep:newStep parent:[self selectedModel] index:NSNotFound];
-	
+	if (nextStepIdx >= model.subdirectives.count) {
+		nextStepIdx = NSNotFound;
+	}
+
+	[self addStep:newStep parent:model index:nextStepIdx];
+
 }//end addStepClicked:
 
 
