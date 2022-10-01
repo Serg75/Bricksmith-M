@@ -2747,8 +2747,14 @@ void AppendChoicesToNewItem(
 - (IBAction) addModelClicked:(id)sender
 {
 	LDrawMPDModel	*newModel		= [LDrawMPDModel model];
-
-	[self addModel:newModel atIndex:NSNotFound preventNameCollisions:YES];
+	LDrawMPDModel	*selectedModel	= self.documentContents.activeModel;
+	NSInteger 		index	= [self.documentContents indexOfDirective:selectedModel];
+	
+	if(index != NSNotFound)	{
+		index++;
+	}
+	
+	[self addModel:newModel atIndex:index preventNameCollisions:YES];
 	[self setActiveModel:newModel];
 	
 }//end modelSelected
