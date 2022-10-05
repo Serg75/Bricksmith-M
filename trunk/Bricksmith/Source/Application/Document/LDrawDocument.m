@@ -4205,6 +4205,8 @@ void AppendChoicesToNewItem(
 	NSInteger		selectedStepIndex	= 0;
 	NSInteger       counter             = 0;
 	
+	selectedObjects = [LDrawUtilities mostInnerDirectives:selectedObjects];
+	
 	// This method can be called from LDrawOpenGLView (in which case we already 
 	// have a context we want to use) or it might be called on its own. Since 
 	// selecting parts can trigger OpenGL commands, we should make sure we have 

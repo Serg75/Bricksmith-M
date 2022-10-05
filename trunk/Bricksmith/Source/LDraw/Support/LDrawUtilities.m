@@ -16,8 +16,10 @@
 #import "LDrawKeywords.h"
 #import "LDrawLine.h"
 #import "LDrawMetaCommand.h"
+#import "LDrawModel.h"
 #import "LDrawPart.h"
 #import "LDrawQuadrilateral.h"
+#import "LDrawStep.h"
 #import "LDrawTexture.h"
 #import "LDrawTriangle.h"
 #import "PartLibrary.h"
@@ -805,6 +807,55 @@ static NSString				*defaultAuthor		= @"anonymous";
 	if([directive respondsToSelector:@selector(unresolvePartIfPartLibrary)])
 		[(LDrawPart*)directive unresolvePartIfPartLibrary];
 }//end unresolveLibraryParts
+
+
+//---------- mostInnerDirectives: ------------------------------------[static]--
+//
+// Purpose:		Filters directives out from the list and leaves only ones with
+//				the lowest hierarchical level.
+//				Levels of hierarchy (highest to lowest):
+//					- model
+//					- step
+//					- part/primitive/meta/lsynth
+//				Examples:
+//					- list with parts, steps and models returns parts only
+//					- list with steps and models returns steps only
+//
+//------------------------------------------------------------------------------
++ (NSArray *)mostInnerDirectives:(NSArray *)objects
+{
+	NSArray *types = @[[LDrawModel class], [LDrawStep class], [LDrawDirective class]];
+	NSMutableArray *excludeTypes = [NSMutableArray array];
+	NSMutableSet *foundTypes = [NSMutableSet set];
+	Class type;
+	Class lowestType = nil;
+	
+	for (id object in objects) {
+		for (type in types) {
+			if ([object isKindOfClass:type]) {
+				[foundTypes addObject:type];
+				break;
+			}
+		}
+	}
+	for (type in types) {
+		if ([foundTypes containsObject:type]) {
+			if (lowestType != nil) {
+				[excludeTypes addObject:lowestType];
+			}
+			lowestType = type;
+		}
+	}
+
+	if (lowestType != nil) {
+		return [objects filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
+			return [object isKindOfClass:lowestType] && [excludeTypes indexOfObjectPassingTest:^BOOL(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+				return [object isKindOfClass:obj];
+			}] == NSNotFound;
+		}]];
+	}
+	return objects;
+}//end mostInnerDirectives
 
 
 @end
