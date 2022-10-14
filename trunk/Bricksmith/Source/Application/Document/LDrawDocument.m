@@ -1841,9 +1841,10 @@ void AppendChoicesToNewItem(
 	NSPasteboard	*pasteboard			= [NSPasteboard pasteboardWithName:@"BricksmithDuplicationPboard"];
 	NSArray			*selectedObjects	= [self selectedObjects];
 	NSUndoManager	*undoManager		= [self undoManager];
-	
+	NSInteger 		indexOfObject		= [self nextModelIndex];
+
 	[self writeDirectives:selectedObjects toPasteboard:pasteboard];
-	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:nil index:NSNotFound];
+	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:nil index:indexOfObject];
 
 	[undoManager setActionName:NSLocalizedString(@"UndoDuplicate", nil)];
 	
@@ -2747,13 +2748,8 @@ void AppendChoicesToNewItem(
 - (IBAction) addModelClicked:(id)sender
 {
 	LDrawMPDModel	*newModel		= [LDrawMPDModel model];
-	LDrawMPDModel	*selectedModel	= self.documentContents.activeModel;
-	NSInteger 		index	= [self.documentContents indexOfDirective:selectedModel];
-	
-	if(index != NSNotFound)	{
-		index++;
-	}
-	
+	NSInteger 		index	 		= [self nextModelIndex];
+
 	[self addModel:newModel atIndex:index preventNameCollisions:YES];
 	[self setActiveModel:newModel];
 	
@@ -6449,6 +6445,28 @@ void AppendChoicesToNewItem(
 	//Either we just found one, on we found nothing.
 	return currentObject;
 }//end 
+
+
+//========== nextModelIndex =====================================================
+//
+// Purpose:		Returns index of the next model that follows another one, which
+//				encloses the current selection, or NSNotFound if there is no
+//				selection.
+//
+//==============================================================================
+- (NSInteger) nextModelIndex
+{
+	LDrawModel *selectedModel 	= self.selectedModel;
+	NSInteger indexOfObject 	= [self.documentContents indexOfDirective:selectedModel];
+
+	if(indexOfObject != NSNotFound)
+	{
+		indexOfObject++;
+	}
+	
+	return indexOfObject;
+	
+}//end nextModelIndex
 
 
 //========== updateInspector ===================================================
