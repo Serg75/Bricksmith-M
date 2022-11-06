@@ -1865,7 +1865,7 @@ void AppendChoicesToNewItem(
 //
 // Purpose:		splitStep splits the selected directives out of their current
 //				steps and puts them into a newly created step; the newly 
-//				created step is inserted directly after the last parent step of
+//				created step is inserted directly BEFORE the last parent step of
 //				the selection.  (Users can use this to rapidly 'break down' a
 //				monolithic pile of bricks into sane steps.)
 //
@@ -1876,13 +1876,13 @@ void AppendChoicesToNewItem(
 - (IBAction) splitStep:(id)sender
 {
 	NSUndoManager			*undoManager		= [self undoManager];
-	NSArray					*directives =			[self selectedObjects];
-													//[NSArray arrayWithArray:selectedDirectives];	
-	NSMutableArray			*movedDirectives = [NSMutableArray arrayWithCapacity:[directives count]];
-	LDrawContainer			*containingModel = nil;
-	NSInteger				highestIndex = 0;
-	LDrawStep				*newStep = nil;
-
+	NSArray					*directives 		= [self selectedObjects];
+	NSMutableArray			*movedDirectives 	= [NSMutableArray arrayWithCapacity:[directives count]];
+	LDrawContainer			*containingModel 	= nil;
+	NSInteger				highestIndex 		= 0;	// The index of the highest step with selected directives
+	LDrawStep				*highestStep 		= nil;	// The highest step which contains selected directives
+	LDrawStep				*newStep 			= nil;
+	
 	[fileContentsOutline deselectAll:sender];
 
 	for(id child in directives)
@@ -1905,10 +1905,22 @@ void AppendChoicesToNewItem(
 		}		
 	}
 	
+	// The step for splitting
+	highestStep = containingModel.subdirectives[highestIndex];
+
 	if([movedDirectives count] == 0)
 		return;
-
+	
 	newStep = [LDrawStep emptyStep];
+	
+	// Do undo stuff before changing rotation
+	[self preserveDirectiveState:highestStep];
+
+	// Move the rotation from the current step to the newly created one
+	newStep.stepRotationType = highestStep.stepRotationType;
+	newStep.rotationAngle = highestStep.rotationAngle;
+	highestStep.stepRotationType = LDrawStepRotationNone;
+
 	[self addDirective:newStep toParent:containingModel atIndex:highestIndex];
 	
 	for(id child in movedDirectives)
