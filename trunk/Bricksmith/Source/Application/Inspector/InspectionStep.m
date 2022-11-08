@@ -197,8 +197,13 @@
 //==============================================================================
 - (void) rotationTypeRadioButtonsClicked:(id)sender
 {
-//	LDrawStepRotationT	stepRotationType	= [[self->rotationTypeRadioButtons selectedCell] tag];
-	
+	// Apply current step rotation automatically when absolute rotation is selected
+	LDrawStepRotationT	stepRotationType	= (LDrawStepRotationT)[[self->rotationTypeRadioButtons selectedCell] tag];
+	if (stepRotationType == LDrawStepRotationAbsolute) {
+		[self->absoluteRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutCustom];
+		[self useCurrentViewingAngleClicked:sender];
+	}
+
 	[self setAngleUIAccordingToPopUp];
 	
 	[self finishedEditing:sender];
@@ -295,7 +300,7 @@
 //==============================================================================
 - (void) setAngleUIAccordingToPopUp
 {
-	LDrawStepRotationT  stepRotationType    = [self->rotationTypeRadioButtons selectedTag];
+	LDrawStepRotationT  stepRotationType    = (LDrawStepRotationT)[self->rotationTypeRadioButtons selectedTag];
 	NSInteger           shortcut            = 0;
 	Tuple3              newAngle            = ZeroPoint3;
 	
@@ -335,12 +340,15 @@
 		switch(shortcut)
 		{
 			case InspectorRotationShortcutCustom:
-				newAngle = V3Make(0, 0, 0);
+			{
+				// Apply current step rotation automatically when absolute rotation is selected
+				LDrawDocument *currentDocument = [[NSDocumentController sharedDocumentController] currentDocument];
+				newAngle = [currentDocument viewingAngle];
 				break;
-				
+			}
 			default:
 				// This is one of the head-on views
-				newAngle = [LDrawUtilities angleForViewOrientation:shortcut];
+				newAngle = [LDrawUtilities angleForViewOrientation:(LDrawStepRotationT)shortcut];
 				break;
 		}
 	}
