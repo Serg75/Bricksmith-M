@@ -2749,6 +2749,44 @@ void AppendChoicesToNewItem(
 }//end snapSelectionByAxis
 
 
+//========== mirroredSelectionByX: =============================================
+//
+// Purpose:		Move all selected parts simmetrically by X.
+//
+//==============================================================================
+- (void) mirroredSelectionByX:(id)sender
+{
+	[self mirroredSelectionByAxis:V3Make(-1.0, 1.0, 1.0)];
+}
+
+
+//========== mirroredSelectionByAxis: ==========================================
+//
+// Purpose:		Move all selected parts simmetrically by axis.
+//
+//==============================================================================
+- (void) mirroredSelectionByAxis:(Vector3)axis
+{
+	NSArray             *selectedObjects    = [self selectedObjects];
+	TransformComponents snappedComponents   = IdentityComponents;
+	
+	for (id currentObject in selectedObjects) {
+
+		if([currentObject isKindOfClass:[LDrawPart class]])
+		{
+			snappedComponents = [currentObject
+								 componentsMirroredByAxis:axis];
+			
+			[self setTransformation:snappedComponents
+							forPart:currentObject];
+		}
+	}//end update loop
+	
+	[[self documentContents] noteNeedsDisplay];
+
+}//end mirroredSelectionByAxis:
+
+
 #pragma mark -
 #pragma mark Models Menu
 

@@ -560,6 +560,12 @@ CA
                                     <action selector="snapSelectionToGridZ:" target="-1" id="AG1-Vb-zar"/>
                                 </connections>
                             </menuItem>
+                            <menuItem isSeparatorItem="YES" id="KbH-cq-bJq"/>
+                            <menuItem title="Mirror By X" tag="503" keyEquivalent="X" id="S6C-Pm-7mb">
+                                <connections>
+                                    <action selector="mirroredSelectionByX:" target="-1" id="JcA-Ig-rwq"/>
+                                </connections>
+                            </menuItem>
                             <menuItem isSeparatorItem="YES" id="8b4-X5-qab"/>
                             <menuItem title="Go To Model" tag="504" keyEquivalent="G" id="Tj5-vw-GLl">
                                 <connections>
