@@ -1293,6 +1293,27 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 }//end components:snappedToGrid:byAxis:
 
 
+//========== componentsMirroredByAxis: =========================================
+//
+// Purpose:		Returns part's current components, moved by axis symmetrically.
+//
+// Parameters:	axis    Pass -1 to componet(s) which should be mirrored,
+//                      and 1 to others.
+//
+//==============================================================================
+- (TransformComponents) componentsMirroredByAxis:(Vector3)axis
+{
+	TransformComponents	components = [self transformComponents];
+	
+	components.translate.x = axis.x * components.translate.x;
+	components.translate.y = axis.y * components.translate.y;
+	components.translate.z = axis.z * components.translate.z;
+	
+	return components;
+	
+}//end componentsMirroredByAxis:
+
+
 //========== moveBy: ===========================================================
 //
 // Purpose:		Moves the receiver in the specified direction.
