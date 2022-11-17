@@ -236,10 +236,46 @@ CA
                                                 <action selector="quickRotateClicked:" target="-1" id="397"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="+X fine" tag="220" alternate="YES" keyEquivalent="x" id="6P8-cl-Xti">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineClicked:" target="-1" id="8Lv-3R-pDP"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="+X (0)" tag="220" alternate="YES" keyEquivalent="x" id="L8Y-oE-M8q">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateAroundOriginClicked:" target="-1" id="cXx-qo-qfV"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="+X (0) fine" tag="220" alternate="YES" keyEquivalent="x" id="m3x-ga-jHy">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineAroundOriginClicked:" target="-1" id="iWo-nB-qm7"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem title="−X" tag="221" keyEquivalent="X" id="381">
                                             <modifierMask key="keyEquivalentModifierMask" shift="YES"/>
                                             <connections>
                                                 <action selector="quickRotateClicked:" target="-1" id="398"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−X fine" tag="221" alternate="YES" keyEquivalent="X" id="TOc-Vb-tcz">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineClicked:" target="-1" id="RPT-HN-bLc"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−X (0)" tag="221" alternate="YES" keyEquivalent="X" id="PPM-f1-j3F">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateAroundOriginClicked:" target="-1" id="atn-QQ-mZM"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−X (0) fine" tag="221" alternate="YES" keyEquivalent="X" id="QqD-bY-UKz">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineAroundOriginClicked:" target="-1" id="Zcc-AY-qpV"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="389">
@@ -251,10 +287,46 @@ CA
                                                 <action selector="quickRotateClicked:" target="-1" id="399"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="+Y fine" tag="222" alternate="YES" keyEquivalent="y" id="Yls-js-Kqh">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineClicked:" target="-1" id="9SZ-rQ-W5L"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="+Y (0)" tag="222" alternate="YES" keyEquivalent="y" id="03q-Wb-4Ka">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateAroundOriginClicked:" target="-1" id="IZQ-CJ-4r3"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="+Y (0) fine" tag="222" alternate="YES" keyEquivalent="y" id="vxl-0M-lJQ">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineAroundOriginClicked:" target="-1" id="nse-Pc-MJI"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem title="−Y" tag="223" keyEquivalent="Y" id="386">
                                             <modifierMask key="keyEquivalentModifierMask" shift="YES"/>
                                             <connections>
                                                 <action selector="quickRotateClicked:" target="-1" id="400"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−Y fine" tag="223" alternate="YES" keyEquivalent="Y" id="cfr-LR-jr4">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineClicked:" target="-1" id="kFB-Zf-VbV"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−Y (0)" tag="223" alternate="YES" keyEquivalent="Y" id="62y-QT-aPP">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateAroundOriginClicked:" target="-1" id="PmB-4q-KlB"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−Y (0) fine" tag="223" alternate="YES" keyEquivalent="Y" id="X8e-Lh-ke4">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineAroundOriginClicked:" target="-1" id="BMo-7I-6o2"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="390">
@@ -266,10 +338,46 @@ CA
                                                 <action selector="quickRotateClicked:" target="-1" id="401"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="+Z fine" tag="224" alternate="YES" keyEquivalent="z" id="euJ-N7-H9e">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineClicked:" target="-1" id="CuM-Ut-FP2"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="+Z (0)" tag="224" alternate="YES" keyEquivalent="z" id="dEC-yM-CH6">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateAroundOriginClicked:" target="-1" id="Gi1-Js-0at"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="+Z (0) fine" tag="224" alternate="YES" keyEquivalent="z" id="Zxs-PW-xGP">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineAroundOriginClicked:" target="-1" id="ps0-J2-3Fm"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem title="−Z" tag="225" keyEquivalent="Z" id="387">
                                             <modifierMask key="keyEquivalentModifierMask" shift="YES"/>
                                             <connections>
                                                 <action selector="quickRotateClicked:" target="-1" id="402"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−Z fine" tag="225" alternate="YES" keyEquivalent="Z" id="0cz-zo-yej">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineClicked:" target="-1" id="qVu-sH-mmG"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−Z (0)" tag="225" alternate="YES" keyEquivalent="Z" id="xhY-2G-JFP">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateAroundOriginClicked:" target="-1" id="x4u-E6-tMi"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="−Z (0) fine" tag="225" alternate="YES" keyEquivalent="Z" id="s8l-tL-MwG">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" option="YES"/>
+                                            <connections>
+                                                <action selector="quickRotateFineAroundOriginClicked:" target="-1" id="ibe-DW-z9C"/>
                                             </connections>
                                         </menuItem>
                                     </items>

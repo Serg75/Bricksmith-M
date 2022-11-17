@@ -140,6 +140,7 @@
 #define DRAW_BOUNDS_ONLY						1 << 3
 
 //Number of degrees to rotate in each grid mode.
+#define GRID_ROTATION_SUPERFINE					1
 #define GRID_ROTATION_FINE						15
 #define GRID_ROTATION_MEDIUM					45
 #define GRID_ROTATION_COARSE					90
