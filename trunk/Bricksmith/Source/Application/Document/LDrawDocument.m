@@ -911,39 +911,47 @@ void AppendChoicesToNewItem(
 }//end nudgeSelectionBy:
 
 
-//========== rotateSelectionAround: ============================================
+//========== rotateSelectionAround:extraFine:aroundOrigin: =====================
 //
 // Purpose:		Rotates all selected parts in a clockwise direction around the 
 //				specified axis. The rotationAxis should be either 
 //				+/- i, +/- j or +/- k.
 //
-//				This method is used by the rotate toolbar methods. It chooses 
+//				If extraFine is YES, the rotation angle is reduced in 5 times.
+//
+//				If aroundOrigin is YES, the rotation center is the origin of
+//				the model, otherwize - the center of the selected directives.
+//
+//				This method is used by the rotate toolbar methods. It chooses
 //				the actual number of degrees based on the current grid mode.
 //
 //==============================================================================
 - (void) rotateSelectionAround:(Vector3)rotationAxis
+					 extraFine:(BOOL)extraFine
+				  aroundOrigin:(BOOL)aroundOrigin
 {
 	NSArray			*selectedObjects	= [self selectedObjects]; //array of LDrawDirectives.
 	RotationModeT	 rotationMode		= RotateAroundSelectionCenter;
 	Tuple3			 rotation			= {0};
 	float			 degreesToRotate	= 0;
-	NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
 
 	//Determine magnitude of nudge.
 	switch([self gridSpacingMode])
 	{
 		case gridModeFine:
-			// was: degreesToRotate = GRID_ROTATION_FINE;	//15 degrees
-			degreesToRotate = [userDefaults floatForKey:GRID_SPACING_FINE];
+			degreesToRotate = GRID_ROTATION_SUPERFINE;	//  1 degree
 			break;
 		case gridModeMedium:
-			degreesToRotate = GRID_ROTATION_MEDIUM;	//45 degrees
+			degreesToRotate = GRID_ROTATION_MEDIUM;		// 45 degrees
 			break;
 		case gridModeCoarse:
-			degreesToRotate = GRID_ROTATION_COARSE;	//90 degrees
+			degreesToRotate = GRID_ROTATION_COARSE;		// 90 degrees
 			break;
 	}
-	
+	if (extraFine) {
+		degreesToRotate /= 5.0;
+	}
+
 	//normalize just in case someone didn't get the message!
 	rotationAxis = V3Normalize(rotationAxis);
 	
@@ -991,9 +999,16 @@ void AppendChoicesToNewItem(
 		}
 	}
 	
-	//Just one part selected; rotate around that part's origin. That is 
+	Point3 *fixedCenter = NULL;
+	
+	if(aroundOrigin){
+		rotationMode = RotateAroundFixedPoint;
+		Point3 origin = {0};
+		fixedCenter = &origin;
+	}
+	//Just one part selected; rotate around that part's origin. That is
 	// presumably what the part's author intended to be the rotation point.
-	if([selectedObjects count] == 1){
+	else if([selectedObjects count] == 1){
 		rotationMode = RotateAroundPartPositions;
 	}
 	//More than one part selected. We now must make a "best guess" about 
@@ -1003,9 +1018,9 @@ void AppendChoicesToNewItem(
 		rotationMode = RotateAroundSelectionCenter;
 	
 	
-	[self rotateSelection:rotation mode:rotationMode fixedCenter:NULL];
-	
-}//end rotateSelectionAround
+	[self rotateSelection:rotation mode:rotationMode fixedCenter:fixedCenter];
+
+}//end rotateSelectionAround:extraFine:aroundOrigin:
 
 
 //========== rotateSelection:mode:fixedCenter: =================================
@@ -2048,9 +2063,93 @@ void AppendChoicesToNewItem(
 		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
 		default:													break;
 	}
-	[self rotateSelectionAround:rotation];
-	
+	[self rotateSelectionAround:rotation extraFine:NO aroundOrigin:NO];
+
 }//end quickRotateClicked:
+
+
+//========== quickRotateFineClicked: ===========================================
+//
+// Purpose:		One of the quick rotation shortcuts was clicked. Build a
+//				rotation in the requested direction (deduced from the sender's
+//				tag).
+//				Extra fine modification.
+//
+//==============================================================================
+- (IBAction) quickRotateFineClicked:(id)sender
+{
+	menuTagsT	tag			= [sender tag];
+	Vector3		rotation	= ZeroPoint3;
+	
+	switch(tag)
+	{
+		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
+		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
+		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
+		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
+		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
+		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
+		default:													break;
+	}
+	[self rotateSelectionAround:rotation extraFine:YES aroundOrigin:NO];
+	
+}//end quickRotateFineClicked:
+
+
+//========== quickRotateAroundOriginClicked: ===================================
+//
+// Purpose:		One of the quick rotation shortcuts was clicked. Build a
+//				rotation in the requested direction (deduced from the sender's
+//				tag).
+//				Around model origin modification.
+//
+//==============================================================================
+- (IBAction) quickRotateAroundOriginClicked:(id)sender
+{
+	menuTagsT	tag			= [sender tag];
+	Vector3		rotation	= ZeroPoint3;
+	
+	switch(tag)
+	{
+		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
+		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
+		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
+		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
+		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
+		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
+		default:													break;
+	}
+	[self rotateSelectionAround:rotation extraFine:NO aroundOrigin:YES];
+	
+}//end quickRotateAroundOriginClicked:
+
+
+//========== quickRotateFineAroundOriginClicked: ===============================
+//
+// Purpose:		One of the quick rotation shortcuts was clicked. Build a
+//				rotation in the requested direction (deduced from the sender's
+//				tag).
+//				Around model origin with extra fine modification.
+//
+//==============================================================================
+- (IBAction) quickRotateFineAroundOriginClicked:(id)sender
+{
+	menuTagsT	tag			= [sender tag];
+	Vector3		rotation	= ZeroPoint3;
+	
+	switch(tag)
+	{
+		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
+		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
+		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
+		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
+		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
+		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
+		default:													break;
+	}
+	[self rotateSelectionAround:rotation extraFine:YES aroundOrigin:YES];
+	
+}//end quickRotateFineAroundOriginClicked:
 
 
 //========== randomizeLDrawColors: =============================================
