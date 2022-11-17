@@ -1320,6 +1320,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	Vector3		actualNudge		= ZeroPoint3;
 	BOOL		isZMovement		= NO;
 	BOOL		isFastNudge		= NO;
+	BOOL		isSlowNudge		= NO;
 	BOOL		isNudge			= NO;
 	
 	CGLLockContext([[self openGLContext] CGLContextObj]);
@@ -1342,6 +1343,7 @@ static Box2 NSRectToBox2(NSRect rect)
 			// z-axis. 
 			isZMovement	= ([theEvent modifierFlags] & NSAlternateKeyMask) != 0;
 			isFastNudge = ([theEvent modifierFlags] & NSShiftKeyMask) != 0;
+			isSlowNudge = ([theEvent modifierFlags] & NSCommandKeyMask) != 0;
 			isNudge		= NO;
 			
 			
@@ -1410,6 +1412,9 @@ static Box2 NSRectToBox2(NSRect rect)
 			{
 				if(isFastNudge)
 					actualNudge = V3Scale(actualNudge,10.0);
+				else if(isSlowNudge)
+					actualNudge = V3Scale(actualNudge,0.04);
+				
 				self->nudgeVector = actualNudge;
 				
 				if([self locationMode] == LocationModeWalkthrough)
