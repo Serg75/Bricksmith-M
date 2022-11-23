@@ -27,6 +27,7 @@ typedef enum
 + (LDrawPaths *) sharedPaths;
 
 // Accessors
+- (NSString *) internalLDrawPath;
 - (NSString *) preferredLDrawPath;
 - (void) setPreferredLDrawPath:(NSString *)pathIn;
 

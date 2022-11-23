@@ -58,6 +58,7 @@
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
 #import "PartReport.h"
+#import "PartSpecific.h"
 #import "PieceCountPanel.h"
 #import "RotationPanelController.h"
 #import "SearchPanelController.h"
@@ -2245,10 +2246,13 @@ void AppendChoicesToNewItem(
 //				which it rotates.
 //
 //==============================================================================
-- (IBAction) changeOrigin:(id)sender
+- (IBAction) changeOrigin:(NSButton *)sender
 {
-	NSUndoManager       *	undoManager    = [self undoManager];
-	NSArray *				directives = [self selectedObjects];
+	NSUndoManager       *	undoManager	= [self undoManager];
+	NSArray *				directives 	= [self selectedObjects];
+	NSInteger				tag			= [sender tag];
+	Vector3					rotCenter;
+	Vector3					rotPlane;
 
 	id thing = [directives objectAtIndex:0];
 	if (![thing isKindOfClass:[LDrawPart class]])
@@ -2256,8 +2260,20 @@ void AppendChoicesToNewItem(
 	
 	LDrawPart * anchor = (LDrawPart *) thing;
 	
-	Matrix4 anchorMatrix = [anchor transformationMatrix];
-	Matrix4 correction = Matrix4Invert(anchorMatrix);
+	if (tag == changeOriginByRotationMenuTag) {
+		rotCenter = [PartSpecific rotationCenterForPart:anchor.displayName];
+		rotPlane = [PartSpecific rotationPlaneForPart:anchor.displayName];
+		Matrix4 anchorMatrix = [anchor transformationMatrix];
+		rotCenter = V3MulPointByProjMatrix(rotCenter, anchorMatrix);
+		rotPlane = V3Val(V3MulPointByProjMatrix(rotPlane, Matrix4ClearTranslation(anchorMatrix)));
+	} else {
+		rotCenter = anchor.position;
+		rotPlane = V3Make(1, 1, 1);
+	}
+	Vector3 offset = V3Mul(rotCenter, rotPlane);
+
+	Matrix4 offsetMatrix = Matrix4Translate(IdentityMatrix4, offset);
+	Matrix4 correction = Matrix4Invert(offsetMatrix);
 	
 	LDrawModel * parentModel = [anchor enclosingModel];
 	
@@ -2286,7 +2302,7 @@ void AppendChoicesToNewItem(
 				if([part referencedMPDSubmodel] == parentModel)
 				{
 					Matrix4 old = [part transformationMatrix];
-					Matrix4 newM = Matrix4Multiply(anchorMatrix, old);
+					Matrix4 newM = Matrix4Multiply(offsetMatrix, old);
 					TransformComponents oldComp = [part transformComponents];
 					
 					[[undoManager prepareWithInvocationTarget:self]
@@ -5370,6 +5386,11 @@ void AppendChoicesToNewItem(
 		
 		case changeOriginMenuTag:
 			if(selCount == 1 && selTypes == [LDrawPart class])
+				enable = YES;
+			break;
+		
+		case changeOriginByRotationMenuTag:
+			if(selCount == 1 && selTypes == [LDrawPart class] && [PartSpecific hasRotationCenter:selectedPart.displayName])
 				enable = YES;
 			break;
 		

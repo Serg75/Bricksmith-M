@@ -232,6 +232,8 @@
 		95D893B916555F3E00AA055B /* LSynthConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D893B716555F3E00AA055B /* LSynthConfiguration.m */; };
 		95D893CA16569CFD00AA055B /* LDrawLSynth.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893C816569CFD00AA055B /* LDrawLSynth.h */; };
 		95D893CB16569CFD00AA055B /* LDrawLSynth.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D893C916569CFD00AA055B /* LDrawLSynth.m */; };
+		95DC1D1F292993CC00915853 /* PartSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DC1D1D292993CC00915853 /* PartSpecific.h */; };
+		95DC1D20292993CC00915853 /* PartSpecific.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DC1D1E292993CC00915853 /* PartSpecific.m */; };
 		95F759A127BC67AD00CFE5ED /* FastSet.m in Sources */ = {isa = PBXBuildFile; fileRef = 95F7599F27BC67AD00CFE5ED /* FastSet.m */; };
 		95F759A227BC67AD00CFE5ED /* FastSet.h in Headers */ = {isa = PBXBuildFile; fileRef = 95F759A027BC67AD00CFE5ED /* FastSet.h */; };
 		D608724816ED61F500828B4E /* MeshSmooth.h in Headers */ = {isa = PBXBuildFile; fileRef = D608724616ED61F500828B4E /* MeshSmooth.h */; };
@@ -551,6 +553,8 @@
 		95D893B716555F3E00AA055B /* LSynthConfiguration.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LSynthConfiguration.m; sourceTree = "<group>"; };
 		95D893C816569CFD00AA055B /* LDrawLSynth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawLSynth.h; sourceTree = "<group>"; };
 		95D893C916569CFD00AA055B /* LDrawLSynth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawLSynth.m; sourceTree = "<group>"; };
+		95DC1D1D292993CC00915853 /* PartSpecific.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PartSpecific.h; sourceTree = "<group>"; };
+		95DC1D1E292993CC00915853 /* PartSpecific.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PartSpecific.m; sourceTree = "<group>"; };
 		95F7599F27BC67AD00CFE5ED /* FastSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FastSet.m; sourceTree = "<group>"; };
 		95F759A027BC67AD00CFE5ED /* FastSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastSet.h; sourceTree = "<group>"; };
 		D608724616ED61F500828B4E /* MeshSmooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MeshSmooth.h; sourceTree = "<group>"; };
@@ -662,6 +666,8 @@
 				0BC75338136FC878002568B8 /* PartLibrary.m */,
 				0BE523FF1373C26200E21FBC /* PartReport.h */,
 				0BE524001373C26200E21FBC /* PartReport.m */,
+				95DC1D1D292993CC00915853 /* PartSpecific.h */,
+				95DC1D1E292993CC00915853 /* PartSpecific.m */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -1091,6 +1097,7 @@
 				0BC699CD08B93A0500DAF996 /* DimensionsPanel.h in Headers */,
 				0B356AF108D385B900695EEB /* PieceCountPanel.h in Headers */,
 				0B8EBE51093C0FAD00D87E0C /* InspectionComment.h in Headers */,
+				95DC1D1F292993CC00915853 /* PartSpecific.h in Headers */,
 				0B8EBE53093C0FAD00D87E0C /* InspectionConditionalLine.h in Headers */,
 				0B8EBE55093C0FAD00D87E0C /* InspectionLine.h in Headers */,
 				0B8EBE57093C0FAD00D87E0C /* InspectionMPDModel.h in Headers */,
@@ -1339,6 +1346,7 @@
 				0B8EBE7E093C100100D87E0C /* DialogPanel.m in Sources */,
 				0B8EBE80093C100100D87E0C /* ExtendedSplitView.m in Sources */,
 				0B8EBE82093C100100D87E0C /* IconTextCell.m in Sources */,
+				95DC1D20292993CC00915853 /* PartSpecific.m in Sources */,
 				0B8EBE84093C100100D87E0C /* LDrawColorBar.m in Sources */,
 				0B8EBE86093C100100D87E0C /* LDrawColorCell.m in Sources */,
 				0B8EBE88093C100100D87E0C /* LDrawColorWell.m in Sources */,

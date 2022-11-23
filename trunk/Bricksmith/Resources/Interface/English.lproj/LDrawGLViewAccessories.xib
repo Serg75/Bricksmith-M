@@ -66,6 +66,19 @@
                         <action selector="zoomToFit:" target="-2" id="34"/>
                     </connections>
                 </menuItem>
+                <menuItem isSeparatorItem="YES" id="AxN-OW-soJ"/>
+                <menuItem title="Make Origin" tag="209" id="hGI-9J-dfc">
+                    <modifierMask key="keyEquivalentModifierMask"/>
+                    <connections>
+                        <action selector="changeOrigin:" target="-1" id="4CD-HX-WGl"/>
+                    </connections>
+                </menuItem>
+                <menuItem title="Origin by rotation center" tag="250" id="jBc-V0-9cU">
+                    <modifierMask key="keyEquivalentModifierMask"/>
+                    <connections>
+                        <action selector="changeOrigin:" target="-1" id="tKA-fe-JeU"/>
+                    </connections>
+                </menuItem>
             </items>
             <point key="canvasLocation" x="10" y="152"/>
         </menu>
