@@ -222,11 +222,6 @@ CA
                                     <action selector="orderFrontRotationPanel:" target="-1" id="361"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Make Origin" tag="209" id="Z8B-Qv-V2J">
-                                <connections>
-                                    <action selector="changeOrigin:" target="-1" id="gW5-rP-sHh"/>
-                                </connections>
-                            </menuItem>
                             <menuItem title="Quick Rotate" id="378">
                                 <menu key="submenu" title="Quick Rotate" id="379">
                                     <items>
@@ -382,6 +377,16 @@ CA
                                         </menuItem>
                                     </items>
                                 </menu>
+                            </menuItem>
+                            <menuItem title="Make Origin" tag="209" id="Z8B-Qv-V2J">
+                                <connections>
+                                    <action selector="changeOrigin:" target="-1" id="gW5-rP-sHh"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Origin by rotation center" tag="250" id="2M6-E8-9nA">
+                                <connections>
+                                    <action selector="changeOrigin:" target="-1" id="jqc-l4-B4d"/>
+                                </connections>
                             </menuItem>
                             <menuItem title="Randomize Color" id="1zh-hF-dQv">
                                 <connections>
