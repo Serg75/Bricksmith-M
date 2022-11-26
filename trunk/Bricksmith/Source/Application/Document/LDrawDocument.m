@@ -1857,8 +1857,11 @@ void AppendChoicesToNewItem(
 	NSPasteboard	*pasteboard			= [NSPasteboard pasteboardWithName:@"BricksmithDuplicationPboard"];
 	NSArray			*selectedObjects	= [self selectedObjects];
 	NSUndoManager	*undoManager		= [self undoManager];
-	NSInteger 		indexOfObject		= [self nextModelIndex];
+	NSInteger 		indexOfObject		= NSNotFound;
 
+	if ([selectedObjects.firstObject isKindOfClass:[LDrawMPDModel class]]) {
+		indexOfObject = [self nextModelIndex];
+	}
 	[self writeDirectives:selectedObjects toPasteboard:pasteboard];
 	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:nil index:indexOfObject];
 
