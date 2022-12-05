@@ -807,7 +807,7 @@ Tuple3 	V3AntiEuler(Tuple3 v)
 {
 	Matrix4 forwardTransform = Matrix4Rotate(IdentityMatrix4, v);
 	Matrix4 inverseTransform = Matrix4Invert(forwardTransform);
-	Tuple3 inverse = Matrix4DecomposeXYZRotation(inverseTransform);
+	Tuple3 inverse = Matrix4DecomposeXZYRotation(inverseTransform);
 	inverse.x = degrees(inverse.x);
 	inverse.y = degrees(inverse.y);
 	inverse.z = degrees(inverse.z);
@@ -1854,6 +1854,12 @@ Matrix4 Matrix4CreateFromGLMatrix4(const GLfloat *glMatrix)
 //
 // Source:		Allen Smith, after too much handwork.
 //
+// UPD:			This function is also using X-Z-Y rotation to be consistent with
+//				opposite transformation.
+//				The formula was taken from
+//				https://www.geometrictools.com/Documentation/EulerAngles.pdf
+//				except that all angles have changed sign.
+//
 //==============================================================================
 Matrix4 Matrix4CreateTransformation(TransformComponents *components)
 {
@@ -1871,17 +1877,17 @@ Matrix4 Matrix4CreateTransformation(TransformComponents *components)
 	double cosZ = cos(components->rotate.z);
 	
 	rotation[0][0] = cosY * cosZ;
-	rotation[0][1] = cosY * sinZ;
-	rotation[0][2] = -sinY;
+	rotation[0][1] = sinZ;
+	rotation[0][2] = -cosZ * sinY;
 	
-	rotation[1][0] = sinX*sinY*cosZ - cosX*sinZ;
-	rotation[1][1] = sinX*sinY*sinZ + cosX*cosZ;
-	rotation[1][2] = sinX*cosY;
+	rotation[1][0] = sinX*sinY - cosX*cosY*sinZ;
+	rotation[1][1] = cosX*cosZ;
+	rotation[1][2] = sinX*cosY + cosX*sinY*sinZ;
 	
-	rotation[2][0] = cosX*sinY*cosZ + sinX*sinZ;
-	rotation[2][1] = cosX*sinY*sinZ - sinX*cosZ;
-	rotation[2][2] = cosX*cosY;
-	
+	rotation[2][0] = cosX*sinY + sinX*cosY*sinZ;
+	rotation[2][1] = -sinX*cosZ;
+	rotation[2][2] = cosX*cosY - sinX*sinY*sinZ;
+
 	//Build the transformation.element matrix.
 	// Seeing the transformation.element matrix in these terms helps to make sense of Matrix4DecomposeTransformation().
 	transformation.element[0][0] = components->scale.x * rotation[0][0];
@@ -2073,7 +2079,7 @@ int Matrix4DecomposeTransformation( Matrix4 originalMatrix,
  	}
 	
 	// extract rotation
-	decomposed->rotate = Matrix4DecomposeXYZRotation(localMatrix);
+	decomposed->rotate = Matrix4DecomposeXZYRotation(localMatrix);
 	
 	
  	// All done!
@@ -2082,49 +2088,59 @@ int Matrix4DecomposeTransformation( Matrix4 originalMatrix,
 }//end Matrix4DecomposeTransformation
 
 
-//========== Matrix4DecomposeXYZRotation =======================================
+//========== Matrix4DecomposeXZYRotation =======================================
 //
-// Purpose:		Decomposes a rotation matrix into an X-Y-Z angle (in radians) 
+// Purpose:		Decomposes a rotation matrix into an X-Z-Y angle (in radians)
 //				which would yield it, such that the X angle is applied first and 
-//				the Z angle last. 
+//				the Y angle last.
 //
 //				The matrix must not have any affect other than rotation.
 //
+// Notes:		The initial X-Y-Z rotation was replaced in favor to this one to
+//				make angle for simple Y roration more predictable (from -180º to
+//				+180º).
+//				It also shows better persistance for angles while part mirroring
+//				and in Undo/Redo commands.
+//				The implementation was taken from
+//				https://www.geometrictools.com/Documentation/EulerAngles.pdf
+//				except that all angles have changed sign.
+//
 //==============================================================================
-Tuple3 Matrix4DecomposeXYZRotation(Matrix4 matrix)
+Tuple3 Matrix4DecomposeXZYRotation(Matrix4 matrix)
 {
 	Tuple3 rotationAngle	= ZeroPoint3;
 	
-	// Y is easy.
-	rotationAngle.y = asin(-matrix.element[0][2]);
-	
-	//cos(Y) != 0.
-	// We can just use some simple algebra on the simplest components 
-	// of the rotation matrix.
- 	
-	if ( fabs(cos(rotationAngle.y)) > SMALL_NUMBER )//within a tolerance of zero.
+	// Angles close to boundaries are treated as boundaries
+	if (matrix.element[0][1] + SMALL_NUMBER < 1.0)
 	{
- 		rotationAngle.x = atan2(matrix.element[1][2], matrix.element[2][2]);
- 		rotationAngle.z = atan2(matrix.element[0][1], matrix.element[0][0]);
- 	}
-	//cos(Y) == 0; so Y = +/- PI/2
-	// this is a "singularity" that zeroes out the information we would 
-	// usually use to determine X and Y.
-	
-	else if( rotationAngle.y < 0) // -PI/2
+		if (matrix.element[0][1] - SMALL_NUMBER > -1.0)
+		{
+			// -1 > r01 > +1
+			rotationAngle.z = asinf(matrix.element[0][1]);
+			rotationAngle.x = -atan2f(matrix.element[2][1], matrix.element[1][1]);
+			rotationAngle.y = -atan2f(matrix.element[0][2], matrix.element[0][0]);
+		}
+		else
+		{
+			// r01 = -1
+			// Not a unique solution: thetaY - thetaX = atan2(-r20,r22)
+			rotationAngle.z = -PI / 2;
+			rotationAngle.x = atan2f(-matrix.element[2][0], matrix.element[2][2]);
+			rotationAngle.y = 0;
+		}
+	}
+	else
 	{
- 		rotationAngle.x = atan2(-matrix.element[2][1], matrix.element[1][1]);
- 		rotationAngle.z = 0;
- 	}
-	else if( rotationAngle.y > 0) // +PI/2
-	{
- 		rotationAngle.x = atan2(matrix.element[2][1], matrix.element[1][1]);
- 		rotationAngle.z = 0;
- 	}
-	
+		// r01 = +1
+		// Not a unique solution: thetaY + thetaX = atan2(-r20,r22)
+		rotationAngle.z = PI / 2;
+		rotationAngle.x = atan2f(matrix.element[2][0], matrix.element[2][2] );
+		rotationAngle.y = 0;
+	}
+
 	return rotationAngle;
 	
-}//end Matrix4DecomposeXYZRotation
+}//end Matrix4DecomposeXZYRotation
 
 
 //========== Matrix4DecomposeZYXRotation =======================================
