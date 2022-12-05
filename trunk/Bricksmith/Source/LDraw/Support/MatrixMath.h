@@ -314,7 +314,7 @@ extern Vector4	V4MulPointByMatrix(Vector4 pin, Matrix4 m);
 extern Matrix4	Matrix4CreateFromGLMatrix4(const GLfloat *glMatrix);
 extern Matrix4	Matrix4CreateTransformation(TransformComponents *);
 extern int		Matrix4DecomposeTransformation( Matrix4 originalMatrix, TransformComponents *decomposed);
-extern Tuple3	Matrix4DecomposeXYZRotation(Matrix4 matrix);
+extern Tuple3	Matrix4DecomposeXZYRotation(Matrix4 matrix);
 extern Tuple3	Matrix4DecomposeZYXRotation(Matrix4 matrix);
 extern Matrix4	Matrix4Multiply(Matrix4 a, Matrix4 b);
 extern void		Matrix4MultiplyGLMatrices(GLfloat *a, GLfloat *b, GLfloat *result);

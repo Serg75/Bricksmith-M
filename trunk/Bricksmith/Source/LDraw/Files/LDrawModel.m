@@ -876,7 +876,7 @@
 				// Add the new value to it.
 				rotationMatrix	= Matrix4Rotate(IdentityMatrix4, stepRotationAngle);
 				rotationMatrix	= Matrix4Rotate(rotationMatrix,  previousRotation);
-				newRotation		= Matrix4DecomposeXYZRotation(rotationMatrix);
+				newRotation		= Matrix4DecomposeXZYRotation(rotationMatrix);
 				
 				// convert from radians to degrees
 				newRotation.x	= degrees(newRotation.x);
@@ -898,7 +898,7 @@
 				// Add the new value to it.
 				rotationMatrix	= Matrix4Rotate(IdentityMatrix4, stepRotationAngle);
 				rotationMatrix	= Matrix4Rotate(rotationMatrix,  previousRotation);
-				newRotation		= Matrix4DecomposeXYZRotation(rotationMatrix);
+				newRotation		= Matrix4DecomposeXZYRotation(rotationMatrix);
 				
 				// convert from radians to degrees
 				newRotation.x	= degrees(newRotation.x);

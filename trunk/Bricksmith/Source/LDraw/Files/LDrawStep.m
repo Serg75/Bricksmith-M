@@ -878,7 +878,7 @@
 	rotationMatrix = Matrix4Rotate(rotationMatrix, V3Make(0, newAngleZYX.y, 0));
 	rotationMatrix = Matrix4Rotate(rotationMatrix, V3Make(newAngleZYX.x, 0, 0));
 	
-	newAngleXYZ = Matrix4DecomposeXYZRotation(rotationMatrix);
+	newAngleXYZ = Matrix4DecomposeXZYRotation(rotationMatrix);
 	
 	// convert from radians to degrees
 	newAngleXYZ.x	= degrees(newAngleXYZ.x);
