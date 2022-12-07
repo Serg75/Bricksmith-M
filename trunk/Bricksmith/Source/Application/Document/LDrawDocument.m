@@ -2236,17 +2236,18 @@ void AppendChoicesToNewItem(
 
 //========== changeOrigin: =====================================================
 //
-// Purpose:		Movs every part in the selection's parent model so that the
-//				selected part is at 0,0,0.
+// Purpose:		Handles 3 related commands:
+//				1. Moves every part in the selection's parent model so that the
+//				   selected part is at 0,0,0.
+//				2. Moves every part in the selection's parent model so that the
+//				   rotation axis for selected part goes through 0,0,0.
+//				3. Rotates every part in the selection's parent model so that
+//				   the rotation of the selected part is aligned to 0, 90, 180
+//				   or 270º.
 //
 //				Also, find all uses of this MPD model and adjust their location
 //				in the opposite direction so parent models are not visually
 //				affected.
-//
-// Notes:		By moving the parts in the sub-model and moving the use of the
-//				sub-model in the opposite direction, this routine makes no
-//				visual changes to the model, while changing the point around
-//				which it rotates.
 //
 //==============================================================================
 - (IBAction) changeOrigin:(NSButton *)sender
@@ -2256,6 +2257,8 @@ void AppendChoicesToNewItem(
 	NSInteger				tag			= [sender tag];
 	Vector3					rotCenter;
 	Vector3					rotPlane;
+	Matrix4 				transformMatrix;
+	Matrix4 				correction;
 
 	id thing = [directives objectAtIndex:0];
 	if (![thing isKindOfClass:[LDrawPart class]])
@@ -2263,20 +2266,38 @@ void AppendChoicesToNewItem(
 	
 	LDrawPart * anchor = (LDrawPart *) thing;
 	
-	if (tag == changeOriginByRotationMenuTag) {
+	if (tag == changeOriginByRotationMenuTag)
+	{
 		rotCenter = [PartSpecific rotationCenterForPart:anchor.displayName];
 		rotPlane = [PartSpecific rotationPlaneForPart:anchor.displayName];
 		Matrix4 anchorMatrix = [anchor transformationMatrix];
 		rotCenter = V3MulPointByProjMatrix(rotCenter, anchorMatrix);
 		rotPlane = V3Val(V3MulPointByProjMatrix(rotPlane, Matrix4ClearTranslation(anchorMatrix)));
-	} else {
-		rotCenter = anchor.position;
-		rotPlane = V3Make(1, 1, 1);
+		Vector3 offset = V3Mul(rotCenter, rotPlane);
+		transformMatrix = Matrix4Translate(IdentityMatrix4, offset);
 	}
-	Vector3 offset = V3Mul(rotCenter, rotPlane);
+	else if (tag == axesByPartRotationMenuTag)
+	{
+		TransformComponents	components	= [anchor transformComponents];
+		Tuple3 rotation;
+		rotation.x = degrees(components.rotate.x);
+		rotation.y = degrees(components.rotate.y);
+		rotation.z = degrees(components.rotate.z);
+		transformMatrix = Matrix4Rotate(IdentityMatrix4, rotation);
+		// align Y rotation to 0, 90, 180 or 270º
+		Tuple3 subRotation;
+		subRotation.x = 0;
+		subRotation.y = -roundf(rotation.y / 90.0) * 90.0;
+		subRotation.z = 0;
+		Matrix4 extraRotationMatrix = Matrix4Rotate(IdentityMatrix4, subRotation);
+		transformMatrix = Matrix4Multiply(extraRotationMatrix, transformMatrix);
+	}
+	else	// changeOriginMenuTag
+	{
+		transformMatrix = Matrix4Translate(IdentityMatrix4, anchor.position);
+	}
 
-	Matrix4 offsetMatrix = Matrix4Translate(IdentityMatrix4, offset);
-	Matrix4 correction = Matrix4Invert(offsetMatrix);
+	correction = Matrix4Invert(transformMatrix);
 	
 	LDrawModel * parentModel = [anchor enclosingModel];
 	
@@ -2305,7 +2326,7 @@ void AppendChoicesToNewItem(
 				if([part referencedMPDSubmodel] == parentModel)
 				{
 					Matrix4 old = [part transformationMatrix];
-					Matrix4 newM = Matrix4Multiply(offsetMatrix, old);
+					Matrix4 newM = Matrix4Multiply(transformMatrix, old);
 					TransformComponents oldComp = [part transformComponents];
 					
 					[[undoManager prepareWithInvocationTarget:self]
@@ -5388,6 +5409,7 @@ void AppendChoicesToNewItem(
 			break;
 		
 		case changeOriginMenuTag:
+		case axesByPartRotationMenuTag:
 			if(selCount == 1 && selTypes == [LDrawPart class])
 				enable = YES;
 			break;
