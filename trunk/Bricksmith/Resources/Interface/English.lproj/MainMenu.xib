@@ -383,19 +383,23 @@ CA
                                     <action selector="changeOrigin:" target="-1" id="gW5-rP-sHh"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Origin by rotation center" tag="250" id="2M6-E8-9nA">
+                            <menuItem title="Origin by Rotation Center" tag="226" id="2M6-E8-9nA">
                                 <connections>
                                     <action selector="changeOrigin:" target="-1" id="jqc-l4-B4d"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Axes by Part Rotation" tag="227" id="Eje-Qd-U8g">
+                                <connections>
+                                    <action selector="changeOrigin:" target="-1" id="Vo5-Pa-MS0"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="fnA-Lo-M5c"/>
                             <menuItem title="Randomize Color" id="1zh-hF-dQv">
                                 <connections>
                                     <action selector="randomizeLDrawColors:" target="-1" id="lCz-a8-02s"/>
                                 </connections>
                             </menuItem>
-                            <menuItem isSeparatorItem="YES" id="174">
-                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
-                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="174"/>
                             <menuItem title="Spelling" id="184">
                                 <menu key="submenu" title="Spelling" id="185">
                                     <items>

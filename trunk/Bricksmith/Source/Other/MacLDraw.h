@@ -229,7 +229,8 @@ typedef enum MenuTags
 	rotateNegativeYTag				= 223,
 	rotatePositiveZTag				= 224,
 	rotateNegativeZTag				= 225,
-	changeOriginByRotationMenuTag	= 250,
+	changeOriginByRotationMenuTag	= 226,
+	axesByPartRotationMenuTag		= 227,
 
 	// Tools Menu
 	toolsMenuTag					= 3,
