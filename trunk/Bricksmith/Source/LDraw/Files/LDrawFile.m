@@ -546,6 +546,25 @@
 }//end submodels
 
 
+//========== partsWithName =========================================================
+//
+// Purpose:		Returns an array of the LDrawParts with the given name.
+//
+//==============================================================================
+- (NSArray<LDrawPart *> *) partsWithName:(NSString *)name
+{
+	NSMutableArray<LDrawPart *> *parts = [NSMutableArray array];
+	
+	[self applyToAllParts:^(LDrawPart *part) {
+		if ([part.referenceName isEqualToString:name]) {
+			[parts addObject:part];
+		}
+	}];
+	return [parts copy];
+	
+}//end partsWithName
+
+
 #pragma mark -
 
 //========== setActiveModel: ===================================================

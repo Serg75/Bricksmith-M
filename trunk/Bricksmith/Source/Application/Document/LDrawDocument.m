@@ -2012,6 +2012,85 @@ void AppendChoicesToNewItem(
 }//end splitModel:
 
 
+//========== moveToParentModel: ================================================
+//
+// Purpose:		Move selected directives from submodel to the parent model(s)
+//				where this submodel is inserted as a part.
+//				This also works if selected directives are located in different
+//				submodels.
+//
+// Notes:		If we get empty submodels or empty steps after moving stuff then
+//				they will be deleted.
+//
+//==============================================================================
+- (IBAction) moveToParentModel:(id)sender
+{
+	LDrawFile 				*docContents		= [self documentContents];
+	NSUndoManager			*undoManager		= [self undoManager];
+	NSArray					*directives			= [self selectedObjects];
+	
+	if (directives.count == 0) {
+		return;
+	}
+	
+	[fileContentsOutline deselectAll:sender];
+	
+	// Save all selected directives here with their model name:
+	// model_name1 : [directive1, directive2...]
+	// model_name2 : [directiveK...]
+	NSMutableDictionary<NSString *, NSMutableArray<LDrawDirective *> *> *modelsWithDirectives = [NSMutableDictionary new];
+
+	for (LDrawDirective *directive in directives) {
+		NSString *modelName = directive.enclosingModel.fileName;
+		if (modelsWithDirectives[modelName] == nil) {
+			modelsWithDirectives[modelName] = [[NSMutableArray alloc] initWithObjects:directive, nil];
+		} else {
+			[modelsWithDirectives[modelName] addObject:directive];
+		}
+	}
+	
+	// iterate over all submodels whose parts are selected
+	for (NSString *subModelName in modelsWithDirectives.allKeys) {
+		// find parts as references to the submodel in whole document
+		NSArray<LDrawPart *> *references = [docContents partsWithName:subModelName];
+		// iterate over all selected parts in this submodel
+		for (LDrawPart *directive in modelsWithDirectives[subModelName]) {
+			for (LDrawPart *ref in references) {
+				LDrawStep *step = ref.enclosingStep;
+				if ([directive isKindOfClass:[LDrawPart class]]) {
+					LDrawPart *newPart = [directive copy];
+					newPart.LDrawColor = directive.LDrawColor;
+					newPart.displayName = directive.displayName;
+					Matrix4 global = Matrix4Multiply(directive.transformationMatrix, ref.transformationMatrix);
+					newPart.transformationMatrix = &global;
+					[self addDirective:newPart toParent:step];
+				} else {
+					[self addDirective:[directive copy] toParent:step];
+				}
+			}
+			
+			// moving model's parents
+			LDrawModel *parentModel = directive.enclosingModel;
+			LDrawStep *parentStep = directive.enclosingStep;
+			
+			// remove everything that gets empty
+			[self deleteDirective:directive];
+			if (parentModel.numberElements == 0) {
+				[self deleteDirective:parentModel];
+				for (LDrawPart *instance in references) {
+					[self deleteDirective:instance];
+				}
+			} else if (parentStep.subdirectives.count == 0) {
+				[self deleteDirective:parentStep];
+			}
+		}
+	}
+	
+	[undoManager setActionName:NSLocalizedString(@"UndoMoveToParentModel", nil)];
+	[[self documentContents] noteNeedsDisplay];
+	
+}//end moveToParentModel:
+
 
 //========== orderFrontMovePanel: ==============================================
 //
@@ -5421,6 +5500,11 @@ void AppendChoicesToNewItem(
 		
 		case splitModelMenuTag:
 			if(selCount > 0 && selTypes == [LDrawPart class])
+				enable = YES;
+			break;
+			
+		case moveToParentMenuTag:
+			if(selCount > 0 && selTypes != [LDrawMPDModel class] && selTypes != [LDrawStep class])
 				enable = YES;
 			break;
 		

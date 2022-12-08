@@ -47,6 +47,7 @@
 - (LDrawMPDModel *) modelWithName:(NSString *)soughtName;
 - (NSString *)path;
 - (NSArray *) submodels;
+- (NSArray<LDrawPart *> *) partsWithName:(NSString *)name;
 
 - (void) setActiveModel:(LDrawMPDModel *)newModel;
 - (void) setDraggingDirectives:(NSArray *)directives;
