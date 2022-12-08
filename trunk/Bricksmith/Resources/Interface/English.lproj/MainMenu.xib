@@ -209,6 +209,12 @@ CA
                                     <action selector="splitModel:" target="-1" id="Qqh-4h-xCC"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Move to Parent Model" tag="228" id="kYE-eX-XIk">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="moveToParentModel:" target="-1" id="gly-zI-Pji"/>
+                                </connections>
+                            </menuItem>
                             <menuItem isSeparatorItem="YES" id="438">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
