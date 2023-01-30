@@ -39,7 +39,7 @@ typedef enum PartType {
 {
 @private
 	NSString		*displayName;
-	NSString		*referenceName; //lower-case version of display name
+	NSString		*referenceName; 		//lower-case version of display name
 	
 	GLfloat			glTransformation[16];
 
@@ -50,6 +50,8 @@ typedef enum PartType {
 	
 	Box3			cacheBounds;			// Cached bonuding box of resolved parts, in part's coordinate (that is, _not_ in the coordinates of the underlying model.
 }
+
+@property (strong) NSString * group;		// MLCAD group name or nil
 
 //Directives
 - (void) drawBoundsWithColor:(LDrawColor *)drawingColor;

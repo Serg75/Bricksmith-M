@@ -121,6 +121,7 @@ int floatNearGrid(float v, float grid, float epsi)
 		 parentGroup:(dispatch_group_t)parentGroup
 {
 	NSString    *workingLine    = [lines objectAtIndex:range.location];
+	NSString    *prevLine       = range.location > 0 ? [lines objectAtIndex:range.location - 1] : nil;
 	NSString    *parsedField    = nil;
 	Matrix4     transformation  = IdentityMatrix4;
 	LDrawColor  *parsedColor    = nil;
@@ -202,6 +203,8 @@ int floatNearGrid(float v, float grid, float epsi)
 			[self setDisplayName:[workingLine stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]
 						   parse:YES
 						 inGroup:parentGroup];
+			
+			self.group = [LDrawUtilities parseGroup:prevLine];
 			
 			// Debug check: full part resolution isn't thread-safe so make sure we haven't run it by accident here!
 			assert(cacheType == PartTypeUnresolved);
@@ -612,9 +615,15 @@ int floatNearGrid(float v, float grid, float epsi)
 //==============================================================================
 - (NSString *) write
 {
-	Matrix4 transformation = [self transformationMatrix];
-
-	return [NSString stringWithFormat:
+	NSString        *CRLF           = [NSString CRLF];
+	Matrix4			transformation	= [self transformationMatrix];
+	NSMutableString *written 		= [NSMutableString string];
+	
+	if (self.group.length > 0) {
+		[written appendFormat:GROUP_WRITE_PATTERN, self.group, CRLF];
+	}
+	
+	[written appendFormat:
 				@"1 %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@",
 				[LDrawUtilities outputStringForColor:self->color],
 				
@@ -636,6 +645,8 @@ int floatNearGrid(float v, float grid, float epsi)
 				
 				displayName
 			];
+	return written;
+	
 }//end write
 
 #pragma mark -
@@ -652,8 +663,12 @@ int floatNearGrid(float v, float grid, float epsi)
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	return [[PartLibrary sharedPartLibrary] descriptionForPart:self];
-	
+	NSString *description = [[PartLibrary sharedPartLibrary] descriptionForPart:self];
+	if (self.group.length > 0) {
+		description = [NSString stringWithFormat:@"[%@] %@", self.group, description];
+	}
+	return description;
+
 }//end browsingDescription
 
 //========== inspectorClassName ================================================

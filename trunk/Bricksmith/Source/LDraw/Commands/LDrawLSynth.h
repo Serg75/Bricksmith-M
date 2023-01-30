@@ -69,6 +69,8 @@ typedef enum
     Box3			 cachedBounds;		// cached bounds of the enclosed directives
 }
 
+@property (strong) NSString * group;        // MLCAD group name or nil
+
 // Accessors
 - (void) setLsynthClass:(int)lsynthClass;
 - (int) lsynthClass;
@@ -87,7 +89,7 @@ typedef enum
 - (void)colorSelectedSynthesizedParts:(BOOL)yesNo;
 - (NSString *)determineIconName:(LDrawDirective *)directive;
 - (NSMutableArray *)prepareAutoHullData;
--(int)synthesizedPartsCount;
+- (int)synthesizedPartsCount;
 
 
 + (BOOL) lineIsLSynthBeginning:(NSString*)line;

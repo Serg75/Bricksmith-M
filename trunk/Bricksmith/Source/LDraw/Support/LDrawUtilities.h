@@ -17,6 +17,9 @@
 @class LDrawPart;
 
 
+static NSString * const		GROUP_WRITE_PATTERN		= @"0 MLCAD BTG %@%@";
+static NSString * const		GROUP_REGEX_PATTERN		= @"0\\s+MLCAD\\s+BTG\\s+(\\S+)";
+
 // Viewing Angle
 typedef enum
 {
@@ -56,6 +59,7 @@ typedef enum
 + (NSString *) scanQuotableToken:(NSScanner *)scanner;
 + (NSString *) stringFromFile:(NSString *)path;
 + (NSString *) stringFromFileData:(NSData *)fileData;
++ (NSString *) parseGroup:(NSString *)line;
 
 // Writing
 + (NSString *) outputStringForColor:(LDrawColor *)color;

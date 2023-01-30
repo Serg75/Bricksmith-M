@@ -178,6 +178,7 @@
 - (IBAction) snapSelectionToGridY:(id)sender;
 - (IBAction) snapSelectionToGridZ:(id)sender;
 - (IBAction) mirroredSelectionByX:(id)sender;
+- (IBAction) setGroup:(id)sender;
 
 // - Models menu
 - (IBAction) addModelClicked:(id)sender;

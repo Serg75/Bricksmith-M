@@ -224,6 +224,8 @@
 		9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
 		9506E0F118A3F4130006CE9C /* SearchPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9506E0EF18A3F4130006CE9C /* SearchPanelController.m */; };
 		9506E0FC18AA74BE0006CE9C /* SearchPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9506E0FE18AA74BE0006CE9C /* SearchPanel.xib */; };
+		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
+		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
 		95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
 		95C0387228BFFF86005C6346 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
 		95D8939316550B6400AA055B /* Legonian Ruler.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 95D8939216550B6400AA055B /* Legonian Ruler.pdf */; };
@@ -544,6 +546,8 @@
 		9506E0EE18A3F4130006CE9C /* SearchPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SearchPanelController.h; sourceTree = "<group>"; };
 		9506E0EF18A3F4130006CE9C /* SearchPanelController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SearchPanelController.m; sourceTree = "<group>"; };
 		9506E0FD18AA74BE0006CE9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/SearchPanel.xib; sourceTree = "<group>"; };
+		957B9724294D308D007EF76C /* LDrawObjectWithValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawObjectWithValue.h; sourceTree = "<group>"; };
+		957B9725294D308D007EF76C /* LDrawObjectWithValue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawObjectWithValue.m; sourceTree = "<group>"; };
 		95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawHighResPrimitives.h; sourceTree = "<group>"; };
 		95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawHighResPrimitives.m; sourceTree = "<group>"; };
 		95D8939216550B6400AA055B /* Legonian Ruler.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Legonian Ruler.pdf"; sourceTree = "<group>"; };
@@ -649,6 +653,8 @@
 				95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */,
 				0BED4742136D30C10098D353 /* LDrawKeywords.h */,
 				73772480B291C29D1B0D13B4 /* LDrawMovableDirective.h */,
+				957B9724294D308D007EF76C /* LDrawObjectWithValue.h */,
+				957B9725294D308D007EF76C /* LDrawObjectWithValue.m */,
 				0BDE0EE91371063600FDB8DB /* LDrawPathNames.h */,
 				0BDE0EEF1371070600FDB8DB /* LDrawPaths.h */,
 				0BDE0EF01371070600FDB8DB /* LDrawPaths.m */,
@@ -1132,6 +1138,7 @@
 				0B2DD14A0CD810DC0093E8E5 /* PartBrowserTableView.h in Headers */,
 				0B0B6CCD2787D87800F6E225 /* PartCatalogBuilder.h in Headers */,
 				0B2DD14E0CD810F20093E8E5 /* BezierPathCategory.h in Headers */,
+				957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */,
 				0B7588D80D8DC4DD00357703 /* ColorLibrary.h in Headers */,
 				0B9907D80DDD540D003F6B13 /* LDrawColor.h in Headers */,
 				0B76F2F90E74CC1700349D03 /* InspectionStep.h in Headers */,
@@ -1400,6 +1407,7 @@
 				D6EDB9C9164DF28100B4062B /* LDrawShaderLoader.m in Sources */,
 				D6EDBB4816508D7200B4062B /* LDrawBDPAllocator.m in Sources */,
 				D6EDBC261650B9E200B4062B /* LDrawDisplayList.m in Sources */,
+				957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */,
 				D6C0C5D016DABE70007E4266 /* RelatedParts.m in Sources */,
 				73772F8E91836860E4330407 /* LDrawLSynthDirective.m in Sources */,
 				737726E8FC931A7828531671 /* ComputationalGeometry.m in Sources */,

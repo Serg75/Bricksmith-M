@@ -259,7 +259,8 @@ typedef enum MenuTags
 	showPieceMenuTag				= 502,
 	snapToGridMenuTag				= 503,
 	gotoModelMenuTag				= 504,
-	
+	setGroupMenuTag					= 510,
+
 	// Models Menu
 	modelsMenuTag					= 6,
 	addModelMenuTag					= 601,
