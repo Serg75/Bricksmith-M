@@ -88,6 +88,7 @@
          parentGroup:(dispatch_group_t)parentGroup
 {
     NSString          *currentLine         = nil;
+	NSString          *prevLine            = range.location > 0 ? [lines objectAtIndex:range.location - 1] : nil;
     Class              CommandClass        = Nil;
     NSRange            commandRange        = range;
     NSUInteger         lineIndex           = 0;
@@ -98,6 +99,8 @@
 
     if(self)
     {
+		self.group = [LDrawUtilities parseGroup:prevLine];
+
         lineIndex = range.location;
 
         while(lineIndex < NSMaxRange(range))
@@ -180,6 +183,9 @@
                                                                      maxIndex:NSMaxRange(range) - 1];
 
                 LDrawDirective *newDirective = [[CommandClass alloc] initWithLines:lines inRange:commandRange parentGroup:parentGroup];
+				if ([newDirective isKindOfClass:[LDrawPart class]]) {
+					((LDrawPart *)newDirective).group = nil;
+				}
                 [newDirective setEnclosingDirective:self];
                 [newDirective addObserver:self];
 
@@ -194,6 +200,16 @@
                 }
             }
 
+			//
+			// 0 MLCAD BTG <GROUP_NAME>
+			//
+			
+			else if ([currentLine isMatchedByRegex:GROUP_REGEX_PATTERN]) {
+				
+				// Skip group directive because we handle it for header
+				
+			}
+			
             //
             // Unrecognized or inappropriate directive at this point
             //
@@ -588,6 +604,10 @@
     
     // Start
 
+	if (self.group.length > 0) {
+		[written appendFormat:GROUP_WRITE_PATTERN, self.group, CRLF];
+	}
+
     [written appendFormat:@"0 SYNTH BEGIN %@ %d%@", [self lsynthType], (int)[self->color colorCode], CRLF];
     [written appendFormat:@"0 SYNTH %@%@", lsynthVisibility, CRLF];
 
@@ -606,10 +626,16 @@
         [written appendString:@"0 SYNTH SYNTHESIZED BEGIN"];
         [written appendString:CRLF];
         for (LDrawPart *part in self->synthesizedParts) {
+			if (self.group.length > 0) {
+				[written appendFormat:GROUP_WRITE_PATTERN, self.group, CRLF];
+			}
+
             // Parts aren't smart enough to know that they're temporarily coloured differently
             // during Synth part selection, so we force the parent color in.  It's reset when the
             // part selection changes, anyway.
-            [part setLDrawColor:self->color];
+			if ([part isKindOfClass:[LDrawPart class]]) {
+				[part setLDrawColor:self->color];
+			}
             [written appendString:[part write]];
             [written appendString:CRLF];
         }
@@ -649,6 +675,10 @@
     // TODO: allow for single-piece objects like tubes/string etc.  Meanwhile just show the part type
     // The part type's <fill> param (FIXED or STRETCH( should serve in deciding this.
     //return [NSString stringWithFormat:@"%@ (%i pieces)", self->synthType, [synthesizedParts count]];
+	
+	if (self.group.length > 0) {
+		description = [NSString stringWithFormat:@"[%@] %@", self.group, description];
+	}
     return description;
 
 }//end browsingDescription
@@ -1293,7 +1323,9 @@
 
     // Recolor the synthesized parts
     for (LDrawPart *part in self->synthesizedParts) {
-        [part setLDrawColor:theColor];
+		if ([part isKindOfClass:[LDrawPart class]]) {
+			[part setLDrawColor:theColor];
+		}
     }
 
 } //end colorSelectedSynthesizedParts:

@@ -24,6 +24,8 @@
 #import "LDrawTriangle.h"
 #import "PartLibrary.h"
 #import "LDrawLSynth.h"
+#import "RegexKitLite.h"
+
 
 static BOOL                 ColumnizesOutput    = NO;
 static NSString				*defaultAuthor		= @"anonymous";
@@ -392,6 +394,23 @@ static NSString				*defaultAuthor		= @"anonymous";
 	return fileString;
 	
 }//end stringFromFileData:
+
+
+//---------- parseGroup: ---------------------------------------------[static]--
+//
+// Purpose:        Reads MLCAD group meta command
+//
+//------------------------------------------------------------------------------
++ (NSString *) parseGroup:(NSString *)line
+{
+	// 0 MLCAD BTG <GROUP_NAME>
+	NSArray *matches = [line captureComponentsMatchedByRegex:GROUP_REGEX_PATTERN];
+	if (matches.count == 2) {
+		return matches[1];
+	}
+	
+	return nil;
+}//end parseGroup:
 
 
 #pragma mark -

@@ -38,6 +38,7 @@
 #import "LDrawUtilities.h"
 #import "StringCategory.h"
 #import "LDrawLSynthDirective.h"
+#import "RegexKitLite.h"
 
 
 @implementation LDrawStep
@@ -168,6 +169,13 @@
 		currentLine = [lines objectAtIndex:lineIndex];
 		if([currentLine length] > 0)
 		{
+			if ([currentLine isMatchedByRegex:GROUP_REGEX_PATTERN]) {
+				
+				// Skip group directive because we handle it for header
+				lineIndex += 1;
+				continue;
+			}
+			
 			CommandClass = [LDrawUtilities classForDirectiveBeginningWithLine:currentLine];
 			commandRange = [CommandClass rangeOfDirectiveBeginningAtIndex:lineIndex
 																  inLines:lines

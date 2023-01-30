@@ -44,6 +44,7 @@
 #import "LDrawLSynthDirective.h"
 #import "LDrawModel.h"
 #import "LDrawMPDModel.h"
+#import "LDrawObjectWithValue.h"
 #import "LDrawPart.h"
 #import "LDrawQuadrilateral.h"
 #import "LDrawStep.h"
@@ -57,6 +58,7 @@
 #import "MovePanel.h"
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
+#import "PartLibrary.h"
 #import "PartReport.h"
 #import "PartSpecific.h"
 #import "PieceCountPanel.h"
@@ -3005,6 +3007,60 @@ void AppendChoicesToNewItem(
 }//end mirroredSelectionByAxis:
 
 
+//========== setGroup: =========================================================
+//
+// Purpose:		Set/edit MLCAD group
+//
+//==============================================================================
+- (IBAction) setGroup:(id)sender
+{
+	NSCharacterSet				*whitespaceCharacterSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+	NSArray						*selectedObjects		= [self selectedObjects];
+	NSMutableSet<NSString *>	*groups					= [NSMutableSet set];
+	LDrawObjectWithValue		*objectWithGroup;
+	
+	for (id object in selectedObjects) {
+		if ([object isKindOfClass:[LDrawDirective class]] && [object respondsToSelector:@selector(group)]) {
+			NSString *group = [object group];
+			[groups addObject:group != nil ? group : @""];
+		} else {
+			return;
+		}
+	}
+	
+	NSAlert *alert = [NSAlert new];
+	[alert addButtonWithTitle:NSLocalizedString(@"SetButtonName", nil)];
+	[alert addButtonWithTitle:NSLocalizedString(@"CancelButtonName", nil)];
+	alert.messageText = NSLocalizedString(@"MLCADGroupDialogMessage", nil);
+    alert.informativeText = NSLocalizedString(@"MLCADGroupDialogInformative", nil);
+	if (groups.count <= 1) {
+		NSTextField *txt = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 240, 24)];
+		txt.stringValue = groups.anyObject;
+		alert.accessoryView = txt;
+	} else {
+		NSComboBox *cmb = [[NSComboBox alloc] initWithFrame:NSMakeRect(0, 0, 240, 24)];
+		[cmb addItemsWithObjectValues:[groups.allObjects filteredArrayUsingPredicate:
+									   [NSPredicate predicateWithFormat:@"SELF.length > 0"]]];
+		alert.accessoryView = cmb;
+	}
+	NSModalResponse responce = [alert runModal];
+	if (responce == NSAlertFirstButtonReturn) {
+		NSString *group = [[((id)alert.accessoryView) stringValue]
+						   stringByTrimmingCharactersInSet:whitespaceCharacterSet];
+		NSMutableArray *directivesWithNewGroup = [NSMutableArray array];
+		for (id object in selectedObjects) {
+			if ([object isKindOfClass:[LDrawDirective class]] && [object respondsToSelector:@selector(group)]) {
+				if (![group isEqualToString:[object group]]) {
+					objectWithGroup = [[LDrawObjectWithValue alloc] initWithObject:object value:group];
+					[directivesWithNewGroup addObject:objectWithGroup];
+				}
+			}
+		}
+		[self setGroupForDirectives:directivesWithNewGroup];
+	}
+	
+}//end setGroup:
+
 #pragma mark -
 #pragma mark Models Menu
 
@@ -4062,6 +4118,37 @@ void AppendChoicesToNewItem(
 	[part noteNeedsDisplay];
 	
 }//end setTransformation:forPart:
+
+
+//========== setGroupForDirectives: ============================================
+//
+// Purpose:		Undo-aware call to set the MLCAD group.
+//
+//==============================================================================
+- (void) setGroupForDirectives:(NSArray *)directivesAndGroups
+{
+	NSUndoManager			*undoManager			= [self undoManager];
+	NSMutableArray			*directivesAndOldGroups = [NSMutableArray array];
+	LDrawObjectWithValue	*directiveWithNewGroup;
+	LDrawObjectWithValue	*directiveWithOldGroup;
+	
+	if (directivesAndGroups.count == 0) {
+		return;
+	}
+
+	for (directiveWithNewGroup in directivesAndGroups) {
+		LDrawDirective *directive = directiveWithNewGroup.object;
+		NSString *oldGroup = [directive performSelector:@selector(group)];
+		directiveWithOldGroup = [[LDrawObjectWithValue alloc] initWithObject:directive value:oldGroup != nil ? oldGroup : @""];
+		[directivesAndOldGroups addObject:directiveWithOldGroup];
+
+		[directive performSelector:@selector(setGroup:) withObject:directiveWithNewGroup.value];
+	}
+	[[undoManager prepareWithInvocationTarget:self] setGroupForDirectives:directivesAndOldGroups];
+	[[undoManager prepareWithInvocationTarget:fileContentsOutline] reloadData];
+	[undoManager setActionName:NSLocalizedString(@"UndoSetGroup", nil)];
+	
+}//end setGroupForDirectives:
 
 
 #pragma mark -
@@ -5621,7 +5708,25 @@ void AppendChoicesToNewItem(
 		case gotoModelMenuTag:
 			enable = (selectedPart != nil && [selectedItems count] == 1);
 			break;		
-				
+			
+		case setGroupMenuTag:
+			if (selectedItems.count > 0)
+			{
+				enable = YES;
+				for (id directive in self->selectedDirectives)
+				{
+					if (![directive isKindOfClass:[LDrawDirective class]] ||
+						![directive respondsToSelector:@selector(group)])
+					{
+						enable = NO;
+						break;
+					}
+				}
+			}
+			else
+				enable = NO;
+			break;
+
 		////////////////////////////////////////
 		//
 		// Model Menu
