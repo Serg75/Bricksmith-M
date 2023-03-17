@@ -64,3 +64,6 @@ xcuserdata
 ## gradle files
 gradlew.bat
 .gradle/
+
+# Ignored stuff
+ignore
