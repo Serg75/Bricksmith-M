@@ -37,7 +37,7 @@
 #pragma mark ACTIONS
 #pragma mark -
 
-//========== finishedEditing: ==================================================
+//========== commitChanges: ====================================================
 //
 // Purpose:		Called in response to the conclusion of editing in the palette.
 //
@@ -48,7 +48,7 @@
 	
 	NSString *newCommand = [commandField stringValue];
 	
-	[representedObject setStringValue:newCommand];
+	[representedObject setCommandString:newCommand];
 	
 	[super commitChanges:sender];
 	
@@ -67,7 +67,7 @@
 {
 	LDrawMetaCommand *representedObject = [self object];
 
-	[commandField setStringValue:[representedObject stringValue]];
+	[commandField setStringValue:[representedObject commandString]];
 	
 	[super revert:sender];
 	
@@ -84,7 +84,7 @@
 - (IBAction) commandFieldChanged:(id)sender
 {
 	NSString *newCommand	= [commandField stringValue];
-	NSString *oldCommand	= [[self object] stringValue];
+	NSString *oldCommand	= [[self object] commandString];
 	
 	//If the values really did change, then update.
 	if([newCommand isEqualToString:oldCommand] == NO)

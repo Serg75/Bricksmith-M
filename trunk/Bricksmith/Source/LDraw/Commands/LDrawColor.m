@@ -179,6 +179,22 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 }//end copyWithZone:
 
 
+//---------- metaCommandInstanceByMarker:scanner: --------------------[static]--
+///
+/// @abstract	Creates LDrawColor instance if we have proper command marker.
+///
+//------------------------------------------------------------------------------
++ (LDrawMetaCommand *) metaCommandInstanceByMarker:(NSString *)ldrawMarker scanner:(NSScanner *)scanner
+{
+	if([ldrawMarker isEqualToString:LDRAW_COLOR_DEFINITION])
+	{
+		return [[LDrawColor alloc] init];
+	}
+	return nil;
+	
+}//end metaCommandInstanceByMarker:scanner:
+
+
 //========== finishParsing: ====================================================
 //
 // Purpose:		-[LDrawMetaCommand initWithLines:inRange:] is 

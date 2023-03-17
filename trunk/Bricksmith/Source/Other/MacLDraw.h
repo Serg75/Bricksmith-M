@@ -51,6 +51,7 @@
 #define SYNTAX_COLOR_PARTS_KEY						@"Syntax Color Parts"
 #define SYNTAX_COLOR_PRIMITIVES_KEY					@"Syntax Color Primitives"
 #define SYNTAX_COLOR_STEPS_KEY						@"Syntax Color Steps"
+#define SYNTAX_COLOR_REMOVE_GROUP_KEY				@"Syntax Color Remove Group"
 #define SYNTAX_COLOR_UNKNOWN_KEY					@"Syntax Color Unknown"
 #define TOOL_PALETTE_HIDDEN							@"Tool Palette Hidden"
 #define VIEWPORTS_EXPAND_TO_AVAILABLE_SIZE			@"ViewportsExpandToAvailableSize"

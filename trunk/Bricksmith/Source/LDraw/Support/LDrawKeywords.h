@@ -69,4 +69,10 @@
 #define LSYNTH_END                              @"END"
 #define LSYNTH_SYNTHESIZED                      @"SYNTHESIZED"
 
+
+// LPub
+static NSString * const	LPUB_COMMAND			= @"!LPUB";
+static NSString * const	LPUB_REMOVE_GROUP_1		= @"REMOVE";
+static NSString * const	LPUB_REMOVE_GROUP_2		= @"GROUP";
+
 #endif

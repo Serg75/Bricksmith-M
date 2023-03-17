@@ -965,6 +965,7 @@ PreferencesDialogController *preferencesDialog = nil;
 																	 blue:128./ 255
 																    alpha:1.0 ];
 	NSColor				*commentsColor		= [NSColor systemGreenColor];
+	NSColor				*removeGroupColor	= [NSColor systemRedColor];
 	NSColor				*unknownColor		= [NSColor systemGrayColor];
 	
 	//
@@ -994,6 +995,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:partsColor]		forKey:SYNTAX_COLOR_PARTS_KEY];
 	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:primitivesColor]	forKey:SYNTAX_COLOR_PRIMITIVES_KEY];
 	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:commentsColor]	forKey:SYNTAX_COLOR_COMMENTS_KEY];
+	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:removeGroupColor]	forKey:SYNTAX_COLOR_REMOVE_GROUP_KEY];
 	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:colorsColor]		forKey:SYNTAX_COLOR_COLORS_KEY];
 	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:unknownColor]		forKey:SYNTAX_COLOR_UNKNOWN_KEY];
 	

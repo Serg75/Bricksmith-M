@@ -51,6 +51,8 @@
 #import "LDrawTriangle.h"
 #import "LDrawUtilities.h"
 #import "LDrawViewerContainer.h"
+#import "LPubCommand.h"
+#import "LPubRemoveGroup.h"
 #import "LSynthConfiguration.h"
 #import "MacLDraw.h"
 #import "MinifigureDialogController.h"
@@ -3399,13 +3401,14 @@ void AppendChoicesToNewItem(
 	[self addStepComponent:newComment parent:nil index:NSNotFound];
 	
 	[undoManager setActionName:NSLocalizedString(@"UndoAddComment", nil)];
-	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newComment]];		
+	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newComment]];
+	
 }//end addCommentClicked:
 
 
 //========== addRawCommandClicked: =============================================
 //
-// Purpose:		Adds a new comment primitive to the currently-displayed model.
+// Purpose:		Adds a new raw command to the currently-displayed model.
 //
 //==============================================================================
 - (IBAction) addRawCommandClicked:(id)sender
@@ -3417,7 +3420,46 @@ void AppendChoicesToNewItem(
 	
 	[undoManager setActionName:NSLocalizedString(@"UndoAddMetaCommand", nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newCommand]];
+	
 }//end addCommentClicked:
+
+
+//========== addLPubCommandClicked: ============================================
+//
+// Purpose:		Adds a new generic LPub command to the currently-displayed model.
+//
+//==============================================================================
+- (IBAction) addLPubCommandClicked:(id)sender
+{
+	LPubCommand		*newCommand		= [[LPubCommand alloc] init];
+	NSUndoManager	*undoManager	= [self undoManager];
+	
+	[self addStepComponent:newCommand parent:nil index:NSNotFound];
+	
+	[undoManager setActionName:NSLocalizedString(@"UndoAddLPubCommand", nil)];
+	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newCommand]];
+	
+}//end addLPubCommandClicked:
+
+
+//========== addRemoveGroupClicked: ============================================
+//
+// Purpose:		Adds a new LPub Remove Group command to the currently-displayed
+//				model.
+//
+//==============================================================================
+- (IBAction) addRemoveGroupClicked:(id)sender
+{
+	LPubRemoveGroup	*newCommand		= [[LPubRemoveGroup alloc] init];
+	NSUndoManager	*undoManager	= [self undoManager];
+	
+	newCommand.groupName = @"group name";
+	[self addStepComponent:newCommand parent:nil index:NSNotFound];
+	
+	[undoManager setActionName:NSLocalizedString(@"UndoAddRemoveGroup", nil)];
+	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newCommand]];
+	
+}//end addRemoveGroupClicked:
 
 
 //========== addRelatedPartClicked: ============================================
@@ -3668,15 +3710,15 @@ void AppendChoicesToNewItem(
 
         // Set direction based on menuItem tag
         if ([(NSMenuItem *)sender tag] == lsynthInsertINSIDETag) {
-            [direction setStringValue:@"INSIDE"];
+            [direction setCommandString:@"INSIDE"];
 			undoName = NSLocalizedString(@"UndoAddLSynthInside", nil);
         }
         else if ([(NSMenuItem *)sender tag] == lsynthInsertOUTSIDETag) {
-            [direction setStringValue:@"OUTSIDE"];
+            [direction setCommandString:@"OUTSIDE"];
 			undoName = NSLocalizedString(@"UndoAddLSynthOutside", nil);
         }
         else if ([(NSMenuItem *)sender tag] == lsynthInsertCROSSTag) {
-            [direction setStringValue:@"CROSS"];
+            [direction setCommandString:@"CROSS"];
 			undoName = NSLocalizedString(@"UndoAddLSynthCross", nil);
         }
 
@@ -6628,6 +6670,9 @@ void AppendChoicesToNewItem(
 	
 	else if([item isKindOfClass:[LDrawColor class]])
 		colorKey = SYNTAX_COLOR_COLORS_KEY;
+	
+	else if([item isKindOfClass:[LPubRemoveGroup class]])
+		colorKey = SYNTAX_COLOR_REMOVE_GROUP_KEY;
 	
 	else
 		colorKey = SYNTAX_COLOR_UNKNOWN_KEY;

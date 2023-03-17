@@ -224,10 +224,27 @@
 		9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
 		9506E0F118A3F4130006CE9C /* SearchPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9506E0EF18A3F4130006CE9C /* SearchPanelController.m */; };
 		9506E0FC18AA74BE0006CE9C /* SearchPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9506E0FE18AA74BE0006CE9C /* SearchPanel.xib */; };
+		9533FA112992F4E30032FEBF /* LPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */; };
+		9533FA122992F4E30032FEBF /* LPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */; };
+		9533FA172993EB480032FEBF /* LPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA152993EB480032FEBF /* LPubCommand.h */; };
+		9533FA182993EB480032FEBF /* LPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA162993EB480032FEBF /* LPubCommand.m */; };
+		9543FF8529C52CB400564638 /* InspectorLPubCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */; };
+		955459F42996FDA400E23691 /* LDrawDocumentTree.h in Headers */ = {isa = PBXBuildFile; fileRef = 955459F22996FDA400E23691 /* LDrawDocumentTree.h */; };
+		955459F52996FDA400E23691 /* LDrawDocumentTree.m in Sources */ = {isa = PBXBuildFile; fileRef = 955459F32996FDA400E23691 /* LDrawDocumentTree.m */; };
+		95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */; };
 		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
 		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
+		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
+		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
 		95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
 		95C0387228BFFF86005C6346 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
+		95D021B029AEA5D3001F2B4D /* ScannerCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */; };
+		95D021B129AEA5D3001F2B4D /* ScannerCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */; };
+		95D021F829B1F533001F2B4D /* ScannerCategory_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */; };
+		95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */; };
+		95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D0223C29B68FE0001F2B4D /* MockArchiver.m */; };
+		95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
+		95D115AC299E5D74008051BF /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
 		95D8939316550B6400AA055B /* Legonian Ruler.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 95D8939216550B6400AA055B /* Legonian Ruler.pdf */; };
 		95D893AC165532B100AA055B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; };
 		95D893B816555F3E00AA055B /* LSynthConfiguration.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893B616555F3E00AA055B /* LSynthConfiguration.h */; };
@@ -236,8 +253,14 @@
 		95D893CB16569CFD00AA055B /* LDrawLSynth.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D893C916569CFD00AA055B /* LDrawLSynth.m */; };
 		95DC1D1F292993CC00915853 /* PartSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DC1D1D292993CC00915853 /* PartSpecific.h */; };
 		95DC1D20292993CC00915853 /* PartSpecific.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DC1D1E292993CC00915853 /* PartSpecific.m */; };
+		95DFF98E298F165300E7BF76 /* InspectionLPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */; };
+		95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
+		95DFF9B12991B0E900E7BF76 /* ClassInspector.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF9AF2991B0E900E7BF76 /* ClassInspector.h */; };
+		95DFF9B22991B0E900E7BF76 /* ClassInspector.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF9B02991B0E900E7BF76 /* ClassInspector.m */; };
 		95F759A127BC67AD00CFE5ED /* FastSet.m in Sources */ = {isa = PBXBuildFile; fileRef = 95F7599F27BC67AD00CFE5ED /* FastSet.m */; };
 		95F759A227BC67AD00CFE5ED /* FastSet.h in Headers */ = {isa = PBXBuildFile; fileRef = 95F759A027BC67AD00CFE5ED /* FastSet.h */; };
+		95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
+		95FBD68129C4A5A900E84D2F /* ClassInspector_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */; };
 		D608724816ED61F500828B4E /* MeshSmooth.h in Headers */ = {isa = PBXBuildFile; fileRef = D608724616ED61F500828B4E /* MeshSmooth.h */; };
 		D608724916ED61F500828B4E /* MeshSmooth.c in Sources */ = {isa = PBXBuildFile; fileRef = D608724716ED61F500828B4E /* MeshSmooth.c */; };
 		D619130117F004A300B5DF44 /* LDrawGLCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */; };
@@ -278,6 +301,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
 			remoteInfo = AMSProgressBar;
+		};
+		95D021F129B1F482001F2B4D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2A37F4A9FDCFA73011CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8D15AC270486D014006FF6A4;
+			remoteInfo = Bricksmith;
 		};
 		95D893A61655325100AA055B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -546,10 +576,31 @@
 		9506E0EE18A3F4130006CE9C /* SearchPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SearchPanelController.h; sourceTree = "<group>"; };
 		9506E0EF18A3F4130006CE9C /* SearchPanelController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SearchPanelController.m; sourceTree = "<group>"; };
 		9506E0FD18AA74BE0006CE9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/SearchPanel.xib; sourceTree = "<group>"; };
+		9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubRemoveGroup.h; sourceTree = "<group>"; };
+		9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup.m; sourceTree = "<group>"; };
+		9533FA152993EB480032FEBF /* LPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubCommand.h; sourceTree = "<group>"; };
+		9533FA162993EB480032FEBF /* LPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand.m; sourceTree = "<group>"; };
+		9543FF8429C52CB400564638 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorLPubCommand.xib; sourceTree = "<group>"; };
+		955459F22996FDA400E23691 /* LDrawDocumentTree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDocumentTree.h; sourceTree = "<group>"; };
+		955459F32996FDA400E23691 /* LDrawDocumentTree.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDocumentTree.m; sourceTree = "<group>"; };
+		95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawMetaCommand_Tests.m; sourceTree = "<group>"; };
 		957B9724294D308D007EF76C /* LDrawObjectWithValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawObjectWithValue.h; sourceTree = "<group>"; };
 		957B9725294D308D007EF76C /* LDrawObjectWithValue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawObjectWithValue.m; sourceTree = "<group>"; };
+		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
+		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
+		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
 		95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawHighResPrimitives.h; sourceTree = "<group>"; };
 		95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawHighResPrimitives.m; sourceTree = "<group>"; };
+		95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScannerCategory.h; sourceTree = "<group>"; };
+		95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory.m; sourceTree = "<group>"; };
+		95D021ED29B1F482001F2B4D /* UnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory_Tests.m; sourceTree = "<group>"; };
+		95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand_Tests.m; sourceTree = "<group>"; };
+		95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UnitTests_Prefix.pch; path = UnitTests/Other/UnitTests_Prefix.pch; sourceTree = SOURCE_ROOT; };
+		95D0223B29B68FE0001F2B4D /* MockArchiver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockArchiver.h; sourceTree = "<group>"; };
+		95D0223C29B68FE0001F2B4D /* MockArchiver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockArchiver.m; sourceTree = "<group>"; };
+		95D115A9299E5D74008051BF /* InspectionLPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubCommand.h; sourceTree = "<group>"; };
+		95D115AA299E5D74008051BF /* InspectionLPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubCommand.m; sourceTree = "<group>"; };
 		95D8939216550B6400AA055B /* Legonian Ruler.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Legonian Ruler.pdf"; sourceTree = "<group>"; };
 		95D8939E1655325000AA055B /* LSynth.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = LSynth.xcodeproj; path = ../ThirdParty/LSynth/LSynth.xcodeproj; sourceTree = "<group>"; };
 		95D893AD1655334500AA055B /* lsynth.mpd */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = lsynth.mpd; path = ../../ThirdParty/LSynth/LSynth/lsynth.mpd; sourceTree = "<group>"; };
@@ -559,8 +610,14 @@
 		95D893C916569CFD00AA055B /* LDrawLSynth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawLSynth.m; sourceTree = "<group>"; };
 		95DC1D1D292993CC00915853 /* PartSpecific.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PartSpecific.h; sourceTree = "<group>"; };
 		95DC1D1E292993CC00915853 /* PartSpecific.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PartSpecific.m; sourceTree = "<group>"; };
+		95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubRemoveGroup.h; sourceTree = "<group>"; };
+		95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubRemoveGroup.m; sourceTree = "<group>"; };
+		95DFF9AF2991B0E900E7BF76 /* ClassInspector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ClassInspector.h; sourceTree = "<group>"; };
+		95DFF9B02991B0E900E7BF76 /* ClassInspector.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClassInspector.m; sourceTree = "<group>"; };
 		95F7599F27BC67AD00CFE5ED /* FastSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FastSet.m; sourceTree = "<group>"; };
 		95F759A027BC67AD00CFE5ED /* FastSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastSet.h; sourceTree = "<group>"; };
+		95FBD67C29C46BC100E84D2F /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorRemoveGroup.xib; sourceTree = "<group>"; };
+		95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClassInspector_Tests.m; sourceTree = "<group>"; };
 		D608724616ED61F500828B4E /* MeshSmooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MeshSmooth.h; sourceTree = "<group>"; };
 		D608724716ED61F500828B4E /* MeshSmooth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = MeshSmooth.c; sourceTree = "<group>"; };
 		D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawGLCamera.h; sourceTree = "<group>"; };
@@ -604,6 +661,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		95D021EA29B1F482001F2B4D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -643,6 +707,8 @@
 				D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */,
 				0B1DA5A213172DA700E14960 /* LDrawDirective.h */,
 				0B1DA5A313172DA700E14960 /* LDrawDirective.m */,
+				955459F22996FDA400E23691 /* LDrawDocumentTree.h */,
+				955459F32996FDA400E23691 /* LDrawDocumentTree.m */,
 				0B27CFA81318AA0F005C7E1A /* LDrawDragHandle.h */,
 				0B27CFA91318AA0F005C7E1A /* LDrawDragHandle.m */,
 				D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */,
@@ -684,6 +750,7 @@
 				0BF729AB08AD849300E3DA53 /* General */,
 				0BF729A608AD849300E3DA53 /* Document */,
 				0B6F448807D02F68007B1075 /* Inspector */,
+				95DFF9AA2991AD1F00E7BF76 /* Utilities */,
 			);
 			name = Application;
 			path = Source/Application;
@@ -728,6 +795,10 @@
 				95D893C916569CFD00AA055B /* LDrawLSynth.m */,
 				73772CF1E56647D450E6AAA1 /* LDrawLSynthDirective.h */,
 				737720E867742FB944EB62C7 /* LDrawLSynthDirective.m */,
+				9533FA152993EB480032FEBF /* LPubCommand.h */,
+				9533FA162993EB480032FEBF /* LPubCommand.m */,
+				9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */,
+				9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */,
 			);
 			path = Commands;
 			sourceTree = "<group>";
@@ -764,6 +835,8 @@
 				0B8EBE9B093C102E00D87E0C /* UserDefaultsCategory.m */,
 				0B8EBE9C093C102E00D87E0C /* WindowCategory.h */,
 				0B8EBE9D093C102E00D87E0C /* WindowCategory.m */,
+				95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */,
+				95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */,
 			);
 			name = Categories;
 			path = Source/Categories;
@@ -796,6 +869,10 @@
 				0B76F2F80E74CC1700349D03 /* InspectionStep.m */,
 				73772D9444E1E3B92321011F /* InspectionLSynth.h */,
 				737728C3A3DF6166BE9183ED /* InspectionLSynth.m */,
+				95D115A9299E5D74008051BF /* InspectionLPubCommand.h */,
+				95D115AA299E5D74008051BF /* InspectionLPubCommand.m */,
+				95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */,
+				95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */,
 			);
 			path = Inspector;
 			sourceTree = "<group>";
@@ -919,6 +996,7 @@
 			isa = PBXGroup;
 			children = (
 				8D15AC370486D014006FF6A4 /* Bricksmith.app */,
+				95D021ED29B1F482001F2B4D /* UnitTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -930,6 +1008,7 @@
 				2A37F4ABFDCFA73011CA2CEA /* Classes */,
 				0B6F38FD07C84E79007B1075 /* Categories */,
 				2A37F4B8FDCFA73011CA2CEA /* Resources */,
+				95D021EE29B1F482001F2B4D /* UnitTests */,
 				2A37F4C3FDCFA73011CA2CEA /* Frameworks */,
 				19C28FB0FE9D524F11CA2CBB /* Products */,
 				2BB5975809FEFD250077A885 /* AMSProgressBar.xcodeproj */,
@@ -1022,15 +1101,82 @@
 				0B04E94F1093BB4200E201EE /* InspectorComment.xib */,
 				0B04E9511093BB4200E201EE /* InspectorConditionalLine.xib */,
 				0B04E9531093BB4200E201EE /* InspectorLine.xib */,
+				9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */,
 				0B30C6BD16DC61000023B3A6 /* InspectorLSynth.xib */,
 				0B04E9551093BB4200E201EE /* InspectorMPDModel.xib */,
 				0B04E9571093BB4200E201EE /* InspectorPart.xib */,
 				0B04E9591093BB4200E201EE /* InspectorQuadrilateral.xib */,
+				95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */,
 				0B04E95B1093BB4200E201EE /* InspectorStep.xib */,
-				0B04E95D1093BB4200E201EE /* InspectorTriangle.xib */,
 				0B04E95F1093BB4200E201EE /* InspectorUnknownCommand.xib */,
+				0B04E95D1093BB4200E201EE /* InspectorTriangle.xib */,
 			);
 			name = Inspectors;
+			sourceTree = "<group>";
+		};
+		95D021EE29B1F482001F2B4D /* UnitTests */ = {
+			isa = PBXGroup;
+			children = (
+				95D0223A29B68E59001F2B4D /* Test Support */,
+				95D021FE29B3F8C6001F2B4D /* Other */,
+				95D021F929B3F474001F2B4D /* Classes */,
+				95D021F629B1F4DB001F2B4D /* Categories */,
+			);
+			path = UnitTests;
+			sourceTree = "<group>";
+		};
+		95D021F629B1F4DB001F2B4D /* Categories */ = {
+			isa = PBXGroup;
+			children = (
+				95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */,
+			);
+			path = Categories;
+			sourceTree = "<group>";
+		};
+		95D021F929B3F474001F2B4D /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				95FBD67E29C4A52E00E84D2F /* Application */,
+				95D021FA29B3F4B4001F2B4D /* LDraw */,
+			);
+			path = Classes;
+			sourceTree = "<group>";
+		};
+		95D021FA29B3F4B4001F2B4D /* LDraw */ = {
+			isa = PBXGroup;
+			children = (
+				95D021FB29B3F4BE001F2B4D /* Commands */,
+			);
+			path = LDraw;
+			sourceTree = "<group>";
+		};
+		95D021FB29B3F4BE001F2B4D /* Commands */ = {
+			isa = PBXGroup;
+			children = (
+				95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */,
+				95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */,
+				95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */,
+			);
+			path = Commands;
+			sourceTree = "<group>";
+		};
+		95D021FE29B3F8C6001F2B4D /* Other */ = {
+			isa = PBXGroup;
+			children = (
+				95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */,
+			);
+			path = Other;
+			sourceTree = "<group>";
+		};
+		95D0223A29B68E59001F2B4D /* Test Support */ = {
+			isa = PBXGroup;
+			children = (
+				95D0223B29B68FE0001F2B4D /* MockArchiver.h */,
+				95D0223C29B68FE0001F2B4D /* MockArchiver.m */,
+				95B37A0B29BA81F6008C581E /* MockScanner.h */,
+				95B37A0C29BA81F6008C581E /* MockScanner.m */,
+			);
+			path = "Test Support";
 			sourceTree = "<group>";
 		};
 		95D8939F1655325000AA055B /* Products */ = {
@@ -1039,6 +1185,31 @@
 				95D893A71655325100AA055B /* lsynthcp */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		95DFF9AA2991AD1F00E7BF76 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				95DFF9AF2991B0E900E7BF76 /* ClassInspector.h */,
+				95DFF9B02991B0E900E7BF76 /* ClassInspector.m */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		95FBD67E29C4A52E00E84D2F /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				95FBD67F29C4A56200E84D2F /* Utilities */,
+			);
+			path = Application;
+			sourceTree = "<group>";
+		};
+		95FBD67F29C4A56200E84D2F /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 		D6EDB97F164DEB0000B4062B /* Renderer */ = {
@@ -1093,6 +1264,7 @@
 				0BC6992C08B5719100DAF996 /* LDrawConditionalLine.h in Headers */,
 				0BE49CD025AAB7FF00E96C96 /* LDrawViewerContainer.h in Headers */,
 				0BC6992D08B5719100DAF996 /* LDrawLine.h in Headers */,
+				9533FA112992F4E30032FEBF /* LPubRemoveGroup.h in Headers */,
 				0BC6992E08B5719200DAF996 /* LDrawModel.h in Headers */,
 				0BC6992F08B5719300DAF996 /* LDrawPart.h in Headers */,
 				0BC6993108B5719500DAF996 /* LDrawFile.h in Headers */,
@@ -1114,6 +1286,7 @@
 				0B8EBE5F093C0FAD00D87E0C /* InspectionUnknownCommand.h in Headers */,
 				0B8EBE61093C0FAD00D87E0C /* Inspector.h in Headers */,
 				0B8EBE63093C0FAD00D87E0C /* ObjectInspectionController.h in Headers */,
+				9533FA172993EB480032FEBF /* LPubCommand.h in Headers */,
 				0B8EBE7D093C100100D87E0C /* DialogPanel.h in Headers */,
 				0B8EBE7F093C100100D87E0C /* ExtendedSplitView.h in Headers */,
 				0B8EBE81093C100100D87E0C /* IconTextCell.h in Headers */,
@@ -1126,7 +1299,9 @@
 				0B8EBEA0093C102E00D87E0C /* StringCategory.h in Headers */,
 				0B8EBEA2093C102E00D87E0C /* UserDefaultsCategory.h in Headers */,
 				0B8EBEA4093C102E00D87E0C /* WindowCategory.h in Headers */,
+				95DFF9B12991B0E900E7BF76 /* ClassInspector.h in Headers */,
 				0B25F040093D5F960099D85E /* BricksmithApplication.h in Headers */,
+				95DFF98E298F165300E7BF76 /* InspectionLPubRemoveGroup.h in Headers */,
 				95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */,
 				0B2700870981FCEA0058A7BE /* ToolPalette.h in Headers */,
 				2BF2E3030AB0FC5E0026D5DB /* MovePanel.h in Headers */,
@@ -1143,6 +1318,7 @@
 				0B9907D80DDD540D003F6B13 /* LDrawColor.h in Headers */,
 				0B76F2F90E74CC1700349D03 /* InspectionStep.h in Headers */,
 				0BA24BEA0EFF2A6500BF9915 /* StringUtilities.h in Headers */,
+				955459F42996FDA400E23691 /* LDrawDocumentTree.h in Headers */,
 				0B4F5E110F31632C00355631 /* PartLibraryController.h in Headers */,
 				0B06F7170F633FD2004E7DD7 /* ExtendedTableView.h in Headers */,
 				0B2FADD310196C2E007BA948 /* DonationDialogController.h in Headers */,
@@ -1150,11 +1326,13 @@
 				0BFC4CFD1076F61900293B60 /* ViewportArranger.h in Headers */,
 				0B04EF3710A6A38E00E201EE /* FocusRingView.h in Headers */,
 				0B8C096810BA532F00BEB111 /* OverlayHelperView.h in Headers */,
+				95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */,
 				0B8C097310BA550500BEB111 /* OverlayHelperWindow.h in Headers */,
 				0B8C0A2610BA623700BEB111 /* OverlayViewCategory.h in Headers */,
 				0BE84A1F1300F91F004E7626 /* BricksmithUtilities.h in Headers */,
 				0B1DA5A813172DA700E14960 /* LDrawDirective.h in Headers */,
 				0B1DA5AA13172DA700E14960 /* LDrawUtilities.h in Headers */,
+				95D021B029AEA5D3001F2B4D /* ScannerCategory.h in Headers */,
 				0B27CFAA1318AA0F005C7E1A /* LDrawDragHandle.h in Headers */,
 				0BED4743136D30C10098D353 /* LDrawKeywords.h in Headers */,
 				0BC75339136FC878002568B8 /* PartLibrary.h in Headers */,
@@ -1207,12 +1385,37 @@
 			productReference = 8D15AC370486D014006FF6A4 /* Bricksmith.app */;
 			productType = "com.apple.product-type.application";
 		};
+		95D021EC29B1F482001F2B4D /* UnitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 95D021F329B1F483001F2B4D /* Build configuration list for PBXNativeTarget "UnitTests" */;
+			buildPhases = (
+				95D021E929B1F482001F2B4D /* Sources */,
+				95D021EA29B1F482001F2B4D /* Frameworks */,
+				95D021EB29B1F482001F2B4D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				95D021F229B1F482001F2B4D /* PBXTargetDependency */,
+			);
+			name = UnitTests;
+			productName = UnitTests;
+			productReference = 95D021ED29B1F482001F2B4D /* UnitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		2A37F4A9FDCFA73011CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				TargetAttributes = {
+					95D021EC29B1F482001F2B4D = {
+						CreatedOnToolsVersion = 14.1;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 8D15AC270486D014006FF6A4;
+					};
+				};
 			};
 			buildConfigurationList = 2BB5975109FEFD180077A885 /* Build configuration list for PBXProject "Bricksmith" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -1240,6 +1443,7 @@
 			projectRoot = ..;
 			targets = (
 				8D15AC270486D014006FF6A4 /* Bricksmith */,
+				95D021EC29B1F482001F2B4D /* UnitTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1294,8 +1498,10 @@
 				0B04E9871093BB4200E201EE /* InspectorUnknownCommand.xib in Resources */,
 				0B04E9881093BB4200E201EE /* LDrawDocument.xib in Resources */,
 				0B04E9891093BB4200E201EE /* LDrawGLViewAccessories.xib in Resources */,
+				9543FF8529C52CB400564638 /* InspectorLPubCommand.xib in Resources */,
 				0B04E98A1093BB4200E201EE /* MainMenu.xib in Resources */,
 				0B04E98B1093BB4200E201EE /* MinifigureGenerator.xib in Resources */,
+				95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */,
 				0B04E98C1093BB4200E201EE /* MovePanel.xib in Resources */,
 				0B04E98D1093BB4200E201EE /* PartBrowser.xib in Resources */,
 				0B04E98E1093BB4200E201EE /* PartBrowserAccessories.xib in Resources */,
@@ -1309,6 +1515,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		95D021EB29B1F482001F2B4D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1317,6 +1530,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8D15AC320486D014006FF6A4 /* main.m in Sources */,
+				9533FA122992F4E30032FEBF /* LPubRemoveGroup.m in Sources */,
+				95D021B129AEA5D3001F2B4D /* ScannerCategory.m in Sources */,
 				0B6F384007C81FEF007B1075 /* LDrawFile.m in Sources */,
 				95F759A127BC67AD00CFE5ED /* FastSet.m in Sources */,
 				0B6F384407C82025007B1075 /* LDrawMPDModel.m in Sources */,
@@ -1341,19 +1556,23 @@
 				0BC699CE08B93A0500DAF996 /* DimensionsPanel.m in Sources */,
 				0B356AF008D385B900695EEB /* PieceCountPanel.m in Sources */,
 				0B8EBE52093C0FAD00D87E0C /* InspectionComment.m in Sources */,
+				9533FA182993EB480032FEBF /* LPubCommand.m in Sources */,
 				0B8EBE54093C0FAD00D87E0C /* InspectionConditionalLine.m in Sources */,
 				0B8EBE56093C0FAD00D87E0C /* InspectionLine.m in Sources */,
 				0B8EBE58093C0FAD00D87E0C /* InspectionMPDModel.m in Sources */,
 				0B8EBE5A093C0FAD00D87E0C /* InspectionPart.m in Sources */,
 				0B8EBE5C093C0FAD00D87E0C /* InspectionQuadrilateral.m in Sources */,
+				95D115AC299E5D74008051BF /* InspectionLPubCommand.m in Sources */,
 				0B8EBE5E093C0FAD00D87E0C /* InspectionTriangle.m in Sources */,
 				0B8EBE60093C0FAD00D87E0C /* InspectionUnknownCommand.m in Sources */,
+				95DFF9B22991B0E900E7BF76 /* ClassInspector.m in Sources */,
 				9506E0F118A3F4130006CE9C /* SearchPanelController.m in Sources */,
 				0B8EBE62093C0FAD00D87E0C /* Inspector.m in Sources */,
 				0B8EBE64093C0FAD00D87E0C /* ObjectInspectionController.m in Sources */,
 				0B8EBE7E093C100100D87E0C /* DialogPanel.m in Sources */,
 				0B8EBE80093C100100D87E0C /* ExtendedSplitView.m in Sources */,
 				0B8EBE82093C100100D87E0C /* IconTextCell.m in Sources */,
+				95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */,
 				95DC1D20292993CC00915853 /* PartSpecific.m in Sources */,
 				0B8EBE84093C100100D87E0C /* LDrawColorBar.m in Sources */,
 				0B8EBE86093C100100D87E0C /* LDrawColorCell.m in Sources */,
@@ -1371,6 +1590,7 @@
 				2BF2E3100AB0FC840026D5DB /* MinifigureDialogController.m in Sources */,
 				2BF2E3160AB0FCAB0026D5DB /* MLCadIni.m in Sources */,
 				2BF2E3180AB0FCAB0026D5DB /* TransformerIntMinus1.m in Sources */,
+				955459F52996FDA400E23691 /* LDrawDocumentTree.m in Sources */,
 				0BDC14700B9D0502001D1FF1 /* PartBrowserPanelController.m in Sources */,
 				0B2DD14B0CD810DC0093E8E5 /* PartBrowserTableView.m in Sources */,
 				0B2DD14F0CD810F20093E8E5 /* BezierPathCategory.m in Sources */,
@@ -1420,6 +1640,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		95D021E929B1F482001F2B4D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				95FBD68129C4A5A900E84D2F /* ClassInspector_Tests.m in Sources */,
+				95D021F829B1F533001F2B4D /* ScannerCategory_Tests.m in Sources */,
+				95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */,
+				95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */,
+				95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */,
+				95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */,
+				95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1427,6 +1661,11 @@
 			isa = PBXTargetDependency;
 			name = AMSProgressBar;
 			targetProxy = 2BB5975F09FEFD2E0077A885 /* PBXContainerItemProxy */;
+		};
+		95D021F229B1F482001F2B4D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8D15AC270486D014006FF6A4 /* Bricksmith */;
+			targetProxy = 95D021F129B1F482001F2B4D /* PBXContainerItemProxy */;
 		};
 		95D893AA1655328300AA055B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1676,6 +1915,22 @@
 			name = SearchPanel.xib;
 			sourceTree = "<group>";
 		};
+		9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9543FF8429C52CB400564638 /* English */,
+			);
+			name = InspectorLPubCommand.xib;
+			sourceTree = "<group>";
+		};
+		95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				95FBD67C29C46BC100E84D2F /* English */,
+			);
+			name = InspectorRemoveGroup.xib;
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -1686,6 +1941,7 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
+				ENABLE_TESTABILITY = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../ThirdParty\"",
 					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
@@ -1783,6 +2039,132 @@
 			};
 			name = Release;
 		};
+		95D021F429B1F483001F2B4D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREFIX_HEADER = UnitTests/Other/UnitTests_Prefix.pch;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith.UnitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Bricksmith.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Bricksmith";
+			};
+			name = Debug;
+		};
+		95D021F529B1F483001F2B4D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREFIX_HEADER = UnitTests/Other/UnitTests_Prefix.pch;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith.UnitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Bricksmith.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Bricksmith";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1800,6 +2182,15 @@
 			buildConfigurations = (
 				2BB5975209FEFD180077A885 /* Debug */,
 				2BB5975309FEFD180077A885 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		95D021F329B1F483001F2B4D /* Build configuration list for PBXNativeTarget "UnitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95D021F429B1F483001F2B4D /* Debug */,
+				95D021F529B1F483001F2B4D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -29,6 +29,24 @@
 #pragma mark INITIALIZATION
 #pragma mark -
 
+//---------- metaCommandInstanceByMarker:scanner: --------------------[static]--
+///
+/// @abstract	Creates Comment instance if we have proper command marker.
+///
+//------------------------------------------------------------------------------
++ (LDrawMetaCommand *) metaCommandInstanceByMarker:(NSString *)ldrawMarker scanner:(NSScanner *)scanner
+{
+	if ([ldrawMarker isEqualToString:LDRAW_COMMENT_SLASH] ||
+		[ldrawMarker isEqualToString:LDRAW_COMMENT_WRITE] ||
+		[ldrawMarker isEqualToString:LDRAW_COMMENT_PRINT])
+	{
+		return [[LDrawComment alloc] init];
+	}
+	return nil;
+	
+}//end metaCommandInstanceByMarker:scanner:
+
+
 //========== finishParsing: ====================================================
 //
 // Purpose:		-[LDrawMetaCommand initWithLines:inRange:] is 
@@ -42,17 +60,12 @@
 {
 	NSString	*remainder	= nil;
 
-	// skip to first word of comment
-	[scanner scanCharactersFromSet:[NSCharacterSet whitespaceCharacterSet] intoString:nil];
-	
 	remainder = [[scanner string] substringFromIndex:[scanner scanLocation]];
-	[self setStringValue:remainder];
-//	[self setStringValue:
-//			[lineRemainder stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
+	[self setCommandString:remainder];
 	
 	return YES;
 	
-}//end lineWithDirectiveText
+}//end finishParsing
 
 
 #pragma mark -
@@ -74,7 +87,7 @@
 {
 	return [NSString stringWithFormat:	@"0 %@ %@",
 										LDRAW_COMMENT_SLASH,
-										[self stringValue]	];
+										[self commandString]	];
 }//end write
 
 
@@ -90,7 +103,7 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	return [self stringValue];
+	return [self commandString];
 	
 }//end browsingDescription
 

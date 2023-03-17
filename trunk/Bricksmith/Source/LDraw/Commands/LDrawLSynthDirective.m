@@ -42,13 +42,13 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-    if ([[self stringValue] isEqualToString:@"INSIDE"]) {
+    if ([[self commandString] isEqualToString:@"INSIDE"]) {
         return @"Inside";
     }
-    else if ([[self stringValue] isEqualToString:@"OUTSIDE"]) {
+    else if ([[self commandString] isEqualToString:@"OUTSIDE"]) {
         return @"Outside";
     }
-    else if ([[self stringValue] isEqualToString:@"CROSS"]) {
+    else if ([[self commandString] isEqualToString:@"CROSS"]) {
         return @"Cross";
     }
 
@@ -79,7 +79,7 @@
 //==============================================================================
 - (NSString *) write
 {
-    return [NSString stringWithFormat:	@"0 SYNTH %@", [self stringValue]];
+    return [NSString stringWithFormat:	@"0 SYNTH %@", [self commandString]];
 }//end write
 
 @end

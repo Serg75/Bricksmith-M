@@ -161,7 +161,7 @@
 
                 NSString *direction = [[[currentLine arrayOfCaptureComponentsMatchedByRegex:@"(INSIDE|OUTSIDE|CROSS)"] objectAtIndex:0] objectAtIndex:0];
                 LDrawLSynthDirective *directive = [[LDrawLSynthDirective alloc] init];
-                [directive setStringValue:direction];
+                [directive setCommandString:direction];
                 [[self subdirectives] addObject:directive];
                 [directive setEnclosingDirective:self];
                 [directive addObserver:self];
@@ -1100,7 +1100,7 @@
         // Not on the hull? Then prepend an OUTSIDE
         if (i == 0 && ![hullConstraints containsObject:part]) {
             LDrawLSynthDirective *OUTSIDE = [[LDrawLSynthDirective alloc] init];
-            [OUTSIDE setStringValue:@"OUTSIDE"];
+            [OUTSIDE setCommandString:@"OUTSIDE"];
             [newConstraints addObject:OUTSIDE];
         }
 
@@ -1110,7 +1110,7 @@
             ![hullConstraints containsObject:nextPart]) {
             // generate OUTSIDE
             LDrawLSynthDirective *OUTSIDE = [[LDrawLSynthDirective alloc] init];
-            [OUTSIDE setStringValue:@"OUTSIDE"];
+            [OUTSIDE setCommandString:@"OUTSIDE"];
             [newConstraints addObject:part];
             [newConstraints addObject:OUTSIDE];
         }
@@ -1121,7 +1121,7 @@
                 [hullConstraints containsObject:nextPart]){
             // generate INSIDE
             LDrawLSynthDirective *INSIDE = [[LDrawLSynthDirective alloc] init];
-            [INSIDE setStringValue:@"INSIDE"];
+            [INSIDE setCommandString:@"INSIDE"];
             [newConstraints addObject:part];
             [newConstraints addObject:INSIDE];
         }

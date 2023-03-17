@@ -1,0 +1,15 @@
+//==============================================================================
+//
+// File:		UnitTests_Prefix.pch
+//
+// Purpose:		Prefix header for all source files of the 'UnitTests' target in 
+//				the 'Bricksmith' project 
+//
+// Created by Sergey Slobodenyuk on 2023-03-09.
+//
+//==============================================================================
+
+#ifndef OPEN_GL_HEADER
+	#define OPEN_GL_HEADER		<OpenGL/gl.h>
+	#define OPEN_GL_EXT_HEADER	<OpenGL/glext.h>
+#endif
