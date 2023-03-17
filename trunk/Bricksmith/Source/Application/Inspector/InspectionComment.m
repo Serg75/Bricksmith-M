@@ -48,7 +48,7 @@
 	
 	NSString *newCommand = [commandField stringValue];
 	
-	[representedObject setStringValue:newCommand];
+	[representedObject setCommandString:newCommand];
 	
 	[super commitChanges:sender];
 	
@@ -67,7 +67,7 @@
 {
 	LDrawComment *representedObject = [self object];
 
-	[commandField setStringValue:[representedObject stringValue]];
+	[commandField setStringValue:[representedObject commandString]];
 	
 	[super revert:sender];
 	
@@ -84,7 +84,7 @@
 - (IBAction) commandFieldChanged:(id)sender
 {
 	NSString *newComment	= [commandField stringValue];
-	NSString *oldComment	= [[self object] stringValue];
+	NSString *oldComment	= [[self object] commandString];
 	
 	//If the values really did change, then update.
 	if([newComment isEqualToString:oldComment] == NO)

@@ -406,7 +406,7 @@ static NSString				*defaultAuthor		= @"anonymous";
 	// 0 MLCAD BTG <GROUP_NAME>
 	NSArray *matches = [line captureComponentsMatchedByRegex:GROUP_REGEX_PATTERN];
 	if (matches.count == 2) {
-		return matches[1];
+		return [NSString stringWithString:matches[1]];
 	}
 	
 	return nil;

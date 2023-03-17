@@ -19,11 +19,12 @@
 //==============================================================================
 #import "LDrawMetaCommand.h"
 
+#import "ClassInspector.h"
 #import "LDrawColor.h"
-#import "LDrawComment.h"
-#import "LDrawKeywords.h"
-#import "LDrawTexture.h"
 #import "LDrawUtilities.h"
+
+
+static NSArray<Class>	*subclasses;
 
 
 @implementation LDrawMetaCommand
@@ -33,6 +34,19 @@
 #pragma mark INITIALIZATION
 #pragma mark -
 
+//---------- initialize ----------------------------------------------[static]--
+///
+/// @abstract	Gets knowledge about subclasses.
+///
+//------------------------------------------------------------------------------
++ (void)initialize
+{
+	if (self == [LDrawMetaCommand class]) {
+		subclasses = [ClassInspector firstLevelSubclassesFor:[self class]];
+	}
+}
+
+
 //========== init ==============================================================
 //
 // Purpose:		Initialize an empty command.
@@ -41,7 +55,9 @@
 - (id) init
 {
 	self = [super init];
-	[self setStringValue:@""];
+	if (self) {
+		[self setCommandString:@""];
+	}
 	return self;
 	
 }//end init
@@ -74,7 +90,8 @@
 	NSScanner			*scanner		= [NSScanner scannerWithString:firstLine];
 	int 				lineCode		= 0;
 	BOOL				gotLineCode 	= 0;
-	int 				metaLineStart	= 0;
+	NSUInteger			metaLineStart	= 0;
+	NSUInteger			remainderStart	= 0;
 	
 	[scanner setCharactersToBeSkipped:nil];
 	
@@ -95,21 +112,21 @@
 			// first word might not be a recognized command. It might not even 
 			// be anything. "0\n" is perfectly valid LDraw.
 			[scanner scanCharactersFromSet:[NSCharacterSet whitespaceCharacterSet] intoString:nil];
-			metaLineStart = [scanner scanLocation];
+			metaLineStart = scanner.scanLocation;
 			
 			[scanner scanUpToCharactersFromSet:[NSCharacterSet whitespaceCharacterSet] intoString:&parsedField];
+
+			// skip whitespace
+			[scanner scanCharactersFromSet:[NSCharacterSet whitespaceCharacterSet] intoString:nil];
+
+			remainderStart = scanner.scanLocation;
 		
-			// Comment?
-			if(		[parsedField isEqualToString:LDRAW_COMMENT_SLASH]
-			   ||	[parsedField isEqualToString:LDRAW_COMMENT_WRITE]
-			   ||   [parsedField isEqualToString:LDRAW_COMMENT_PRINT]    )
-			{
-				directive = [[LDrawComment alloc] init];
-			}
-			// Color Definition?
-			else if([parsedField isEqualToString:LDRAW_COLOR_DEFINITION])
-			{
-				directive = [[LDrawColor alloc] init];
+			for (Class subclass in subclasses) {
+				directive = [subclass metaCommandInstanceByMarker:parsedField scanner:scanner];
+				scanner.scanLocation = remainderStart;
+				if (directive) {
+					break;
+				}
 			}
 			
 			// If we recognized the metacommand, use the subclass to finish 
@@ -125,7 +142,7 @@
 				directive = self;
 				NSString *command = [[scanner string] substringFromIndex:metaLineStart];
 		
-				[directive setStringValue:command];
+				directive.commandString = command;
 			}
 		}
 		else if(gotLineCode == NO)
@@ -135,7 +152,7 @@
 			directive = self;
 			NSString *command = [scanner string];
 	
-			[directive setStringValue:command];
+			directive.commandString = command;
 		}
 		else
 		{
@@ -168,7 +185,7 @@
 {
 	self = [super initWithCoder:decoder];
 	
-	commandString	= [decoder decodeObjectForKey:@"commandString"];
+	_commandString	= [decoder decodeObjectForKey:@"commandString"];
 	
 	return self;
 	
@@ -186,7 +203,7 @@
 {
 	[super encodeWithCoder:encoder];
 	
-	[encoder encodeObject:commandString forKey:@"commandString"];
+	[encoder encodeObject:_commandString forKey:@"commandString"];
 	
 }//end encodeWithCoder:
 
@@ -200,11 +217,22 @@
 {
 	LDrawMetaCommand *copied = (LDrawMetaCommand *)[super copyWithZone:zone];
 	
-	[copied setStringValue:[self stringValue]];
+	copied.commandString = self.commandString;
 	
 	return copied;
 	
 }//end copyWithZone:
+
+
+//========== metaCommandInstanceByMarker:scanner: ==============================
+///
+/// @abstract	Subclasses override this method to create their own instance.
+///
+//==============================================================================
++ (LDrawMetaCommand *) metaCommandInstanceByMarker:(NSString *)ldrawMarker scanner:(NSScanner *)scanner
+{
+	return nil;
+}
 
 
 //========== finishParsing: ====================================================
@@ -251,11 +279,8 @@
 //==============================================================================
 - (NSString *) write
 {
-	return [NSString stringWithFormat:
-				@"0 %@",
-				[self stringValue]
-				
-			];
+	return [NSString stringWithFormat: @"0 %@", self.commandString];
+	
 }//end write
 
 #pragma mark -
@@ -270,8 +295,7 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-//	return NSLocalizedString(@"Unknown Metacommand", nil);
-	return commandString;
+	return _commandString;
 	
 }//end browsingDescription
 
@@ -301,32 +325,24 @@
 }//end inspectorClassName
 
 
-#pragma mark -
-#pragma mark ACCESSORS
-#pragma mark -
+// MARK: - ACCESSORS -
 
-//========== setStringValue: ===================================================
-//
-// Purpose:		updates the basic command string.
-//
-//==============================================================================
--(void) setStringValue:(NSString *)newString
+
+//---------- subclassNames--------------------------------------------[static]--
+///
+/// @abstract	Convenient method for debugging and testsing.
+///
+//------------------------------------------------------------------------------
++ (NSArray<NSString *> *)subclassNames
 {
-	commandString = newString;
+	NSMutableArray<NSString *> *result = [NSMutableArray array];
+	[subclasses enumerateObjectsUsingBlock:^(Class  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+			[result addObject:NSStringFromClass(obj)];
+	}];
+	return result;
 	
-}//end setStringValue:
+}//end subclassNames
 
-
-//========== stringValue =======================================================
-//
-// Purpose:		
-//
-//==============================================================================
--(NSString *) stringValue
-{
-	return commandString;
-	
-}//end stringValue
 
 #pragma mark -
 #pragma mark UTILITIES
@@ -342,7 +358,7 @@
 {
 	[super registerUndoActions:undoManager];
 	
-	[[undoManager prepareWithInvocationTarget:self] setStringValue:[self stringValue]];
+	[[undoManager prepareWithInvocationTarget:self] setCommandString:[self commandString]];
 	
 	//[undoManager setActionName:NSLocalizedString(@"UndoAttributesLine", nil)];
 	// (unused for this class; a plain "Undo" will probably be less confusing.)

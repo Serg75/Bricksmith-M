@@ -768,6 +768,18 @@ CA
                                     <action selector="addRawCommandClicked:" target="-1" id="366"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Insert LPub Command" id="ZmF-bh-AYA">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="addLPubCommandClicked:" target="-1" id="3jX-6z-kT3"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Insert Remove Group" id="QHa-yl-8h7">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="addRemoveGroupClicked:" target="-1" id="6H0-4P-my0"/>
+                                </connections>
+                            </menuItem>
                             <menuItem isSeparatorItem="YES" id="356">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>

@@ -16,9 +16,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 @interface LDrawMetaCommand : LDrawDirective
-{
-	NSString		*commandString;
-}
 
 // Initialization
 - (BOOL) finishParsing:(NSScanner *)scanner;
@@ -27,8 +24,7 @@
 - (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor;
 - (NSString *) write;
 
-//Accessors
--(void) setStringValue:(NSString *)newString;
--(NSString *) stringValue;
+// Accessors
+@property (nonatomic) NSString *commandString;
 
 @end
