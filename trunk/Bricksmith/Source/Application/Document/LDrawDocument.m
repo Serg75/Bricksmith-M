@@ -4489,18 +4489,15 @@ void AppendChoicesToNewItem(
 		//
 		// Note we're doing this *before* moving, so that the indexes are 
 		// still correct.
-		NSArray         *rowsToDelete   = nil;
-		NSInteger       doomedIndex     = 0;
-		LDrawDirective  *objectToDelete = nil;
+		NSIndexSet		*rowsToDelete	= nil;
 		
 		//Gather up the objects we'll be removing.
-		rowsToDelete = [pasteboard propertyListForType:LDrawDragSourceRowsPboardType];
-		for(counter = 0; counter < [rowsToDelete count]; counter++)
-		{
-			doomedIndex = [[rowsToDelete objectAtIndex:counter] integerValue];
-			objectToDelete = [outlineView itemAtRow:doomedIndex];
+		rowsToDelete = outlineView.selectedRowIndexes;
+		[rowsToDelete enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL * stop) {
+			NSInteger doomedIndex = idx;
+			LDrawDirective *objectToDelete = [outlineView itemAtRow:doomedIndex];
 			[doomedObjects addObject:objectToDelete];
-		}
+		}];
 		
 		// When rearranging models within a file, don't do "copy X" renaming.
 		renameDuplicateModels = NO;
