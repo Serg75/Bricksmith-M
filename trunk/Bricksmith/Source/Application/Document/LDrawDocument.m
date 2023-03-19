@@ -375,9 +375,10 @@ void AppendChoicesToNewItem(
 			[[self documentContents] setPath:nil];
 
 		//Postflight: find missing and moved parts.
-		[self doMissingPiecesCheck:self];
 		[self doMovedPiecesCheck:self];
 		[self doMissingModelnameExtensionCheck:self];
+		
+		[self doMissingPiecesCheck:self];
 		
 		// Now that all the parts are at their final name, we can optimize.
 //		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
@@ -1492,6 +1493,12 @@ void AppendChoicesToNewItem(
 		[alert addButtonWithTitle:NSLocalizedString(@"OKButtonName", nil)];
 		
 		[alert runModal];
+		
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+			for (LDrawDirective *part in missingParts) {
+				[self selectDirective:part byExtendingSelection:YES];
+			}
+		});
 	}
 	
 }//end doMissingPiecesCheck:
