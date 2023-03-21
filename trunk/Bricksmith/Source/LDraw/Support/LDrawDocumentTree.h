@@ -20,6 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LDrawDocumentTree : NSObject
 
++ (NSArray *)mostInnerDirectives:(NSArray *)objects;
 + (NSSet<NSString *> *) groupsBeforeStep:(LDrawStep *)step;
 
 @end
