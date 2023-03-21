@@ -79,6 +79,5 @@ typedef enum
 + (void) updateNameForMovedPart:(LDrawPart *)movedPart;
 + (ViewOrientationT) viewOrientationForAngle:(Tuple3)rotationAngle;
 + (void) unresolveLibraryParts:(LDrawDirective *)directive;
-+ (NSArray *)mostInnerDirectives:(NSArray *)objects;
 
 @end

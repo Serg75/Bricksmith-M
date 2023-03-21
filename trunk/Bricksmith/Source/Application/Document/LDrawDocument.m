@@ -32,6 +32,7 @@
 #import "LDrawConditionalLine.h"
 #import "LDrawContainer.h"
 #import "LDrawDirective.h"
+#import "LDrawDocumentTree.h"
 #import "LDrawDocumentWindow.h"
 #import "LDrawDragHandle.h"
 #import "LDrawDrawableElement.h"
@@ -4602,7 +4603,7 @@ void AppendChoicesToNewItem(
 	NSInteger		selectedStepIndex	= 0;
 	NSInteger       counter             = 0;
 	
-	selectedObjects = [LDrawUtilities mostInnerDirectives:selectedObjects];
+	selectedObjects = [LDrawDocumentTree mostInnerDirectives:selectedObjects];
 	
 	// This method can be called from LDrawOpenGLView (in which case we already 
 	// have a context we want to use) or it might be called on its own. Since 
