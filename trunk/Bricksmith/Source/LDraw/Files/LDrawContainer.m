@@ -187,7 +187,7 @@
 
 //========== indexOfDirective: =================================================
 //
-// Purpose:		Adds directive into the collection at position index.
+// Purpose:		Returns the directive index within this object.
 //
 //==============================================================================
 - (NSInteger) indexOfDirective:(LDrawDirective *)directive

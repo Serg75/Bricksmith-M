@@ -329,6 +329,7 @@ extern Matrix4	Matrix4ClearTranslation(Matrix4 m);
 extern void		Matrix4Adjoint( Matrix4 *, Matrix4 * );
 extern float	Matrix4x4Determinant( Matrix4 * );
 extern void		Matrix4Print(Matrix4 *matrix);
+extern bool		Matrix4EqualMatrices(Matrix4 *matrix1, Matrix4 *matrix2);
 
 extern bool		DepthOnTriangle(
 						Point3		vert0,

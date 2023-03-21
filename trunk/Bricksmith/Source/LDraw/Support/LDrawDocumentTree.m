@@ -14,6 +14,7 @@
 #import "LDrawStep.h"
 #import "LDrawModel.h"
 #import "LDrawPart.h"
+#import "MatrixMath.h"
 
 @implementation LDrawDocumentTree
 
@@ -64,6 +65,39 @@
 	}
 	return objects;
 }//end mostInnerDirectives
+
+
+//---------- similarDirective:amongObjects: --------------------------[static]--
+///
+/// @abstract	Returns the part that is similar to the given one, or NSNotFound
+///				if there is no such directive or given directive is not a part.
+///
+/// @param 		directive	- given directive which copy we are looking for.
+/// @param 		objects		- we are searching withing this set of objects.
+///
+//------------------------------------------------------------------------------
++ (LDrawDirective *)similarDirective:(LDrawDirective *)directive
+						amongObjects:(id)objects
+{
+	if ([directive isKindOfClass:[LDrawPart class]]) {
+		LDrawPart *part = (LDrawPart *)directive;
+		for (id object in objects) {
+			if ([object isKindOfClass:[LDrawPart class]]) {
+				LDrawPart *p = (LDrawPart *)object;
+				Matrix4 m1 = part.transformationMatrix;
+				Matrix4 m2 = p.transformationMatrix;
+				if (	[part.displayName isEqualToString:p.displayName]
+					&& 	part.LDrawColor == p.LDrawColor
+					&& 	Matrix4EqualMatrices(&m1, &m2))
+				{
+					return object;
+				}
+			}
+		}
+	}
+	return nil;
+	
+}//end similarDirective:amongObjects:
 
 
 //---------- groupsBeforeStep ----------------------------------------[static]--

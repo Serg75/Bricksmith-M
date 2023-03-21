@@ -1775,7 +1775,11 @@ void AppendChoicesToNewItem(
 	NSPasteboard	*pasteboard			= [NSPasteboard generalPasteboard];
 	NSUndoManager	*undoManager		= [self undoManager];
 	
-	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:[self selectedStep] index:NSNotFound];
+	[self pasteFromPasteboard:pasteboard
+		preventNameCollisions:YES
+					   parent:[self selectedStep]
+						index:NSNotFound
+				nextToSimilar:NO];
 
 	[undoManager setActionName:NSLocalizedString(@"", nil)];
 	
@@ -1871,11 +1875,17 @@ void AppendChoicesToNewItem(
 	NSUndoManager	*undoManager		= [self undoManager];
 	NSInteger 		indexOfObject		= NSNotFound;
 
+	[[undoManager prepareWithInvocationTarget:self] selectDirectives:selectedObjects];
+
 	if ([selectedObjects.firstObject isKindOfClass:[LDrawMPDModel class]]) {
 		indexOfObject = [self nextModelIndex];
 	}
 	[self writeDirectives:selectedObjects toPasteboard:pasteboard];
-	[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:nil index:indexOfObject];
+	[self pasteFromPasteboard:pasteboard
+		preventNameCollisions:YES
+					   parent:nil
+						index:indexOfObject
+				nextToSimilar:YES];
 
 	[undoManager setActionName:NSLocalizedString(@"UndoDuplicate", nil)];
 	
@@ -4519,8 +4529,9 @@ void AppendChoicesToNewItem(
 	pastedObjects = [self pasteFromPasteboard:pasteboard
 						preventNameCollisions:renameDuplicateModels
 									   parent:newParent
-										index:dropIndex];
-	
+										index:dropIndex
+								nextToSimilar:NO];
+
 	if(sourceView == outlineView)
 	{
 		//Now that we've inserted the new objects, we need to delete the 
@@ -4788,7 +4799,12 @@ void AppendChoicesToNewItem(
 	else
 	{
 		[self writeDirectives:directives toPasteboard:pasteboard];
-		[self pasteFromPasteboard:pasteboard preventNameCollisions:YES parent:nil index:NSNotFound];
+		[self pasteFromPasteboard:pasteboard
+					preventNameCollisions:YES
+								   parent:nil
+									index:NSNotFound
+							nextToSimilar:NO];
+
 		[undoManager setActionName:NSLocalizedString(@"UndoDrop", nil)];
 	}
 	
@@ -6781,7 +6797,9 @@ void AppendChoicesToNewItem(
 	while(currentIndex != NSNotFound){
 	
 		currentObject = [fileContentsOutline itemAtRow:currentIndex];
-		[selectedObjects addObject:currentObject];
+		if (currentObject != nil) {
+			[selectedObjects addObject:currentObject];
+		}
 		
 		currentIndex = [selectedIndexes indexGreaterThanIndex:currentIndex];
 	}
@@ -7053,19 +7071,28 @@ void AppendChoicesToNewItem(
 //				renameModels	- add "copy X" suffixes to pasted models as needed. 
 //				parent			- add objects to this component (pass nil for default behavior)
 //				insertAtIndex	- child index within parent (pass NSNotFound for default behavior)
+//				nextToSimilar	- for part duplication: if true, paste duplicated parts next to originals
 //
 //==============================================================================
 - (NSArray *) pasteFromPasteboard:(NSPasteboard *) pasteboard
 			preventNameCollisions:(BOOL)renameModels
 						   parent:(LDrawContainer*)parent
 							index:(NSInteger)insertAtIndex
+					nextToSimilar:(BOOL)nextToSimilar
 {
 	NSArray         *objects        = nil;
 	id              currentObject   = nil; //some kind of unarchived LDrawDirective
 	NSData          *data           = nil;
 	NSMutableArray  *addedObjects   = [NSMutableArray array];
 	NSInteger       counter         = 0;
-		
+	NSMutableArray	*models			= [NSMutableArray array];
+	NSMutableArray	*steps			= [NSMutableArray array];
+	NSMutableArray	*directives		= [NSMutableArray array];
+	LDrawContainer	*parentStep		= nil;
+	LDrawDirective	*similarDirective = nil;
+	NSInteger		real_index		= NSNotFound;
+	NSArray			*selectedObjects = self.selectedObjects; // initial selection
+
 	//We must make sure we have the proper pasteboard type available.
  	if([[pasteboard types] containsObject:LDrawDirectivePboardType])
 	{
@@ -7073,8 +7100,6 @@ void AppendChoicesToNewItem(
 		objects = [pasteboard propertyListForType:LDrawDirectivePboardType];
 		for(counter = 0; counter < [objects count]; counter++)
 		{
-			NSInteger real_index = insertAtIndex;
-			if(real_index != NSNotFound)	real_index += counter;
 			data			= [objects objectAtIndex:counter];
 			currentObject	= [NSKeyedUnarchiver unarchiveObjectWithData:data];
 
@@ -7087,23 +7112,49 @@ void AppendChoicesToNewItem(
                 }
             }
 
-			//Now pop the data into our file.
-			if([currentObject isKindOfClass:[LDrawModel class]])
-                [self addModel:currentObject atIndex:real_index preventNameCollisions:renameModels];
-			else if([currentObject isKindOfClass:[LDrawStep class]])
-				if ([parent isKindOfClass:[LDrawMPDModel class]]) {
-					[self addStep:currentObject parent:(LDrawMPDModel*)parent index:real_index];
-				} else {
-					[self addStep:currentObject parent:nil index:real_index];
-				}
-			else
-			{
-				[self addStepComponent:currentObject parent:parent index:real_index];
+			if ([currentObject isKindOfClass:[LDrawModel class]]) {
+				[models addObject:currentObject];
+			} else if([currentObject isKindOfClass:[LDrawStep class]]) {
+				[steps addObject:currentObject];
+			} else {
+				[directives addObject:currentObject];
 			}
-			
-			[addedObjects addObject:currentObject];
 		}
 		
+		//Now pop the data into our file.
+		if (directives.count > 0) {
+			real_index = insertAtIndex;
+			for (LDrawDirective *directive in directives) {
+				if (nextToSimilar) {
+					similarDirective = [LDrawDocumentTree similarDirective:directive amongObjects:selectedObjects];
+					if (similarDirective != nil) {
+						parentStep = [fileContentsOutline parentForItem:similarDirective];
+						real_index = [parentStep indexOfDirective:similarDirective] + 1;
+					} else {
+						parentStep = [self selectedStep];
+						real_index = NSNotFound;
+					}
+				} else if ([parent isKindOfClass:[LDrawStep class]]) {
+					parentStep = parent;
+				}
+				[self addStepComponent:directive parent:parentStep index:real_index];
+				[addedObjects addObject:directive];
+			}
+		} else if (steps.count > 0) {
+			for (LDrawStep *step in steps) {
+				LDrawMPDModel * parentModel = [parent isKindOfClass:[LDrawMPDModel class]] ? (LDrawMPDModel*)parent : nil;
+				[self addStep:step parent:parentModel index:insertAtIndex];
+				[addedObjects addObject:step];
+			}
+		} else {
+			real_index = insertAtIndex != NSNotFound ? insertAtIndex : [self nextModelIndex];
+			for (LDrawMPDModel *model in models) {
+				[self addModel:model atIndex:real_index preventNameCollisions:renameModels];
+				if (real_index != NSNotFound) real_index++;
+				[addedObjects addObject:model];
+			}
+		}
+
 		[self flushDocChangesAndSelect:addedObjects];
 
 	}

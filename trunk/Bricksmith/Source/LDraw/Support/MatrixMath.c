@@ -2605,6 +2605,28 @@ void Matrix4Print(Matrix4 *matrix)
 }//end Matrix4Print
 
 
+//========== Matrix4EqualMatrices() ===============================================
+///
+/// @abstract	Test 2 matrices for identity.
+///
+//==============================================================================
+bool Matrix4EqualMatrices(Matrix4 *matrix1, Matrix4 *matrix2)
+{
+	int i, j;
+	
+	for (i = 0; i < 4; i++)
+	{
+		for (j = 0; j < 4; j++) {
+			if (matrix1->element[i][j] != matrix2->element[i][j]) {
+				return false;
+			}
+		}
+	}
+	return true;
+	
+}//end Matrix4EqualMatrices
+
+
 //========== VolumeCanIntersectBox() ===========================================
 //
 // Purpose:		Checks whether a bounding box in model view space may intersect
