@@ -21,6 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LDrawDocumentTree : NSObject
 
 + (NSArray *)mostInnerDirectives:(NSArray *)objects;
++ (LDrawDirective *)similarDirective:(LDrawDirective *)directive amongObjects:(id)objects;
 + (NSSet<NSString *> *) groupsBeforeStep:(LDrawStep *)step;
 
 @end
