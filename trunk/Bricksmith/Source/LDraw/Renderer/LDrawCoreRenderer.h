@@ -1,5 +1,5 @@
 //
-//  LDrawRenderer.h
+//  LDrawCoreRenderer.h
 //  Bricksmith
 //
 //  Created by bsupnik on 11/5/12.
@@ -87,7 +87,7 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);			// Cleanup function ass
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// LDrawRenderer
+// LDrawCoreRenderer
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -98,7 +98,7 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);			// Cleanup function ass
 // list containing the mesh.  beginDL provides a "collector" protocol capable of actually receiving
 // the mesh.
 
-@protocol LDrawRenderer
+@protocol LDrawCoreRenderer
 @required
 
 // Matrix stack.  The new matrix is accumulated onto the existing transform.

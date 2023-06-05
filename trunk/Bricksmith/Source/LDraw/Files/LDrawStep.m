@@ -385,7 +385,7 @@
 //				not "collect" themselves.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	NSArray         *commandsInStep     = [self subdirectives];
 	LDrawDirective  *currentDirective   = nil;

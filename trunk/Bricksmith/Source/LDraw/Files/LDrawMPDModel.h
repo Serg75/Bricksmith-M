@@ -9,7 +9,7 @@
 //==============================================================================
 #import <Foundation/Foundation.h>
 
-#import "LDrawDirective.h"
+#import "LDrawDirectiveGPU.h"
 #import "LDrawModel.h"
 
 @interface LDrawMPDModel : LDrawModel <NSCoding>

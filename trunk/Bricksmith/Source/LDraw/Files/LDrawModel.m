@@ -309,7 +309,7 @@
 //				flattened to ensure one VBO per library part.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	// First: cull check!  In my last perf look, draw time was bottlenecked
 	// on the GPU not eating data fast enough, _not_ on CPU.  So burning a

@@ -1,6 +1,6 @@
 //==============================================================================
 //
-// File:		LDrawGLRenderer.h
+// File:		LDrawRenderer.h
 //
 // Purpose:		Draws an LDrawFile with OpenGL.
 //
@@ -8,18 +8,17 @@
 //
 //==============================================================================
 #import <Foundation/Foundation.h>
-#import OPEN_GL_HEADER
 
-#import "MacLDraw.h"
 #import "ColorLibrary.h"
-#import "LDrawUtilities.h"
+#import "MacLDraw.h"
 #import "MatrixMath.h"
 #import "LDrawGLCamera.h"
+#import "LDrawUtilities.h"
 
 //Forward declarations
 @class LDrawDirective;
 @class LDrawDragHandle;
-@protocol LDrawGLRendererDelegate;
+@protocol LDrawRendererDelegate;
 @protocol LDrawGLCameraScroller;
 
 
@@ -41,17 +40,39 @@ typedef enum
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-//		LDrawGLRenderer
+//		LDrawRenderer
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawGLRenderer : NSObject <LDrawColorable>
+@interface LDrawRenderer : NSObject <LDrawColorable>
+{
+	id<LDrawRendererDelegate>	delegate;
+
+	LDrawDirective		*fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
+												// if you want to do anything else, you must
+												// tweak the selection code in LDrawDrawableElement
+												// and here in -mouseUp: to handle such cases.
+
+	LDrawGLCamera		*camera;
+
+	GLfloat				glBackgroundColor[4];
+	Box2				selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
+	RotationDrawModeT	rotationDrawMode;		// drawing detail while rotating.
+	ViewOrientationT	viewOrientation;		// our orientation
+	NSInteger			framesSinceStartTime;
+
+	// Event Tracking
+	BOOL				isGesturing;			// true if performing a multitouch trackpad gesture.
+	BOOL				isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
+}
 
 // Initialization
 - (id) initWithBounds:(Size2)boundsIn;
-- (void) prepareOpenGL;
+// moved to category
+//- (void) prepareOpenGL;
 
 // Drawing
-- (void) draw;
+// moved to category
+//- (void) draw;
 
 // Accessors
 - (LDrawDragHandle*) activeDragHandle;
@@ -64,12 +85,14 @@ typedef enum
 - (Box2) selectionMarquee;
 - (Tuple3) viewingAngle;
 - (ViewOrientationT) viewOrientation;
+- (Box2) viewport;
 - (CGFloat) zoomPercentage;
 - (CGFloat) zoomPercentageForGL;
 
 - (void) setAllowsEditing:(BOOL)flag;
-- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
-- (void) setDelegate:(id<LDrawGLRendererDelegate>)object withScroller:(id<LDrawGLCameraScroller>)scroller;
+// moved to category
+//- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
+- (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawGLCameraScroller>)scroller;
 - (void) setDraggingOffset:(Vector3)offsetIn;
 - (void) setGridSpacing:(float)newValue;
 - (void) setLDrawDirective:(LDrawDirective *) newFile;
@@ -145,28 +168,26 @@ typedef enum
 //		Delegate Methods
 //
 ////////////////////////////////////////////////////////////////////////////////
-@protocol LDrawGLRendererDelegate <NSObject>
+@protocol LDrawRendererDelegate <NSObject>
 
 @required
-- (void) LDrawGLRendererNeedsFlush:(LDrawGLRenderer*)renderer;
-- (void) LDrawGLRendererNeedsRedisplay:(LDrawGLRenderer*)renderer;
+- (void) LDrawRendererNeedsFlush:(LDrawRenderer*)renderer;
+- (void) LDrawRendererNeedsRedisplay:(LDrawRenderer*)renderer;
 
 @optional
-- (void) LDrawGLRenderer:(LDrawGLRenderer*)renderer mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence;
-- (void) LDrawGLRendererMouseNotPositioning:(LDrawGLRenderer*)renderer;
+- (void) LDrawRenderer:(LDrawRenderer*)renderer mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence;
+- (void) LDrawRendererMouseNotPositioning:(LDrawRenderer*)renderer;
 
-- (TransformComponents) LDrawGLRendererPreferredPartTransform:(LDrawGLRenderer*)renderer;
+- (TransformComponents) LDrawRendererPreferredPartTransform:(LDrawRenderer*)renderer;
 
-- (void) LDrawGLRenderer:(LDrawGLRenderer*)renderer wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
-- (void) LDrawGLRenderer:(LDrawGLRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode;
-- (void) LDrawGLRenderer:(LDrawGLRenderer*)renderer willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
-- (void) LDrawGLRenderer:(LDrawGLRenderer*)renderer dragHandleDidMove:(LDrawDragHandle *)dragHandle;
+- (void) LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
+- (void) LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode;
+- (void) LDrawRenderer:(LDrawRenderer*)renderer willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
+- (void) LDrawRenderer:(LDrawRenderer*)renderer dragHandleDidMove:(LDrawDragHandle *)dragHandle;
 
-- (void) markPreviousSelection:(LDrawGLRenderer*)renderer;
-- (void) unmarkPreviousSelection:(LDrawGLRenderer*)renderer;
+- (void) markPreviousSelection:(LDrawRenderer*)renderer;
+- (void) unmarkPreviousSelection:(LDrawRenderer*)renderer;
 
 
 
 @end
-
-

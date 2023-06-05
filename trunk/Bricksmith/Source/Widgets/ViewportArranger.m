@@ -12,7 +12,7 @@
 #import "ViewportArranger.h"
 
 #import "LDrawViewerContainer.h"
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 
 
 const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";

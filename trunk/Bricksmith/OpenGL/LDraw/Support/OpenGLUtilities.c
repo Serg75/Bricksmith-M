@@ -11,12 +11,12 @@
 
 #if DEBUG
 
-GLboolean		glIsDisabled(GLenum cap)
+GLboolean	glIsDisabled(GLenum cap)
 {
 	return !glIsEnabled(cap);
 }
 
-GLboolean		glCheckInteger(GLenum cap, GLint value)
+GLboolean	glCheckInteger(GLenum cap, GLint value)
 {
 	GLint v = 0;
 	glGetIntegerv(cap, &v);

@@ -14,6 +14,8 @@
 
 #import "LDrawDrawableElement.h"
 
+static const float HandleDiameter	= 7.0;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -42,12 +44,14 @@
 - (void) setPosition:(Point3)positionIn updateTarget:(BOOL)update;
 - (void) setTarget:(id)sender;
 
-// Draw
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-;
+// moved to category
+//// Draw
+//- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
+//;
 
-// Utilities
-+ (void) makeSphereWithLongitudinalCount:(int)longitudeSections
-						latitudinalCount:(int)latitudeSections;
+// moved to category
+//// Utilities
+//+ (void) makeSphereWithLongitudinalCount:(int)longitudeSections
+//						latitudinalCount:(int)latitudeSections;
 @end
 

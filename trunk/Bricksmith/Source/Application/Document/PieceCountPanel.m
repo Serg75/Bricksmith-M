@@ -9,11 +9,11 @@
 //==============================================================================
 #import "PieceCountPanel.h"
 
-#import "LDrawApplication.h"
+#import "LDrawApplicationGPU.h"
 #import "LDrawColor.h"
 #import "LDrawColorCell.h"
 #import "LDrawFile.h"
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 #import "LDrawMPDModel.h"
 #import "LDrawPart.h"
 #import "LDrawViewerContainer.h"

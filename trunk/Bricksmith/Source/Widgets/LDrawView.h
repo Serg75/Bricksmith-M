@@ -1,9 +1,9 @@
 //==============================================================================
 //
-// File:		LDrawGLView.h
+// File:		LDrawView.h
 //
 // Purpose:		This is the intermediary between the operating system (events 
-//				and view hierarchy) and the LDrawGLRenderer (responsible for all 
+//				and view hierarchy) and the LDrawRenderer (responsible for all 
 //				platform-independent drawing logic).
 //
 // Modified:	4/17/05 Allen Smith. Creation Date.
@@ -13,7 +13,8 @@
 
 #import "BricksmithUtilities.h"
 #import "ColorLibrary.h"
-#import "LDrawGLRenderer.h"
+#import "GPU.h"
+#import "LDrawRenderer.h"
 #import "LDrawGLCamera.h"
 #import "LDrawUtilities.h"
 #import "MatrixMath.h"
@@ -23,23 +24,23 @@
 @class FocusRingView;
 @class LDrawDirective;
 @class LDrawDragHandle;
-@class LDrawGLRenderer;
+@class LDrawRenderer;
 
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-//		LDrawGLView
+//		LDrawView
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawGLView : NSOpenGLView <LDrawColorable, LDrawGLRendererDelegate, LDrawGLCameraScroller>
+@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawGLCameraScroller>
 {
-@private
-	// The renderer is responsible for viewport math and OpenGL calls. Because 
+	// The renderer is responsible for viewport math and OpenGL calls. Because
 	// of the latter, there is NO PUBLIC ACCESS, since each OpenGL call must be 
 	// preceeded by activating the correct context. Thus any renderer-modifying 
 	// calls must pass through the LDrawOpenGLView first. 
-	LDrawGLRenderer			*renderer;
+	LDrawRenderer			*renderer;
 	
+@private
 	FocusRingView	*focusRingView;
 	
 	__weak IBOutlet id		delegate;
@@ -62,7 +63,8 @@
 	Vector3					nudgeVector;			// direction of nudge action (valid only in nudgeAction callback)
 }
 
-- (void) setFocusRingVisible:(BOOL)isVisible;
+// moved to category
+//- (void) internalInit;
 
 // Drawing
 - (void) draw;
@@ -79,7 +81,8 @@
 - (void) setAcceptsFirstResponder:(BOOL)flag;
 - (void) setAutosaveName:(NSString *)newName;
 - (void) setBackAction:(SEL)newAction;
-- (void) setBackgroundColor:(NSColor *)newColor;
+// moved to category
+//- (void) setBackgroundColor:(NSColor *)newColor;
 - (void) setDelegate:(id)object;
 - (void) setForwardAction:(SEL)newAction;
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode;
@@ -88,9 +91,11 @@
 - (void) setProjectionMode:(ProjectionModeT) newProjectionMode;
 - (void) setLocationMode:(LocationModeT) newLocationMode;
 - (void) setTarget:(id)target;
-- (void) setViewingAngle:(Tuple3)newAngle;
+// moved to category
+//- (void) setViewingAngle:(Tuple3)newAngle;
 - (void) setViewOrientation:(ViewOrientationT) newAngle;
 - (void) setZoomPercentage:(CGFloat) newPercentage;
+- (void) setFocusRingVisible:(BOOL)isVisible;
 
 // Actions
 - (IBAction) viewOrientationSelected:(id)sender;
@@ -117,7 +122,8 @@
 // Utilities
 - (void) restoreConfiguration;
 - (void) saveConfiguration;
-- (void) saveImageToPath:(NSString *)path;
+// moved to category
+//- (void) saveImageToPath:(NSString *)path;
 - (void) scrollCameraVisibleRectToPoint:(Point2)visibleRectOrigin;
 - (void) scrollCenterToModelPoint:(Point3)modelPoint;
 - (void) takeBackgroundColorFromUserDefaults;
@@ -131,27 +137,27 @@
 //		Delegate Methods
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface NSObject (LDrawGLViewDelegate)
+@interface NSObject (LDrawViewDelegate)
 
-- (void) LDrawGLViewBecameFirstResponder:(LDrawGLView *)glView;
+- (void) LDrawViewBecameFirstResponder:(LDrawView *)glView;
 
-- (BOOL) LDrawGLView:(LDrawGLView *)glView writeDirectivesToPasteboard:(NSPasteboard *)pasteboard asCopy:(BOOL)copyFlag;
-- (void) LDrawGLView:(LDrawGLView *)glView acceptDrop:(id < NSDraggingInfo >)info directives:(NSArray *)directives;
-- (void) LDrawGLViewPartsWereDraggedIntoOblivion:(LDrawGLView *)glView;
-- (void) LDrawGLViewPartDragEnded:(LDrawGLView*)glView;
+- (BOOL) LDrawView:(LDrawView *)glView writeDirectivesToPasteboard:(NSPasteboard *)pasteboard asCopy:(BOOL)copyFlag;
+- (void) LDrawView:(LDrawView *)glView acceptDrop:(id < NSDraggingInfo >)info directives:(NSArray *)directives;
+- (void) LDrawViewPartsWereDraggedIntoOblivion:(LDrawView *)glView;
+- (void) LDrawViewPartDragEnded:(LDrawView*)glView;
 
-- (TransformComponents) LDrawGLViewPreferredPartTransform:(LDrawGLView *)glView;
+- (TransformComponents) LDrawViewPreferredPartTransform:(LDrawView *)glView;
 
 // Delegate method is called when the user has changed the selection of parts 
 // by clicking in the view. This does not actually do any selecting; that is 
 // left entirely to the delegate. Some may rightly question the design of this 
 // system.
-- (void) LDrawGLView:(LDrawGLView *)glView wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
-- (void) LDrawGLView:(LDrawGLView*)glView wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode;
-- (void) LDrawGLView:(LDrawGLView *)glView willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
-- (void) LDrawGLView:(LDrawGLView *)glView dragHandleDidMove:(LDrawDragHandle *)dragHandle;
-- (void) LDrawGLView:(LDrawGLView *)glView mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence;
-- (void) LDrawGLViewMouseNotPositioning:(LDrawGLView *)glView;
+- (void) LDrawView:(LDrawView *)glView wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
+- (void) LDrawView:(LDrawView*)glView wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode;
+- (void) LDrawView:(LDrawView *)glView willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
+- (void) LDrawView:(LDrawView *)glView dragHandleDidMove:(LDrawDragHandle *)dragHandle;
+- (void) LDrawView:(LDrawView *)glView mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence;
+- (void) LDrawViewMouseNotPositioning:(LDrawView *)glView;
 - (void) markPreviousSelection;
 - (void) unmarkPreviousSelection;
 

@@ -307,7 +307,7 @@
 //				the passed in renderer, then calling drawSelf on children.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	[activeModel drawSelf:renderer];
 }//end drawSelf:
@@ -604,7 +604,7 @@
 // Purpose:		Sets the parts which are being manipulated in the model via 
 //			    drag-and-drop. 
 //
-// Notes:		This is a convenience method for LDrawGLView, which might not 
+// Notes:		This is a convenience method for LDrawView, which might not 
 //			    care to wonder whether it's displaying a model or a file. In 
 //			    either event, we just want to drag-and-drop, and that's defined 
 //			    in the model. 

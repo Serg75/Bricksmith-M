@@ -7,7 +7,7 @@
 //
 
 #import "LDrawDisplayList.h"
-#import "LDrawRenderer.h"
+#import "LDrawCoreRenderer.h"
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderRenderer.h"
 #import "MeshSmooth.h"

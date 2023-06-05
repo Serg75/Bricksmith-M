@@ -9,7 +9,7 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 #import "MacLDraw.h"
 
 @class LDrawViewerContainer;
@@ -28,7 +28,7 @@
 	
 	__weak IBOutlet NSOutlineView	*categoryTable;
 	__weak IBOutlet NSTableView		*partsTable;
-	__weak IBOutlet LDrawGLView		*partPreview;
+	__weak IBOutlet LDrawView		*partPreview;
 	__weak IBOutlet LDrawViewerContainer	*partPreviewViewport;
 	__weak IBOutlet NSButton		*zoomInButton;
 	__weak IBOutlet NSButton		*zoomOutButton;

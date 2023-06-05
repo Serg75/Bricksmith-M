@@ -12,7 +12,7 @@
 
 #import "MatrixMath.h"
 #import "FastSet.h"
-#import "LDrawRenderer.h"
+#import "LDrawCoreRenderer.h"
 
 // This uses the hacky C wrapper around NSSet to improve performance.
 #define NEW_SET 1
@@ -197,10 +197,11 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 
 // Directives
 - (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor;
-- (void) drawSelf:(id<LDrawRenderer>)renderer;
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer;
 - (void) collectSelf:(id<LDrawCollector>)renderer;
 - (Box3) boundingBox3;
-- (void) debugDrawboundingBox;
+// moved to category
+//- (void) debugDrawboundingBox;
 
 // Hit testing primitives
 - (void) hitTest:(Ray3)pickRay transform:(Matrix4)transform viewScale:(float)scaleFactor boundsOnly:(BOOL)boundsOnly creditObject:(id)creditObject hits:(NSMutableDictionary *)hits;

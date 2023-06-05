@@ -31,7 +31,7 @@
 @class LDrawDrawableElement;
 @class LDrawFile;
 @class LDrawFileOutlineView;
-@class LDrawGLView;
+@class LDrawView;
 @class LDrawModel;
 @class LDrawMPDModel;
 @class LDrawStep;
@@ -82,7 +82,7 @@
 		NSArray			*selectedDirectivesBeforeCopyDrag;
 		gridSpacingModeT gridMode;
 		gridOrientationModeT gridOrientation;
-		LDrawGLView		*mostRecentLDrawView; //file graphic view which most recently had focus. Weak link.
+		LDrawView		*mostRecentLDrawView; //file graphic view which most recently had focus. Weak link.
 		NSArray		*	markedSelection;		// if we are mid-marquee selection, this is an array of the previously selected directives before drag started
 }
 
@@ -100,7 +100,7 @@
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode;
 - (void) setGridOrientationMode:(gridOrientationModeT)newMode;
 - (void) setLastSelectedPart:(LDrawPart *)newPart;
-- (void) setMostRecentLDrawView:(LDrawGLView *)viewIn;
+- (void) setMostRecentLDrawView:(LDrawView *)viewIn;
 - (void) setStepDisplay:(BOOL)showStepsFlag;
 
 // Activities
@@ -217,8 +217,8 @@
 - (void) buildRelatedPartsMenus;
 
 // Viewport Management
-- (void) connectLDrawGLView:(LDrawGLView *)glView;
-- (LDrawGLView *) main3DViewport;
+- (void) connectLDrawView:(LDrawView *)view;
+- (LDrawView *) main3DViewport;
 - (void) updateViewportAutosaveNamesAndRestore:(BOOL)shouldRestore;
 
 // Utilities

@@ -29,7 +29,7 @@
 //
 //				We need to override it to grab NSKeyUp events generated while 
 //				the command key is held down. We need those events so we can 
-//				track keys properly for LDrawGLView's tool mode. Unfortunately, 
+//				track keys properly for LDrawView's tool mode. Unfortunately, 
 //				Cocoa seems to supress command-keyup events--at least, I never 
 //				see them anywhere. All we do here is dispatch them to a custom 
 //				method before they vanish into the ether. And we want other 
@@ -84,7 +84,7 @@
 //				responder chain. That mean it generates a beep when pressed. So 
 //				we kill it here. 
 //
-//				I guess we could handle this in LDrawGLView, but that would only 
+//				I guess we could handle this in LDrawView, but that would only 
 //				work if the view is first responder. In places like the 
 //				minifigure dialog or part browser, that is not the case. 
 //

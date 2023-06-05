@@ -13,7 +13,7 @@
 #import "BackgroundColorView.h"
 #import "LDrawApplication.h"
 #import "LDrawFile.h"
-#import "LDrawGLView.h"
+#import "LDrawViewGPU.h"
 #import "LDrawViewerContainer.h"
 #import "MacLDraw.h"
 

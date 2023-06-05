@@ -8,11 +8,11 @@
 
 #import <Cocoa/Cocoa.h>
 
-#import "LDrawRenderer.h"
+#import "LDrawCoreRenderer.h"
 
 /*
 
-	LDrawShaderRenderer - an implementation of the LDrawRenderer API using GL shaders.
+	LDrawShaderRenderer - an implementation of the LDrawCoreRenderer API using GL shaders.
 
 	The renderer maintains a stack view of OpenGL state; as directives push their
 	info to the renderer, containing LDraw parts push and pop state to affect the
@@ -36,6 +36,15 @@ enum {
 };
 
 
+// Drag handle linked list.  When we get drag handle requests we transform the location into eye-space (to 'capture' the
+// drag handle location, then we draw it later when our coordinate system isn't possibly scaled.
+struct	LDrawDragHandleInstance {
+	struct LDrawDragHandleInstance * next;
+	float	xyz[3];
+	float	size;
+};
+
+
 // Stack depths for renderer.
 #define COLOR_STACK_DEPTH 64		
 #define TEXTURE_STACK_DEPTH 128
@@ -46,7 +55,7 @@ struct	LDrawDLBuilder;
 struct	LDrawBDP;
 struct	LDrawDragHandleInstance;
 
-@interface LDrawShaderRenderer : NSObject<LDrawRenderer,LDrawCollector> {
+@interface LDrawShaderRenderer : NSObject<LDrawCoreRenderer,LDrawCollector> {
 
 	struct LDrawDLSession *			session;										// DL session - this accumulates draw calls and sorts them.
 	struct LDrawBDP *				pool;
@@ -79,8 +88,10 @@ struct	LDrawDragHandleInstance;
 	
 }
 
-- (id) initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
+// moved to category
+//- (id) initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
 
-- (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
+// moved to category
+//- (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
 
 @end

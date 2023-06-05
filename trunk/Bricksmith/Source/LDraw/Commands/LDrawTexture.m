@@ -13,7 +13,7 @@
 #import "LDrawKeywords.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "PartLibrary.h"
+#import "PartLibraryGPU.h"
 #import "StringCategory.h"
 
 
@@ -316,7 +316,7 @@
 //				calls for.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	NSArray 		*commands			= [self subdirectives];
 	LDrawDirective	*currentDirective	= nil;

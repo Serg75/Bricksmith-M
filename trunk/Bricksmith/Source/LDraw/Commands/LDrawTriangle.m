@@ -230,7 +230,7 @@
 //				accumulating a mesh.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	if(self->hidden == NO)
 	{

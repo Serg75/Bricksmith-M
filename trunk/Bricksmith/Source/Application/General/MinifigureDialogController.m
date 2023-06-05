@@ -14,7 +14,7 @@
 #import "ColorLibrary.h"
 #import "LDrawColor.h"
 #import "LDrawColorWell.h"
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 #import "LDrawMPDModel.h"
 #import "LDrawPart.h"
 #import "LDrawStep.h"

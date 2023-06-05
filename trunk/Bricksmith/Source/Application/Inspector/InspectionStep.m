@@ -24,7 +24,7 @@
 
 #import "LDrawApplication.h"
 #import "LDrawDocument.h"
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
 

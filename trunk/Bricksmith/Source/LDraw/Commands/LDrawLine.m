@@ -207,7 +207,7 @@
 //				accumulating a mesh.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	[self revalCache:DisplayList];
 	if(self->hidden == NO)

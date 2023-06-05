@@ -24,7 +24,7 @@
 #import "PartBrowserDataSource.h"
 
 #import "IconTextCell.h"
-#import "LDrawApplication.h"
+#import "LDrawApplicationGPU.h"
 #import "LDrawColorPanelController.h"
 #import "LDrawModel.h"
 #import "LDrawPart.h"
@@ -601,13 +601,13 @@
 
 #pragma mark LDrawGLView
 
-//========== LDrawGLView:writeDirectivesToPasteboard:asCopy: ===================
+//========== LDrawView:writeDirectivesToPasteboard:asCopy: =====================
 //
 // Purpose:		Begin a drag-and-drop part insertion initiated in the directive 
 //				view. 
 //
 //==============================================================================
-- (BOOL)         LDrawGLView:(LDrawGLView *)glView
+- (BOOL)           LDrawView:(LDrawView *)glView
  writeDirectivesToPasteboard:(NSPasteboard *)pasteboard
 					  asCopy:(BOOL)copyFlag
 {
@@ -615,7 +615,7 @@
 	
 	return success;
 	
-}//end LDrawGLView:writeDirectivesToPasteboard:asCopy:
+}//end LDrawView:writeDirectivesToPasteboard:asCopy:
 
 
 #pragma mark -

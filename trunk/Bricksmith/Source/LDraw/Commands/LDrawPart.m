@@ -295,74 +295,75 @@ int floatNearGrid(float v, float grid, float epsi)
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== drawElement:viewScale:withColor: ==================================
+// moved to category
+////========== drawElement:viewScale:withColor: ==================================
+////
+//// Purpose:		Draws the graphic of the element represented. This call is a
+////				subroutine of -draw: in LDrawDrawableElement.
+////
+////==============================================================================
+//- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
+//{
+//	LDrawDirective  *drawable       = nil;
+//	BOOL            drawBoundsOnly  = ((optionsMask & DRAW_BOUNDS_ONLY) != 0);
 //
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
+//	// If the part is selected, we need to give some indication. We do this
+//	// by drawing it as a wireframe instead of a filled color. This setting
+//	// also conveniently applies to all referenced parts herein.
+//	if([self isSelected] == YES)
+//	{
+//#if (USE_AUTOMATIC_WIREFRAMES)
+//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//#else
+//		optionsMask = optionsMask | DRAW_WIREFRAME;
+//#endif
+//	}
 //
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	LDrawDirective  *drawable       = nil;
-	BOOL            drawBoundsOnly  = ((optionsMask & DRAW_BOUNDS_ONLY) != 0);
-	
-	// If the part is selected, we need to give some indication. We do this 
-	// by drawing it as a wireframe instead of a filled color. This setting 
-	// also conveniently applies to all referenced parts herein. 
-	if([self isSelected] == YES)
-	{
-#if (USE_AUTOMATIC_WIREFRAMES)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-#else
-		optionsMask = optionsMask | DRAW_WIREFRAME;
-#endif
-	}
-
-	// Multithreading finally works with one display list per displayed part 
-	// AND mutexes around the glCallList. But the mutex contention causes a 
-	// 50% increase in drawing time. Gah! 
-	
-	glPushMatrix();
-	{
-		glMultMatrixf(glTransformation);
-		
-		[self resolvePart];
-
-		drawable = cacheDrawable;
-
-		if (cacheType == PartTypeLibrary && cacheDrawable == nil)
-		{
-			// Parts assigned to LDrawCurrentColor may get drawn in many 
-			// different colors in one draw, so we can't cache their 
-			// optimized drawable. We have to retrieve their optimized 
-			// drawable on-the-fly. 
-			
-			// Parts that have a SPECIFIC color have been linked DIRECTLY to 
-			// their specific colored VBO during -optimizeOpenGL. 
-			
-			drawable = [[PartLibrary sharedPartLibrary] optimizedDrawableForPart:self color:drawingColor];
-		}
-		
-		if(drawBoundsOnly == NO)
-		{
-			[drawable draw:optionsMask viewScale:scaleFactor parentColor:drawingColor];
-		}
-		else
-		{
-			[self drawBoundsWithColor:drawingColor];
-		}
-	}
-	glPopMatrix();
-
-	// Done drawing a selected part? Then switch back to normal filled drawing. 
-	if([self isSelected] == YES)
-	{
-#if (USE_AUTOMATIC_WIREFRAMES)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-#endif
-	}
-
-}//end drawElement:parentColor:
+//	// Multithreading finally works with one display list per displayed part
+//	// AND mutexes around the glCallList. But the mutex contention causes a
+//	// 50% increase in drawing time. Gah!
+//
+//	glPushMatrix();
+//	{
+//		glMultMatrixf(glTransformation);
+//
+//		[self resolvePart];
+//
+//		drawable = cacheDrawable;
+//
+//		if (cacheType == PartTypeLibrary && cacheDrawable == nil)
+//		{
+//			// Parts assigned to LDrawCurrentColor may get drawn in many
+//			// different colors in one draw, so we can't cache their
+//			// optimized drawable. We have to retrieve their optimized
+//			// drawable on-the-fly.
+//
+//			// Parts that have a SPECIFIC color have been linked DIRECTLY to
+//			// their specific colored VBO during -optimizeOpenGL.
+//
+//			drawable = [[PartLibrary sharedPartLibrary] optimizedDrawableForPart:self color:drawingColor];
+//		}
+//
+//		if(drawBoundsOnly == NO)
+//		{
+//			[drawable draw:optionsMask viewScale:scaleFactor parentColor:drawingColor];
+//		}
+//		else
+//		{
+//			[self drawBoundsWithColor:drawingColor];
+//		}
+//	}
+//	glPopMatrix();
+//
+//	// Done drawing a selected part? Then switch back to normal filled drawing.
+//	if([self isSelected] == YES)
+//	{
+//#if (USE_AUTOMATIC_WIREFRAMES)
+//		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//#endif
+//	}
+//
+//}//end drawElement:parentColor:
 
 
 //========== drawSelf: ===========================================================
@@ -375,7 +376,7 @@ int floatNearGrid(float v, float grid, float epsi)
 //				backing the part, if it exists.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	if(self->hidden == NO)
 	{
@@ -473,28 +474,29 @@ int floatNearGrid(float v, float grid, float epsi)
 }//end drawBounds
 
 
-//========== debugDrawboundingBox ==============================================
+// moved to category
+////========== debugDrawboundingBox ==============================================
+////
+//// Purpose:		Draw a translucent visualization of our bounding box to test
+////				bounding box caching.
+////
+////==============================================================================
+//- (void) debugDrawboundingBox
+//{
+//	[self resolvePart];
+//	LDrawModel	*modelToDraw	= cacheModel;
 //
-// Purpose:		Draw a translucent visualization of our bounding box to test
-//				bounding box caching.
+//	//If the model can't be found, we can't draw good bounds for it!
+//	if(modelToDraw != nil)
+//	{
+//		glPushMatrix();
+//		glMultMatrixf(glTransformation);
+//		[modelToDraw debugDrawboundingBox];
+//		glPopMatrix();
+//	}
 //
-//==============================================================================
-- (void) debugDrawboundingBox
-{
-	[self resolvePart];
-	LDrawModel	*modelToDraw	= cacheModel;
-	
-	//If the model can't be found, we can't draw good bounds for it!
-	if(modelToDraw != nil)
-	{
-		glPushMatrix();
-		glMultMatrixf(glTransformation);
-		[modelToDraw debugDrawboundingBox];
-		glPopMatrix();
-	}
-	
-	[super debugDrawboundingBox];	
-}//end debugDrawboundingBox
+//	[super debugDrawboundingBox];
+//}//end debugDrawboundingBox
 
 
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======

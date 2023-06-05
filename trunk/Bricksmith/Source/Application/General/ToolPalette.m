@@ -3,11 +3,11 @@
 // File:		ToolPalette.h
 //
 // Purpose:		Manages the current tool mode in effect when the mouse is used 
-//				in an LDrawGLView. This object is the central clearinghouse for 
+//				in an LDrawView. This object is the central clearinghouse for 
 //				administering the current mouse-tool mode. It analyzes the 
 //				keyboard events posted by BricksmithApplication, and then posts 
 //				the appropriate LDrawMouseToolDidChangeNotifications, which are 
-//				observed by LDrawGLView to do cursor tracking and event 
+//				observed by LDrawView to do cursor tracking and event 
 //				interpetation properly. 
 //
 //				By doing all this tracking in a global location, we allow all 
@@ -311,7 +311,7 @@ ToolPalette *sharedToolPalette = nil;
 
 //========== mouseButton3DidChange: ============================================
 //
-// Purpose:		Mouse Button 3 is observed by LDrawGLView to do spin model. But 
+// Purpose:		Mouse Button 3 is observed by LDrawView to do spin model. But 
 //				it needs to be registered in our omniscient state tracker here. 
 //
 // Notes:		This isn't a notification because this event response is so 

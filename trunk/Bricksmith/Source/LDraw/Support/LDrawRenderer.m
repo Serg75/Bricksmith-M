@@ -1,6 +1,6 @@
 //==============================================================================
 //
-// File:		LDrawGLRenderer.m
+// File:		LDrawRenderer.m
 //
 // Purpose:		Draws an LDrawFile with OpenGL.
 //
@@ -14,14 +14,14 @@
 //				example, we don't check -- or want to know! -- if the option key 
 //				is down. The platform layer figures out stuff like that, and 
 //				more importantly, figures out what it *means*. The *meaning* is 
-//				what the renderer's methods care about. 
+//				what the renderer's methods care about.
 //
-// Note:        This file uses manual reference counting.
+// Note:		This file uses manual reference counting.
 //
 //  Created by Allen Smith on 4/17/05.
 //  Copyright 2005. All rights reserved.
 //==============================================================================
-#import "LDrawGLRenderer.h"
+#import "LDrawRenderer.h"
 
 #import "LDrawColor.h"
 #import "LDrawDirective.h"
@@ -37,45 +37,61 @@
 #include "MacLDraw.h"
 
 
-#define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
+// moved to category
+//#define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
 #define TIME_BOXTEST				0	// output timing data for how long box tests and marquee drags take.
-#define DEBUG_BOUNDING_BOX			0	// attempts to draw debug bounding box visualization on the model.
 
-#define NEW_RENDERER				1	// runs Ben's new shader-based renderer, not 2.6-era fixed-function renderer.
+// moved to category
+//#define DEBUG_BOUNDING_BOX			0	// attempts to draw debug bounding box visualization on the model.
+
+// moved to category
+//#define NEW_RENDERER				1	// runs Ben's new shader-based renderer, not 2.6-era fixed-function renderer.
 
 
-#define DEBUG_DRAWING				0	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
-#define SIMPLIFICATION_THRESHOLD	0.3 // seconds
+// moved to category
+//#define DEBUG_DRAWING				0	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
+//#define SIMPLIFICATION_THRESHOLD	0.3 // seconds
 
 #define HANDLE_SIZE 3
 
-@interface LDrawGLRenderer ()
+@interface LDrawRenderer ()
 {
-	id<LDrawGLRendererDelegate> delegate;
+	// moved to header
+//	id<LDrawRendererDelegate> delegate;
 	id<LDrawGLCameraScroller>	scroller;
 	id							target;
 	BOOL						allowsEditing;
 	
-	LDrawDirective          *fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
-													// if you want to do anything else, you must
-													// tweak the selection code in LDrawDrawableElement
-													// and here in -mouseUp: to handle such cases.
+	// moved to header
+//	LDrawDirective          *fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
+//													// if you want to do anything else, you must
+//													// tweak the selection code in LDrawDrawableElement
+//													// and here in -mouseUp: to handle such cases.
 	
-	LDrawGLCamera *			camera;
+	// moved to header
+//	LDrawGLCamera *			camera;
 	
 	// Drawing Environment
 	LDrawColor				*color;					// default color to draw parts if none is specified
-	GLfloat                 glBackgroundColor[4];
-	Box2					selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
-	RotationDrawModeT       rotationDrawMode;		// drawing detail while rotating.
-	ViewOrientationT        viewOrientation;		// our orientation
+
+	// moved to header
+//	GLfloat                 glBackgroundColor[4];
+//	Box2					selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
+//	RotationDrawModeT       rotationDrawMode;		// drawing detail while rotating.
+//	ViewOrientationT        viewOrientation;		// our orientation
+
 	NSTimeInterval			fpsStartTime;
-	NSInteger				framesSinceStartTime;
+
+	// moved to header
+//	NSInteger				framesSinceStartTime;
 	
 	// Event Tracking
 	float					gridSpacing;
-	BOOL                    isGesturing;			// true if performing a multitouch trackpad gesture.
-	BOOL                    isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
+
+	// moved to header
+//	BOOL                    isGesturing;			// true if performing a multitouch trackpad gesture.
+//	BOOL                    isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
+
 	BOOL					isStartingDrag;			// this is the first event in a drag
 	NSTimer                 *mouseDownTimer;		// countdown to beginning drag-and-drop
 	BOOL                    canBeginDragAndDrop;	// the next mouse-dragged will initiate a drag-and-drop.
@@ -87,7 +103,7 @@
 }
 @end
 
-@implementation LDrawGLRenderer
+@implementation LDrawRenderer
 
 #pragma mark -
 #pragma mark INITIALIZATION
@@ -121,121 +137,122 @@
 }//end initWithFrame:
 
 
-//========== prepareOpenGL =====================================================
+// moved to category
+////========== prepareOpenGL =====================================================
+////
+//// Purpose:		The context is all set up; this is where we prepare our OpenGL
+////				state.
+////
+////==============================================================================
+//- (void) prepareOpenGL
+//{
+//	glEnable(GL_DEPTH_TEST);
+//	glEnable(GL_BLEND);
+//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//	glEnable(GL_MULTISAMPLE); //antialiasing
 //
-// Purpose:		The context is all set up; this is where we prepare our OpenGL 
-//				state.
+//	glEnable(GL_TEXTURE_2D);
+//	glEnable(GL_TEXTURE_GEN_S);
+//	glEnable(GL_TEXTURE_GEN_T);
 //
-//==============================================================================
-- (void) prepareOpenGL
-{
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_MULTISAMPLE); //antialiasing
-	
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-		
-	// This represents the "default" GL state, at least until we change that policy.
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	// Default color. Our wrapper is responsible from applying the user's
-	// preferred color. 
-	NSColor *bgColor = [NSColor.controlBackgroundColor
-						colorUsingColorSpace: [NSColorSpace deviceRGBColorSpace]];
-	[self setBackgroundColorRed:bgColor.redComponent
-						  green:bgColor.greenComponent
-						   blue:bgColor.blueComponent]; // window background color
-
-	//
-	// Define the lighting.
-	//
-	
-	//Our light position is transformed by the modelview matrix. That means 
-	// we need to have a standard model matrix loaded to get our light to 
-	// land in the right place! But our modelview might have already been 
-	// affected by someone calling -setViewOrientation:. So we restore the 
-	// default here.
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glRotatef(180,1,0,0); //convert to standard, upside-down LDraw orientation.
-	
-	//---------- Material ------------------------------------------------------
-	
-//	GLfloat ambient[4]  = { 0.2, 0.2, 0.2, 1.0 };
-//	GLfloat diffuse[4]	= { 0.5, 0.5, 0.5, 1.0 };
-	GLfloat specular[4] = { 0.0, 0.0, 0.0, 1.0 };
-	GLfloat shininess   = 64.0; // range [0-128]
-	
-//	glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT,	ambient );
-//	glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE,	diffuse ); //don't bother; overridden by glColorMaterial
-	glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR,	specular );
-	glMaterialf(  GL_FRONT_AND_BACK, GL_SHININESS,	shininess );
-
-//	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); // this is the default anyway
-
-	glShadeModel(GL_SMOOTH);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_COLOR_MATERIAL);
-	
-
-	//---------- Light Model ---------------------------------------------------
-	
-	// The overall scene has ambient light to make the lighting less harsh. But 
-	// too much ambient light makes everything washed out. 
-	GLfloat lightModelAmbient[4]    = {0.3, 0.3, 0.3, 0.0};
-	
-	glLightModelf( GL_LIGHT_MODEL_TWO_SIDE,		GL_FALSE );
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT,		lightModelAmbient);
-	
-	
-	//---------- Lights --------------------------------------------------------
-	
-	// We are going to have two lights, one in a standard position (LIGHT0) and 
-	// another pointing opposite to it (LIGHT1). The second light will 
-	// illuminate any inverted normals or backwards polygons. 
-	GLfloat position0[] = {0, -0.0, -1.0, 0};
-	GLfloat position1[] = {0,  0.0,  1.0, 0};
-	
-	// Lessening the diffuseness also makes lighting less extreme.
-	GLfloat light0Ambient[4]     = { 0.0, 0.0, 0.0, 1.0 };
-	GLfloat light0Diffuse[4]     = { 0.8, 0.8, 0.8, 1.0 };
-	GLfloat light0Specular[4]    = { 0.0, 0.0, 0.0, 1.0 };
-	
-	//normal forward light
-	glLightfv(GL_LIGHT0, GL_POSITION, position0);
-	glLightfv(GL_LIGHT0, GL_AMBIENT,  light0Ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE,  light0Diffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, light0Specular);
-	
-	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION,	1.0);
-	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION,		0.0);
-	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION,	0.0);
-
-	//opposing light to illuminate backward normals.
-	glLightfv(GL_LIGHT1, GL_POSITION, position1);
-	glLightfv(GL_LIGHT1, GL_AMBIENT,  light0Ambient);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE,  light0Diffuse);
-	glLightfv(GL_LIGHT1, GL_SPECULAR, light0Specular);
-	
-	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION,	1.0);
-	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION,		0.0);
-	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION,	0.0);
-
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_LIGHT1);
-	
-	
-	//Now that the light is positioned where we want it, we can restore the 
-	// correct viewing angle.
-	[self setViewOrientation:self->viewOrientation];
-	
-}//end prepareOpenGL
+//	// This represents the "default" GL state, at least until we change that policy.
+//	glEnableClientState(GL_VERTEX_ARRAY);
+//	glEnableClientState(GL_NORMAL_ARRAY);
+//	glEnableClientState(GL_COLOR_ARRAY);
+//
+//	// Default color. Our wrapper is responsible from applying the user's
+//	// preferred color.
+//	NSColor *bgColor = [NSColor.controlBackgroundColor
+//						colorUsingColorSpace: [NSColorSpace deviceRGBColorSpace]];
+//	[self setBackgroundColorRed:bgColor.redComponent
+//						  green:bgColor.greenComponent
+//						   blue:bgColor.blueComponent]; // window background color
+//
+//	//
+//	// Define the lighting.
+//	//
+//
+//	//Our light position is transformed by the modelview matrix. That means
+//	// we need to have a standard model matrix loaded to get our light to
+//	// land in the right place! But our modelview might have already been
+//	// affected by someone calling -setViewOrientation:. So we restore the
+//	// default here.
+//	glMatrixMode(GL_MODELVIEW);
+//	glLoadIdentity();
+//	glRotatef(180,1,0,0); //convert to standard, upside-down LDraw orientation.
+//
+//	//---------- Material ------------------------------------------------------
+//
+////	GLfloat ambient[4]  = { 0.2, 0.2, 0.2, 1.0 };
+////	GLfloat diffuse[4]	= { 0.5, 0.5, 0.5, 1.0 };
+//	GLfloat specular[4] = { 0.0, 0.0, 0.0, 1.0 };
+//	GLfloat shininess   = 64.0; // range [0-128]
+//
+////	glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT,	ambient );
+////	glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE,	diffuse ); //don't bother; overridden by glColorMaterial
+//	glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR,	specular );
+//	glMaterialf(  GL_FRONT_AND_BACK, GL_SHININESS,	shininess );
+//
+////	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); // this is the default anyway
+//
+//	glShadeModel(GL_SMOOTH);
+//	glEnable(GL_NORMALIZE);
+//	glEnable(GL_COLOR_MATERIAL);
+//
+//
+//	//---------- Light Model ---------------------------------------------------
+//
+//	// The overall scene has ambient light to make the lighting less harsh. But
+//	// too much ambient light makes everything washed out.
+//	GLfloat lightModelAmbient[4]    = {0.3, 0.3, 0.3, 0.0};
+//
+//	glLightModelf( GL_LIGHT_MODEL_TWO_SIDE,		GL_FALSE );
+//	glLightModelfv(GL_LIGHT_MODEL_AMBIENT,		lightModelAmbient);
+//
+//
+//	//---------- Lights --------------------------------------------------------
+//
+//	// We are going to have two lights, one in a standard position (LIGHT0) and
+//	// another pointing opposite to it (LIGHT1). The second light will
+//	// illuminate any inverted normals or backwards polygons.
+//	GLfloat position0[] = {0, -0.0, -1.0, 0};
+//	GLfloat position1[] = {0,  0.0,  1.0, 0};
+//
+//	// Lessening the diffuseness also makes lighting less extreme.
+//	GLfloat light0Ambient[4]     = { 0.0, 0.0, 0.0, 1.0 };
+//	GLfloat light0Diffuse[4]     = { 0.8, 0.8, 0.8, 1.0 };
+//	GLfloat light0Specular[4]    = { 0.0, 0.0, 0.0, 1.0 };
+//
+//	//normal forward light
+//	glLightfv(GL_LIGHT0, GL_POSITION, position0);
+//	glLightfv(GL_LIGHT0, GL_AMBIENT,  light0Ambient);
+//	glLightfv(GL_LIGHT0, GL_DIFFUSE,  light0Diffuse);
+//	glLightfv(GL_LIGHT0, GL_SPECULAR, light0Specular);
+//
+//	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION,	1.0);
+//	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION,		0.0);
+//	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION,	0.0);
+//
+//	//opposing light to illuminate backward normals.
+//	glLightfv(GL_LIGHT1, GL_POSITION, position1);
+//	glLightfv(GL_LIGHT1, GL_AMBIENT,  light0Ambient);
+//	glLightfv(GL_LIGHT1, GL_DIFFUSE,  light0Diffuse);
+//	glLightfv(GL_LIGHT1, GL_SPECULAR, light0Specular);
+//
+//	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION,	1.0);
+//	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION,		0.0);
+//	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION,	0.0);
+//
+//	glEnable(GL_LIGHTING);
+//	glEnable(GL_LIGHT0);
+//	glEnable(GL_LIGHT1);
+//
+//
+//	//Now that the light is positioned where we want it, we can restore the
+//	// correct viewing angle.
+//	[self setViewOrientation:self->viewOrientation];
+//
+//}//end prepareOpenGL
 
 
 
@@ -243,173 +260,174 @@
 #pragma mark DRAWING
 #pragma mark -
 
-//========== draw ==============================================================
+// moved to category
+////========== draw ==============================================================
+////
+//// Purpose:		Draw the LDraw content of the view.
+////
+//// Notes:		This method is, in theory at least, as thread-safe as Apple's
+////				OpenGL implementation is. Which is to say, not very much.
+////
+////==============================================================================
+//- (void) draw
+//{
+//	NSDate			*startTime			= nil;
+//	NSUInteger		options 			= DRAW_NO_OPTIONS;
+//	NSTimeInterval	drawTime			= 0;
+//	BOOL			considerFastDraw	= NO;
 //
-// Purpose:		Draw the LDraw content of the view.
+//	startTime	= [NSDate date];
 //
-// Notes:		This method is, in theory at least, as thread-safe as Apple's 
-//				OpenGL implementation is. Which is to say, not very much.
+//	// We may need to simplify large models if we are spinning the model
+//	// or doing part drag-and-drop.
+//	considerFastDraw =		self->isTrackingDrag == YES
+//						||	self->isGesturing == YES
+//						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
+//							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
+//							);
+//#if DEBUG_DRAWING == 0
+//	if(considerFastDraw == YES && self->rotationDrawMode == LDrawGLDrawExtremelyFast)
+//	{
+//		options |= DRAW_BOUNDS_ONLY;
+//	}
+//#endif //DEBUG_DRAWING
 //
-//==============================================================================
-- (void) draw
-{
-	NSDate			*startTime			= nil;
-	NSUInteger		options 			= DRAW_NO_OPTIONS;
-	NSTimeInterval	drawTime			= 0;
-	BOOL			considerFastDraw	= NO;
-	
-	startTime	= [NSDate date];
-
-	// We may need to simplify large models if we are spinning the model 
-	// or doing part drag-and-drop. 
-	considerFastDraw =		self->isTrackingDrag == YES
-						||	self->isGesturing == YES
-						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
-							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
-							);
-#if DEBUG_DRAWING == 0
-	if(considerFastDraw == YES && self->rotationDrawMode == LDrawGLDrawExtremelyFast)
-	{
-		options |= DRAW_BOUNDS_ONLY;
-	}
-#endif //DEBUG_DRAWING
-
-	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
-	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
-	assert(glIsEnabled(GL_VERTEX_ARRAY));
-	assert(glIsEnabled(GL_NORMAL_ARRAY));
-	assert(glIsEnabled(GL_COLOR_ARRAY));
-
-	//Load the model matrix to make sure we are applying the right stuff.
-	glMatrixMode(GL_MODELVIEW);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	// Make lines look a little nicer; Max width 1.0; 0.5 at 100% zoom
-	glLineWidth(MIN([self zoomPercentageForGL]/100 * 0.5, 1.0));
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf([camera getProjection]);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf([camera getModelView]);
-
-	// DRAW!
-	#if !NEW_RENDERER
-	
-		[self->fileBeingDrawn draw:options
-						 viewScale:[self zoomPercentageForGL]/100.
-					   parentColor:color];
-	
-	#else
-
-		LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForGL]/100. modelView:[camera getModelView] projection:[camera getProjection]];	
-		[self->fileBeingDrawn drawSelf:ren];
-		[ren release];
-
-	#endif
-  
-	// We allow primitive drawing to leave their VAO bound to avoid setting the VAO
-	// back to zero between every draw call.  Set it once here to avoid usign some
-	// poor directive to draw!
-	glBindVertexArrayAPPLE(0);
-
-	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
-	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
-	assert(glIsEnabled(GL_VERTEX_ARRAY));
-	assert(glIsEnabled(GL_NORMAL_ARRAY));
-	assert(glIsEnabled(GL_COLOR_ARRAY));
-
-	#if DEBUG_BOUNDING_BOX
-	glDepthMask(GL_FALSE);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisable(GL_LIGHTING);
-	glColor4f(0.5,0.5,0.5,0.1);
-	[self->fileBeingDrawn debugDrawboundingBox];
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnable(GL_LIGHTING);
-	glDepthMask(GL_TRUE);
-	#endif
-
-	// Marquee selection box -- only if non-zero.
-	if( V2BoxWidth(self->selectionMarquee) != 0 && V2BoxHeight(self->selectionMarquee) != 0)
-	{
-		Point2	from	= self->selectionMarquee.origin;
-		Point2	to		= V2Make( V2BoxMaxX(selectionMarquee), V2BoxMaxY(selectionMarquee) );
-		Point2	p1		= [self convertPointToViewport:from];
-		Point2	p2		= [self convertPointToViewport:to];
-
-		Box2	vp = [self viewport];
-		glMatrixMode(GL_PROJECTION);
-		glPushMatrix();
-		glLoadIdentity();
-		glOrtho(V2BoxMinX(vp),V2BoxMaxX(vp),V2BoxMinY(vp),V2BoxMaxY(vp),-1,1);
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-		glLoadIdentity();
-		
-		glColor4f(0,0,0,1);
-
-		GLfloat	vertices[8] = {
-							p1.x,p1.y,
-							p2.x,p1.y,
-							p2.x,p2.y,
-							p1.x,p2.y };
-							
-							
-		glVertexPointer(2, GL_FLOAT, 0, vertices);
-		glDisableClientState(GL_NORMAL_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-
-		glDrawArrays(GL_LINE_LOOP,0,4);
-		glEnableClientState(GL_NORMAL_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
-
-		glMatrixMode(GL_PROJECTION);
-		glPopMatrix();
-		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
-	}
-	
-	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
-	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
-	assert(glIsEnabled(GL_VERTEX_ARRAY));
-	assert(glIsEnabled(GL_NORMAL_ARRAY));
-	assert(glIsEnabled(GL_COLOR_ARRAY));
-	
-	
-	[self->delegate LDrawGLRendererNeedsFlush:self];
-	
-	// If we just did a full draw, let's see if rotating needs to be 
-	// done simply. 
-	drawTime = -[startTime timeIntervalSinceNow];
-	if(considerFastDraw == NO)
-	{
-		if( drawTime > SIMPLIFICATION_THRESHOLD )
-			rotationDrawMode = LDrawGLDrawExtremelyFast;
-		else
-			rotationDrawMode = LDrawGLDrawNormal;
-	}
-
-	// Timing info
-	framesSinceStartTime++;
-#if DEBUG_DRAWING
-	NSTimeInterval timeSinceMark = [NSDate timeIntervalSinceReferenceDate] - fpsStartTime;
-	if(timeSinceMark > 5)
-	{	// reset periodically
-		fpsStartTime = [NSDate timeIntervalSinceReferenceDate]; 
-		framesSinceStartTime = 0;
-		NSLog(@"fps = ????????, period = ????????, draw time: %f", drawTime);
-	}
-	else
-	{
-		CGFloat framesPerSecond = framesSinceStartTime / timeSinceMark;
-		CGFloat period = timeSinceMark / framesSinceStartTime;
-		NSLog(@"fps = %f, period = %f, draw time: %f", framesPerSecond, period, drawTime);
-	}
-#endif //DEBUG_DRAWING
-	
-}//end draw:to
+//	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
+//	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
+//	assert(glIsEnabled(GL_VERTEX_ARRAY));
+//	assert(glIsEnabled(GL_NORMAL_ARRAY));
+//	assert(glIsEnabled(GL_COLOR_ARRAY));
+//
+//	//Load the model matrix to make sure we are applying the right stuff.
+//	glMatrixMode(GL_MODELVIEW);
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//
+//	// Make lines look a little nicer; Max width 1.0; 0.5 at 100% zoom
+//	glLineWidth(MIN([self zoomPercentageForGL]/100 * 0.5, 1.0));
+//
+//	glMatrixMode(GL_PROJECTION);
+//	glLoadMatrixf([camera getProjection]);
+//	glMatrixMode(GL_MODELVIEW);
+//	glLoadMatrixf([camera getModelView]);
+//
+//	// DRAW!
+//	#if !NEW_RENDERER
+//
+//		[self->fileBeingDrawn draw:options
+//						 viewScale:[self zoomPercentageForGL]/100.
+//					   parentColor:color];
+//
+//	#else
+//
+//		LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForGL]/100. modelView:[camera getModelView] projection:[camera getProjection]];
+//		[self->fileBeingDrawn drawSelf:ren];
+//		[ren release];
+//
+//	#endif
+//
+//	// We allow primitive drawing to leave their VAO bound to avoid setting the VAO
+//	// back to zero between every draw call.  Set it once here to avoid usign some
+//	// poor directive to draw!
+//	glBindVertexArrayAPPLE(0);
+//
+//	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
+//	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
+//	assert(glIsEnabled(GL_VERTEX_ARRAY));
+//	assert(glIsEnabled(GL_NORMAL_ARRAY));
+//	assert(glIsEnabled(GL_COLOR_ARRAY));
+//
+//	#if DEBUG_BOUNDING_BOX
+//	glDepthMask(GL_FALSE);
+//	glDisableClientState(GL_COLOR_ARRAY);
+//	glDisableClientState(GL_NORMAL_ARRAY);
+//	glDisable(GL_LIGHTING);
+//	glColor4f(0.5,0.5,0.5,0.1);
+//	[self->fileBeingDrawn debugDrawboundingBox];
+//	glEnableClientState(GL_COLOR_ARRAY);
+//	glEnableClientState(GL_NORMAL_ARRAY);
+//	glEnable(GL_LIGHTING);
+//	glDepthMask(GL_TRUE);
+//	#endif
+//
+//	// Marquee selection box -- only if non-zero.
+//	if( V2BoxWidth(self->selectionMarquee) != 0 && V2BoxHeight(self->selectionMarquee) != 0)
+//	{
+//		Point2	from	= self->selectionMarquee.origin;
+//		Point2	to		= V2Make( V2BoxMaxX(selectionMarquee), V2BoxMaxY(selectionMarquee) );
+//		Point2	p1		= [self convertPointToViewport:from];
+//		Point2	p2		= [self convertPointToViewport:to];
+//
+//		Box2	vp = [self viewport];
+//		glMatrixMode(GL_PROJECTION);
+//		glPushMatrix();
+//		glLoadIdentity();
+//		glOrtho(V2BoxMinX(vp),V2BoxMaxX(vp),V2BoxMinY(vp),V2BoxMaxY(vp),-1,1);
+//		glMatrixMode(GL_MODELVIEW);
+//		glPushMatrix();
+//		glLoadIdentity();
+//
+//		glColor4f(0,0,0,1);
+//
+//		GLfloat	vertices[8] = {
+//							p1.x,p1.y,
+//							p2.x,p1.y,
+//							p2.x,p2.y,
+//							p1.x,p2.y };
+//
+//
+//		glVertexPointer(2, GL_FLOAT, 0, vertices);
+//		glDisableClientState(GL_NORMAL_ARRAY);
+//		glDisableClientState(GL_COLOR_ARRAY);
+//
+//		glDrawArrays(GL_LINE_LOOP,0,4);
+//		glEnableClientState(GL_NORMAL_ARRAY);
+//		glEnableClientState(GL_COLOR_ARRAY);
+//
+//		glMatrixMode(GL_PROJECTION);
+//		glPopMatrix();
+//		glMatrixMode(GL_MODELVIEW);
+//		glPopMatrix();
+//	}
+//
+//	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
+//	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
+//	assert(glIsEnabled(GL_VERTEX_ARRAY));
+//	assert(glIsEnabled(GL_NORMAL_ARRAY));
+//	assert(glIsEnabled(GL_COLOR_ARRAY));
+//
+//
+//	[self->delegate LDrawRendererNeedsFlush:self];
+//
+//	// If we just did a full draw, let's see if rotating needs to be
+//	// done simply.
+//	drawTime = -[startTime timeIntervalSinceNow];
+//	if(considerFastDraw == NO)
+//	{
+//		if( drawTime > SIMPLIFICATION_THRESHOLD )
+//			rotationDrawMode = LDrawGLDrawExtremelyFast;
+//		else
+//			rotationDrawMode = LDrawGLDrawNormal;
+//	}
+//
+//	// Timing info
+//	framesSinceStartTime++;
+//#if DEBUG_DRAWING
+//	NSTimeInterval timeSinceMark = [NSDate timeIntervalSinceReferenceDate] - fpsStartTime;
+//	if(timeSinceMark > 5)
+//	{	// reset periodically
+//		fpsStartTime = [NSDate timeIntervalSinceReferenceDate];
+//		framesSinceStartTime = 0;
+//		NSLog(@"fps = ????????, period = ????????, draw time: %f", drawTime);
+//	}
+//	else
+//	{
+//		CGFloat framesPerSecond = framesSinceStartTime / timeSinceMark;
+//		CGFloat period = timeSinceMark / framesSinceStartTime;
+//		NSLog(@"fps = %f, period = %f, draw time: %f", framesPerSecond, period, drawTime);
+//	}
+//#endif //DEBUG_DRAWING
+//
+//}//end draw:to
 
 
 //========== isFlipped =========================================================
@@ -678,7 +696,7 @@
 //				window manager to do things like scrolling. 
 //
 //==============================================================================
-- (void) setDelegate:(id<LDrawGLRendererDelegate>)object withScroller:(id<LDrawGLCameraScroller>)newScroller
+- (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawGLCameraScroller>)newScroller
 {
 	// weak link.
 	self->delegate = object;
@@ -688,25 +706,26 @@
 }//end setDelegate:
 
 
-//========== setBackgroundColorRed:green:blue: =================================
+// moved to category
+////========== setBackgroundColorRed:green:blue: =================================
+////
+//// Purpose:		Sets the canvas background color.
+////
+////==============================================================================
+//- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue
+//{
+//	glBackgroundColor[0] = red;
+//	glBackgroundColor[1] = green;
+//	glBackgroundColor[2] = blue;
+//	glBackgroundColor[3] = 1.0;
 //
-// Purpose:		Sets the canvas background color.
+//	glClearColor(glBackgroundColor[0],
+//				 glBackgroundColor[1],
+//				 glBackgroundColor[2],
+//				 glBackgroundColor[3] );
 //
-//==============================================================================
-- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue
-{
-	glBackgroundColor[0] = red;
-	glBackgroundColor[1] = green;
-	glBackgroundColor[2] = blue;
-	glBackgroundColor[3] = 1.0;
-
-	glClearColor(glBackgroundColor[0],
-				 glBackgroundColor[1],
-				 glBackgroundColor[2],
-				 glBackgroundColor[3] );
-				 
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
-}
+//	[self->delegate LDrawRendererNeedsRedisplay:self];
+//}
 
 
 //========== setDragEndedInOurDocument: ========================================
@@ -719,7 +738,7 @@
 //				insufficient to simply test whether the drag ended within this 
 //				view. 
 //
-//				So, when a drag ends in any LDrawGLView, it inspects the 
+//				So, when a drag ends in any LDrawView, it inspects the 
 //				dragging source to see if it represents the same document. If it 
 //				does, it sends the source this message. If this message hasn't 
 //				been received by the time the drag ends, this view will 
@@ -774,7 +793,7 @@
 	[self->color release];
 	self->color = newColor;
 	
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 }//end setColor
 
@@ -803,7 +822,7 @@
 		[camera setModelSize:bounds];
 	}
 
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 	if(virginView == YES)
 	{
@@ -850,7 +869,7 @@
 - (void) setGraphicsSurfaceSize:(Size2)size
 {
 	[camera setGraphicsSurfaceSize:size];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 }
 
 
@@ -867,7 +886,7 @@
 {
 	[camera setProjectionMode:newProjectionMode];
 	
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 } //end setProjectionMode:
 
@@ -883,7 +902,7 @@
 {
 	[camera setLocationMode:newLocationMode];
 	
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 } //end setLocationMode:
 
@@ -926,7 +945,7 @@
 - (void) setViewingAngle:(Tuple3)newAngle
 {
 	[camera setViewingAngle:newAngle];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 }//end setViewingAngle:
 
@@ -945,7 +964,7 @@
 		
 	// Apply the angle itself.
 	[self setViewingAngle:newAngle];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 }//end setViewOrientation:
 
@@ -964,7 +983,7 @@
 - (void) setZoomPercentage:(CGFloat)newPercentage
 {
 	[camera setZoomPercentage:newPercentage];
-	[delegate LDrawGLRendererNeedsRedisplay:self];
+	[delegate LDrawRendererNeedsRedisplay:self];
 }
 
 
@@ -978,7 +997,7 @@
 - (void) moveCamera:(Vector3)delta
 {
 	[camera setRotationCenter:V3Add([camera rotationCenter], delta)];
-	[delegate LDrawGLRendererNeedsRedisplay:self];
+	[delegate LDrawRendererNeedsRedisplay:self];
 }//end moveCamera
 
 
@@ -1165,7 +1184,7 @@
 	if(		(self->isTrackingDrag == YES && rotationDrawMode == LDrawGLDrawExtremelyFast)
 	   ||	V2BoxWidth(self->selectionMarquee) || V2BoxHeight(self->selectionMarquee) )
 	{
-		[self->delegate LDrawGLRendererNeedsRedisplay:self];
+		[self->delegate LDrawRendererNeedsRedisplay:self];
 	}
 	
 	self->activeDragHandle = nil;
@@ -1228,7 +1247,7 @@
 	// select it. 
 	if(		self->fileBeingDrawn != nil
 	   &&	self->allowsEditing == YES
-	   &&	[self->delegate respondsToSelector:@selector(LDrawGLRenderer:wantsToSelectDirective:byExtendingSelection:)] )
+	   &&	[self->delegate respondsToSelector:@selector(LDrawRenderer:wantsToSelectDirective:byExtendingSelection:)] )
 	{
 		Point2	point_viewport			= [self convertPointToViewport:point_view];
 		Point2	bl						= V2Make(point_viewport.x-HANDLE_SIZE,point_viewport.y-HANDLE_SIZE);
@@ -1277,13 +1296,13 @@
 				case SelectionReplace:				
 					// Replacement mode?  Select unless we hit an already hit one - we do not "deselect others" on a click.
 					if(!has_sel_directive)
-						[self->delegate LDrawGLRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];				
+						[self->delegate LDrawRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
 					break;
 				
 				case SelectionExtend:
 					// Extended selection.  If we hit a part, toggle it - if we miss a part, don't do anything, nothing to do.
 					if(has_any_directive)
-						[self->delegate LDrawGLRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
+						[self->delegate LDrawRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
 					break;
 				
 				case SelectionIntersection:
@@ -1291,14 +1310,14 @@
 					// Then we copy.  If we have no directive, the whole sel clears, which is the correct start for an intersection (since the
 					// marquee is empty).
 					if(!has_sel_directive)
-						[self->delegate LDrawGLRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
+						[self->delegate LDrawRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
 					break;
 				
 				case SelectionSubtract:
 					// Subtraction.  If we have an UNSELECTED directive, we have to grab it.  If we have a selected directive  we do nothing so
 					// we can option-drag-copy thes el.  And if we just miss everything, the subtraction hasn't nuked anything yet...again we do nothing.
 					if(has_any_directive && !has_sel_directive)
-						[self->delegate LDrawGLRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
+						[self->delegate LDrawRenderer:self wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection ];
 					break;
 			}
 		}
@@ -1359,9 +1378,9 @@
 	[self publishMouseOverPoint:point_view];
 
 	// Give the document controller an opportunity for undo management!
-	if(self->isStartingDrag && [self->delegate respondsToSelector:@selector(LDrawGLRenderer:willBeginDraggingHandle:)])
+	if(self->isStartingDrag && [self->delegate respondsToSelector:@selector(LDrawRenderer:willBeginDraggingHandle:)])
 	{
-		[self->delegate LDrawGLRenderer:self willBeginDraggingHandle:self->activeDragHandle];
+		[self->delegate LDrawRenderer:self willBeginDraggingHandle:self->activeDragHandle];
 	}
 
 	// Update with new position
@@ -1374,9 +1393,9 @@
 	{
 		[self->fileBeingDrawn noteNeedsDisplay];
 
-		if([self->delegate respondsToSelector:@selector(LDrawGLRenderer:dragHandleDidMove:)])
+		if([self->delegate respondsToSelector:@selector(LDrawRenderer:dragHandleDidMove:)])
 		{
-			[self->delegate LDrawGLRenderer:self dragHandleDidMove:self->activeDragHandle];
+			[self->delegate LDrawRenderer:self dragHandleDidMove:self->activeDragHandle];
 		}
 	}
 
@@ -1402,8 +1421,8 @@
 	proportion.x /= V2BoxWidth(viewport);
 	proportion.y /= V2BoxHeight(viewport);
 	
-	if([self->delegate respondsToSelector:@selector(LDrawGLRendererMouseNotPositioning:)])
-		[self->delegate LDrawGLRendererMouseNotPositioning:self];
+	if([self->delegate respondsToSelector:@selector(LDrawRendererMouseNotPositioning:)])
+		[self->delegate LDrawRendererMouseNotPositioning:self];
 	
 	[self scrollModelPoint:self->initialDragLocation toViewportProportionalPoint:proportion];
 	
@@ -1461,10 +1480,10 @@
 
 	[camera rotationDragged:viewDirection];
 	
-	if([self->delegate respondsToSelector:@selector(LDrawGLRendererMouseNotPositioning:)])
-		[self->delegate LDrawGLRendererMouseNotPositioning:self];
+	if([self->delegate respondsToSelector:@selector(LDrawRendererMouseNotPositioning:)])
+		[self->delegate LDrawRendererMouseNotPositioning:self];
 	
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 		
 	
 }//end rotationDragged
@@ -1483,8 +1502,8 @@
 	
 	[self setZoomPercentage:(currentZoom * zoomChange)];
 	
-	if([self->delegate respondsToSelector:@selector(LDrawGLRendererMouseNotPositioning:)])
-		[self->delegate LDrawGLRendererMouseNotPositioning:self];
+	if([self->delegate respondsToSelector:@selector(LDrawRendererMouseNotPositioning:)])
+		[self->delegate LDrawRendererMouseNotPositioning:self];
 	
 }//end zoomDragged:
 
@@ -1510,7 +1529,7 @@
 	// select it. 
 	if(		self->fileBeingDrawn != nil
 	   &&	self->allowsEditing == YES
-	   &&	[self->delegate respondsToSelector:@selector(LDrawGLRenderer:wantsToSelectDirective:byExtendingSelection:)] )
+	   &&	[self->delegate respondsToSelector:@selector(LDrawRenderer:wantsToSelectDirective:byExtendingSelection:)] )
 	{
 		// First do hit-testing on nothing but the bounding boxes; that is very 
 		// fast and likely eliminates a lot of parts. 
@@ -1518,9 +1537,9 @@
 		fineDrawParts = [self getDirectivesUnderRect:self->selectionMarquee
 									 amongDirectives:[NSArray arrayWithObject:self->fileBeingDrawn]
 											fastDraw:NO];
-		[self->delegate LDrawGLRenderer:self
-				wantsToSelectDirectives:fineDrawParts
-				   selectionMode:selectionMode ];
+		[self->delegate LDrawRenderer:self
+			  wantsToSelectDirectives:fineDrawParts
+						selectionMode:selectionMode ];
 		
 	}
 
@@ -1561,7 +1580,7 @@
 	
 	if(self->rotationDrawMode == LDrawGLDrawExtremelyFast)
 	{
-		[self->delegate LDrawGLRendererNeedsRedisplay:self];
+		[self->delegate LDrawRendererNeedsRedisplay:self];
 	}
 }
 
@@ -1584,7 +1603,7 @@
 	}
 
 	[camera rotateByDegrees:angle];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 }//end rotateWithEvent:
 
@@ -1619,9 +1638,9 @@
 		// Ask the delegate roughly where it wants us to be.
 		// We get a full transform here so that when we drag in new parts, they 
 		// will be rotated the same as whatever part we were using last. 
-		if([self->delegate respondsToSelector:@selector(LDrawGLRendererPreferredPartTransform:)])
+		if([self->delegate respondsToSelector:@selector(LDrawRendererPreferredPartTransform:)])
 		{
-			partTransform = [self->delegate LDrawGLRendererPreferredPartTransform:self];
+			partTransform = [self->delegate LDrawRendererPreferredPartTransform:self];
 			[newPart setTransformComponents:partTransform];
 		}
 	}
@@ -1813,7 +1832,7 @@
 	if(fileBeingDrawn != nil)
 		[camera setModelSize:[fileBeingDrawn boundingBox3]];
 
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 }//end displayNeedsUpdating
 
@@ -1830,7 +1849,7 @@
 - (void) displayNeedsUpdating:(NSNotification *)notification
 {
 	[camera setModelSize:[fileBeingDrawn boundingBox3]];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 }//end displayNeedsUpdating
 
@@ -1844,7 +1863,7 @@
 {
 	[self updateRotationCenter];
 
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 }//end rotationCenterChanged:
 
@@ -2155,7 +2174,7 @@
 	Vector3		modelAxisForZ		= ZeroPoint3;
 	Vector3		confidence			= ZeroPoint3;
 	
-	if([self->delegate respondsToSelector:@selector(LDrawGLRenderer:mouseIsOverPoint:confidence:)])
+	if([self->delegate respondsToSelector:@selector(LDrawRenderer:mouseIsOverPoint:confidence:)])
 	{
 		modelPoint = [self modelPointForPoint:point_view];
 		
@@ -2166,7 +2185,7 @@
 			confidence = V3Add(modelAxisForX, modelAxisForY);
 		}
 		
-		[self->delegate LDrawGLRenderer:self mouseIsOverPoint:modelPoint confidence:confidence];
+		[self->delegate LDrawRenderer:self mouseIsOverPoint:modelPoint confidence:confidence];
 	}
 }
 
@@ -2185,7 +2204,7 @@
 	Point3 modelPoint = [self modelPointForPoint:viewPoint];
 
 	[camera setZoomPercentage:newPercentage preservePoint:modelPoint];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 }//end setZoomPercentage:preservePoint:
 
@@ -2205,7 +2224,7 @@
 - (void) scrollBy:(Vector2)scrollDelta_viewport
 {
 	[camera scrollBy:scrollDelta_viewport];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 }
 
 
@@ -2219,7 +2238,7 @@
 - (void) scrollCameraVisibleRectToPoint:(Point2)visibleRectOrigin
 {
 	[self->camera scrollToPoint:visibleRectOrigin];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 }
 
 
@@ -2248,7 +2267,7 @@
   toViewportProportionalPoint:(Point2)viewportPoint
 {
 	[camera scrollModelPoint:modelPoint  toViewportProportionalPoint:viewportPoint];
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 }//end scrollCenterToModelPoint:
 
@@ -2273,7 +2292,7 @@
 	}
 	
 	[camera setRotationCenter:point];	
-	[self->delegate LDrawGLRendererNeedsRedisplay:self];
+	[self->delegate LDrawRendererNeedsRedisplay:self];
 }
 
 #pragma mark -
@@ -2423,9 +2442,9 @@
 		// will very likely be wrong, but there is little else which can be 
 		// done. 
 		
-		if([self->delegate respondsToSelector:@selector(LDrawGLRendererPreferredPartTransform:)])
+		if([self->delegate respondsToSelector:@selector(LDrawRendererPreferredPartTransform:)])
 		{
-			partTransform = [self->delegate LDrawGLRendererPreferredPartTransform:self];
+			partTransform = [self->delegate LDrawRendererPreferredPartTransform:self];
 		}
 
 		modelPoint = [self modelPointForPoint:viewPoint

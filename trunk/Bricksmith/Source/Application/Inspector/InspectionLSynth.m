@@ -16,7 +16,7 @@
 #import "LDrawApplication.h"
 #import "LDrawPart.h"
 #import "PartLibrary.h"
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 
 @implementation InspectionLSynth
 

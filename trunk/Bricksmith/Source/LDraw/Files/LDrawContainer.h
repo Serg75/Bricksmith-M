@@ -10,7 +10,7 @@
 //==============================================================================
 #import <Foundation/Foundation.h>
 
-#import "LDrawDirective.h"
+#import "LDrawDirectiveGPU.h"
 #import "MatrixMath.h"
 
 @class PartReport;

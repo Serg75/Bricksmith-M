@@ -417,7 +417,7 @@
 // Purpose:		Draw the synthesized part.
 //
 //==============================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
     NSArray         *constraints         = [self subdirectives];
     LDrawDirective  *currentDirective    = nil;
