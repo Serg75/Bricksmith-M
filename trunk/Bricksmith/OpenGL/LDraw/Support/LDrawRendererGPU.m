@@ -27,7 +27,7 @@
 
 #import "LDrawRendererGPU.h"
 
-#import "LDrawShaderRenderer.h"
+#import "LDrawShaderRendererGPU.h"
 #include "OpenGLUtilities.h"
 
 

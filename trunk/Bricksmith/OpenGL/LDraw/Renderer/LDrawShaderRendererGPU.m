@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawShaderRenderer.m
+//	LDrawShaderRendererGPU.m
 //	Bricksmith
 //
 //	Purpose:	an implementation of the LDrawCoreRenderer API using GL shaders.
@@ -17,7 +17,6 @@
 //==============================================================================
 
 #import "LDrawShaderRendererGPU.h"
-#import "LDrawShaderRenderer.h"
 
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderLoader.h"

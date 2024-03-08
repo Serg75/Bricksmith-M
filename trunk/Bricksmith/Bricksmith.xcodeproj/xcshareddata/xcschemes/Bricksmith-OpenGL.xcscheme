@@ -16,7 +16,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8D15AC270486D014006FF6A4"
                BuildableName = "Bricksmith.app"
-               BlueprintName = "Bricksmith"
+               BlueprintName = "Bricksmith-OpenGL"
                ReferencedContainer = "container:Bricksmith.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -57,7 +57,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8D15AC270486D014006FF6A4"
             BuildableName = "Bricksmith.app"
-            BlueprintName = "Bricksmith"
+            BlueprintName = "Bricksmith-OpenGL"
             ReferencedContainer = "container:Bricksmith.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -74,7 +74,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8D15AC270486D014006FF6A4"
             BuildableName = "Bricksmith.app"
-            BlueprintName = "Bricksmith"
+            BlueprintName = "Bricksmith-OpenGL"
             ReferencedContainer = "container:Bricksmith.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

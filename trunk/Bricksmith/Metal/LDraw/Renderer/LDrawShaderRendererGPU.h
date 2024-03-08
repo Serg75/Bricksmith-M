@@ -10,16 +10,16 @@
 //				parts push and pop state to affect the child parts that are
 //				drawn via the depth-first traversal.
 //
-//	Info:		This category contains OpenGL-related code.
+//	Info:		This category contains Metal-related code.
 //
-//	Created by Sergey Slobodenyuk on 2023-05-10.
+//	Created by Sergey Slobodenyuk on 2023-06-07.
 //
 //==============================================================================
 
 #import "LDrawShaderRenderer.h"
 
 
-@interface LDrawShaderRenderer (OpenGL)
+@interface LDrawShaderRenderer (Metal)
 
 - (id) initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
 

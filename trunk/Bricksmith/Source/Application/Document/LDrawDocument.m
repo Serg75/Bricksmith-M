@@ -17,6 +17,7 @@
 //  Copyright (c) 2005. All rights reserved.
 //==============================================================================
 #import "LDrawDocument.h"
+#import "LDrawDocumentGPU.h"
 
 #import <AMSProgressBar/AMSProgressBar.h>
 
@@ -441,17 +442,17 @@ void AppendChoicesToNewItem(
 				error:(NSError **)outError
 {
 	NSString    *fileContents   = [LDrawUtilities stringFromFileData:data];
-	LDrawFile   *newFile        = nil;
-	BOOL        success         = NO;
+	__block	LDrawFile   *newFile        = nil;
+	__block	BOOL        success         = NO;
 	
 	//Parse the model.
 	// - optimizing models can result in OpenGL calls, so to be ultra-safe we 
 	//   set a context and lock on it. We can't use any of the documents GL 
 	//   views because the Nib may not have been loaded yet.
-	CGLLockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	[self lockContextAndExecute:^
 	{
-		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-		
+		[LDrawApplication makeCurrentSharedContext];
+
 		@try
 		{
 			CFAbsoluteTime  startTime   = CFAbsoluteTimeGetCurrent();
@@ -476,8 +477,7 @@ void AppendChoicesToNewItem(
 											code:NSFileReadCorruptFileError
 										userInfo:nil];
 		}
-	}
-	CGLUnlockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	}];
 	
     return success;
 	
@@ -720,8 +720,8 @@ void AppendChoicesToNewItem(
 	
 	documentContents = newContents;
 	
-	[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-		
+    [LDrawApplication makeCurrentSharedContext];
+
 }//end setDocumentContents:
 
 
@@ -3952,11 +3952,10 @@ void AppendChoicesToNewItem(
 	
 		[parent insertDirective:newDirective atIndex:index];
 	}
-	CGLLockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	[self lockContextAndExecute:^
 	{
-		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-	}
-	CGLUnlockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+		[LDrawApplication makeCurrentSharedContext];
+	}];
 	
 }//end addDirective:toParent:atIndex:
 

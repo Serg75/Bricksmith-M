@@ -13,16 +13,16 @@
 //					NSDocumentController *documentController = [NSDocumentController sharedDocumentController];
 //					LDrawDocument *currentDocument = [documentController currentDocument];
 //
-//	Info:		This category contains OpenGL-related code.
+//	Info:		This category contains Metal-related code.
 //
-//	Created by Sergey Slobodenyuk on 2023-05-29.
+//	Created by Sergey Slobodenyuk on 2023-06-07.
 //
 //==============================================================================
 
 #import "LDrawDocument.h"
 
 
-@interface LDrawDocument (OpenGL)
+@interface LDrawDocument (Metal)
 
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
 

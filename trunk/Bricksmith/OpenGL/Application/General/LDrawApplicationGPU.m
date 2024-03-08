@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawApplication.m
+//	LDrawApplicationGPU.m
 //	Bricksmith
 //
 //	Purpose:	This is the "application controller." Here we find application-

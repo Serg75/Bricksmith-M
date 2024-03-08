@@ -24,7 +24,7 @@
 		0B04E9861093BB4200E201EE /* InspectorTriangle.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E95D1093BB4200E201EE /* InspectorTriangle.xib */; };
 		0B04E9871093BB4200E201EE /* InspectorUnknownCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E95F1093BB4200E201EE /* InspectorUnknownCommand.xib */; };
 		0B04E9881093BB4200E201EE /* LDrawDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9611093BB4200E201EE /* LDrawDocument.xib */; };
-		0B04E9891093BB4200E201EE /* LDrawGLViewAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9631093BB4200E201EE /* LDrawGLViewAccessories.xib */; };
+		0B04E9891093BB4200E201EE /* LDrawViewAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9631093BB4200E201EE /* LDrawViewAccessories.xib */; };
 		0B04E98A1093BB4200E201EE /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9651093BB4200E201EE /* MainMenu.xib */; };
 		0B04E98B1093BB4200E201EE /* MinifigureGenerator.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9671093BB4200E201EE /* MinifigureGenerator.xib */; };
 		0B04E98C1093BB4200E201EE /* MovePanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9691093BB4200E201EE /* MovePanel.xib */; };
@@ -200,6 +200,30 @@
 		0BF729C708AD849300E3DA53 /* PreferencesDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729B708AD849300E3DA53 /* PreferencesDialogController.m */; };
 		0BFC4CFD1076F61900293B60 /* ViewportArranger.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BFC4CFB1076F61900293B60 /* ViewportArranger.h */; };
 		0BFC4CFE1076F61900293B60 /* ViewportArranger.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BFC4CFC1076F61900293B60 /* ViewportArranger.m */; };
+		18B32A5D2B9A0E5300A97084 /* ClassInspector.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF9AF2991B0E900E7BF76 /* ClassInspector.h */; };
+		18B32A5E2B9A0E5900A97084 /* ClassInspector.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF9B02991B0E900E7BF76 /* ClassInspector.m */; };
+		18B32A5F2B9A0E6E00A97084 /* LPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA162993EB480032FEBF /* LPubCommand.m */; };
+		18B32A602B9A0E8700A97084 /* LDrawDocumentTree.h in Headers */ = {isa = PBXBuildFile; fileRef = 955459F22996FDA400E23691 /* LDrawDocumentTree.h */; };
+		18B32A612B9A0E8C00A97084 /* LDrawDocumentTree.m in Sources */ = {isa = PBXBuildFile; fileRef = 955459F32996FDA400E23691 /* LDrawDocumentTree.m */; };
+		18B32A622B9A0EA000A97084 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
+		18B32A632B9A0EA400A97084 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
+		18B32A642B9A0EB800A97084 /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
+		18B32A652B9A0EBC00A97084 /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
+		18B32A662B9A0ECF00A97084 /* LPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA152993EB480032FEBF /* LPubCommand.h */; };
+		18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
+		18B32A682B9A0EDC00A97084 /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
+		18B32A692B9A0EE200A97084 /* InspectorLPubCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */; };
+		18B32A6A2B9A0EFD00A97084 /* LPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */; };
+		18B32A6B2B9A0F0100A97084 /* LPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */; };
+		18B32A6C2B9A0F0700A97084 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
+		18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */; };
+		18B32A6E2B9A0F3A00A97084 /* PartSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DC1D1D292993CC00915853 /* PartSpecific.h */; };
+		18B32A6F2B9A0F3E00A97084 /* PartSpecific.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DC1D1E292993CC00915853 /* PartSpecific.m */; };
+		18B32A702B9A113300A97084 /* ScannerCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */; };
+		18B32A712B9A113900A97084 /* ScannerCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */; };
+		18B32A722B9A61DF00A97084 /* LDrawApplicationMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E1082F2A41E0AB0091D579 /* LDrawApplicationMTL.h */; };
+		18B32A732B9A622D00A97084 /* LDrawShaderRendererMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108302A41E22F0091D579 /* LDrawShaderRendererMTL.h */; };
+		18B935CE2B60072900291171 /* Info-M.plist in Resources */ = {isa = PBXBuildFile; fileRef = 18B935CD2B60072900291171 /* Info-M.plist */; };
 		2BB59F4309FEFE960077A885 /* AMSProgressBar.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
 		2BF2E2CD0AB0FBB50026D5DB /* MLCad.ini in Resources */ = {isa = PBXBuildFile; fileRef = 2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */; };
 		2BF2E3030AB0FC5E0026D5DB /* MovePanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */; };
@@ -224,27 +248,6 @@
 		9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
 		9506E0F118A3F4130006CE9C /* SearchPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9506E0EF18A3F4130006CE9C /* SearchPanelController.m */; };
 		9506E0FC18AA74BE0006CE9C /* SearchPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9506E0FE18AA74BE0006CE9C /* SearchPanel.xib */; };
-		9533FA112992F4E30032FEBF /* LPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */; };
-		9533FA122992F4E30032FEBF /* LPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */; };
-		9533FA172993EB480032FEBF /* LPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA152993EB480032FEBF /* LPubCommand.h */; };
-		9533FA182993EB480032FEBF /* LPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA162993EB480032FEBF /* LPubCommand.m */; };
-		9543FF8529C52CB400564638 /* InspectorLPubCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */; };
-		955459F42996FDA400E23691 /* LDrawDocumentTree.h in Headers */ = {isa = PBXBuildFile; fileRef = 955459F22996FDA400E23691 /* LDrawDocumentTree.h */; };
-		955459F52996FDA400E23691 /* LDrawDocumentTree.m in Sources */ = {isa = PBXBuildFile; fileRef = 955459F32996FDA400E23691 /* LDrawDocumentTree.m */; };
-		95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */; };
-		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
-		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
-		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
-		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
-		95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
-		95C0387228BFFF86005C6346 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
-		95D021B029AEA5D3001F2B4D /* ScannerCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */; };
-		95D021B129AEA5D3001F2B4D /* ScannerCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */; };
-		95D021F829B1F533001F2B4D /* ScannerCategory_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */; };
-		95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */; };
-		95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D0223C29B68FE0001F2B4D /* MockArchiver.m */; };
-		95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
-		95D115AC299E5D74008051BF /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
 		9526F97F2A0A990E0083A86A /* PartLibraryGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 9526F97D2A0A990E0083A86A /* PartLibraryGPU.h */; };
 		9526F9802A0A990E0083A86A /* PartLibraryGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F97E2A0A990E0083A86A /* PartLibraryGPU.m */; };
 		9526F9832A0B8FA10083A86A /* LDrawShaderRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 9526F9812A0B8FA10083A86A /* LDrawShaderRendererGPU.h */; };
@@ -253,9 +256,283 @@
 		9526F98A2A0BA1A50083A86A /* LDrawApplicationGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F9882A0BA1A50083A86A /* LDrawApplicationGPU.m */; };
 		9526F98D2A0BBA590083A86A /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 9526F98B2A0BBA590083A86A /* LDrawDirectiveGPU.h */; };
 		9526F98E2A0BBA590083A86A /* LDrawDirectiveGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F98C2A0BBA590083A86A /* LDrawDirectiveGPU.m */; };
+		9533FA112992F4E30032FEBF /* LPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */; };
+		9533FA122992F4E30032FEBF /* LPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */; };
+		9533FA172993EB480032FEBF /* LPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA152993EB480032FEBF /* LPubCommand.h */; };
+		9533FA182993EB480032FEBF /* LPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA162993EB480032FEBF /* LPubCommand.m */; };
 		953912D829D5A7E000C6802D /* OpenGLUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 953912D629D5A7E000C6802D /* OpenGLUtilities.h */; };
 		953912D929D5A7E000C6802D /* OpenGLUtilities.c in Sources */ = {isa = PBXBuildFile; fileRef = 953912D729D5A7E000C6802D /* OpenGLUtilities.c */; };
-		953912E129D5C4EF00C6802D /* GPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 953912E029D5C4EF00C6802D /* GPU.h */; };
+		953912E129D5C4EF00C6802D /* GL.h in Headers */ = {isa = PBXBuildFile; fileRef = 953912E029D5C4EF00C6802D /* GL.h */; };
+		9543FF8529C52CB400564638 /* InspectorLPubCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */; };
+		955459F42996FDA400E23691 /* LDrawDocumentTree.h in Headers */ = {isa = PBXBuildFile; fileRef = 955459F22996FDA400E23691 /* LDrawDocumentTree.h */; };
+		955459F52996FDA400E23691 /* LDrawDocumentTree.m in Sources */ = {isa = PBXBuildFile; fileRef = 955459F32996FDA400E23691 /* LDrawDocumentTree.m */; };
+		95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */; };
+		956D9B862A30768000FA956B /* LDrawComment.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B83E9B707E3BB0D009C2384 /* LDrawComment.h */; };
+		956D9B872A30768000FA956B /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
+		956D9B882A30768000FA956B /* MatrixMath.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B491DA207F5555B00AC0C10 /* MatrixMath.h */; };
+		956D9B8B2A30768000FA956B /* LDrawContainer.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BCD0C6307FD0BA10066A536 /* LDrawContainer.h */; };
+		956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 32DBCF750370BD2300C91783 /* Mac LDraw_Prefix.pch */; };
+		956D9B8D2A30768000FA956B /* LDrawDrawableElement.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6771A8081764E60044A0E0 /* LDrawDrawableElement.h */; };
+		956D9B8E2A30768000FA956B /* DocumentToolbarController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */; };
+		956D9B8F2A30768000FA956B /* LDrawDocument.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A908AD849300E3DA53 /* LDrawDocument.h */; };
+		956D9B902A30768000FA956B /* LDrawApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AC08AD849300E3DA53 /* LDrawApplication.h */; };
+		956D9B912A30768000FA956B /* FastSet.h in Headers */ = {isa = PBXBuildFile; fileRef = 95F759A027BC67AD00CFE5ED /* FastSet.h */; };
+		956D9B922A30768000FA956B /* LDrawColorPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AE08AD849300E3DA53 /* LDrawColorPanelController.h */; };
+		956D9B942A30768000FA956B /* PartBrowserDataSource.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729B008AD849300E3DA53 /* PartBrowserDataSource.h */; };
+		956D9B952A30768000FA956B /* PreferencesDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729B608AD849300E3DA53 /* PreferencesDialogController.h */; };
+		956D9B962A30768000FA956B /* LDrawMPDModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F384107C82025007B1075 /* LDrawMPDModel.h */; };
+		956D9B972A30768000FA956B /* LDrawConditionalLine.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3FA907CB0253007B1075 /* LDrawConditionalLine.h */; };
+		956D9B982A30768000FA956B /* LDrawViewerContainer.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BE49CCE25AAB7FF00E96C96 /* LDrawViewerContainer.h */; };
+		956D9B992A30768000FA956B /* LDrawLine.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3FAD07CB0253007B1075 /* LDrawLine.h */; };
+		956D9B9A2A30768000FA956B /* LDrawModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F384507C8207B007B1075 /* LDrawModel.h */; };
+		956D9B9B2A30768000FA956B /* LDrawPart.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3FB107CB0253007B1075 /* LDrawPart.h */; };
+		956D9B9C2A30768000FA956B /* LDrawFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F383D07C81FEF007B1075 /* LDrawFile.h */; };
+		956D9B9D2A30768000FA956B /* LDrawMetaCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3FAF07CB0253007B1075 /* LDrawMetaCommand.h */; };
+		956D9B9E2A30768000FA956B /* MacLDraw.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2AAA4407C1D22A00085145 /* MacLDraw.h */; };
+		956D9B9F2A30768000FA956B /* LDrawTriangle.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3FB507CB0253007B1075 /* LDrawTriangle.h */; };
+		956D9BA02A30768000FA956B /* LDrawQuadrilateral.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3FB307CB0253007B1075 /* LDrawQuadrilateral.h */; };
+		956D9BA12A30768000FA956B /* LDrawStep.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6F3A8C07C9934E007B1075 /* LDrawStep.h */; };
+		956D9BA22A30768000FA956B /* DimensionsPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BC699CB08B93A0500DAF996 /* DimensionsPanel.h */; };
+		956D9BA32A30768000FA956B /* PieceCountPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B356AEF08D385B900695EEB /* PieceCountPanel.h */; };
+		956D9BA42A30768000FA956B /* InspectionComment.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE3D093C0FAC00D87E0C /* InspectionComment.h */; };
+		956D9BA52A30768000FA956B /* InspectionConditionalLine.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE3F093C0FAC00D87E0C /* InspectionConditionalLine.h */; };
+		956D9BA62A30768000FA956B /* InspectionLine.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE41093C0FAC00D87E0C /* InspectionLine.h */; };
+		956D9BA72A30768000FA956B /* InspectionMPDModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE43093C0FAC00D87E0C /* InspectionMPDModel.h */; };
+		956D9BA82A30768000FA956B /* InspectionPart.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE45093C0FAD00D87E0C /* InspectionPart.h */; };
+		956D9BA92A30768000FA956B /* InspectionQuadrilateral.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE47093C0FAD00D87E0C /* InspectionQuadrilateral.h */; };
+		956D9BAA2A30768000FA956B /* InspectionTriangle.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE49093C0FAD00D87E0C /* InspectionTriangle.h */; };
+		956D9BAB2A30768000FA956B /* InspectionUnknownCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE4B093C0FAD00D87E0C /* InspectionUnknownCommand.h */; };
+		956D9BAC2A30768000FA956B /* Inspector.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE4D093C0FAD00D87E0C /* Inspector.h */; };
+		956D9BAD2A30768000FA956B /* ObjectInspectionController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE4F093C0FAD00D87E0C /* ObjectInspectionController.h */; };
+		956D9BAE2A30768000FA956B /* DialogPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE6B093C100100D87E0C /* DialogPanel.h */; };
+		956D9BAF2A30768000FA956B /* ExtendedSplitView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE6D093C100100D87E0C /* ExtendedSplitView.h */; };
+		956D9BB02A30768000FA956B /* IconTextCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE6F093C100100D87E0C /* IconTextCell.h */; };
+		956D9BB12A30768000FA956B /* LDrawColorBar.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE71093C100100D87E0C /* LDrawColorBar.h */; };
+		956D9BB22A30768000FA956B /* LDrawColorCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE73093C100100D87E0C /* LDrawColorCell.h */; };
+		956D9BB32A30768000FA956B /* LDrawColorWell.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE75093C100100D87E0C /* LDrawColorWell.h */; };
+		956D9BB42A30768000FA956B /* LDrawDocumentWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE77093C100100D87E0C /* LDrawDocumentWindow.h */; };
+		956D9BB52A30768000FA956B /* LDrawFileOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE79093C100100D87E0C /* LDrawFileOutlineView.h */; };
+		956D9BB72A30768000FA956B /* LDrawView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE7B093C100100D87E0C /* LDrawView.h */; };
+		956D9BB92A30768000FA956B /* StringCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE98093C102E00D87E0C /* StringCategory.h */; };
+		956D9BBA2A30768000FA956B /* UserDefaultsCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE9A093C102E00D87E0C /* UserDefaultsCategory.h */; };
+		956D9BBB2A30768000FA956B /* WindowCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8EBE9C093C102E00D87E0C /* WindowCategory.h */; };
+		956D9BBC2A30768000FA956B /* BricksmithApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B25F03E093D5F960099D85E /* BricksmithApplication.h */; };
+		956D9BBD2A30768000FA956B /* ToolPalette.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2700850981FCEA0058A7BE /* ToolPalette.h */; };
+		956D9BBE2A30768000FA956B /* MovePanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */; };
+		956D9BC02A30768000FA956B /* RotationPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E3010AB0FC5E0026D5DB /* RotationPanelController.h */; };
+		956D9BC12A30768000FA956B /* MinifigureDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E30D0AB0FC840026D5DB /* MinifigureDialogController.h */; };
+		956D9BC22A30768000FA956B /* MLCadIni.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E3110AB0FCAB0026D5DB /* MLCadIni.h */; };
+		956D9BC32A30768000FA956B /* TransformerIntMinus1.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E3130AB0FCAB0026D5DB /* TransformerIntMinus1.h */; };
+		956D9BC52A30768000FA956B /* PartBrowserPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BDC146D0B9D0502001D1FF1 /* PartBrowserPanelController.h */; };
+		956D9BC62A30768000FA956B /* PartBrowserTableView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2DD1480CD810DC0093E8E5 /* PartBrowserTableView.h */; };
+		956D9BC82A30768000FA956B /* PartCatalogBuilder.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B0B6CCB2787D87800F6E225 /* PartCatalogBuilder.h */; };
+		956D9BC92A30768000FA956B /* BezierPathCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2DD14C0CD810F20093E8E5 /* BezierPathCategory.h */; };
+		956D9BCA2A30768000FA956B /* ColorLibrary.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B7588D60D8DC4DD00357703 /* ColorLibrary.h */; };
+		956D9BCB2A30768000FA956B /* LDrawColor.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B7588DA0D8DC4EF00357703 /* LDrawColor.h */; };
+		956D9BCC2A30768000FA956B /* InspectionStep.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B76F2F70E74CC1700349D03 /* InspectionStep.h */; };
+		956D9BCD2A30768000FA956B /* StringUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BA24BE80EFF2A6500BF9915 /* StringUtilities.h */; };
+		956D9BCE2A30768000FA956B /* PartLibraryController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B4F5E0F0F31632C00355631 /* PartLibraryController.h */; };
+		956D9BCF2A30768000FA956B /* ExtendedTableView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B06F7150F633FD2004E7DD7 /* ExtendedTableView.h */; };
+		956D9BD02A30768000FA956B /* DonationDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FADD110196C2E007BA948 /* DonationDialogController.h */; };
+		956D9BD12A30768000FA956B /* BackgroundColorView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */; };
+		956D9BD22A30768000FA956B /* ViewportArranger.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BFC4CFB1076F61900293B60 /* ViewportArranger.h */; };
+		956D9BD32A30768000FA956B /* FocusRingView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B04EF3510A6A38E00E201EE /* FocusRingView.h */; };
+		956D9BD42A30768000FA956B /* OverlayHelperView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8C096610BA532F00BEB111 /* OverlayHelperView.h */; };
+		956D9BD52A30768000FA956B /* OverlayHelperWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8C097110BA550500BEB111 /* OverlayHelperWindow.h */; };
+		956D9BD62A30768000FA956B /* OverlayViewCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B8C0A2510BA623700BEB111 /* OverlayViewCategory.h */; };
+		956D9BD82A30768000FA956B /* BricksmithUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BE84A1D1300F91F004E7626 /* BricksmithUtilities.h */; };
+		956D9BD92A30768000FA956B /* LDrawDirective.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B1DA5A213172DA700E14960 /* LDrawDirective.h */; };
+		956D9BDA2A30768000FA956B /* LDrawUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B1DA5A413172DA700E14960 /* LDrawUtilities.h */; };
+		956D9BDB2A30768000FA956B /* LDrawDragHandle.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B27CFA81318AA0F005C7E1A /* LDrawDragHandle.h */; };
+		956D9BDC2A30768000FA956B /* LDrawKeywords.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BED4742136D30C10098D353 /* LDrawKeywords.h */; };
+		956D9BDD2A30768000FA956B /* PartLibrary.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BC75337136FC878002568B8 /* PartLibrary.h */; };
+		956D9BDE2A30768000FA956B /* LDrawPathNames.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BDE0EE91371063600FDB8DB /* LDrawPathNames.h */; };
+		956D9BDF2A30768000FA956B /* LDrawPaths.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BDE0EEF1371070600FDB8DB /* LDrawPaths.h */; };
+		956D9BE02A30768000FA956B /* PartReport.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BE523FF1373C26200E21FBC /* PartReport.h */; };
+		956D9BE12A30768000FA956B /* LDrawRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B3B76AA13DB86AE007CCC5D /* LDrawRenderer.h */; };
+		956D9BE22A30768000FA956B /* TableViewCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BBCFE7E1529492D00728A54 /* TableViewCategory.h */; };
+		956D9BE32A30768000FA956B /* LDrawTexture.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B6122EB153516600085F944 /* LDrawTexture.h */; };
+		956D9BE42A30768000FA956B /* ModelManager.h in Headers */ = {isa = PBXBuildFile; fileRef = D6CB41DE15E2AA6C00730E2A /* ModelManager.h */; };
+		956D9BE52A30768000FA956B /* LSynthConfiguration.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893B616555F3E00AA055B /* LSynthConfiguration.h */; };
+		956D9BE72A30768000FA956B /* LDrawLSynth.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893C816569CFD00AA055B /* LDrawLSynth.h */; };
+		956D9BE82A30768000FA956B /* LDrawCoreRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDB980164DEB0000B4062B /* LDrawCoreRenderer.h */; };
+		956D9BE92A30768000FA956B /* LDrawShaderRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDB981164DEB0000B4062B /* LDrawShaderRenderer.h */; };
+		956D9BEC2A30768000FA956B /* LDrawBDPAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDBB4516508D7200B4062B /* LDrawBDPAllocator.h */; };
+		956D9BEE2A30768000FA956B /* LDrawDataStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D62E73C31659C5D50044E2E9 /* LDrawDataStream.h */; };
+		956D9BEF2A30768000FA956B /* MeshSmooth.h in Headers */ = {isa = PBXBuildFile; fileRef = D608724616ED61F500828B4E /* MeshSmooth.h */; };
+		956D9BF02A30768000FA956B /* RelatedParts.h in Headers */ = {isa = PBXBuildFile; fileRef = D6C0C5CD16DABE70007E4266 /* RelatedParts.h */; };
+		956D9BF12A30768000FA956B /* LDrawGLCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */; };
+		956D9BF22A30768000FA956B /* GLMatrixMath.h in Headers */ = {isa = PBXBuildFile; fileRef = D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */; };
+		956D9BF42A30768000FA956B /* Bricksmith_Sparkle_signature_public.pem in Resources */ = {isa = PBXBuildFile; fileRef = 0B040CD6164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem */; };
+		956D9BF52A30768000FA956B /* Bum.ldr in Resources */ = {isa = PBXBuildFile; fileRef = 0B2FAE5F101972DF007BA948 /* Bum.ldr */; };
+		956D9BF62A30768000FA956B /* SearchPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9506E0FE18AA74BE0006CE9C /* SearchPanel.xib */; };
+		956D9BF72A30768000FA956B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39C633C2278F56F6005511E6 /* Assets.xcassets */; };
+		956D9BF82A30768000FA956B /* LDConfig.ldr in Resources */ = {isa = PBXBuildFile; fileRef = 0B9907620DD7EDBB003F6B13 /* LDConfig.ldr */; };
+		956D9BF92A30768000FA956B /* LDraw in Resources */ = {isa = PBXBuildFile; fileRef = 0BA3BE421772B3E10087579B /* LDraw */; };
+		956D9BFA2A30768000FA956B /* Legonian Ruler.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 95D8939216550B6400AA055B /* Legonian Ruler.pdf */; };
+		956D9BFB2A30768000FA956B /* MLCad.ini in Resources */ = {isa = PBXBuildFile; fileRef = 2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */; };
+		956D9BFD2A30768000FA956B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0B9FE54E08AD971E0046511D /* InfoPlist.strings */; };
+		956D9BFE2A30768000FA956B /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 0B9FE56408AD97280046511D /* Credits.rtf */; };
+		956D9BFF2A30768000FA956B /* Help in Resources */ = {isa = PBXBuildFile; fileRef = 0BC6AACC0987296700505A88 /* Help */; };
+		956D9C002A30768000FA956B /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0B34306508B2E93D00A06A40 /* Localizable.strings */; };
+		956D9C012A30768000FA956B /* ColorPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9471093BB4200E201EE /* ColorPanel.xib */; };
+		956D9C022A30768000FA956B /* Dimensions.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9491093BB4200E201EE /* Dimensions.xib */; };
+		956D9C032A30768000FA956B /* Donation.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E94B1093BB4200E201EE /* Donation.xib */; };
+		956D9C042A30768000FA956B /* Inspector.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E94D1093BB4200E201EE /* Inspector.xib */; };
+		956D9C052A30768000FA956B /* InspectorComment.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E94F1093BB4200E201EE /* InspectorComment.xib */; };
+		956D9C062A30768000FA956B /* InspectorConditionalLine.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9511093BB4200E201EE /* InspectorConditionalLine.xib */; };
+		956D9C072A30768000FA956B /* InspectorLine.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9531093BB4200E201EE /* InspectorLine.xib */; };
+		956D9C082A30768000FA956B /* InspectorMPDModel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9551093BB4200E201EE /* InspectorMPDModel.xib */; };
+		956D9C092A30768000FA956B /* InspectorPart.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9571093BB4200E201EE /* InspectorPart.xib */; };
+		956D9C0A2A30768000FA956B /* InspectorQuadrilateral.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9591093BB4200E201EE /* InspectorQuadrilateral.xib */; };
+		956D9C0B2A30768000FA956B /* InspectorStep.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E95B1093BB4200E201EE /* InspectorStep.xib */; };
+		956D9C0C2A30768000FA956B /* InspectorTriangle.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E95D1093BB4200E201EE /* InspectorTriangle.xib */; };
+		956D9C0D2A30768000FA956B /* InspectorUnknownCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E95F1093BB4200E201EE /* InspectorUnknownCommand.xib */; };
+		956D9C0E2A30768000FA956B /* LDrawDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9611093BB4200E201EE /* LDrawDocument.xib */; };
+		956D9C102A30768000FA956B /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9651093BB4200E201EE /* MainMenu.xib */; };
+		956D9C112A30768000FA956B /* MinifigureGenerator.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9671093BB4200E201EE /* MinifigureGenerator.xib */; };
+		956D9C122A30768000FA956B /* MovePanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9691093BB4200E201EE /* MovePanel.xib */; };
+		956D9C132A30768000FA956B /* PartBrowser.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E96B1093BB4200E201EE /* PartBrowser.xib */; };
+		956D9C142A30768000FA956B /* PartBrowserAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E96D1093BB4200E201EE /* PartBrowserAccessories.xib */; };
+		956D9C152A30768000FA956B /* PieceCountPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9711093BB4200E201EE /* PieceCountPanel.xib */; };
+		956D9C162A30768000FA956B /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9731093BB4200E201EE /* Preferences.xib */; };
+		956D9C172A30768000FA956B /* RotationPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9751093BB4200E201EE /* RotationPanel.xib */; };
+		956D9C182A30768000FA956B /* ToolPalette.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9771093BB4200E201EE /* ToolPalette.xib */; };
+		956D9C192A30768000FA956B /* InspectorLSynth.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B30C6BD16DC61000023B3A6 /* InspectorLSynth.xib */; };
+		956D9C1A2A30768000FA956B /* related.ldr in Resources */ = {isa = PBXBuildFile; fileRef = D687D423170A6DF3007300E2 /* related.ldr */; };
+		956D9C1B2A30768000FA956B /* lsynth.mpd in Resources */ = {isa = PBXBuildFile; fileRef = 95D893AD1655334500AA055B /* lsynth.mpd */; };
+		956D9C1D2A30768000FA956B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A37F4B0FDCFA73011CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
+		956D9C1E2A30768000FA956B /* LDrawFile.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F383E07C81FEF007B1075 /* LDrawFile.m */; };
+		956D9C1F2A30768000FA956B /* FastSet.m in Sources */ = {isa = PBXBuildFile; fileRef = 95F7599F27BC67AD00CFE5ED /* FastSet.m */; };
+		956D9C202A30768000FA956B /* LDrawMPDModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F384207C82025007B1075 /* LDrawMPDModel.m */; };
+		956D9C212A30768000FA956B /* LDrawModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F384607C8207B007B1075 /* LDrawModel.m */; };
+		956D9C222A30768000FA956B /* LDrawStep.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3A8D07C9934E007B1075 /* LDrawStep.m */; };
+		956D9C232A30768000FA956B /* LDrawConditionalLine.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3FAA07CB0253007B1075 /* LDrawConditionalLine.m */; };
+		956D9C242A30768000FA956B /* LDrawLine.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3FAE07CB0253007B1075 /* LDrawLine.m */; };
+		956D9C252A30768000FA956B /* LDrawMetaCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3FB007CB0253007B1075 /* LDrawMetaCommand.m */; };
+		956D9C262A30768000FA956B /* LDrawPart.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3FB207CB0253007B1075 /* LDrawPart.m */; };
+		956D9C272A30768000FA956B /* LDrawQuadrilateral.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3FB407CB0253007B1075 /* LDrawQuadrilateral.m */; };
+		956D9C282A30768000FA956B /* LDrawTriangle.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6F3FB607CB0253007B1075 /* LDrawTriangle.m */; };
+		956D9C292A30768000FA956B /* LDrawComment.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B83E9B807E3BB0D009C2384 /* LDrawComment.m */; };
+		956D9C2A2A30768000FA956B /* MatrixMath.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B491DA307F5555B00AC0C10 /* MatrixMath.c */; };
+		956D9C2B2A30768000FA956B /* LDrawContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BCD0C6407FD0BA10066A536 /* LDrawContainer.m */; };
+		956D9C2C2A30768000FA956B /* LDrawDrawableElement.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6771A9081764E60044A0E0 /* LDrawDrawableElement.m */; };
+		956D9C2E2A30768000FA956B /* DocumentToolbarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */; };
+		956D9C2F2A30768000FA956B /* LDrawDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AA08AD849300E3DA53 /* LDrawDocument.m */; };
+		956D9C302A30768000FA956B /* LDrawApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AD08AD849300E3DA53 /* LDrawApplication.m */; };
+		956D9C312A30768000FA956B /* LDrawColorPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AF08AD849300E3DA53 /* LDrawColorPanelController.m */; };
+		956D9C332A30768000FA956B /* PartBrowserDataSource.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729B108AD849300E3DA53 /* PartBrowserDataSource.m */; };
+		956D9C342A30768000FA956B /* PreferencesDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729B708AD849300E3DA53 /* PreferencesDialogController.m */; };
+		956D9C362A30768000FA956B /* DimensionsPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BC699CC08B93A0500DAF996 /* DimensionsPanel.m */; };
+		956D9C372A30768000FA956B /* PieceCountPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B356AEE08D385B900695EEB /* PieceCountPanel.m */; };
+		956D9C382A30768000FA956B /* InspectionComment.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE3E093C0FAC00D87E0C /* InspectionComment.m */; };
+		956D9C392A30768000FA956B /* InspectionConditionalLine.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE40093C0FAC00D87E0C /* InspectionConditionalLine.m */; };
+		956D9C3A2A30768000FA956B /* InspectionLine.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE42093C0FAC00D87E0C /* InspectionLine.m */; };
+		956D9C3B2A30768000FA956B /* InspectionMPDModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE44093C0FAD00D87E0C /* InspectionMPDModel.m */; };
+		956D9C3C2A30768000FA956B /* InspectionPart.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE46093C0FAD00D87E0C /* InspectionPart.m */; };
+		956D9C3D2A30768000FA956B /* InspectionQuadrilateral.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE48093C0FAD00D87E0C /* InspectionQuadrilateral.m */; };
+		956D9C3E2A30768000FA956B /* InspectionTriangle.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE4A093C0FAD00D87E0C /* InspectionTriangle.m */; };
+		956D9C3F2A30768000FA956B /* InspectionUnknownCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE4C093C0FAD00D87E0C /* InspectionUnknownCommand.m */; };
+		956D9C402A30768000FA956B /* SearchPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9506E0EF18A3F4130006CE9C /* SearchPanelController.m */; };
+		956D9C412A30768000FA956B /* Inspector.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE4E093C0FAD00D87E0C /* Inspector.m */; };
+		956D9C422A30768000FA956B /* ObjectInspectionController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE50093C0FAD00D87E0C /* ObjectInspectionController.m */; };
+		956D9C432A30768000FA956B /* DialogPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE6C093C100100D87E0C /* DialogPanel.m */; };
+		956D9C442A30768000FA956B /* ExtendedSplitView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE6E093C100100D87E0C /* ExtendedSplitView.m */; };
+		956D9C452A30768000FA956B /* IconTextCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE70093C100100D87E0C /* IconTextCell.m */; };
+		956D9C462A30768000FA956B /* LDrawColorBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE72093C100100D87E0C /* LDrawColorBar.m */; };
+		956D9C472A30768000FA956B /* LDrawColorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE74093C100100D87E0C /* LDrawColorCell.m */; };
+		956D9C482A30768000FA956B /* LDrawColorWell.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE76093C100100D87E0C /* LDrawColorWell.m */; };
+		956D9C492A30768000FA956B /* LDrawDocumentWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE78093C100100D87E0C /* LDrawDocumentWindow.m */; };
+		956D9C4A2A30768000FA956B /* LDrawFileOutlineView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE7A093C100100D87E0C /* LDrawFileOutlineView.m */; };
+		956D9C4B2A30768000FA956B /* LDrawView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE7C093C100100D87E0C /* LDrawView.m */; };
+		956D9C4C2A30768000FA956B /* StringCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE99093C102E00D87E0C /* StringCategory.m */; };
+		956D9C4D2A30768000FA956B /* UserDefaultsCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE9B093C102E00D87E0C /* UserDefaultsCategory.m */; };
+		956D9C4E2A30768000FA956B /* WindowCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8EBE9D093C102E00D87E0C /* WindowCategory.m */; };
+		956D9C4F2A30768000FA956B /* BricksmithApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B25F03F093D5F960099D85E /* BricksmithApplication.m */; };
+		956D9C502A30768000FA956B /* ToolPalette.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2700860981FCEA0058A7BE /* ToolPalette.m */; };
+		956D9C512A30768000FA956B /* MovePanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BF2E3000AB0FC5E0026D5DB /* MovePanel.m */; };
+		956D9C522A30768000FA956B /* RotationPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BF2E3020AB0FC5E0026D5DB /* RotationPanelController.m */; };
+		956D9C532A30768000FA956B /* MinifigureDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BF2E30E0AB0FC840026D5DB /* MinifigureDialogController.m */; };
+		956D9C542A30768000FA956B /* MLCadIni.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BF2E3120AB0FCAB0026D5DB /* MLCadIni.m */; };
+		956D9C552A30768000FA956B /* TransformerIntMinus1.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BF2E3140AB0FCAB0026D5DB /* TransformerIntMinus1.m */; };
+		956D9C572A30768000FA956B /* PartBrowserPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BDC146E0B9D0502001D1FF1 /* PartBrowserPanelController.m */; };
+		956D9C582A30768000FA956B /* PartBrowserTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2DD1490CD810DC0093E8E5 /* PartBrowserTableView.m */; };
+		956D9C592A30768000FA956B /* BezierPathCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2DD14D0CD810F20093E8E5 /* BezierPathCategory.m */; };
+		956D9C5A2A30768000FA956B /* ColorLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B7588D70D8DC4DD00357703 /* ColorLibrary.m */; };
+		956D9C5B2A30768000FA956B /* LDrawColor.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B7588DB0D8DC4EF00357703 /* LDrawColor.m */; };
+		956D9C5C2A30768000FA956B /* InspectionStep.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B76F2F80E74CC1700349D03 /* InspectionStep.m */; };
+		956D9C5D2A30768000FA956B /* StringUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BA24BE90EFF2A6500BF9915 /* StringUtilities.m */; };
+		956D9C5E2A30768000FA956B /* PartLibraryController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B4F5E100F31632C00355631 /* PartLibraryController.m */; };
+		956D9C5F2A30768000FA956B /* ExtendedTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B06F7160F633FD2004E7DD7 /* ExtendedTableView.m */; };
+		956D9C602A30768000FA956B /* DonationDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FADD210196C2E007BA948 /* DonationDialogController.m */; };
+		956D9C612A30768000FA956B /* BackgroundColorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */; };
+		956D9C622A30768000FA956B /* ViewportArranger.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BFC4CFC1076F61900293B60 /* ViewportArranger.m */; };
+		956D9C632A30768000FA956B /* FocusRingView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B04EF3610A6A38E00E201EE /* FocusRingView.m */; };
+		956D9C642A30768000FA956B /* OverlayViewCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B3E7B9F10AF9E5A00AFBCF4 /* OverlayViewCategory.m */; };
+		956D9C652A30768000FA956B /* OverlayHelperView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C096710BA532F00BEB111 /* OverlayHelperView.m */; };
+		956D9C662A30768000FA956B /* OverlayHelperWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C097210BA550500BEB111 /* OverlayHelperWindow.m */; };
+		956D9C672A30768000FA956B /* BricksmithUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BE84A1E1300F91F004E7626 /* BricksmithUtilities.m */; };
+		956D9C6A2A30768000FA956B /* LDrawDirective.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B1DA5A313172DA700E14960 /* LDrawDirective.m */; };
+		956D9C6B2A30768000FA956B /* LDrawUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B1DA5A513172DA700E14960 /* LDrawUtilities.m */; };
+		956D9C6C2A30768000FA956B /* LDrawDragHandle.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B27CFA91318AA0F005C7E1A /* LDrawDragHandle.m */; };
+		956D9C6E2A30768000FA956B /* PartLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BC75338136FC878002568B8 /* PartLibrary.m */; };
+		956D9C6F2A30768000FA956B /* LDrawPaths.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BDE0EF01371070600FDB8DB /* LDrawPaths.m */; };
+		956D9C702A30768000FA956B /* PartReport.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BE524001373C26200E21FBC /* PartReport.m */; };
+		956D9C712A30768000FA956B /* LDrawRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B3B76AB13DB86AE007CCC5D /* LDrawRenderer.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		956D9C722A30768000FA956B /* TableViewCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BBCFE7F1529492D00728A54 /* TableViewCategory.m */; };
+		956D9C732A30768000FA956B /* LDrawTexture.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6122EC153516600085F944 /* LDrawTexture.m */; };
+		956D9C742A30768000FA956B /* ModelManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D6CB41DF15E2AA6C00730E2A /* ModelManager.m */; };
+		956D9C752A30768000FA956B /* LSynthConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D893B716555F3E00AA055B /* LSynthConfiguration.m */; };
+		956D9C762A30768000FA956B /* LDrawLSynth.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D893C916569CFD00AA055B /* LDrawLSynth.m */; };
+		956D9C772A30768000FA956B /* LDrawShaderRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D6EDB982164DEB0000B4062B /* LDrawShaderRenderer.m */; };
+		956D9C782A30768000FA956B /* LDrawViewerContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BE49CCF25AAB7FF00E96C96 /* LDrawViewerContainer.m */; };
+		956D9C7A2A30768000FA956B /* LDrawBDPAllocator.m in Sources */ = {isa = PBXBuildFile; fileRef = D6EDBB4616508D7200B4062B /* LDrawBDPAllocator.m */; };
+		956D9C7C2A30768000FA956B /* RelatedParts.m in Sources */ = {isa = PBXBuildFile; fileRef = D6C0C5CE16DABE70007E4266 /* RelatedParts.m */; };
+		956D9C7D2A30768000FA956B /* LDrawLSynthDirective.m in Sources */ = {isa = PBXBuildFile; fileRef = 737720E867742FB944EB62C7 /* LDrawLSynthDirective.m */; };
+		956D9C7F2A30768000FA956B /* ComputationalGeometry.m in Sources */ = {isa = PBXBuildFile; fileRef = 73772C8BCC3A6435E0AE9103 /* ComputationalGeometry.m */; };
+		956D9C812A30768000FA956B /* InspectionLSynth.m in Sources */ = {isa = PBXBuildFile; fileRef = 737728C3A3DF6166BE9183ED /* InspectionLSynth.m */; };
+		956D9C832A30768000FA956B /* MeshSmooth.c in Sources */ = {isa = PBXBuildFile; fileRef = D608724716ED61F500828B4E /* MeshSmooth.c */; };
+		956D9C842A30768000FA956B /* RegexKitLite.m in Sources */ = {isa = PBXBuildFile; fileRef = 737725695C55F263D18C33B9 /* RegexKitLite.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		956D9C852A30768000FA956B /* LDrawGLCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D619130017F004A300B5DF44 /* LDrawGLCamera.m */; };
+		956D9C862A30768000FA956B /* GLMatrixMath.c in Sources */ = {isa = PBXBuildFile; fileRef = D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */; };
+		956D9C872A30768000FA956B /* PartCatalogBuilder.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B0B6CCC2787D87800F6E225 /* PartCatalogBuilder.m */; };
+		956D9C892A30768000FA956B /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */; };
+		956D9C8B2A30768000FA956B /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B655439081367E800EA7F4F /* GLUT.framework */; };
+		956D9C8C2A30768000FA956B /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B34B52D090B07AE00F3A001 /* Carbon.framework */; };
+		956D9C8D2A30768000FA956B /* AMSProgressBar.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
+		956D9C8E2A30768000FA956B /* 3DconnexionClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B27D22B132B3383005C7E1A /* 3DconnexionClient.framework */; };
+		956D9C8F2A30768000FA956B /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
+		956D9C902A30768000FA956B /* libicucore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 73772F01F06AC293E3F650C4 /* libicucore.dylib */; };
+		956D9C922A30768000FA956B /* AMSProgressBar.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
+		956D9C932A30768000FA956B /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
+		956D9C952A30768000FA956B /* lsynth.mpd in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893AD1655334500AA055B /* lsynth.mpd */; };
+		956D9C962A30768000FA956B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; };
+		956D9C9C2A30769B00FA956B /* MTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9B7F2A2FDC5C00FA956B /* MTL.h */; };
+		956D9CA02A30A72300FA956B /* LDrawApplicationGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9C9E2A30A72300FA956B /* LDrawApplicationGPU.h */; };
+		956D9CA12A30A72300FA956B /* LDrawApplicationGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9C9F2A30A72300FA956B /* LDrawApplicationGPU.m */; };
+		956D9CA62A30AA0800FA956B /* LDrawDocumentGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CA42A30AA0800FA956B /* LDrawDocumentGPU.h */; };
+		956D9CA72A30AA0800FA956B /* LDrawDocumentGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CA52A30AA0800FA956B /* LDrawDocumentGPU.m */; };
+		956D9CAB2A30AADE00FA956B /* LDrawViewGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CA92A30AADE00FA956B /* LDrawViewGPU.h */; };
+		956D9CAC2A30AADE00FA956B /* LDrawViewGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CAA2A30AADE00FA956B /* LDrawViewGPU.m */; };
+		956D9CAD2A30ADC400FA956B /* LDrawViewAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9631093BB4200E201EE /* LDrawViewAccessories.xib */; };
+		956D9CB42A3102C600FA956B /* LDrawShaderRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CB22A3102C600FA956B /* LDrawShaderRendererGPU.h */; };
+		956D9CB52A3102C600FA956B /* LDrawShaderRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */; };
+		956D9CB82A31038800FA956B /* LDrawPartGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CB62A31038800FA956B /* LDrawPartGPU.h */; };
+		956D9CB92A31038800FA956B /* LDrawPartGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CB72A31038800FA956B /* LDrawPartGPU.m */; };
+		956D9CBC2A31042D00FA956B /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CBA2A31042D00FA956B /* LDrawDirectiveGPU.h */; };
+		956D9CBD2A31042D00FA956B /* LDrawDirectiveGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */; };
+		956D9CC02A3104E500FA956B /* LDrawDragHandleGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CBE2A3104E400FA956B /* LDrawDragHandleGPU.h */; };
+		956D9CC12A3104E500FA956B /* LDrawDragHandleGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CBF2A3104E500FA956B /* LDrawDragHandleGPU.m */; };
+		956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CC22A31056400FA956B /* LDrawRendererGPU.h */; };
+		956D9CC52A31056400FA956B /* LDrawRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC32A31056400FA956B /* LDrawRendererGPU.m */; };
+		956D9CC82A31060800FA956B /* PartLibraryGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CC62A31060800FA956B /* PartLibraryGPU.h */; };
+		956D9CC92A31060800FA956B /* PartLibraryGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC72A31060800FA956B /* PartLibraryGPU.m */; };
+		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
+		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
+		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
+		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
+		95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
+		95C0387228BFFF86005C6346 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
 		95C773BB2A24CD9A00058D75 /* LDrawDragHandleGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773B92A24CD9A00058D75 /* LDrawDragHandleGPU.h */; };
 		95C773BC2A24CD9A00058D75 /* LDrawDragHandleGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773BA2A24CD9A00058D75 /* LDrawDragHandleGPU.m */; };
 		95C773C02A24D01800058D75 /* LDrawPartGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773BE2A24D01700058D75 /* LDrawPartGPU.h */; };
@@ -266,6 +543,13 @@
 		95C773CA2A274A3800058D75 /* LDrawViewGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773C82A274A3800058D75 /* LDrawViewGPU.m */; };
 		95C773CD2A27670C00058D75 /* LDrawRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773CB2A27670C00058D75 /* LDrawRendererGPU.h */; };
 		95C773CE2A27670C00058D75 /* LDrawRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773CC2A27670C00058D75 /* LDrawRendererGPU.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		95D021B029AEA5D3001F2B4D /* ScannerCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */; };
+		95D021B129AEA5D3001F2B4D /* ScannerCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */; };
+		95D021F829B1F533001F2B4D /* ScannerCategory_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */; };
+		95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */; };
+		95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D0223C29B68FE0001F2B4D /* MockArchiver.m */; };
+		95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
+		95D115AC299E5D74008051BF /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
 		95D8939316550B6400AA055B /* Legonian Ruler.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 95D8939216550B6400AA055B /* Legonian Ruler.pdf */; };
 		95D893AC165532B100AA055B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; };
 		95D893B816555F3E00AA055B /* LSynthConfiguration.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893B616555F3E00AA055B /* LSynthConfiguration.h */; };
@@ -278,6 +562,12 @@
 		95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
 		95DFF9B12991B0E900E7BF76 /* ClassInspector.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF9AF2991B0E900E7BF76 /* ClassInspector.h */; };
 		95DFF9B22991B0E900E7BF76 /* ClassInspector.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF9B02991B0E900E7BF76 /* ClassInspector.m */; };
+		95E108222A409B6A0091D579 /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 95E108212A409B6A0091D579 /* shaders.metal */; };
+		95E108292A4198860091D579 /* LDrawDisplayList.m in Sources */ = {isa = PBXBuildFile; fileRef = 95E108272A4198860091D579 /* LDrawDisplayList.m */; };
+		95E1082A2A4198860091D579 /* LDrawDisplayList.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108282A4198860091D579 /* LDrawDisplayList.h */; };
+		95E1082E2A41DDD00091D579 /* LDrawRendererMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E1082D2A41DDA50091D579 /* LDrawRendererMTL.h */; };
+		95E108322A4254370091D579 /* GPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108312A4254370091D579 /* GPU.h */; };
+		95E108332A4254370091D579 /* GPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108312A4254370091D579 /* GPU.h */; };
 		95F759A127BC67AD00CFE5ED /* FastSet.m in Sources */ = {isa = PBXBuildFile; fileRef = 95F7599F27BC67AD00CFE5ED /* FastSet.m */; };
 		95F759A227BC67AD00CFE5ED /* FastSet.h in Headers */ = {isa = PBXBuildFile; fileRef = 95F759A027BC67AD00CFE5ED /* FastSet.h */; };
 		95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
@@ -321,6 +611,20 @@
 			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
 			remoteInfo = AMSProgressBar;
 		};
+		956D9B822A30768000FA956B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 95D8939E1655325000AA055B /* LSynth.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 95BE9C101609F609004437E1;
+			remoteInfo = LSynth;
+		};
+		956D9B842A30768000FA956B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2BB5975809FEFD250077A885 /* AMSProgressBar.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
+			remoteInfo = AMSProgressBar;
+		};
 		95D021F129B1F482001F2B4D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2A37F4A9FDCFA73011CA2CEA /* Project object */;
@@ -357,6 +661,30 @@
 			name = "Copy Frameworks (1)";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		956D9C912A30768000FA956B /* Copy Frameworks (1) */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				956D9C922A30768000FA956B /* AMSProgressBar.framework in Copy Frameworks (1) */,
+				956D9C932A30768000FA956B /* Sparkle.framework in Copy Frameworks (1) */,
+			);
+			name = "Copy Frameworks (1)";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		956D9C942A30768000FA956B /* Copy LSynth */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				956D9C952A30768000FA956B /* lsynth.mpd in Copy LSynth */,
+				956D9C962A30768000FA956B /* lsynthcp in Copy LSynth */,
+			);
+			name = "Copy LSynth";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		95D893AB165532A400AA055B /* Copy LSynth */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -388,7 +716,7 @@
 		0B04E95E1093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorTriangle.xib; sourceTree = "<group>"; };
 		0B04E9601093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorUnknownCommand.xib; sourceTree = "<group>"; };
 		0B04E9621093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/LDrawDocument.xib; sourceTree = "<group>"; };
-		0B04E9641093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/LDrawGLViewAccessories.xib; sourceTree = "<group>"; };
+		0B04E9641093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/LDrawViewAccessories.xib; sourceTree = "<group>"; };
 		0B04E9661093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		0B04E9681093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MinifigureGenerator.xib; sourceTree = "<group>"; };
 		0B04E96A1093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MovePanel.xib; sourceTree = "<group>"; };
@@ -428,7 +756,7 @@
 		0B30C6BE16DC61000023B3A6 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorLSynth.xib; sourceTree = "<group>"; };
 		0B34306608B2E93D00A06A40 /* Localizable.strings */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = English.lproj/Localizable.strings; sourceTree = "<group>"; };
 		0B34B52D090B07AE00F3A001 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
-		0B356AEE08D385B900695EEB /* PieceCountPanel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PieceCountPanel.m; sourceTree = "<group>"; };
+		0B356AEE08D385B900695EEB /* PieceCountPanel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PieceCountPanel.m; sourceTree = "<group>"; usesTabs = 1; };
 		0B356AEF08D385B900695EEB /* PieceCountPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PieceCountPanel.h; sourceTree = "<group>"; };
 		0B3B76AA13DB86AE007CCC5D /* LDrawRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawRenderer.h; sourceTree = "<group>"; };
 		0B3B76AB13DB86AE007CCC5D /* LDrawRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawRenderer.m; sourceTree = "<group>"; };
@@ -550,7 +878,7 @@
 		0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DocumentToolbarController.h; sourceTree = "<group>"; };
 		0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DocumentToolbarController.m; sourceTree = "<group>"; };
 		0BF729A908AD849300E3DA53 /* LDrawDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawDocument.h; sourceTree = "<group>"; };
-		0BF729AA08AD849300E3DA53 /* LDrawDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawDocument.m; sourceTree = "<group>"; };
+		0BF729AA08AD849300E3DA53 /* LDrawDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawDocument.m; sourceTree = "<group>"; usesTabs = 1; };
 		0BF729AC08AD849300E3DA53 /* LDrawApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawApplication.h; sourceTree = "<group>"; };
 		0BF729AD08AD849300E3DA53 /* LDrawApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawApplication.m; sourceTree = "<group>"; };
 		0BF729AE08AD849300E3DA53 /* LDrawColorPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawColorPanelController.h; sourceTree = "<group>"; };
@@ -562,6 +890,7 @@
 		0BFC4CFB1076F61900293B60 /* ViewportArranger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewportArranger.h; sourceTree = "<group>"; };
 		0BFC4CFC1076F61900293B60 /* ViewportArranger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ViewportArranger.m; sourceTree = "<group>"; };
 		1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
+		18B935CD2B60072900291171 /* Info-M.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-M.plist"; sourceTree = SOURCE_ROOT; };
 		2A37F4B0FDCFA73011CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		2A37F4C4FDCFA73011CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		2A37F4C5FDCFA73011CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
@@ -595,31 +924,6 @@
 		9506E0EE18A3F4130006CE9C /* SearchPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SearchPanelController.h; sourceTree = "<group>"; };
 		9506E0EF18A3F4130006CE9C /* SearchPanelController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SearchPanelController.m; sourceTree = "<group>"; };
 		9506E0FD18AA74BE0006CE9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/SearchPanel.xib; sourceTree = "<group>"; };
-		9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubRemoveGroup.h; sourceTree = "<group>"; };
-		9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup.m; sourceTree = "<group>"; };
-		9533FA152993EB480032FEBF /* LPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubCommand.h; sourceTree = "<group>"; };
-		9533FA162993EB480032FEBF /* LPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand.m; sourceTree = "<group>"; };
-		9543FF8429C52CB400564638 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorLPubCommand.xib; sourceTree = "<group>"; };
-		955459F22996FDA400E23691 /* LDrawDocumentTree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDocumentTree.h; sourceTree = "<group>"; };
-		955459F32996FDA400E23691 /* LDrawDocumentTree.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDocumentTree.m; sourceTree = "<group>"; };
-		95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawMetaCommand_Tests.m; sourceTree = "<group>"; };
-		957B9724294D308D007EF76C /* LDrawObjectWithValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawObjectWithValue.h; sourceTree = "<group>"; };
-		957B9725294D308D007EF76C /* LDrawObjectWithValue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawObjectWithValue.m; sourceTree = "<group>"; };
-		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
-		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
-		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
-		95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawHighResPrimitives.h; sourceTree = "<group>"; };
-		95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawHighResPrimitives.m; sourceTree = "<group>"; };
-		95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScannerCategory.h; sourceTree = "<group>"; };
-		95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory.m; sourceTree = "<group>"; };
-		95D021ED29B1F482001F2B4D /* UnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory_Tests.m; sourceTree = "<group>"; };
-		95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand_Tests.m; sourceTree = "<group>"; };
-		95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UnitTests_Prefix.pch; path = UnitTests/Other/UnitTests_Prefix.pch; sourceTree = SOURCE_ROOT; };
-		95D0223B29B68FE0001F2B4D /* MockArchiver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockArchiver.h; sourceTree = "<group>"; };
-		95D0223C29B68FE0001F2B4D /* MockArchiver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockArchiver.m; sourceTree = "<group>"; };
-		95D115A9299E5D74008051BF /* InspectionLPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubCommand.h; sourceTree = "<group>"; };
-		95D115AA299E5D74008051BF /* InspectionLPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubCommand.m; sourceTree = "<group>"; };
 		9526F97D2A0A990E0083A86A /* PartLibraryGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PartLibraryGPU.h; sourceTree = "<group>"; };
 		9526F97E2A0A990E0083A86A /* PartLibraryGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PartLibraryGPU.m; sourceTree = "<group>"; };
 		9526F9812A0B8FA10083A86A /* LDrawShaderRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawShaderRendererGPU.h; sourceTree = "<group>"; };
@@ -628,9 +932,44 @@
 		9526F9882A0BA1A50083A86A /* LDrawApplicationGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawApplicationGPU.m; sourceTree = "<group>"; };
 		9526F98B2A0BBA590083A86A /* LDrawDirectiveGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDirectiveGPU.h; sourceTree = "<group>"; };
 		9526F98C2A0BBA590083A86A /* LDrawDirectiveGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDirectiveGPU.m; sourceTree = "<group>"; };
+		9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubRemoveGroup.h; sourceTree = "<group>"; };
+		9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup.m; sourceTree = "<group>"; };
+		9533FA152993EB480032FEBF /* LPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubCommand.h; sourceTree = "<group>"; };
+		9533FA162993EB480032FEBF /* LPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand.m; sourceTree = "<group>"; };
 		953912D629D5A7E000C6802D /* OpenGLUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpenGLUtilities.h; sourceTree = "<group>"; };
 		953912D729D5A7E000C6802D /* OpenGLUtilities.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = OpenGLUtilities.c; sourceTree = "<group>"; };
-		953912E029D5C4EF00C6802D /* GPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GPU.h; sourceTree = "<group>"; };
+		953912E029D5C4EF00C6802D /* GL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GL.h; sourceTree = "<group>"; };
+		9543FF8429C52CB400564638 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorLPubCommand.xib; sourceTree = "<group>"; };
+		955459F22996FDA400E23691 /* LDrawDocumentTree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDocumentTree.h; sourceTree = "<group>"; };
+		955459F32996FDA400E23691 /* LDrawDocumentTree.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDocumentTree.m; sourceTree = "<group>"; };
+		95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawMetaCommand_Tests.m; sourceTree = "<group>"; };
+		956D9B7F2A2FDC5C00FA956B /* MTL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTL.h; sourceTree = "<group>"; };
+		956D9C9A2A30768000FA956B /* Bricksmith-M.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bricksmith-M.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		956D9C9E2A30A72300FA956B /* LDrawApplicationGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawApplicationGPU.h; sourceTree = "<group>"; };
+		956D9C9F2A30A72300FA956B /* LDrawApplicationGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawApplicationGPU.m; sourceTree = "<group>"; };
+		956D9CA42A30AA0800FA956B /* LDrawDocumentGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDocumentGPU.h; sourceTree = "<group>"; };
+		956D9CA52A30AA0800FA956B /* LDrawDocumentGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDocumentGPU.m; sourceTree = "<group>"; };
+		956D9CA92A30AADE00FA956B /* LDrawViewGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawViewGPU.h; sourceTree = "<group>"; };
+		956D9CAA2A30AADE00FA956B /* LDrawViewGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawViewGPU.m; sourceTree = "<group>"; };
+		956D9CB22A3102C600FA956B /* LDrawShaderRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawShaderRendererGPU.h; sourceTree = "<group>"; };
+		956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawShaderRendererGPU.m; sourceTree = "<group>"; };
+		956D9CB62A31038800FA956B /* LDrawPartGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawPartGPU.h; sourceTree = "<group>"; };
+		956D9CB72A31038800FA956B /* LDrawPartGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawPartGPU.m; sourceTree = "<group>"; };
+		956D9CBA2A31042D00FA956B /* LDrawDirectiveGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDirectiveGPU.h; sourceTree = "<group>"; };
+		956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDirectiveGPU.m; sourceTree = "<group>"; };
+		956D9CBE2A3104E400FA956B /* LDrawDragHandleGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDragHandleGPU.h; sourceTree = "<group>"; };
+		956D9CBF2A3104E500FA956B /* LDrawDragHandleGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDragHandleGPU.m; sourceTree = "<group>"; };
+		956D9CC22A31056400FA956B /* LDrawRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawRendererGPU.h; sourceTree = "<group>"; };
+		956D9CC32A31056400FA956B /* LDrawRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawRendererGPU.m; sourceTree = "<group>"; };
+		956D9CC62A31060800FA956B /* PartLibraryGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PartLibraryGPU.h; sourceTree = "<group>"; };
+		956D9CC72A31060800FA956B /* PartLibraryGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PartLibraryGPU.m; sourceTree = "<group>"; };
+		957B9724294D308D007EF76C /* LDrawObjectWithValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawObjectWithValue.h; sourceTree = "<group>"; };
+		957B9725294D308D007EF76C /* LDrawObjectWithValue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawObjectWithValue.m; sourceTree = "<group>"; };
+		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
+		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
+		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
+		95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawHighResPrimitives.h; sourceTree = "<group>"; };
+		95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawHighResPrimitives.m; sourceTree = "<group>"; };
 		95C773B92A24CD9A00058D75 /* LDrawDragHandleGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDragHandleGPU.h; sourceTree = "<group>"; };
 		95C773BA2A24CD9A00058D75 /* LDrawDragHandleGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDragHandleGPU.m; sourceTree = "<group>"; };
 		95C773BE2A24D01700058D75 /* LDrawPartGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawPartGPU.h; sourceTree = "<group>"; };
@@ -641,6 +980,16 @@
 		95C773C82A274A3800058D75 /* LDrawViewGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawViewGPU.m; sourceTree = "<group>"; };
 		95C773CB2A27670C00058D75 /* LDrawRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawRendererGPU.h; sourceTree = "<group>"; };
 		95C773CC2A27670C00058D75 /* LDrawRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawRendererGPU.m; sourceTree = "<group>"; };
+		95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScannerCategory.h; sourceTree = "<group>"; };
+		95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory.m; sourceTree = "<group>"; };
+		95D021ED29B1F482001F2B4D /* UnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory_Tests.m; sourceTree = "<group>"; };
+		95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand_Tests.m; sourceTree = "<group>"; };
+		95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UnitTests_Prefix.pch; path = UnitTests/Other/UnitTests_Prefix.pch; sourceTree = SOURCE_ROOT; };
+		95D0223B29B68FE0001F2B4D /* MockArchiver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockArchiver.h; sourceTree = "<group>"; };
+		95D0223C29B68FE0001F2B4D /* MockArchiver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockArchiver.m; sourceTree = "<group>"; };
+		95D115A9299E5D74008051BF /* InspectionLPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubCommand.h; sourceTree = "<group>"; };
+		95D115AA299E5D74008051BF /* InspectionLPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubCommand.m; sourceTree = "<group>"; };
 		95D8939216550B6400AA055B /* Legonian Ruler.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Legonian Ruler.pdf"; sourceTree = "<group>"; };
 		95D8939E1655325000AA055B /* LSynth.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = LSynth.xcodeproj; path = ../ThirdParty/LSynth/LSynth.xcodeproj; sourceTree = "<group>"; };
 		95D893AD1655334500AA055B /* lsynth.mpd */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = lsynth.mpd; path = ../../ThirdParty/LSynth/LSynth/lsynth.mpd; sourceTree = "<group>"; };
@@ -654,6 +1003,13 @@
 		95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubRemoveGroup.m; sourceTree = "<group>"; };
 		95DFF9AF2991B0E900E7BF76 /* ClassInspector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ClassInspector.h; sourceTree = "<group>"; };
 		95DFF9B02991B0E900E7BF76 /* ClassInspector.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClassInspector.m; sourceTree = "<group>"; };
+		95E108212A409B6A0091D579 /* shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+		95E108272A4198860091D579 /* LDrawDisplayList.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawDisplayList.m; sourceTree = "<group>"; };
+		95E108282A4198860091D579 /* LDrawDisplayList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawDisplayList.h; sourceTree = "<group>"; };
+		95E1082D2A41DDA50091D579 /* LDrawRendererMTL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawRendererMTL.h; sourceTree = "<group>"; };
+		95E1082F2A41E0AB0091D579 /* LDrawApplicationMTL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawApplicationMTL.h; sourceTree = "<group>"; };
+		95E108302A41E22F0091D579 /* LDrawShaderRendererMTL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawShaderRendererMTL.h; sourceTree = "<group>"; };
+		95E108312A4254370091D579 /* GPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GPU.h; sourceTree = "<group>"; };
 		95F7599F27BC67AD00CFE5ED /* FastSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FastSet.m; sourceTree = "<group>"; };
 		95F759A027BC67AD00CFE5ED /* FastSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastSet.h; sourceTree = "<group>"; };
 		95FBD67C29C46BC100E84D2F /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorRemoveGroup.xib; sourceTree = "<group>"; };
@@ -699,6 +1055,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		956D9C882A30768000FA956B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				956D9C892A30768000FA956B /* Cocoa.framework in Frameworks */,
+				956D9C8B2A30768000FA956B /* GLUT.framework in Frameworks */,
+				956D9C8C2A30768000FA956B /* Carbon.framework in Frameworks */,
+				956D9C8D2A30768000FA956B /* AMSProgressBar.framework in Frameworks */,
+				956D9C8E2A30768000FA956B /* 3DconnexionClient.framework in Frameworks */,
+				956D9C8F2A30768000FA956B /* Sparkle.framework in Frameworks */,
+				956D9C902A30768000FA956B /* libicucore.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		95D021EA29B1F482001F2B4D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -717,7 +1087,7 @@
 				0B04E94B1093BB4200E201EE /* Donation.xib */,
 				952AA8F5169D552E0087919E /* Inspectors */,
 				0B04E9611093BB4200E201EE /* LDrawDocument.xib */,
-				0B04E9631093BB4200E201EE /* LDrawGLViewAccessories.xib */,
+				0B04E9631093BB4200E201EE /* LDrawViewAccessories.xib */,
 				0B04E9651093BB4200E201EE /* MainMenu.xib */,
 				0B04E9671093BB4200E201EE /* MinifigureGenerator.xib */,
 				0B04E9691093BB4200E201EE /* MovePanel.xib */,
@@ -1032,6 +1402,7 @@
 			isa = PBXGroup;
 			children = (
 				8D15AC370486D014006FF6A4 /* Bricksmith.app */,
+				956D9C9A2A30768000FA956B /* Bricksmith-M.app */,
 				95D021ED29B1F482001F2B4D /* UnitTests.xctest */,
 			);
 			name = Products;
@@ -1043,9 +1414,10 @@
 				2A37F4AFFDCFA73011CA2CEA /* Other */,
 				2A37F4ABFDCFA73011CA2CEA /* Classes */,
 				0B6F38FD07C84E79007B1075 /* Categories */,
+				953912D329D5A6C900C6802D /* OpenGL */,
+				956D9B7E2A2FDC2600FA956B /* Metal */,
 				2A37F4B8FDCFA73011CA2CEA /* Resources */,
 				95D021EE29B1F482001F2B4D /* UnitTests */,
-				953912D329D5A6C900C6802D /* OpenGL */,
 				2A37F4C3FDCFA73011CA2CEA /* Frameworks */,
 				19C28FB0FE9D524F11CA2CBB /* Products */,
 				2BB5975809FEFD250077A885 /* AMSProgressBar.xcodeproj */,
@@ -1083,6 +1455,7 @@
 				2BF2E3140AB0FCAB0026D5DB /* TransformerIntMinus1.m */,
 				7377248D1A5C278143C65104 /* RegexKitLite.h */,
 				737725695C55F263D18C33B9 /* RegexKitLite.m */,
+				95E108312A4254370091D579 /* GPU.h */,
 			);
 			name = Other;
 			path = Source/Other;
@@ -1093,7 +1466,6 @@
 			children = (
 				39C633C2278F56F6005511E6 /* Assets.xcassets */,
 				D687D423170A6DF3007300E2 /* related.ldr */,
-				D6EDBA0B164DF86F00B4062B /* Shaders */,
 				95D893AD1655334500AA055B /* lsynth.mpd */,
 				95D8939216550B6400AA055B /* Legonian Ruler.pdf */,
 				0B2FAE5F101972DF007BA948 /* Bum.ldr */,
@@ -1103,6 +1475,7 @@
 				0B04E9461093BB4200E201EE /* Interface */,
 				0BA3BE421772B3E10087579B /* LDraw */,
 				8D15AC360486D014006FF6A4 /* Info.plist */,
+				18B935CD2B60072900291171 /* Info-M.plist */,
 				0B34306508B2E93D00A06A40 /* Localizable.strings */,
 				0B9FE56408AD97280046511D /* Credits.rtf */,
 				0B9FE54E08AD971E0046511D /* InfoPlist.strings */,
@@ -1169,49 +1542,14 @@
 			name = Inspectors;
 			sourceTree = "<group>";
 		};
-		95D021EE29B1F482001F2B4D /* UnitTests */ = {
-			isa = PBXGroup;
-			children = (
-				95D0223A29B68E59001F2B4D /* Test Support */,
-				95D021FE29B3F8C6001F2B4D /* Other */,
-				95D021F929B3F474001F2B4D /* Classes */,
-				95D021F629B1F4DB001F2B4D /* Categories */,
-			);
-			path = UnitTests;
-			sourceTree = "<group>";
-		};
-		95D021F629B1F4DB001F2B4D /* Categories */ = {
-			isa = PBXGroup;
-			children = (
-				95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */,
-			);
-			path = Categories;
-			sourceTree = "<group>";
-		};
-		95D021F929B3F474001F2B4D /* Classes */ = {
-			isa = PBXGroup;
-			children = (
-				95FBD67E29C4A52E00E84D2F /* Application */,
-				95D021FA29B3F4B4001F2B4D /* LDraw */,
-			);
-			path = Classes;
-			sourceTree = "<group>";
-		};
-		95D021FA29B3F4B4001F2B4D /* LDraw */ = {
-			isa = PBXGroup;
-			children = (
-				95D021FB29B3F4BE001F2B4D /* Commands */,
-			);
-			path = LDraw;
-			sourceTree = "<group>";
-		};
 		953912D329D5A6C900C6802D /* OpenGL */ = {
 			isa = PBXGroup;
 			children = (
-				953912E029D5C4EF00C6802D /* GPU.h */,
+				953912E029D5C4EF00C6802D /* GL.h */,
 				9526F9852A0BA1290083A86A /* Application */,
 				953912DB29D5C10D00C6802D /* Widgets */,
 				953912D429D5A77D00C6802D /* LDraw */,
+				95E1081F2A40999B0091D579 /* Shaders */,
 			);
 			path = OpenGL;
 			sourceTree = "<group>";
@@ -1225,16 +1563,6 @@
 				953912D529D5A78F00C6802D /* Support */,
 			);
 			path = LDraw;
-			sourceTree = "<group>";
-		};
-		95D021FB29B3F4BE001F2B4D /* Commands */ = {
-			isa = PBXGroup;
-			children = (
-				95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */,
-				95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */,
-				95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */,
-			);
-			path = Commands;
 			sourceTree = "<group>";
 		};
 		953912D529D5A78F00C6802D /* Support */ = {
@@ -1276,11 +1604,162 @@
 			path = Widgets;
 			sourceTree = "<group>";
 		};
+		956D9B7E2A2FDC2600FA956B /* Metal */ = {
+			isa = PBXGroup;
+			children = (
+				956D9B7F2A2FDC5C00FA956B /* MTL.h */,
+				956D9CA22A30A99C00FA956B /* Application */,
+				956D9CA82A30AABA00FA956B /* Widgets */,
+				956D9CAE2A31019B00FA956B /* LDraw */,
+				95E108202A409A7F0091D579 /* Shaders */,
+			);
+			path = Metal;
+			sourceTree = "<group>";
+		};
+		956D9C9D2A30A6B600FA956B /* General */ = {
+			isa = PBXGroup;
+			children = (
+				95E1082F2A41E0AB0091D579 /* LDrawApplicationMTL.h */,
+				956D9C9E2A30A72300FA956B /* LDrawApplicationGPU.h */,
+				956D9C9F2A30A72300FA956B /* LDrawApplicationGPU.m */,
+			);
+			path = General;
+			sourceTree = "<group>";
+		};
+		956D9CA22A30A99C00FA956B /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				956D9C9D2A30A6B600FA956B /* General */,
+				956D9CA32A30A9B100FA956B /* Document */,
+			);
+			path = Application;
+			sourceTree = "<group>";
+		};
+		956D9CA32A30A9B100FA956B /* Document */ = {
+			isa = PBXGroup;
+			children = (
+				956D9CA42A30AA0800FA956B /* LDrawDocumentGPU.h */,
+				956D9CA52A30AA0800FA956B /* LDrawDocumentGPU.m */,
+			);
+			path = Document;
+			sourceTree = "<group>";
+		};
+		956D9CA82A30AABA00FA956B /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				956D9CA92A30AADE00FA956B /* LDrawViewGPU.h */,
+				956D9CAA2A30AADE00FA956B /* LDrawViewGPU.m */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		956D9CAE2A31019B00FA956B /* LDraw */ = {
+			isa = PBXGroup;
+			children = (
+				956D9CAF2A3101AE00FA956B /* Renderer */,
+				956D9CB02A3101BE00FA956B /* Commands */,
+				956D9CB12A3101D400FA956B /* Support */,
+			);
+			path = LDraw;
+			sourceTree = "<group>";
+		};
+		956D9CAF2A3101AE00FA956B /* Renderer */ = {
+			isa = PBXGroup;
+			children = (
+				95E108282A4198860091D579 /* LDrawDisplayList.h */,
+				95E108272A4198860091D579 /* LDrawDisplayList.m */,
+				95E108302A41E22F0091D579 /* LDrawShaderRendererMTL.h */,
+				956D9CB22A3102C600FA956B /* LDrawShaderRendererGPU.h */,
+				956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */,
+			);
+			path = Renderer;
+			sourceTree = "<group>";
+		};
+		956D9CB02A3101BE00FA956B /* Commands */ = {
+			isa = PBXGroup;
+			children = (
+				956D9CB62A31038800FA956B /* LDrawPartGPU.h */,
+				956D9CB72A31038800FA956B /* LDrawPartGPU.m */,
+			);
+			path = Commands;
+			sourceTree = "<group>";
+		};
+		956D9CB12A3101D400FA956B /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				956D9CBA2A31042D00FA956B /* LDrawDirectiveGPU.h */,
+				956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */,
+				956D9CBE2A3104E400FA956B /* LDrawDragHandleGPU.h */,
+				956D9CBF2A3104E500FA956B /* LDrawDragHandleGPU.m */,
+				95E1082D2A41DDA50091D579 /* LDrawRendererMTL.h */,
+				956D9CC22A31056400FA956B /* LDrawRendererGPU.h */,
+				956D9CC32A31056400FA956B /* LDrawRendererGPU.m */,
+				956D9CC62A31060800FA956B /* PartLibraryGPU.h */,
+				956D9CC72A31060800FA956B /* PartLibraryGPU.m */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
 		95C773BD2A24CFF700058D75 /* Commands */ = {
 			isa = PBXGroup;
 			children = (
 				95C773BE2A24D01700058D75 /* LDrawPartGPU.h */,
 				95C773BF2A24D01800058D75 /* LDrawPartGPU.m */,
+			);
+			path = Commands;
+			sourceTree = "<group>";
+		};
+		95C773C22A24D6CA00058D75 /* Document */ = {
+			isa = PBXGroup;
+			children = (
+				95C773C32A24D6ED00058D75 /* LDrawDocumentGPU.h */,
+				95C773C42A24D6ED00058D75 /* LDrawDocumentGPU.m */,
+			);
+			path = Document;
+			sourceTree = "<group>";
+		};
+		95D021EE29B1F482001F2B4D /* UnitTests */ = {
+			isa = PBXGroup;
+			children = (
+				95D0223A29B68E59001F2B4D /* Test Support */,
+				95D021FE29B3F8C6001F2B4D /* Other */,
+				95D021F929B3F474001F2B4D /* Classes */,
+				95D021F629B1F4DB001F2B4D /* Categories */,
+			);
+			path = UnitTests;
+			sourceTree = "<group>";
+		};
+		95D021F629B1F4DB001F2B4D /* Categories */ = {
+			isa = PBXGroup;
+			children = (
+				95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */,
+			);
+			path = Categories;
+			sourceTree = "<group>";
+		};
+		95D021F929B3F474001F2B4D /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				95FBD67E29C4A52E00E84D2F /* Application */,
+				95D021FA29B3F4B4001F2B4D /* LDraw */,
+			);
+			path = Classes;
+			sourceTree = "<group>";
+		};
+		95D021FA29B3F4B4001F2B4D /* LDraw */ = {
+			isa = PBXGroup;
+			children = (
+				95D021FB29B3F4BE001F2B4D /* Commands */,
+			);
+			path = LDraw;
+			sourceTree = "<group>";
+		};
+		95D021FB29B3F4BE001F2B4D /* Commands */ = {
+			isa = PBXGroup;
+			children = (
+				95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */,
+				95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */,
+				95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */,
 			);
 			path = Commands;
 			sourceTree = "<group>";
@@ -1304,15 +1783,6 @@
 			path = "Test Support";
 			sourceTree = "<group>";
 		};
-		95C773C22A24D6CA00058D75 /* Document */ = {
-			isa = PBXGroup;
-			children = (
-				95C773C32A24D6ED00058D75 /* LDrawDocumentGPU.h */,
-				95C773C42A24D6ED00058D75 /* LDrawDocumentGPU.m */,
-			);
-			path = Document;
-			sourceTree = "<group>";
-		};
 		95D8939F1655325000AA055B /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -1328,6 +1798,22 @@
 				95DFF9B02991B0E900E7BF76 /* ClassInspector.m */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		95E1081F2A40999B0091D579 /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				D6EDBA0C164DF86F00B4062B /* test.glsl */,
+			);
+			path = Shaders;
+			sourceTree = "<group>";
+		};
+		95E108202A409A7F0091D579 /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				95E108212A409B6A0091D579 /* shaders.metal */,
+			);
+			path = Shaders;
 			sourceTree = "<group>";
 		};
 		95FBD67E29C4A52E00E84D2F /* Application */ = {
@@ -1362,14 +1848,6 @@
 			path = Renderer;
 			sourceTree = "<group>";
 		};
-		D6EDBA0B164DF86F00B4062B /* Shaders */ = {
-			isa = PBXGroup;
-			children = (
-				D6EDBA0C164DF86F00B4062B /* test.glsl */,
-			);
-			path = Shaders;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1380,7 +1858,7 @@
 				0B83E9B907E3BB0D009C2384 /* LDrawComment.h in Headers */,
 				9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */,
 				0B491DA407F5555B00AC0C10 /* MatrixMath.h in Headers */,
-				953912E129D5C4EF00C6802D /* GPU.h in Headers */,
+				953912E129D5C4EF00C6802D /* GL.h in Headers */,
 				9526F9892A0BA1A50083A86A /* LDrawApplicationGPU.h in Headers */,
 				0BCD0C6507FD0BA10066A536 /* LDrawContainer.h in Headers */,
 				0B6770EE0817588D0044A0E0 /* Mac LDraw_Prefix.pch in Headers */,
@@ -1388,6 +1866,7 @@
 				0BF729B808AD849300E3DA53 /* DocumentToolbarController.h in Headers */,
 				0BF729BA08AD849300E3DA53 /* LDrawDocument.h in Headers */,
 				0BF729BC08AD849300E3DA53 /* LDrawApplication.h in Headers */,
+				95E108322A4254370091D579 /* GPU.h in Headers */,
 				95F759A227BC67AD00CFE5ED /* FastSet.h in Headers */,
 				0BF729BE08AD849300E3DA53 /* LDrawColorPanelController.h in Headers */,
 				9526F98D2A0BBA590083A86A /* LDrawDirectiveGPU.h in Headers */,
@@ -1499,12 +1978,140 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		956D9B852A30768000FA956B /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				956D9B862A30768000FA956B /* LDrawComment.h in Headers */,
+				956D9B872A30768000FA956B /* SearchPanelController.h in Headers */,
+				18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */,
+				956D9B882A30768000FA956B /* MatrixMath.h in Headers */,
+				18B32A732B9A622D00A97084 /* LDrawShaderRendererMTL.h in Headers */,
+				956D9B8B2A30768000FA956B /* LDrawContainer.h in Headers */,
+				956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */,
+				956D9B8D2A30768000FA956B /* LDrawDrawableElement.h in Headers */,
+				956D9B8E2A30768000FA956B /* DocumentToolbarController.h in Headers */,
+				956D9B8F2A30768000FA956B /* LDrawDocument.h in Headers */,
+				956D9B902A30768000FA956B /* LDrawApplication.h in Headers */,
+				956D9CA02A30A72300FA956B /* LDrawApplicationGPU.h in Headers */,
+				95E1082E2A41DDD00091D579 /* LDrawRendererMTL.h in Headers */,
+				956D9C9C2A30769B00FA956B /* MTL.h in Headers */,
+				956D9B912A30768000FA956B /* FastSet.h in Headers */,
+				956D9B922A30768000FA956B /* LDrawColorPanelController.h in Headers */,
+				956D9CBC2A31042D00FA956B /* LDrawDirectiveGPU.h in Headers */,
+				956D9B942A30768000FA956B /* PartBrowserDataSource.h in Headers */,
+				956D9B952A30768000FA956B /* PreferencesDialogController.h in Headers */,
+				956D9B962A30768000FA956B /* LDrawMPDModel.h in Headers */,
+				18B32A602B9A0E8700A97084 /* LDrawDocumentTree.h in Headers */,
+				956D9B972A30768000FA956B /* LDrawConditionalLine.h in Headers */,
+				956D9CC02A3104E500FA956B /* LDrawDragHandleGPU.h in Headers */,
+				956D9B982A30768000FA956B /* LDrawViewerContainer.h in Headers */,
+				956D9B992A30768000FA956B /* LDrawLine.h in Headers */,
+				956D9B9A2A30768000FA956B /* LDrawModel.h in Headers */,
+				956D9B9B2A30768000FA956B /* LDrawPart.h in Headers */,
+				18B32A6A2B9A0EFD00A97084 /* LPubRemoveGroup.h in Headers */,
+				956D9CAB2A30AADE00FA956B /* LDrawViewGPU.h in Headers */,
+				956D9B9C2A30768000FA956B /* LDrawFile.h in Headers */,
+				956D9B9D2A30768000FA956B /* LDrawMetaCommand.h in Headers */,
+				956D9B9E2A30768000FA956B /* MacLDraw.h in Headers */,
+				956D9B9F2A30768000FA956B /* LDrawTriangle.h in Headers */,
+				956D9BA02A30768000FA956B /* LDrawQuadrilateral.h in Headers */,
+				956D9BA12A30768000FA956B /* LDrawStep.h in Headers */,
+				956D9BA22A30768000FA956B /* DimensionsPanel.h in Headers */,
+				18B32A6E2B9A0F3A00A97084 /* PartSpecific.h in Headers */,
+				956D9BA32A30768000FA956B /* PieceCountPanel.h in Headers */,
+				956D9BA42A30768000FA956B /* InspectionComment.h in Headers */,
+				956D9BA52A30768000FA956B /* InspectionConditionalLine.h in Headers */,
+				956D9BA62A30768000FA956B /* InspectionLine.h in Headers */,
+				956D9BA72A30768000FA956B /* InspectionMPDModel.h in Headers */,
+				956D9BA82A30768000FA956B /* InspectionPart.h in Headers */,
+				956D9BA92A30768000FA956B /* InspectionQuadrilateral.h in Headers */,
+				956D9BAA2A30768000FA956B /* InspectionTriangle.h in Headers */,
+				956D9BAB2A30768000FA956B /* InspectionUnknownCommand.h in Headers */,
+				956D9BAC2A30768000FA956B /* Inspector.h in Headers */,
+				956D9BAD2A30768000FA956B /* ObjectInspectionController.h in Headers */,
+				956D9BAE2A30768000FA956B /* DialogPanel.h in Headers */,
+				956D9BAF2A30768000FA956B /* ExtendedSplitView.h in Headers */,
+				956D9BB02A30768000FA956B /* IconTextCell.h in Headers */,
+				956D9BB12A30768000FA956B /* LDrawColorBar.h in Headers */,
+				956D9CC82A31060800FA956B /* PartLibraryGPU.h in Headers */,
+				956D9BB22A30768000FA956B /* LDrawColorCell.h in Headers */,
+				956D9BB32A30768000FA956B /* LDrawColorWell.h in Headers */,
+				956D9BB42A30768000FA956B /* LDrawDocumentWindow.h in Headers */,
+				956D9BB52A30768000FA956B /* LDrawFileOutlineView.h in Headers */,
+				956D9BB72A30768000FA956B /* LDrawView.h in Headers */,
+				956D9BB92A30768000FA956B /* StringCategory.h in Headers */,
+				956D9BBA2A30768000FA956B /* UserDefaultsCategory.h in Headers */,
+				956D9BBB2A30768000FA956B /* WindowCategory.h in Headers */,
+				956D9BBC2A30768000FA956B /* BricksmithApplication.h in Headers */,
+				956D9BBD2A30768000FA956B /* ToolPalette.h in Headers */,
+				956D9BBE2A30768000FA956B /* MovePanel.h in Headers */,
+				956D9BC02A30768000FA956B /* RotationPanelController.h in Headers */,
+				956D9BC12A30768000FA956B /* MinifigureDialogController.h in Headers */,
+				18B32A622B9A0EA000A97084 /* LDrawHighResPrimitives.h in Headers */,
+				956D9BC22A30768000FA956B /* MLCadIni.h in Headers */,
+				95E108332A4254370091D579 /* GPU.h in Headers */,
+				956D9BC32A30768000FA956B /* TransformerIntMinus1.h in Headers */,
+				956D9BC52A30768000FA956B /* PartBrowserPanelController.h in Headers */,
+				956D9BC62A30768000FA956B /* PartBrowserTableView.h in Headers */,
+				956D9BC82A30768000FA956B /* PartCatalogBuilder.h in Headers */,
+				956D9BC92A30768000FA956B /* BezierPathCategory.h in Headers */,
+				956D9BCA2A30768000FA956B /* ColorLibrary.h in Headers */,
+				956D9BCB2A30768000FA956B /* LDrawColor.h in Headers */,
+				956D9BCC2A30768000FA956B /* InspectionStep.h in Headers */,
+				956D9BCD2A30768000FA956B /* StringUtilities.h in Headers */,
+				956D9BCE2A30768000FA956B /* PartLibraryController.h in Headers */,
+				956D9BCF2A30768000FA956B /* ExtendedTableView.h in Headers */,
+				956D9BD02A30768000FA956B /* DonationDialogController.h in Headers */,
+				956D9BD12A30768000FA956B /* BackgroundColorView.h in Headers */,
+				956D9BD22A30768000FA956B /* ViewportArranger.h in Headers */,
+				956D9CB42A3102C600FA956B /* LDrawShaderRendererGPU.h in Headers */,
+				956D9BD32A30768000FA956B /* FocusRingView.h in Headers */,
+				956D9BD42A30768000FA956B /* OverlayHelperView.h in Headers */,
+				956D9BD52A30768000FA956B /* OverlayHelperWindow.h in Headers */,
+				18B32A662B9A0ECF00A97084 /* LPubCommand.h in Headers */,
+				956D9BD62A30768000FA956B /* OverlayViewCategory.h in Headers */,
+				956D9BD82A30768000FA956B /* BricksmithUtilities.h in Headers */,
+				956D9BD92A30768000FA956B /* LDrawDirective.h in Headers */,
+				956D9BDA2A30768000FA956B /* LDrawUtilities.h in Headers */,
+				956D9BDB2A30768000FA956B /* LDrawDragHandle.h in Headers */,
+				956D9BDC2A30768000FA956B /* LDrawKeywords.h in Headers */,
+				956D9BDD2A30768000FA956B /* PartLibrary.h in Headers */,
+				18B32A722B9A61DF00A97084 /* LDrawApplicationMTL.h in Headers */,
+				956D9BDE2A30768000FA956B /* LDrawPathNames.h in Headers */,
+				956D9BDF2A30768000FA956B /* LDrawPaths.h in Headers */,
+				18B32A642B9A0EB800A97084 /* LDrawObjectWithValue.h in Headers */,
+				956D9BE02A30768000FA956B /* PartReport.h in Headers */,
+				95E1082A2A4198860091D579 /* LDrawDisplayList.h in Headers */,
+				18B32A702B9A113300A97084 /* ScannerCategory.h in Headers */,
+				956D9BE12A30768000FA956B /* LDrawRenderer.h in Headers */,
+				956D9BE22A30768000FA956B /* TableViewCategory.h in Headers */,
+				956D9CA62A30AA0800FA956B /* LDrawDocumentGPU.h in Headers */,
+				18B32A682B9A0EDC00A97084 /* InspectionLPubCommand.h in Headers */,
+				956D9BE32A30768000FA956B /* LDrawTexture.h in Headers */,
+				956D9BE42A30768000FA956B /* ModelManager.h in Headers */,
+				956D9BE52A30768000FA956B /* LSynthConfiguration.h in Headers */,
+				956D9BE72A30768000FA956B /* LDrawLSynth.h in Headers */,
+				956D9BE82A30768000FA956B /* LDrawCoreRenderer.h in Headers */,
+				956D9BE92A30768000FA956B /* LDrawShaderRenderer.h in Headers */,
+				956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */,
+				956D9BEC2A30768000FA956B /* LDrawBDPAllocator.h in Headers */,
+				956D9BEE2A30768000FA956B /* LDrawDataStream.h in Headers */,
+				956D9CB82A31038800FA956B /* LDrawPartGPU.h in Headers */,
+				18B32A5D2B9A0E5300A97084 /* ClassInspector.h in Headers */,
+				956D9BEF2A30768000FA956B /* MeshSmooth.h in Headers */,
+				956D9BF02A30768000FA956B /* RelatedParts.h in Headers */,
+				956D9BF12A30768000FA956B /* LDrawGLCamera.h in Headers */,
+				956D9BF22A30768000FA956B /* GLMatrixMath.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		8D15AC270486D014006FF6A4 /* Bricksmith */ = {
+		8D15AC270486D014006FF6A4 /* Bricksmith-OpenGL */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2BB5974D09FEFD180077A885 /* Build configuration list for PBXNativeTarget "Bricksmith" */;
+			buildConfigurationList = 2BB5974D09FEFD180077A885 /* Build configuration list for PBXNativeTarget "Bricksmith-OpenGL" */;
 			buildPhases = (
 				0BC6993908B571AC00DAF996 /* Headers */,
 				8D15AC2B0486D014006FF6A4 /* Resources */,
@@ -1519,10 +2126,33 @@
 				95D893AA1655328300AA055B /* PBXTargetDependency */,
 				2BB5976009FEFD2E0077A885 /* PBXTargetDependency */,
 			);
-			name = Bricksmith;
+			name = "Bricksmith-OpenGL";
 			productInstallPath = "$(HOME)/Applications";
 			productName = "Mac LDraw";
 			productReference = 8D15AC370486D014006FF6A4 /* Bricksmith.app */;
+			productType = "com.apple.product-type.application";
+		};
+		956D9B802A30768000FA956B /* Bricksmith-Metal */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 956D9C972A30768000FA956B /* Build configuration list for PBXNativeTarget "Bricksmith-Metal" */;
+			buildPhases = (
+				956D9B852A30768000FA956B /* Headers */,
+				956D9BF32A30768000FA956B /* Resources */,
+				956D9C1C2A30768000FA956B /* Sources */,
+				956D9C882A30768000FA956B /* Frameworks */,
+				956D9C912A30768000FA956B /* Copy Frameworks (1) */,
+				956D9C942A30768000FA956B /* Copy LSynth */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				956D9B812A30768000FA956B /* PBXTargetDependency */,
+				956D9B832A30768000FA956B /* PBXTargetDependency */,
+			);
+			name = "Bricksmith-Metal";
+			productInstallPath = "$(HOME)/Applications";
+			productName = "Mac LDraw";
+			productReference = 956D9C9A2A30768000FA956B /* Bricksmith-M.app */;
 			productType = "com.apple.product-type.application";
 		};
 		95D021EC29B1F482001F2B4D /* UnitTests */ = {
@@ -1582,7 +2212,8 @@
 			);
 			projectRoot = ..;
 			targets = (
-				8D15AC270486D014006FF6A4 /* Bricksmith */,
+				8D15AC270486D014006FF6A4 /* Bricksmith-OpenGL */,
+				956D9B802A30768000FA956B /* Bricksmith-Metal */,
 				95D021EC29B1F482001F2B4D /* UnitTests */,
 			);
 		};
@@ -1637,7 +2268,7 @@
 				0B04E9861093BB4200E201EE /* InspectorTriangle.xib in Resources */,
 				0B04E9871093BB4200E201EE /* InspectorUnknownCommand.xib in Resources */,
 				0B04E9881093BB4200E201EE /* LDrawDocument.xib in Resources */,
-				0B04E9891093BB4200E201EE /* LDrawGLViewAccessories.xib in Resources */,
+				0B04E9891093BB4200E201EE /* LDrawViewAccessories.xib in Resources */,
 				9543FF8529C52CB400564638 /* InspectorLPubCommand.xib in Resources */,
 				0B04E98A1093BB4200E201EE /* MainMenu.xib in Resources */,
 				0B04E98B1093BB4200E201EE /* MinifigureGenerator.xib in Resources */,
@@ -1652,6 +2283,54 @@
 				0B30C6BF16DC61000023B3A6 /* InspectorLSynth.xib in Resources */,
 				D687D424170A6DF3007300E2 /* related.ldr in Resources */,
 				9506E0E0189BD6480006CE9C /* lsynth.mpd in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		956D9BF32A30768000FA956B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				956D9BF42A30768000FA956B /* Bricksmith_Sparkle_signature_public.pem in Resources */,
+				956D9BF52A30768000FA956B /* Bum.ldr in Resources */,
+				956D9BF62A30768000FA956B /* SearchPanel.xib in Resources */,
+				956D9BF72A30768000FA956B /* Assets.xcassets in Resources */,
+				956D9BF82A30768000FA956B /* LDConfig.ldr in Resources */,
+				956D9BF92A30768000FA956B /* LDraw in Resources */,
+				956D9BFA2A30768000FA956B /* Legonian Ruler.pdf in Resources */,
+				956D9CAD2A30ADC400FA956B /* LDrawViewAccessories.xib in Resources */,
+				956D9BFB2A30768000FA956B /* MLCad.ini in Resources */,
+				956D9BFD2A30768000FA956B /* InfoPlist.strings in Resources */,
+				956D9BFE2A30768000FA956B /* Credits.rtf in Resources */,
+				956D9BFF2A30768000FA956B /* Help in Resources */,
+				956D9C002A30768000FA956B /* Localizable.strings in Resources */,
+				956D9C012A30768000FA956B /* ColorPanel.xib in Resources */,
+				956D9C022A30768000FA956B /* Dimensions.xib in Resources */,
+				956D9C032A30768000FA956B /* Donation.xib in Resources */,
+				956D9C042A30768000FA956B /* Inspector.xib in Resources */,
+				956D9C052A30768000FA956B /* InspectorComment.xib in Resources */,
+				956D9C062A30768000FA956B /* InspectorConditionalLine.xib in Resources */,
+				956D9C072A30768000FA956B /* InspectorLine.xib in Resources */,
+				18B935CE2B60072900291171 /* Info-M.plist in Resources */,
+				956D9C082A30768000FA956B /* InspectorMPDModel.xib in Resources */,
+				956D9C092A30768000FA956B /* InspectorPart.xib in Resources */,
+				956D9C0A2A30768000FA956B /* InspectorQuadrilateral.xib in Resources */,
+				956D9C0B2A30768000FA956B /* InspectorStep.xib in Resources */,
+				956D9C0C2A30768000FA956B /* InspectorTriangle.xib in Resources */,
+				18B32A692B9A0EE200A97084 /* InspectorLPubCommand.xib in Resources */,
+				956D9C0D2A30768000FA956B /* InspectorUnknownCommand.xib in Resources */,
+				956D9C0E2A30768000FA956B /* LDrawDocument.xib in Resources */,
+				956D9C102A30768000FA956B /* MainMenu.xib in Resources */,
+				956D9C112A30768000FA956B /* MinifigureGenerator.xib in Resources */,
+				956D9C122A30768000FA956B /* MovePanel.xib in Resources */,
+				956D9C132A30768000FA956B /* PartBrowser.xib in Resources */,
+				956D9C142A30768000FA956B /* PartBrowserAccessories.xib in Resources */,
+				956D9C152A30768000FA956B /* PieceCountPanel.xib in Resources */,
+				956D9C162A30768000FA956B /* Preferences.xib in Resources */,
+				956D9C172A30768000FA956B /* RotationPanel.xib in Resources */,
+				956D9C182A30768000FA956B /* ToolPalette.xib in Resources */,
+				956D9C192A30768000FA956B /* InspectorLSynth.xib in Resources */,
+				956D9C1A2A30768000FA956B /* related.ldr in Resources */,
+				956D9C1B2A30768000FA956B /* lsynth.mpd in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1789,6 +2468,129 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		956D9C1C2A30768000FA956B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				956D9C1D2A30768000FA956B /* main.m in Sources */,
+				956D9C1E2A30768000FA956B /* LDrawFile.m in Sources */,
+				956D9C1F2A30768000FA956B /* FastSet.m in Sources */,
+				956D9C202A30768000FA956B /* LDrawMPDModel.m in Sources */,
+				956D9C212A30768000FA956B /* LDrawModel.m in Sources */,
+				95E108292A4198860091D579 /* LDrawDisplayList.m in Sources */,
+				956D9C222A30768000FA956B /* LDrawStep.m in Sources */,
+				956D9C232A30768000FA956B /* LDrawConditionalLine.m in Sources */,
+				956D9C242A30768000FA956B /* LDrawLine.m in Sources */,
+				18B32A652B9A0EBC00A97084 /* LDrawObjectWithValue.m in Sources */,
+				956D9C252A30768000FA956B /* LDrawMetaCommand.m in Sources */,
+				956D9C262A30768000FA956B /* LDrawPart.m in Sources */,
+				956D9CA12A30A72300FA956B /* LDrawApplicationGPU.m in Sources */,
+				956D9C272A30768000FA956B /* LDrawQuadrilateral.m in Sources */,
+				956D9C282A30768000FA956B /* LDrawTriangle.m in Sources */,
+				956D9C292A30768000FA956B /* LDrawComment.m in Sources */,
+				18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */,
+				956D9CB52A3102C600FA956B /* LDrawShaderRendererGPU.m in Sources */,
+				956D9C2A2A30768000FA956B /* MatrixMath.c in Sources */,
+				956D9C2B2A30768000FA956B /* LDrawContainer.m in Sources */,
+				956D9C2C2A30768000FA956B /* LDrawDrawableElement.m in Sources */,
+				956D9CB92A31038800FA956B /* LDrawPartGPU.m in Sources */,
+				956D9C2E2A30768000FA956B /* DocumentToolbarController.m in Sources */,
+				956D9C2F2A30768000FA956B /* LDrawDocument.m in Sources */,
+				956D9CBD2A31042D00FA956B /* LDrawDirectiveGPU.m in Sources */,
+				956D9C302A30768000FA956B /* LDrawApplication.m in Sources */,
+				956D9C312A30768000FA956B /* LDrawColorPanelController.m in Sources */,
+				18B32A632B9A0EA400A97084 /* LDrawHighResPrimitives.m in Sources */,
+				956D9C332A30768000FA956B /* PartBrowserDataSource.m in Sources */,
+				956D9C342A30768000FA956B /* PreferencesDialogController.m in Sources */,
+				956D9C362A30768000FA956B /* DimensionsPanel.m in Sources */,
+				956D9C372A30768000FA956B /* PieceCountPanel.m in Sources */,
+				956D9C382A30768000FA956B /* InspectionComment.m in Sources */,
+				956D9C392A30768000FA956B /* InspectionConditionalLine.m in Sources */,
+				956D9C3A2A30768000FA956B /* InspectionLine.m in Sources */,
+				956D9C3B2A30768000FA956B /* InspectionMPDModel.m in Sources */,
+				956D9C3C2A30768000FA956B /* InspectionPart.m in Sources */,
+				956D9C3D2A30768000FA956B /* InspectionQuadrilateral.m in Sources */,
+				18B32A5E2B9A0E5900A97084 /* ClassInspector.m in Sources */,
+				956D9C3E2A30768000FA956B /* InspectionTriangle.m in Sources */,
+				956D9C3F2A30768000FA956B /* InspectionUnknownCommand.m in Sources */,
+				956D9C402A30768000FA956B /* SearchPanelController.m in Sources */,
+				956D9C412A30768000FA956B /* Inspector.m in Sources */,
+				956D9CA72A30AA0800FA956B /* LDrawDocumentGPU.m in Sources */,
+				18B32A612B9A0E8C00A97084 /* LDrawDocumentTree.m in Sources */,
+				956D9C422A30768000FA956B /* ObjectInspectionController.m in Sources */,
+				956D9C432A30768000FA956B /* DialogPanel.m in Sources */,
+				956D9C442A30768000FA956B /* ExtendedSplitView.m in Sources */,
+				956D9C452A30768000FA956B /* IconTextCell.m in Sources */,
+				956D9C462A30768000FA956B /* LDrawColorBar.m in Sources */,
+				956D9C472A30768000FA956B /* LDrawColorCell.m in Sources */,
+				956D9C482A30768000FA956B /* LDrawColorWell.m in Sources */,
+				956D9C492A30768000FA956B /* LDrawDocumentWindow.m in Sources */,
+				956D9C4A2A30768000FA956B /* LDrawFileOutlineView.m in Sources */,
+				956D9C4B2A30768000FA956B /* LDrawView.m in Sources */,
+				956D9CC12A3104E500FA956B /* LDrawDragHandleGPU.m in Sources */,
+				956D9C4C2A30768000FA956B /* StringCategory.m in Sources */,
+				956D9C4D2A30768000FA956B /* UserDefaultsCategory.m in Sources */,
+				956D9C4E2A30768000FA956B /* WindowCategory.m in Sources */,
+				956D9C4F2A30768000FA956B /* BricksmithApplication.m in Sources */,
+				18B32A712B9A113900A97084 /* ScannerCategory.m in Sources */,
+				956D9C502A30768000FA956B /* ToolPalette.m in Sources */,
+				956D9C512A30768000FA956B /* MovePanel.m in Sources */,
+				956D9C522A30768000FA956B /* RotationPanelController.m in Sources */,
+				18B32A6F2B9A0F3E00A97084 /* PartSpecific.m in Sources */,
+				956D9C532A30768000FA956B /* MinifigureDialogController.m in Sources */,
+				956D9C542A30768000FA956B /* MLCadIni.m in Sources */,
+				956D9CC92A31060800FA956B /* PartLibraryGPU.m in Sources */,
+				956D9C552A30768000FA956B /* TransformerIntMinus1.m in Sources */,
+				956D9C572A30768000FA956B /* PartBrowserPanelController.m in Sources */,
+				18B32A6C2B9A0F0700A97084 /* InspectionLPubRemoveGroup.m in Sources */,
+				956D9C582A30768000FA956B /* PartBrowserTableView.m in Sources */,
+				956D9C592A30768000FA956B /* BezierPathCategory.m in Sources */,
+				956D9C5A2A30768000FA956B /* ColorLibrary.m in Sources */,
+				956D9C5B2A30768000FA956B /* LDrawColor.m in Sources */,
+				956D9C5C2A30768000FA956B /* InspectionStep.m in Sources */,
+				956D9C5D2A30768000FA956B /* StringUtilities.m in Sources */,
+				956D9C5E2A30768000FA956B /* PartLibraryController.m in Sources */,
+				956D9C5F2A30768000FA956B /* ExtendedTableView.m in Sources */,
+				956D9C602A30768000FA956B /* DonationDialogController.m in Sources */,
+				956D9C612A30768000FA956B /* BackgroundColorView.m in Sources */,
+				956D9C622A30768000FA956B /* ViewportArranger.m in Sources */,
+				956D9C632A30768000FA956B /* FocusRingView.m in Sources */,
+				956D9C642A30768000FA956B /* OverlayViewCategory.m in Sources */,
+				18B32A6B2B9A0F0100A97084 /* LPubRemoveGroup.m in Sources */,
+				956D9C652A30768000FA956B /* OverlayHelperView.m in Sources */,
+				956D9C662A30768000FA956B /* OverlayHelperWindow.m in Sources */,
+				956D9C672A30768000FA956B /* BricksmithUtilities.m in Sources */,
+				956D9C6A2A30768000FA956B /* LDrawDirective.m in Sources */,
+				956D9CAC2A30AADE00FA956B /* LDrawViewGPU.m in Sources */,
+				956D9C6B2A30768000FA956B /* LDrawUtilities.m in Sources */,
+				956D9C6C2A30768000FA956B /* LDrawDragHandle.m in Sources */,
+				956D9C6E2A30768000FA956B /* PartLibrary.m in Sources */,
+				956D9C6F2A30768000FA956B /* LDrawPaths.m in Sources */,
+				956D9C702A30768000FA956B /* PartReport.m in Sources */,
+				956D9C712A30768000FA956B /* LDrawRenderer.m in Sources */,
+				95E108222A409B6A0091D579 /* shaders.metal in Sources */,
+				956D9C722A30768000FA956B /* TableViewCategory.m in Sources */,
+				956D9C732A30768000FA956B /* LDrawTexture.m in Sources */,
+				956D9C742A30768000FA956B /* ModelManager.m in Sources */,
+				956D9C752A30768000FA956B /* LSynthConfiguration.m in Sources */,
+				956D9C762A30768000FA956B /* LDrawLSynth.m in Sources */,
+				956D9C772A30768000FA956B /* LDrawShaderRenderer.m in Sources */,
+				956D9C782A30768000FA956B /* LDrawViewerContainer.m in Sources */,
+				956D9CC52A31056400FA956B /* LDrawRendererGPU.m in Sources */,
+				956D9C7A2A30768000FA956B /* LDrawBDPAllocator.m in Sources */,
+				18B32A5F2B9A0E6E00A97084 /* LPubCommand.m in Sources */,
+				956D9C7C2A30768000FA956B /* RelatedParts.m in Sources */,
+				956D9C7D2A30768000FA956B /* LDrawLSynthDirective.m in Sources */,
+				956D9C7F2A30768000FA956B /* ComputationalGeometry.m in Sources */,
+				956D9C812A30768000FA956B /* InspectionLSynth.m in Sources */,
+				956D9C832A30768000FA956B /* MeshSmooth.c in Sources */,
+				956D9C842A30768000FA956B /* RegexKitLite.m in Sources */,
+				956D9C852A30768000FA956B /* LDrawGLCamera.m in Sources */,
+				956D9C862A30768000FA956B /* GLMatrixMath.c in Sources */,
+				956D9C872A30768000FA956B /* PartCatalogBuilder.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		95D021E929B1F482001F2B4D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1811,9 +2613,19 @@
 			name = AMSProgressBar;
 			targetProxy = 2BB5975F09FEFD2E0077A885 /* PBXContainerItemProxy */;
 		};
+		956D9B812A30768000FA956B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = LSynth;
+			targetProxy = 956D9B822A30768000FA956B /* PBXContainerItemProxy */;
+		};
+		956D9B832A30768000FA956B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AMSProgressBar;
+			targetProxy = 956D9B842A30768000FA956B /* PBXContainerItemProxy */;
+		};
 		95D021F229B1F482001F2B4D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 8D15AC270486D014006FF6A4 /* Bricksmith */;
+			target = 8D15AC270486D014006FF6A4 /* Bricksmith-OpenGL */;
 			targetProxy = 95D021F129B1F482001F2B4D /* PBXContainerItemProxy */;
 		};
 		95D893AA1655328300AA055B /* PBXTargetDependency */ = {
@@ -1936,12 +2748,12 @@
 			name = LDrawDocument.xib;
 			sourceTree = "<group>";
 		};
-		0B04E9631093BB4200E201EE /* LDrawGLViewAccessories.xib */ = {
+		0B04E9631093BB4200E201EE /* LDrawViewAccessories.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
 				0B04E9641093BB4200E201EE /* English */,
 			);
-			name = LDrawGLViewAccessories.xib;
+			name = LDrawViewAccessories.xib;
 			sourceTree = "<group>";
 		};
 		0B04E9651093BB4200E201EE /* MainMenu.xib */ = {
@@ -2107,8 +2919,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				OTHER_CODE_SIGN_FLAGS = "--deep";
 				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
 					3DconnexionClient,
@@ -2143,8 +2955,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				OTHER_CODE_SIGN_FLAGS = "--deep";
 				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
 					3DconnexionClient,
@@ -2187,6 +2999,98 @@
 					3DconnexionClient.framework,
 				);
 				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		956D9C982A30768000FA956B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEFINES_MODULE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../ThirdParty\"",
+					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
+				);
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					METAL,
+				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/Metal/\"";
+				IBC_NOTICES = NO;
+				IBC_WARNINGS = NO;
+				INFOPLIST_FILE = "Info-M.plist";
+				INSTALL_PATH = "$(HOME)/Applications";
+				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MTL_PREPROCESSOR_DEFINITIONS = "";
+				OTHER_CODE_SIGN_FLAGS = "--deep";
+				OTHER_LDFLAGS = (
+					"-weak_framework",
+					3DconnexionClient,
+				);
+				PREBINDING = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith;
+				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
+				PRODUCT_NAME = "Bricksmith-M";
+				SDKROOT = macosx;
+				WARNING_CFLAGS = "-Wall";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		956D9C992A30768000FA956B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = YES;
+				DEFINES_MODULE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../ThirdParty\"",
+					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
+				);
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+					METAL,
+				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/Metal/\"";
+				IBC_NOTICES = NO;
+				IBC_WARNINGS = NO;
+				INFOPLIST_FILE = "Info-M.plist";
+				INSTALL_PATH = "$(HOME)/Applications";
+				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MTL_PREPROCESSOR_DEFINITIONS = "";
+				OTHER_CODE_SIGN_FLAGS = "--deep";
+				OTHER_LDFLAGS = (
+					"-weak_framework",
+					3DconnexionClient,
+				);
+				PREBINDING = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith;
+				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
+				PRODUCT_NAME = "Bricksmith-M";
+				SDKROOT = macosx;
+				WARNING_CFLAGS = "-Wall";
+				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
 		};
@@ -2319,7 +3223,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2BB5974D09FEFD180077A885 /* Build configuration list for PBXNativeTarget "Bricksmith" */ = {
+		2BB5974D09FEFD180077A885 /* Build configuration list for PBXNativeTarget "Bricksmith-OpenGL" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2BB5974E09FEFD180077A885 /* Debug */,
@@ -2333,6 +3237,15 @@
 			buildConfigurations = (
 				2BB5975209FEFD180077A885 /* Debug */,
 				2BB5975309FEFD180077A885 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		956D9C972A30768000FA956B /* Build configuration list for PBXNativeTarget "Bricksmith-Metal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				956D9C982A30768000FA956B /* Debug */,
+				956D9C992A30768000FA956B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

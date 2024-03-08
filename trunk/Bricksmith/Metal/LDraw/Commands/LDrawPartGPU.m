@@ -16,9 +16,9 @@
 //				* a - i are orientation & scaling parameters
 //				* part.dat is the filename of the included file
 //
-//	Info:		This category contains OpenGL-related code.
+//	Info:		This category contains Metal-related code.
 //
-//	Created by Sergey Slobodenyuk on 2023-05-29.
+//	Created by Sergey Slobodenyuk on 2023-06-07.
 //
 //==============================================================================
 
@@ -27,7 +27,7 @@
 #import "LDrawModel.h"
 #import "PartLibrary.h"
 
-@implementation LDrawPart (OpenGL)
+@implementation LDrawPart (Metal)
 
 #pragma mark -
 #pragma mark DIRECTIVES

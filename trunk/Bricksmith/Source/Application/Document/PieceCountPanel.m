@@ -409,7 +409,7 @@
 		//Set up the part attributes
 		[newPart setLDrawColor:partColor];
 		[newPart setDisplayName:partName];
-		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
+		[LDrawApplication makeCurrentSharedContext];
 
 		[_partPreview.glView setLDrawDirective:newPart];
 		[_partPreview.glView setLDrawColor:partColor];

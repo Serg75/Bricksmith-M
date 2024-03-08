@@ -109,7 +109,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //	//---------- Load UI -------------------------------------------------------
 //
 ////	// Yes, we have a nib file. Don't laugh. This view has accessories.
-////	[NSBundle loadNibNamed:@"LDrawGLViewAccessories" owner:self];
+////	[NSBundle loadNibNamed:@"LDrawViewAccessories" owner:self];
 //
 //	self->focusRingView = [[FocusRingView alloc] initWithFrame:[self bounds]];
 //	[focusRingView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
@@ -240,20 +240,20 @@ static Box2 NSRectToBox2(NSRect rect)
 }//end drawRect:
 
 
-//========== draw ==============================================================
-//
-// Purpose:		Draw the LDraw content of the view.
-//
-//==============================================================================
-- (void) draw
-{
-	[self lockContextAndExecute:^
-	{
-		[self makeCurrentContext];
-		[self->renderer draw];
-	}];
-	
-}//end draw
+////========== draw ==============================================================
+////
+//// Purpose:		Draw the LDraw content of the view.
+////
+////==============================================================================
+//- (void) draw
+//{
+//	[self lockContextAndExecute:^
+//	{
+//		[self makeCurrentContext];
+//		[self->renderer draw];
+//	}];
+//	
+//}//end draw
 
 
 //========== isFlipped =========================================================
@@ -2909,23 +2909,23 @@ static Box2 NSRectToBox2(NSRect rect)
 //}//end reshape
 
 
-//========== update ============================================================
+////========== update ============================================================
+////
+//// Purpose:		This method is called by the AppKit whenever our drawable area
+////				changes somehow. Ordinarily, we wouldn't be concerned about what
+////				happens here. However, calling -update is highly thread-unsafe,
+////				so we guard the context with a mutex here so as to avoid truly
+////				hideous system crashes.
+////
+////==============================================================================
+//- (void) update
+//{
+//	[self lockContextAndExecute:^
+//	{
+//		[super update];
+//	}];
 //
-// Purpose:		This method is called by the AppKit whenever our drawable area
-//				changes somehow. Ordinarily, we wouldn't be concerned about what
-//				happens here. However, calling -update is highly thread-unsafe,
-//				so we guard the context with a mutex here so as to avoid truly
-//				hideous system crashes.
-//
-//==============================================================================
-- (void) update
-{
-	[self lockContextAndExecute:^
-	{
-		[super update];
-	}];
-
-}//end update
+//}//end update
 
 
 #pragma mark -

@@ -7,9 +7,9 @@
 //				wide instance variables and actions, as well as application
 //				delegate code for startup and shutdown.
 //
-//	Info:		This category contains OpenGL-related code.
+//	Info:		This category contains Metal-related code.
 //
-//	Created by Sergey Slobodenyuk on 2023-05-10.
+//	Created by Sergey Slobodenyuk on 2023-06-07.
 //
 //==============================================================================
 
@@ -18,17 +18,17 @@
 
 @interface LDrawApplication ()
 {
-	NSOpenGLContext			*sharedGLContext;		// OpenGL variables like display list numbers are shared through this.
+//	NSOpenGLContext			*sharedGLContext;		// OpenGL variables like display list numbers are shared through this.
 }
 
 @end
 
 
-@interface LDrawApplication (OpenGL)
+@interface LDrawApplication (Metal)
 
 //Accessors
-+ (NSOpenGLPixelFormat *) openGLPixelFormat;
-+ (NSOpenGLContext *) sharedOpenGLContext;
+//+ (NSOpenGLPixelFormat *) openGLPixelFormat;
+//+ (NSOpenGLContext *) sharedOpenGLContext;
 + (void) makeCurrentSharedContext;
 
 -(void) makeSharedContext;

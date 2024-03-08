@@ -34,6 +34,17 @@
 
 @implementation LDrawDocument (OpenGL)
 
+
+- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block
+{
+	CGLLockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	{
+		block();
+	}
+	CGLUnlockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+}
+
+
 #pragma mark -
 #pragma mark Delegate
 
