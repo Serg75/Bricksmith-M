@@ -14,6 +14,7 @@
 #import "MatrixMath.h"
 #import "LDrawGLCamera.h"
 #import "LDrawUtilities.h"
+#import "GPU.h"
 
 //Forward declarations
 @class LDrawDirective;
@@ -59,10 +60,18 @@ typedef enum
 	RotationDrawModeT	rotationDrawMode;		// drawing detail while rotating.
 	ViewOrientationT	viewOrientation;		// our orientation
 	NSInteger			framesSinceStartTime;
+	NSTimeInterval		fpsStartTime;
 
 	// Event Tracking
 	BOOL				isGesturing;			// true if performing a multitouch trackpad gesture.
 	BOOL				isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
+
+	// Metal
+	CommandQueue	_commandQueue;
+	PipelineState	_pipelineState;
+	Buffer			_vertexUniformBuffer;
+	Buffer			_fragmentUniformBuffer;
+	DepthStencilState _depthStencilState;
 }
 
 // Initialization

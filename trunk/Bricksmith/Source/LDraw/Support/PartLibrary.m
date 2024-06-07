@@ -70,29 +70,6 @@ NSString	*Category_Subparts			= @"Subparts";
 
 @implementation PartLibrary
 
-static PartLibrary *SharedPartLibrary = nil;
-
-//---------- sharedPartLibrary ---------------------------------------[static]--
-//
-// Purpose:		Returns the part libary, which contains the part catalog, which 
-//				is read in from the file LDRAW_PATH_KEY/PART_CATALOG_NAME when 
-//				the application launches.
-//				This is a rather big XML file, so it behooves us to read it 
-//				once then save it in memory.
-//
-//------------------------------------------------------------------------------
-+ (PartLibrary *) sharedPartLibrary
-{
-	if(SharedPartLibrary == nil)
-	{
-		SharedPartLibrary = [[PartLibrary alloc] init];
-	}
-	
-	return SharedPartLibrary;
-	
-}//end sharedPartLibrary
-
-
 //========== init ==============================================================
 //
 // Purpose:		Creates a part library with no parts loaded.

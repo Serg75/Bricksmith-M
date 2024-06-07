@@ -36,7 +36,6 @@
 #include "OpenGLUtilities.h"
 #include "MacLDraw.h"
 
-
 // moved to category
 //#define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
 #define TIME_BOXTEST				0	// output timing data for how long box tests and marquee drags take.
@@ -57,40 +56,41 @@
 @interface LDrawRenderer ()
 {
 	// moved to header
-//	id<LDrawRendererDelegate> delegate;
+	//	id<LDrawRendererDelegate> delegate;
 	id<LDrawGLCameraScroller>	scroller;
 	id							target;
 	BOOL						allowsEditing;
-	
+
 	// moved to header
-//	LDrawDirective          *fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
-//													// if you want to do anything else, you must
-//													// tweak the selection code in LDrawDrawableElement
-//													// and here in -mouseUp: to handle such cases.
-	
+	//	LDrawDirective          *fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
+	//													// if you want to do anything else, you must
+	//													// tweak the selection code in LDrawDrawableElement
+	//													// and here in -mouseUp: to handle such cases.
+
 	// moved to header
-//	LDrawGLCamera *			camera;
-	
+	//	LDrawGLCamera *			camera;
+
 	// Drawing Environment
 	LDrawColor				*color;					// default color to draw parts if none is specified
 
 	// moved to header
-//	GLfloat                 glBackgroundColor[4];
-//	Box2					selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
-//	RotationDrawModeT       rotationDrawMode;		// drawing detail while rotating.
-//	ViewOrientationT        viewOrientation;		// our orientation
-
-	NSTimeInterval			fpsStartTime;
+	//	GLfloat                 glBackgroundColor[4];
+	//	Box2					selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
+	//	RotationDrawModeT       rotationDrawMode;		// drawing detail while rotating.
+	//	ViewOrientationT        viewOrientation;		// our orientation
 
 	// moved to header
-//	NSInteger				framesSinceStartTime;
-	
+	//	NSTimeInterval			fpsStartTime;
+
+	// moved to header
+	//	NSInteger				framesSinceStartTime;
+
 	// Event Tracking
 	float					gridSpacing;
 
 	// moved to header
-//	BOOL                    isGesturing;			// true if performing a multitouch trackpad gesture.
-//	BOOL                    isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
+	//	BOOL                    isGesturing;			// true if performing a multitouch trackpad gesture.
+	//	BOOL                    isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
 
 	BOOL					isStartingDrag;			// this is the first event in a drag
 	NSTimer                 *mouseDownTimer;		// countdown to beginning drag-and-drop

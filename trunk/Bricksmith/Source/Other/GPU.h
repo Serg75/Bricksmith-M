@@ -11,10 +11,20 @@
 #ifdef METAL
 
 #import "MTL.h"
+#define CommandQueue id<MTLCommandQueue>
+#define PipelineState id<MTLRenderPipelineState>
+#define RenderEncoder id<MTLRenderCommandEncoder>
+#define Buffer id<MTLBuffer>
+#define DepthStencilState id<MTLDepthStencilState>
 
 #else
 
 #import "GL.h"
+#define CommandQueue id
+#define PipelineState id
+#define RenderEncoder id
+#define Buffer id
+#define DepthStencilState id
 
 #endif
 

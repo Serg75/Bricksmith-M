@@ -6,56 +6,67 @@
 //
 
 #include <metal_stdlib>
+
 using namespace metal;
 
+// Include header shared between C code and .metal files.
+#import "MetalCommonDefinitions.h"
 
 // Vertex shader
 
 struct VertexInput {
-	float4	position [[attribute(0)]];
-	float3	normal [[attribute(1)]];
-	float4	color [[attribute(2)]];
-	float4	transform_x [[attribute(3)]];
-	float4	transform_y [[attribute(4)]];
-	float4	transform_z [[attribute(5)]];
-	float4	transform_w [[attribute(6)]];
-	float4	color_current [[attribute(7)]];
-	float4	color_compliment [[attribute(8)]];
-	float	texture_mix [[attribute(9)]];
+	float4	position	[[attribute(VertexAttributePosition)]];
+	float3	normal		[[attribute(VertexAttributeNormal)]];
+	float4	color		[[attribute(VertexAttributeColor)]];
+};
+
+struct InstanceInput {
+	float4	transform_x;
+	float4	transform_y;
+	float4	transform_z;
+	float4	transform_w;
+	float4	color_current;
+	float4	color_compliment;
 };
 
 struct VertexOutput {
-	float4	front_color;
 	float4	position [[position]];
-	float2	tex_coord;
-	float	tex_mix;
-	float3	normal_eye;
+	float4	color;
 	float4	position_eye;
+	float3	normal_eye;
+	float	tex_mix;
+	float2	tex_coord;
 };
 
 struct VertexUniform {
-	float4		object_plane_t[16];
-	float4		object_plane_s[16];
-	float3x3	normal_matrix;
-	float4x4	projection_matrix;
 	float4x4	model_view_matrix;
+	float4x4	projection_matrix;
+	float3x3	normal_matrix;
 };
 
-vertex VertexOutput VertexShader(VertexInput in [[stage_in]],
-								 constant VertexUniform& uni [[buffer(0)]])
+struct TextureUniform {
+	float4		object_plane_t;
+	float4		object_plane_s;
+	float		texture_mix;
+};
+
+vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
+								 constant InstanceInput& inst [[buffer(BufferIndexPerInstanceData)]],
+								 constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]]//,
+								 /*constant TextureUniform& texGen [[buffer(BufferIndexVertexUniforms)]]*/)
 {
 	VertexOutput out;
 
 	float4 pos_obj = 0;
-	pos_obj.x = dot(in.position, in.transform_x);
-	pos_obj.y = dot(in.position, in.transform_y);
-	pos_obj.z = dot(in.position, in.transform_z);
-	pos_obj.w = dot(in.position, in.transform_w);
+	pos_obj.x = dot(in.position, inst.transform_x);
+	pos_obj.y = dot(in.position, inst.transform_y);
+	pos_obj.z = dot(in.position, inst.transform_z);
+	pos_obj.w = dot(in.position, inst.transform_w);
 
 	float3 norm_obj = 0;
-	norm_obj.x = dot(in.normal, in.transform_x.xyz);
-	norm_obj.y = dot(in.normal, in.transform_y.xyz);
-	norm_obj.z = dot(in.normal, in.transform_z.xyz);
+	norm_obj.x = dot(in.normal, inst.transform_x.xyz);
+	norm_obj.y = dot(in.normal, inst.transform_y.xyz);
+	norm_obj.z = dot(in.normal, inst.transform_z.xyz);
 
 	out.normal_eye = normalize(uni.normal_matrix * norm_obj);
 	float4 eye_pos = uni.model_view_matrix * pos_obj;
@@ -65,22 +76,30 @@ vertex VertexOutput VertexShader(VertexInput in [[stage_in]],
 
 	float4 col = in.color;
 	if (in.color.a == 0.0) {
-		col = mix (in.color_current, in.color_compliment, in.color.r);
+		col = mix(inst.color_current, inst.color_compliment, in.color.r);
 	};
-	out.front_color.a = col.a;
-	out.front_color.rgb = col.rgb;
+	out.color.a = col.a;
+	out.color.rgb = col.rgb;
 
 	if (in.normal.x == 0.0 && in.normal.y == 0.0 && in.normal.z == 0.0) {
-		out.front_color = col;
+		out.color = col;
 	};
 
-	float2 tex_coord = 0;
-	tex_coord.x = dot (uni.object_plane_s[0], in.position);
-	tex_coord.y = dot (uni.object_plane_t[0], in.position);
+//	float2 tex_coord = 0;
+//	tex_coord.x = dot(texGen.object_plane_s, in.position);
+//	tex_coord.y = dot(texGen.object_plane_t, in.position);
+//
+//	out.tex_coord = tex_coord;
 
-	out.tex_coord = tex_coord;
-	out.tex_mix = in.texture_mix;
-	out.position.z = (out.position.z + out.position.w) / 2.0f;
+	float4 eye_plane_s = float4(0); // Assuming no equivalent in Metal
+	float4 eye_plane_t = float4(0); // Assuming no equivalent in Metal
+
+	out.tex_coord = float2(dot(eye_plane_s, in.position),
+						   dot(eye_plane_t, in.position));
+
+	out.tex_mix = 0.0; //texGen.texture_mix;
+//	out.position.z = (out.position.z + out.position.w) / 2.0f;
+//	out.position.y /= 2.0f;
 
 	return out;
 }
@@ -99,6 +118,15 @@ struct FragmentOutput {
 	float4	frag_color;
 };
 
+struct LightingUniforms {
+	float3 lightPosition0;
+	float3 lightPosition1;
+	float3 ambientColor;
+	float3 diffuseColor;
+	float3 specularColor;
+	float shininess;
+};
+
 struct LightSourceParameters {
 	float4	diffuse;
 	float4	position;
@@ -109,14 +137,15 @@ struct LightModelParameters {
 };
 
 struct FragmentUniform {
-	LightSourceParameters	light_source[8];
+	LightSourceParameters	light_source[2];
 	LightModelParameters	light_model;
 };
 
-fragment FragmentOutput FragmentShader(FragmentInput in [[stage_in]],
-									   constant FragmentUniform& uni [[buffer(0)]],
-									   texture2d<float> tex [[texture(0)]],
-									   sampler smpl [[sampler(0)]])
+fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
+									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]]//,
+//									   texture2d<float> tex [[texture(0)]]//,
+//									   sampler smpl [[sampler(0)]]
+									   )
 {
 	FragmentOutput out;
 
@@ -128,9 +157,17 @@ fragment FragmentOutput FragmentShader(FragmentInput in [[stage_in]],
 		 uni.light_source[1].diffuse.rgb * max(0.0, dot(normal, uni.light_source[1].position.xyz)) +
 		 uni.light_model.ambient.rgb);
 
-	float4 tex_color = tex.sample(smpl, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
+	constexpr sampler linearSampler (mip_filter::linear,
+									 mag_filter::linear,
+									 min_filter::linear);
+
+	float4 tex_color = 0;
+//	float4 tex_color = tex.sample(linearSampler, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
+	// was
+//	float4 tex_color = tex.sample(smpl, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
 
 	float4 tmp = 0;
+	tmp.rgb = 1;
 	tmp.rgb = ((float3)mix(final_color.rgb, (float3)tex_color.rgb, (float)tex_color.a));
 	tmp.a = in.color.a;
 

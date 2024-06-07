@@ -18,8 +18,9 @@
 
 #import "LDrawShaderRendererGPU.h"
 
+@import MetalKit;
+
 #import "LDrawBDPAllocator.h"
-#import "LDrawShaderLoader.h"
 #import "LDrawDisplayList.h"
 #import "ColorLibrary.h"
 #import "GLMatrixMath.h"
@@ -46,57 +47,36 @@ static const char * attribs[] = {
 // Purpose: initialize our renderer, and grab all basic OpenGL state we need.
 //
 //================================================================================
-- (id) initWithScale:(float)initial_scale
-		   modelView:(GLfloat *)mv_matrix
-		  projection:(GLfloat *)proj_matrix
+- (id) initWithEncoder:(id<MTLRenderCommandEncoder>)renderEncoder
+				 scale:(float)initial_scale
+			 modelView:(GLfloat *)mv_matrix
+			projection:(GLfloat *)proj_matrix
 {
-//	pool = LDrawBDPCreate();
-//	// Build our shader if it doesn't exist yet.  For now, just stash the GL
-//	// object statically.
-//	static GLuint prog = 0;
-//	if(!prog)
-//	{
-//		prog = LDrawLoadShaderFromResource(@"test.glsl", attribs);
-//		GLint u_tex = glGetUniformLocation(prog,"u_tex");
-//		glUseProgram(prog);
-//
-//		// This matches up texture unit 0 with the sampler in the shader.
-//		glUniform1i(u_tex, 0);
-//	}
-//	else
-//		glUseProgram(prog);
-//
-//	self = [super init];
-//
-//	self->scale = initial_scale;
-//
-//	[[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
-//	glVertexAttrib1f(attr_texture_mix,0.0f);
-//	complimentColor(color_now, compl_now);
-//
-//	// Set up the basic transform to be identity - our transform is on top of the MVP matrix.
-//	memset(transform_now,0,sizeof(transform_now));
-//	transform_now[0] = transform_now[5] = transform_now[10] = transform_now[15] = 1.0f;
-//
-//	// "Rip" the MVP matrix from OpenGL.  (TODO: does LDraw just have this info?)
-//	// We use this for culling.
-//	multMatrices(mvp,proj_matrix,mv_matrix);
-//	memcpy(cull_now,mvp,sizeof(mvp));
-//
-//	// Create a DL session to match our lifetime.
-//	session = LDrawDLSessionCreate(mv_matrix);
-//
-//	// Set up GL state for attribute drawing, not the fixed function drawing we used to do.
-//	glEnableVertexAttribArray(attr_position);
-//	glEnableVertexAttribArray(attr_normal);
-//	glEnableVertexAttribArray(attr_color);
-//	glDisableClientState(GL_COLOR_ARRAY);
-//	glDisableClientState(GL_NORMAL_ARRAY);
-//	glDisableClientState(GL_VERTEX_ARRAY);
-//
-//	drag_handles = NULL;
-	
+	pool = LDrawBDPCreate();
+
+	self = [super init];
+
+	_renderEncoder = renderEncoder;
+
+	self->scale = initial_scale;
+
+	[[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
+	complimentColor(color_now, compl_now);
+
+	// Set up the basic transform to be identity - our transform is on top of the MVP matrix.
+	memset(transform_now,0,sizeof(transform_now));
+	transform_now[0] = transform_now[5] = transform_now[10] = transform_now[15] = 1.0f;
+
+	// "Rip" the MVP matrix from OpenGL.  (TODO: does LDraw just have this info?)
+	// We use this for culling.
+	multMatrices(mvp,proj_matrix,mv_matrix);
+	memcpy(cull_now,mvp,sizeof(mvp));
+
+	// Create a DL session to match our lifetime.
+	session = LDrawDLSessionCreate(mv_matrix);
+
 	return self;
+
 }//end init:
 
 
@@ -245,6 +225,12 @@ static const char * attribs[] = {
 }//end drawDragHandleImm:
 
 
+- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx
+{
+	return LDrawDLBuilderFinish(ctx);
+}
+
+
 //========== dealloc: ============================================================
 //
 // Purpose: Clean up our state.  Note that this "triggers" the draw from our
@@ -253,33 +239,23 @@ static const char * attribs[] = {
 //================================================================================
 - (void) dealloc
 {
-//	struct LDrawDragHandleInstance * dh;
-//	LDrawDLSessionDrawAndDestroy(session);
-//	session = nil;
-//	
-//	// Go through and draw the drag handles...
-//	
-//	for(dh = drag_handles; dh != NULL; dh = dh->next)
-//	{
-//		GLfloat s = dh->size / self->scale;
-//		GLfloat m[16] = { s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0 };
-//		
-//		[self pushMatrix:m];
-//		[self drawDragHandleImm:dh->xyz withSize:dh->size];
-//		[self popMatrix];
-//	}
-//	
-//	// Put back OGL state to what LDraw usually has.
-//	glUseProgram(0);
-//	
-//	int a;
-//	for(a = 0; a < attr_count; ++a)
-//		glDisableVertexAttribArray(a);
-//	glEnableClientState(GL_COLOR_ARRAY);
-//	glEnableClientState(GL_NORMAL_ARRAY);
-//	glEnableClientState(GL_VERTEX_ARRAY);
-//	
-//	LDrawBDPDestroy(pool);
+	struct LDrawDragHandleInstance * dh;
+	LDrawDLSessionDrawAndDestroy(_renderEncoder, session);
+	session = nil;
+	
+	// Go through and draw the drag handles...
+	
+	for(dh = drag_handles; dh != NULL; dh = dh->next)
+	{
+		GLfloat s = dh->size / self->scale;
+		GLfloat m[16] = { s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0 };
+		
+		[self pushMatrix:m];
+		[self drawDragHandleImm:dh->xyz withSize:dh->size];
+		[self popMatrix];
+	}
+	
+	LDrawBDPDestroy(pool);
 	
 }//end dealloc:
 

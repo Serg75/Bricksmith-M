@@ -10,4 +10,12 @@
 
 #define GPUView NSOpenGLView
 
+#define TexType					GLuint
+
+#define LDrawTextureGPU_h		"LDrawTextureGL.h"
+#define LDrawTextureGPU 		LDrawTextureGL
+
+#define PartLibraryGPU_h		"PartLibraryGL.h"
+#define PartLibraryGPU			PartLibraryGL
+
 #endif /* GL_h */

@@ -23,6 +23,7 @@
 //==============================================================================
 #import "PartBrowserDataSource.h"
 
+#import "GPU.h"
 #import "IconTextCell.h"
 #import "LDrawApplicationGPU.h"
 #import "LDrawColorPanelController.h"
@@ -30,7 +31,7 @@
 #import "LDrawPart.h"
 #import "LDrawViewerContainer.h"
 #import "MacLDraw.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 #import "StringCategory.h"
 #import "TableViewCategory.h"
 
@@ -86,7 +87,7 @@
 		
 		[self->partPreview setAcceptsFirstResponder:NO];
 		[self->partPreview setDelegate:self];
-		
+
 		[self->zoomInButton setTarget:self->partPreview];
 		[self->zoomInButton setAction:@selector(zoomIn:)];
 		[self->zoomInButton setToolTip:NSLocalizedString(@"ZoomInTooltip", nil)];
@@ -144,7 +145,7 @@
 		
 		//---------- Set Data --------------------------------------------------
 		
-		[self setPartLibrary:[PartLibrary sharedPartLibrary]];
+		[self setPartLibrary:[PartLibraryGPU sharedPartLibrary]];
 		[self loadCategory:startingCategory];
 		
 		[partsTable scrollRowToVisible:startingRow];

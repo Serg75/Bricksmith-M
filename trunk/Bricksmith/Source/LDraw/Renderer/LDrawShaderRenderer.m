@@ -303,7 +303,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 		LDrawDLBuilderAddQuad(builder,frt,n,c);
 		LDrawDLBuilderAddQuad(builder,bak,n,c);
 
-		unit_cube = LDrawDLBuilderFinish(builder);
+		unit_cube = [self builderFinish:builder];
 		
 	}
 	
@@ -689,7 +689,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 - (void) endDL:(LDrawDLHandle *) outHandle cleanupFunc:(LDrawDLCleanup_f *)func
 {
 	assert(dl_stack_top > 0);
-	struct LDrawDL * dl = dl_now ? LDrawDLBuilderFinish(dl_now) : NULL;
+	struct LDrawDL * dl = dl_now ? [self builderFinish:dl_now] : NULL;
 	--dl_stack_top;
 	dl_now = dl_stack[dl_stack_top];
 	
@@ -708,6 +708,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 - (void) drawDL:(LDrawDLHandle)dl
 {
 	LDrawDLDraw(
+		_renderEncoder,
 		session,
 		(struct LDrawDL *) dl,
 		&tex_now,

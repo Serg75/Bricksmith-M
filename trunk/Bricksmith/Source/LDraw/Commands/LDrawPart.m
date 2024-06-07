@@ -23,12 +23,13 @@
 #import "MacLDraw.h"
 #import <math.h>
 #import <string.h>
+#import "GPU.h"
 #import "LDrawColor.h"
 #import "LDrawFile.h"
 #import "LDrawModel.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 #import "LDrawPaths.h"
 #import "PartReport.h"
 #import "ModelManager.h"
@@ -665,7 +666,7 @@ int floatNearGrid(float v, float grid, float epsi)
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	NSString *description = [[PartLibrary sharedPartLibrary] descriptionForPart:self];
+	NSString *description = [[PartLibraryGPU sharedPartLibrary] descriptionForPart:self];
 	if (self.group.length > 0) {
 		description = [NSString stringWithFormat:@"[%@] %@", self.group, description];
 	}
@@ -994,8 +995,8 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		else
 			parseGroup = parentGroup;
 #endif
-		[[PartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
-		
+		[[PartLibraryGPU sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
+
 #if USE_BLOCKS
 		if(parentGroup == NULL)
 		{
@@ -1562,8 +1563,8 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		modelToDraw = [self referencedMPDSubmodel];
 		
 		if(modelToDraw == nil)
-			modelToDraw = [[PartLibrary sharedPartLibrary] modelForName_threadSafe:referenceName];
-		
+			modelToDraw = [[PartLibraryGPU sharedPartLibrary] modelForName_threadSafe:referenceName];
+
 		flatCopy    = [modelToDraw copy];
 		
 		// concatenate the transform and pass it down
@@ -1677,7 +1678,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		else 
 		{
 			// Try the part library first for speed - sub-paths will thrash the modelmanager.
-			cacheModel = [[PartLibrary sharedPartLibrary] modelForName:referenceName];
+			cacheModel = [[PartLibraryGPU sharedPartLibrary] modelForName:referenceName];
 			if(cacheModel != nil)
 			{
 				// Intentional: do not observe library parts - they are immutable so 

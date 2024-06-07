@@ -25,7 +25,7 @@
 #import "LDrawPartGPU.h"
 
 #import "LDrawModel.h"
-#import "PartLibrary.h"
+#import "PartLibraryMTL.h"
 
 @implementation LDrawPart (Metal)
 
@@ -78,7 +78,7 @@
 			// Parts that have a SPECIFIC color have been linked DIRECTLY to
 			// their specific colored VBO during -optimizeOpenGL.
 			
-			drawable = [[PartLibrary sharedPartLibrary] optimizedDrawableForPart:self color:drawingColor];
+			drawable = [[PartLibraryMTL sharedPartLibrary] optimizedDrawableForPart:self color:drawingColor];
 		}
 		
 		if(drawBoundsOnly == NO)

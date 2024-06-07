@@ -10,6 +10,7 @@
 //==============================================================================
 #import "LDrawUtilities.h"
 
+#import "GPU.h"
 #import "LDrawColor.h"
 #import "LDrawConditionalLine.h"
 #import "LDrawContainer.h"
@@ -20,9 +21,9 @@
 #import "LDrawPart.h"
 #import "LDrawQuadrilateral.h"
 #import "LDrawStep.h"
-#import "LDrawTexture.h"
+#import LDrawTextureGPU_h
 #import "LDrawTriangle.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 #import "LDrawLSynth.h"
 #import "RegexKitLite.h"
 
@@ -117,7 +118,7 @@ static NSString				*defaultAuthor		= @"anonymous";
         case 0:
             {
                 if([LDrawTexture lineIsTextureBeginning:line])
-                    classForType = [LDrawTexture class];
+                    classForType = [LDrawTextureGPU class];
                 else if ([LDrawLSynth lineIsLSynthBeginning:line]) {
                     classForType = [LDrawLSynth class];
                 }
@@ -755,8 +756,8 @@ static NSString				*defaultAuthor		= @"anonymous";
 //------------------------------------------------------------------------------
 + (void) updateNameForMovedPart:(LDrawPart *)movedPart
 {
-	NSString	*description	= [[PartLibrary sharedPartLibrary] descriptionForPart:movedPart];
-	
+	NSString	*description	= [[PartLibraryGPU sharedPartLibrary] descriptionForPart:movedPart];
+
 	if([description hasPrefix:LDRAW_MOVED_DESCRIPTION_PREFIX])
 	{
 		[movedPart followRedirectionAndUpdate];

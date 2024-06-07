@@ -21,7 +21,7 @@
 
 @interface LDrawShaderRenderer (Metal)
 
-- (id) initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
+- (id) initWithEncoder:(id<MTLRenderCommandEncoder>)encoder scale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
 
 - (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
 

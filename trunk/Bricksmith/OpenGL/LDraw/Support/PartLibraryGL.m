@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	File:		PartLibraryGPU.m
+//	File:		PartLibraryGL.m
 //
 //	Purpose:	This is the centralized repository for obtaining information
 //				about the contents of the LDraw folder. The part library is
@@ -17,9 +17,32 @@
 //
 //==============================================================================
 
-#import "PartLibraryGPU.h"
+#import "PartLibraryGL.h"
 
-@implementation PartLibrary (OpenGL)
+@implementation PartLibraryGL
+
+static PartLibraryGL *SharedPartLibrary = nil;
+
+//---------- sharedPartLibrary ---------------------------------------[static]--
+//
+// Purpose:		Returns the part library, which contains the part catalog, which
+//				is read in from the file LDRAW_PATH_KEY/PART_CATALOG_NAME when
+//				the application launches.
+//				This is a rather big XML file, so it behooves us to read it
+//				once then save it in memory.
+//
+//------------------------------------------------------------------------------
++ (PartLibraryGL *) sharedPartLibrary
+{
+	if(SharedPartLibrary == nil)
+	{
+		SharedPartLibrary = [[PartLibraryGL alloc] init];
+	}
+
+	return SharedPartLibrary;
+
+}//end sharedPartLibrary
+
 
 //========== textureTagForTexture: =============================================
 //
@@ -27,7 +50,7 @@
 //				by the high-level texture object.
 //
 //==============================================================================
-- (GLuint) textureTagForTexture:(LDrawTexture*)texture
+- (GLuint) textureTagForTexture:(LDrawTextureGPU*)texture
 {
 	NSString	*name		= [texture imageReferenceName];
 	NSNumber	*tagNumber	= [self->optimizedTextures objectForKey:name];

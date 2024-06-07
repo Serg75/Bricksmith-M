@@ -9,6 +9,7 @@
 #import <Cocoa/Cocoa.h>
 
 #import "LDrawCoreRenderer.h"
+#import "GPU.h"
 
 /*
 
@@ -64,10 +65,10 @@ struct	LDrawDragHandleInstance;
 	GLfloat							compl_now[4];
 	GLfloat							color_stack[COLOR_STACK_DEPTH*4];
 	int								color_stack_top;
-	
+
 	int								wire_frame_count;								// wire frame stack is just a count.
-	
-	
+
+
 	struct LDrawTextureSpec			tex_stack[TEXTURE_STACK_DEPTH];					// Texture stack from push/pop texture.
 	int								texture_stack_top;
 	struct LDrawTextureSpec			tex_now;
@@ -76,16 +77,19 @@ struct	LDrawDragHandleInstance;
 	int								transform_stack_top;
 	GLfloat							transform_now[16];
 	GLfloat							cull_now[16];
-	
+
 	struct LDrawDLBuilder*			dl_stack[DL_STACK_DEPTH];						// DL stack from begin/end DL builds.
 	int								dl_stack_top;
 	struct LDrawDLBuilder*			dl_now;											// This is the DL being built "right now".
-	
+
 	GLfloat							mvp[16];										// Cached MVP from when shader is built.
 
 	struct LDrawDragHandleInstance *drag_handles;									// List of drag handles - deferred to draw at the end for perf and correct scaling.
 	GLfloat							scale;											// Needed to code Allen's res-independent drag handles...someday get this from viewport?
-	
+
+
+	// Metal
+	RenderEncoder					_renderEncoder;
 }
 
 // moved to category
@@ -93,5 +97,7 @@ struct	LDrawDragHandleInstance;
 
 // moved to category
 //- (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
+
+- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
 
 @end

@@ -19,7 +19,7 @@
 // This forces quads to be subdivided into tris at creation.
 // For unindexed geometry this is a loss - we end up pushing 50% more vertices for the quad data, which hurts vertex-bound big models.
 // To revisit: once we are indexed, will quads vs tris be a wash?
-#define ONLY_USE_TRIS 0
+#define ONLY_USE_TRIS 1
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
@@ -72,9 +72,9 @@ static const GLuint * idx_null = NULL;
 #define WANT_STATS 0
 
 #define VERT_STRIDE 10								// Stride of our vertices - we always write X Y Z	NX NY NZ		R G B A
-#define INST_CUTOFF 5								// Minimum instances to use hw case, which has higher overhead to set up.  
+#define INST_CUTOFF 0								// Minimum instances to use hw case, which has higher overhead to set up.
 #define INST_MAX_COUNT (1024 * 128)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
-#define INST_RING_BUFFER_COUNT 4					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
+#define INST_RING_BUFFER_COUNT 1					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
 #define MODE_FOR_INST_STREAM GL_DYNAMIC_STATIC		// VBO mode for instancing.
 
 enum {
@@ -1249,6 +1249,7 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 //
 //================================================================================
 void LDrawDLDraw(
+									id								renderEncoder,
 									struct LDrawDLSession *			session,
 									struct LDrawDL *				dl, 
 									struct LDrawTextureSpec *		spec,

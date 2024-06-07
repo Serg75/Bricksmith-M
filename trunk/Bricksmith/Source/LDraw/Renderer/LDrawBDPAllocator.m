@@ -60,7 +60,7 @@ struct	LDrawBDP {
 //================================================================================
 static struct	BDPPage *	get_new_page()
 {	
-	struct	BDPPage * ptr = (struct	BDPPage *) malloc(sizeof(struct	BDPPage));
+	struct	BDPPage * ptr = (struct	BDPPage *) calloc(1, sizeof(struct	BDPPage));
 	ptr->header.cur = ptr->data;
 	ptr->header.end = ptr->data + BDP_PAYLOAD_SIZE;
 	return ptr;
@@ -76,7 +76,7 @@ static struct	BDPPage *	get_new_page()
 //================================================================================
 struct LDrawBDP *		LDrawBDPCreate()
 {
-	struct LDrawBDP * ret = (struct LDrawBDP *) malloc(sizeof(struct LDrawBDP));
+	struct LDrawBDP * ret = (struct LDrawBDP *) calloc(1, sizeof(struct LDrawBDP));
 	ret->first = ret->cur = get_new_page();
 	ret->first->header.next = NULL;
 	return ret;
@@ -126,7 +126,7 @@ void *					LDrawBDPAllocate(struct LDrawBDP * pool, size_t sz)
 		// Oversized case - we make a custom-sized page for this one allocation
 		// and pop it on the head of the list - the tail stays open - maybe
 		// it still has space.
-		char * raw_buf = (char *) malloc(sizeof(struct BDPPageHeader) + sz);
+		char * raw_buf = (char *) calloc(1, sizeof(struct BDPPageHeader) + sz);
 		struct BDPPageHeader * h = (struct BDPPageHeader *) raw_buf;
 		h->next = pool->first;
 		h->cur = h->end = raw_buf + sizeof(struct BDPPageHeader) + sz;

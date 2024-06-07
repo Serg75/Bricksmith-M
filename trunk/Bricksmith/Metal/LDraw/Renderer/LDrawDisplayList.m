@@ -11,15 +11,20 @@
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderRenderer.h"
 #import "MeshSmooth.h"
+#import "MetalGPU.h"
 #import "GLMatrixMath.h"
+#import "MatrixMath.h"
 #import OPEN_GL_HEADER
 #import OPEN_GL_EXT_HEADER
+#import "GPU.h"
+#include "MetalCommonDefinitions.h"
+
 
 
 // This forces quads to be subdivided into tris at creation.
 // For unindexed geometry this is a loss - we end up pushing 50% more vertices for the quad data, which hurts vertex-bound big models.
 // To revisit: once we are indexed, will quads vs tris be a wash?
-#define ONLY_USE_TRIS 0
+#define ONLY_USE_TRIS 1
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
@@ -72,9 +77,9 @@ static const GLuint * idx_null = NULL;
 #define WANT_STATS 0
 
 #define VERT_STRIDE 10								// Stride of our vertices - we always write X Y Z	NX NY NZ		R G B A
-#define INST_CUTOFF 5								// Minimum instances to use hw case, which has higher overhead to set up.  
+#define INST_CUTOFF 0								// Minimum instances to use hw case, which has higher overhead to set up.
 #define INST_MAX_COUNT (1024 * 128)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
-#define INST_RING_BUFFER_COUNT 4					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
+#define INST_RING_BUFFER_COUNT 1					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
 #define MODE_FOR_INST_STREAM GL_DYNAMIC_STATIC		// VBO mode for instancing.
 
 enum {
@@ -82,6 +87,14 @@ enum {
 	dl_has_meta = 2,		// At least one prim in this DL uses a meta-color and thus MIGHT pick up translucency from parent state during draw.
 	dl_has_tex = 4,			// At lesat one real texture is used.
 	dl_needs_destroy = 8	// Destroy after drawing - ptr is only around because it is queued!
+};
+
+
+struct TextureUniform {
+	Point4		object_plane_t;
+	Point4		object_plane_s;
+	float		texture_mix;
+	Point3		space;
 };
 
 
@@ -101,24 +114,27 @@ enum {
 //================================================================================
 static int	get_instance_cutoff()
 {
-	static int has_instancing = -1;
-	if(has_instancing == -1)
-	{
-		const GLubyte * ext_str = glGetString(GL_EXTENSIONS);
-		if(strstr((const char *) ext_str,"GL_ARB_instanced_arrays") != NULL)
-			has_instancing = 1;
-		else
-			has_instancing = 0;
-	}
-	return has_instancing ? INST_CUTOFF : INT32_MAX;
+	return INST_CUTOFF;
+//	static int has_instancing = -1;
+//	if(has_instancing == -1)
+//	{
+//		const GLubyte * ext_str = glGetString(GL_EXTENSIONS);
+//		if(strstr((const char *) ext_str,"GL_ARB_instanced_arrays") != NULL)
+//			has_instancing = 1;
+//		else
+//			has_instancing = 0;
+//	}
+//	return has_instancing ? INST_CUTOFF : INT32_MAX;
 }
 
 static void copy_vec3(GLfloat d[3], const GLfloat s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
 static void copy_vec4(GLfloat d[4], const GLfloat s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
 
-static GLuint inst_vbo_ring[INST_RING_BUFFER_COUNT] = { 0 };
+static id<MTLBuffer> inst_vbo_ring[INST_RING_BUFFER_COUNT] = { nil };
 static int inst_ring_last = 0;
 
+static id<MTLBuffer> immediateInstanceBuffer = nil;
+static id<MTLBuffer> deferredInstanceBuffer = nil;
 
 
 //========== DISPLAY LIST DATA STRUCTURES ========================================
@@ -155,9 +171,9 @@ struct LDrawDL {
 	struct LDrawDLInstance *instance_tail;
 	int						instance_count;
 	int						flags;					// See flags defs above.
-	GLuint					geo_vbo;				// Single VBO containing all geometry in the DL.
+	id<MTLBuffer> 			vertexBuffer;			// Single VBO containing all geometry in the DL.
 #if WANT_SMOOTH
-	GLuint					idx_vbo;				// Single VBO containing all mesh indices.
+	id<MTLBuffer> 			indexBuffer;			// Single VBO containing all mesh indices.
 #endif
 	int						tex_count;				// Number of per-textures; untex case is always first if present.
 	#if WANT_STATS
@@ -178,9 +194,9 @@ struct LDrawDL {
 // huge instancing data buffer.  (The name is taken from "segment buffering" in
 // GPU Gems 2.)
 struct LDrawDLSegment {
-	GLuint					geo_vbo;			// VBO of the brick we are going to draw - contains the actual brick mesh.
+	id<MTLBuffer> 			vertexBuffer;		// VBO of the brick we are going to draw - contains the actual brick mesh.
 #if WANT_SMOOTH
-	GLuint					idx_vbo;
+	id<MTLBuffer> 			indexBuffer;
 #endif
 	struct LDrawDLPerTex *	dl;					// Ptr to the per-tex info for that brick - only untexed bricks get instanced, so we only have one "per tex", by definition.
 	float *					inst_base;			// VBO-relative ptr to the instance data base in the instance VBO.
@@ -553,9 +569,10 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		return NULL;
 	}
 	
-	// Malloc DL structure with extra storage for variable-sized tex array.
-	struct LDrawDL * dl = (struct LDrawDL *) malloc(sizeof(struct LDrawDL) + sizeof(struct LDrawDLPerTex) * total_texes);
-	
+	// Alloc DL structure with extra storage for variable-sized tex array.
+	// Use calloc to prevent undefined values and EXC_BAD_ACCESS issue.
+	struct LDrawDL * dl = (struct LDrawDL *) calloc(1, sizeof(struct LDrawDL) + sizeof(struct LDrawDLPerTex) * total_texes);
+
 	// All per-session linked list ptrs start null.
 	dl->next_dl = NULL;
 	dl->instance_head = NULL;
@@ -589,7 +606,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	{
 		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
-		if(s->spec.tex_obj != 0)
+		if(s->spec.tex_obj != nil)
 			dl->flags |= dl_has_tex;
 
 		for(l = s->tri_head; l; l = l->next)
@@ -614,7 +631,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	{
 		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
-		if(s->spec.tex_obj != 0)
+		if(s->spec.tex_obj != nil)
 			dl->flags |= dl_has_tex;
 
 		for(l = s->line_head; l; l = l->next)
@@ -636,16 +653,31 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	int total_vertices, total_indices;
 	get_final_mesh_counts(M,&total_vertices,&total_indices);
 
-	glGenBuffers(1,&dl->geo_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, dl->geo_vbo);
-	glGenBuffers(1,&dl->idx_vbo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dl->idx_vbo);
+	id<MTLDevice> device = MetalGPU.device;
 
-	glBufferData(GL_ARRAY_BUFFER, total_vertices * sizeof(GLfloat) * VERT_STRIDE, NULL, GL_STATIC_DRAW);
-	volatile GLfloat * vertex_ptr = (volatile GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
+	vertexBuffer.label = @"Vertex buffer";
 
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, total_indices * sizeof(GLuint), NULL, GL_STATIC_DRAW);
-	volatile GLuint * index_ptr = (volatile GLuint *) glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+	id<MTLBuffer> indexBuffer = [device newBufferWithLength:total_indices * sizeof(GLuint) options:MTLResourceStorageModeShared];
+	indexBuffer.label = @"Index buffer";
+
+	dl->vertexBuffer = vertexBuffer;
+	dl->indexBuffer = indexBuffer;
+
+	volatile float * vertex_ptr = (volatile float *)[dl->vertexBuffer contents];
+	volatile GLuint * index_ptr = (volatile GLuint *)[dl->indexBuffer contents];
+
+
+//	glGenBuffers(1,&dl->geo_vbo);
+//	glBindBuffer(GL_ARRAY_BUFFER, dl->geo_vbo);
+//	glGenBuffers(1,&dl->idx_vbo);
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dl->idx_vbo);
+//
+//	glBufferData(GL_ARRAY_BUFFER, total_vertices * sizeof(GLfloat) * VERT_STRIDE, NULL, GL_STATIC_DRAW);
+//	volatile GLfloat * vertex_ptr = (volatile GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+//
+//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, total_indices * sizeof(GLuint), NULL, GL_STATIC_DRAW);
+//	volatile GLuint * index_ptr = (volatile GLuint *) glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
 	
 	// Grab variable size arrays for the start/offsets of each sub-part of our big pile-o-mesh...
 	// the mesher will give us back our tris sorted by texture.
@@ -698,10 +730,10 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	dl->idx_count = total_indices;
 	#endif	
 	
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-	glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+//	glUnmapBuffer(GL_ARRAY_BUFFER);
+//	glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+//	glBindBuffer(GL_ARRAY_BUFFER,0);
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 
 	// Release the BDP that contains all of the build-related junk.
 	LDrawBDPDestroy(ctx->alloc);
@@ -776,7 +808,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	{
 		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
-		if(s->spec.tex_obj != 0)
+		if(s->spec.tex_obj != nil)
 			dl->flags |= dl_has_tex;
 		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
 		cur_tex->line_off = cur_v;
@@ -842,18 +874,36 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 //			or not - a temporary hack until we can get a clear texture.
 //
 //================================================================================
-static void setup_tex_spec(struct LDrawTextureSpec * spec)
+static void setup_tex_spec(struct LDrawTextureSpec * spec,
+						   id<MTLRenderCommandEncoder> encoder)
+//						   float *)
 {
 	if(spec && spec->tex_obj)
 	{
-		glVertexAttrib1f(attr_texture_mix,1.0f);
-		glBindTexture(GL_TEXTURE_2D, spec->tex_obj);		
-		glTexGenfv(GL_S, GL_OBJECT_PLANE, spec->plane_s);
-		glTexGenfv(GL_T, GL_OBJECT_PLANE, spec->plane_t);				
+		struct TextureUniform texUniform;
+		texUniform.object_plane_s = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
+		texUniform.object_plane_t = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
+		texUniform.texture_mix = 1.0;
+		id<MTLBuffer> texBuffer = [MetalGPU.device newBufferWithBytes:&texUniform length:sizeof(texUniform) options:MTLResourceStorageModeShared];
+		texBuffer.label = @"Texture buffer";
+		[encoder setVertexBuffer:texBuffer offset:0 atIndex:TexIndexUniforms];
+		// was
+//		glVertexAttrib1f(attr_texture_mix,1.0f);
+//		glBindTexture(GL_TEXTURE_2D, spec->tex_obj);		
+//		glTexGenfv(GL_S, GL_OBJECT_PLANE, spec->plane_s);
+//		glTexGenfv(GL_T, GL_OBJECT_PLANE, spec->plane_t);				
 	}
 	else
 	{
-		glVertexAttrib1f(attr_texture_mix,0.0f);
+		struct TextureUniform texUniform;
+//		texUniform.object_plane_s = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
+//		texUniform.object_plane_t = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
+		texUniform.texture_mix = 9.0;
+		id<MTLBuffer> texBuffer = [MetalGPU.device newBufferWithBytes:&texUniform length:sizeof(texUniform) options:MTLResourceStorageModeShared];
+		texBuffer.label = @"Texture buffer";
+		[encoder setVertexBuffer:texBuffer offset:0 atIndex:TexIndexUniforms];
+		//was
+//		glVertexAttrib1f(attr_texture_mix,0.0f);
 		// TODO: what texture IS bound when "untextured"?  We should
 		// set up a 'white' texture 1x1 pixel so that (1) our texture state
 		// is not illegal and (2) we waste NO bandwidth on texturing.
@@ -908,7 +958,7 @@ static int compare_sorted_link(const void * lhs, const void * rhs)
 //			session object.
 //
 //================================================================================
-void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
+void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session)
 {
 	struct LDrawDLInstance * inst;
 	struct LDrawDL * dl;
@@ -922,14 +972,22 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 		struct LDrawDLSegment * cur_segment = segments;
 
 		// If we do not yet have a VBO for instancing, build one now.
-		if(inst_vbo_ring[session->inst_ring] == 0)
-			glGenBuffers(1,&inst_vbo_ring[session->inst_ring]);
-			
+		if(inst_vbo_ring[session->inst_ring] == nil)
+		{
+			id<MTLBuffer> instanceBuffer = [MetalGPU.device newBufferWithLength:INST_MAX_COUNT * sizeof(GLfloat)*24 options:MTLResourceStorageModeManaged];
+			instanceBuffer.label = @"Instance buffer";
+			inst_vbo_ring[session->inst_ring] = instanceBuffer;
+			// was
+//			glGenBuffers(1,&inst_vbo_ring[session->inst_ring]);
+		}
+
 			
 		// Map our instance buffer so we can write instancing data.
-		glBindBuffer(GL_ARRAY_BUFFER, inst_vbo_ring[session->inst_ring]);
-		glBufferData(GL_ARRAY_BUFFER,INST_MAX_COUNT * sizeof(GLfloat)*24, NULL, GL_DYNAMIC_DRAW);
-		GLfloat * inst_base = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+		GLfloat * inst_base = (GLfloat *) [inst_vbo_ring[session->inst_ring] contents];
+		// was
+//		glBindBuffer(GL_ARRAY_BUFFER, inst_vbo_ring[session->inst_ring]);
+//		glBufferData(GL_ARRAY_BUFFER,INST_MAX_COUNT * sizeof(GLfloat)*24, NULL, GL_DYNAMIC_DRAW);
+//		GLfloat * inst_base = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		GLfloat * inst_data = inst_base;
 		int		  inst_remain = INST_MAX_COUNT;
 
@@ -942,9 +1000,13 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 			if(dl->instance_count >= get_instance_cutoff() && inst_remain >= dl->instance_count)
 			{
 				// If we have capacity for hw instancing and this DL is used enough, create a segment record and fill it out.
-				cur_segment->geo_vbo = dl->geo_vbo;
+				cur_segment->vertexBuffer = dl->vertexBuffer;
+				// was
+//				cur_segment->geo_vbo = dl->geo_vbo;
 				#if WANT_SMOOTH
-				cur_segment->idx_vbo = dl->idx_vbo;
+				cur_segment->indexBuffer = dl->indexBuffer;
+				// was
+//				cur_segment->idx_vbo = dl->idx_vbo;
 				#endif
 				cur_segment->dl = &dl->texes[0];
 				cur_segment->inst_base = NULL; 
@@ -962,28 +1024,31 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 			
 				for (inst = dl->instance_head; inst; inst = inst->next)
 				{			
-					copy_vec4(inst_data,inst->color);
-					copy_vec4(inst_data+4,inst->comp);
-					inst_data[8] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
-					inst_data[9] = inst->transform[4];
-					inst_data[10] = inst->transform[8];
-					inst_data[11] = inst->transform[12];
-					inst_data[12] = inst->transform[1];
-					inst_data[13] = inst->transform[5];
-					inst_data[14] = inst->transform[9];
-					inst_data[15] = inst->transform[13];
-					inst_data[16] = inst->transform[2];
-					inst_data[17] = inst->transform[6];
-					inst_data[18] = inst->transform[10];
-					inst_data[19] = inst->transform[14];
-					inst_data[20] = inst->transform[3];
-					inst_data[21] = inst->transform[7];
-					inst_data[22] = inst->transform[11];
-					inst_data[23] = inst->transform[15];
+					copy_vec4(inst_data+16,inst->color);
+					copy_vec4(inst_data+20,inst->comp);
+					inst_data[0] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
+					inst_data[1] = inst->transform[4];
+					inst_data[2] = inst->transform[8];
+					inst_data[3] = inst->transform[12];
+					inst_data[4] = inst->transform[1];
+					inst_data[5] = inst->transform[5];
+					inst_data[6] = inst->transform[9];
+					inst_data[7] = inst->transform[13];
+					inst_data[8] = inst->transform[2];
+					inst_data[9] = inst->transform[6];
+					inst_data[10] = inst->transform[10];
+					inst_data[11] = inst->transform[14];
+					inst_data[12] = inst->transform[3];
+					inst_data[13] = inst->transform[7];
+					inst_data[14] = inst->transform[11];
+					inst_data[15] = inst->transform[15];
 					inst_data += 24;
 					--inst_remain;
 				}
 				++cur_segment;
+
+				[inst_vbo_ring[session->inst_ring] didModifyRange:NSMakeRange(0, 2048)]; // ???
+
 			}
 			else
 			{
@@ -995,34 +1060,49 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 				#endif
 			
 				// Immediate mode instancing - we draw now!  So bind up the mesh of this DL.
-				glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
+				[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+				// was
+//				glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
 				#if WANT_SMOOTH
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
+				// we don't bind index buffer, we use in in a draw call
+//				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
 				#endif
-				float * p = NULL;
-				glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
-				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
-				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
+//				float * p = NULL;
+//				glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
+//				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
+//				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 
 				// Now walk the instance list...push instance data into attributes in immediate mode and draw.
 				for(inst = dl->instance_head; inst; inst = inst->next)
 				{
 				
-					int i;
-					for(i = 0; i < 4; ++i)
-						glVertexAttrib4f(attr_transform_x+i,inst->transform[i],inst->transform[4+i],inst->transform[8+i],inst->transform[12+i]);
-					glVertexAttrib4fv(attr_color_current, inst->color);
-					glVertexAttrib4fv(attr_color_compliment, inst->comp);
+//					int i;
+//					for(i = 0; i < 4; ++i)
+//						glVertexAttrib4f(attr_transform_x+i,inst->transform[i],inst->transform[4+i],inst->transform[8+i],inst->transform[12+i]);
+//					glVertexAttrib4fv(attr_color_current, inst->color);
+//					glVertexAttrib4fv(attr_color_compliment, inst->comp);
 			
 					struct LDrawDLPerTex * tptr = dl->texes;
 					
 					#if WANT_SMOOTH
 					if(tptr->line_count)
-						glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
+						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+													indexCount:tptr->line_count
+													 indexType:MTLIndexTypeUInt32
+												   indexBuffer:dl->indexBuffer
+											 indexBufferOffset:idx_null+tptr->line_off];
+						// was
+//						glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
 					if(tptr->tri_count)
-						glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
-					if(tptr->quad_count)
-						glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
+						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+													indexCount:tptr->tri_count
+													 indexType:MTLIndexTypeUInt32
+												   indexBuffer:dl->indexBuffer
+											 indexBufferOffset:idx_null+tptr->tri_off];
+						// was
+//						glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
+//					if(tptr->quad_count)
+//						glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 					#else
 					if(tptr->line_count)
 						glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
@@ -1051,24 +1131,26 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 		// Hardware instancing: unmap our hardware instance buffer and if we got data,
 		// set up the GPU for hardware instancing.
 
-		glBindBuffer(GL_ARRAY_BUFFER, inst_vbo_ring[session->inst_ring]);
-		glUnmapBuffer(GL_ARRAY_BUFFER);
+		[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:0 atIndex:BufferIndexPerInstanceData];
+		// was
+//		glBindBuffer(GL_ARRAY_BUFFER, inst_vbo_ring[session->inst_ring]);
+//		glUnmapBuffer(GL_ARRAY_BUFFER);
 
 
 		if(segments != cur_segment)
 		{
-			glEnableVertexAttribArray(attr_transform_x);
-			glEnableVertexAttribArray(attr_transform_y);
-			glEnableVertexAttribArray(attr_transform_z);
-			glEnableVertexAttribArray(attr_transform_w);
-			glEnableVertexAttribArray(attr_color_current);
-			glEnableVertexAttribArray(attr_color_compliment);
-			glVertexAttribDivisorARB(attr_transform_x,1);
-			glVertexAttribDivisorARB(attr_transform_y,1);
-			glVertexAttribDivisorARB(attr_transform_z,1);
-			glVertexAttribDivisorARB(attr_transform_w,1);
-			glVertexAttribDivisorARB(attr_color_current,1);
-			glVertexAttribDivisorARB(attr_color_compliment,1);
+//			glEnableVertexAttribArray(attr_transform_x);
+//			glEnableVertexAttribArray(attr_transform_y);
+//			glEnableVertexAttribArray(attr_transform_z);
+//			glEnableVertexAttribArray(attr_transform_w);
+//			glEnableVertexAttribArray(attr_color_current);
+//			glEnableVertexAttribArray(attr_color_compliment);
+//			glVertexAttribDivisorARB(attr_transform_x,1);
+//			glVertexAttribDivisorARB(attr_transform_y,1);
+//			glVertexAttribDivisorARB(attr_transform_z,1);
+//			glVertexAttribDivisorARB(attr_transform_w,1);
+//			glVertexAttribDivisorARB(attr_color_current,1);
+//			glVertexAttribDivisorARB(attr_color_compliment,1);
 
 			// Main loop 2 over DLs - for each DL that had hw-instances we built a segment
 			// in our array.  Bind the DL itself, as well as the instance pointers, and do an instanced-draw.
@@ -1076,33 +1158,51 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 			struct LDrawDLSegment * s;
 			for(s = segments; s < cur_segment; ++s)
 			{
-
-				glBindBuffer(GL_ARRAY_BUFFER,s->geo_vbo);
+				[renderEncoder setVertexBuffer:s->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+				// was
+//				glBindBuffer(GL_ARRAY_BUFFER,s->geo_vbo);
 				#if WANT_SMOOTH
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,s->idx_vbo);
+				// we don't bind index buffer, we use in in a draw call
+//				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,s->idx_vbo);
 				#endif
 				float * p = NULL;
-				glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
-				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
-				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
+//				glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
+//				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
+//				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 
-				glBindBuffer(GL_ARRAY_BUFFER,inst_vbo_ring[session->inst_ring]);
+				[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:0 atIndex:BufferIndexPerInstanceData];
+				// was
+//				glBindBuffer(GL_ARRAY_BUFFER,inst_vbo_ring[session->inst_ring]);
 
 				p = s->inst_base;
-				glVertexAttribPointer(attr_color_current, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p  );
-				glVertexAttribPointer(attr_color_compliment, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+4);
-				glVertexAttribPointer(attr_transform_x, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+8);
-				glVertexAttribPointer(attr_transform_y, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+12);
-				glVertexAttribPointer(attr_transform_z, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+16);
-				glVertexAttribPointer(attr_transform_w, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+20);
+//				glVertexAttribPointer(attr_color_current, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p  );
+//				glVertexAttribPointer(attr_color_compliment, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+4);
+//				glVertexAttribPointer(attr_transform_x, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+8);
+//				glVertexAttribPointer(attr_transform_y, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+12);
+//				glVertexAttribPointer(attr_transform_z, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+16);
+//				glVertexAttribPointer(attr_transform_w, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+20);
 				
 				#if WANT_SMOOTH	
 				if(s->dl->line_count)
-					glDrawElementsInstancedARB(GL_LINES,s->dl->line_count,GL_UNSIGNED_INT,idx_null+s->dl->line_off, s->inst_count);
+					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+										indexCount:s->dl->line_count
+										 indexType:MTLIndexTypeUInt32 // ???
+									   indexBuffer:s->indexBuffer
+								 indexBufferOffset:idx_null+s->dl->line_off
+									 instanceCount:s->inst_count];
+					// was
+//					glDrawElementsInstancedARB(GL_LINES,s->dl->line_count,GL_UNSIGNED_INT,idx_null+s->dl->line_off, s->inst_count);
 				if(s->dl->tri_count)
-					glDrawElementsInstancedARB(GL_TRIANGLES,s->dl->tri_count,GL_UNSIGNED_INT,idx_null+s->dl->tri_off, s->inst_count);
-				if(s->dl->quad_count)
-					glDrawElementsInstancedARB(GL_QUADS,s->dl->quad_count,GL_UNSIGNED_INT,idx_null+s->dl->quad_off, s->inst_count);
+					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+										indexCount:s->dl->tri_count
+										 indexType:MTLIndexTypeUInt32 // ???
+									   indexBuffer:s->indexBuffer
+								 indexBufferOffset:idx_null+s->dl->tri_off
+									 instanceCount:s->inst_count];
+					// was
+//					glDrawElementsInstancedARB(GL_TRIANGLES,s->dl->tri_count,GL_UNSIGNED_INT,idx_null+s->dl->tri_off, s->inst_count);
+//				if(s->dl->quad_count)
+//					glDrawElementsInstancedARB(GL_QUADS,s->dl->quad_count,GL_UNSIGNED_INT,idx_null+s->dl->quad_off, s->inst_count);
 				#else
 				if(s->dl->line_count)
 					glDrawArraysInstancedARB(GL_LINES,s->dl->line_off,s->dl->line_count, s->inst_count);
@@ -1113,24 +1213,34 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 				#endif
 			}
 
-			glDisableVertexAttribArray(attr_transform_x);
-			glDisableVertexAttribArray(attr_transform_y);
-			glDisableVertexAttribArray(attr_transform_z);
-			glDisableVertexAttribArray(attr_transform_w);
-			glDisableVertexAttribArray(attr_color_current);
-			glDisableVertexAttribArray(attr_color_compliment);
-			glVertexAttribDivisorARB(attr_transform_x,0);
-			glVertexAttribDivisorARB(attr_transform_y,0);
-			glVertexAttribDivisorARB(attr_transform_z,0);
-			glVertexAttribDivisorARB(attr_transform_w,0);
-			glVertexAttribDivisorARB(attr_color_current,0);
-			glVertexAttribDivisorARB(attr_color_compliment,0);
+//			glDisableVertexAttribArray(attr_transform_x);
+//			glDisableVertexAttribArray(attr_transform_y);
+//			glDisableVertexAttribArray(attr_transform_z);
+//			glDisableVertexAttribArray(attr_transform_w);
+//			glDisableVertexAttribArray(attr_color_current);
+//			glDisableVertexAttribArray(attr_color_compliment);
+//			glVertexAttribDivisorARB(attr_transform_x,0);
+//			glVertexAttribDivisorARB(attr_transform_y,0);
+//			glVertexAttribDivisorARB(attr_transform_z,0);
+//			glVertexAttribDivisorARB(attr_transform_w,0);
+//			glVertexAttribDivisorARB(attr_color_current,0);
+//			glVertexAttribDivisorARB(attr_color_compliment,0);
 
 		}
 
 	}
 
 	// MAIN LOOP 3: sorted deferred drawing (!)
+
+	if(deferredInstanceBuffer == nil)
+	{
+		id<MTLDevice> device = MetalGPU.device;
+		deferredInstanceBuffer = [device newBufferWithLength:sizeof(GLfloat)*24 options:MTLResourceStorageModeManaged];
+		deferredInstanceBuffer.label = @"Deferred instance buffer";
+	}
+
+	// Map our instance buffer so we can write instancing data.
+	GLfloat * inst_data = (GLfloat *)deferredInstanceBuffer.contents;
 
 	struct LDrawDLSortedInstanceLink * l;
 	if(session->sorted_head)
@@ -1161,22 +1271,49 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 		l = arr;
 		int lc;
 		for(lc = 0; lc < session->sort_count; ++lc)
-		{			
-			int i;
-			for(i = 0; i < 4; ++i)
-				glVertexAttrib4f(attr_transform_x+i,l->transform[i],l->transform[4+i],l->transform[8+i],l->transform[12+i]);
-			glVertexAttrib4fv(attr_color_current, l->color);
-			glVertexAttrib4fv(attr_color_compliment, l->comp);
+		{
+			inst_data[0] = l->transform[0];		// Note: copy on transpose to get matrix into right form!
+			inst_data[1] = l->transform[4];
+			inst_data[2] = l->transform[8];
+			inst_data[3] = l->transform[12];
+			inst_data[4] = l->transform[1];
+			inst_data[5] = l->transform[5];
+			inst_data[6] = l->transform[9];
+			inst_data[7] = l->transform[13];
+			inst_data[8] = l->transform[2];
+			inst_data[9] = l->transform[6];
+			inst_data[10] = l->transform[10];
+			inst_data[11] = l->transform[14];
+			inst_data[12] = l->transform[3];
+			inst_data[13] = l->transform[7];
+			inst_data[14] = l->transform[11];
+			inst_data[15] = l->transform[15];
+			// was
+//			int i;
+//			for(i = 0; i < 4; ++i)
+//				glVertexAttrib4f(attr_transform_x+i,l->transform[i],l->transform[4+i],l->transform[8+i],l->transform[12+i]);
+
+			copy_vec4(inst_data+16,l->color);
+			copy_vec4(inst_data+20,l->comp);
+			// was
+//			glVertexAttrib4fv(attr_color_current, l->color);
+//			glVertexAttrib4fv(attr_color_compliment, l->comp);
 			
+			[deferredInstanceBuffer didModifyRange:NSMakeRange(0, 24)];
+			[renderEncoder setVertexBuffer:deferredInstanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
+
 			dl = l->dl;
-			glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
+			[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+			// was
+//			glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
 			#if WANT_SMOOTH
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
+			// we don't bind index buffer, we use in in a draw call
+//			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
 			#endif
-			float * p = NULL;
-			glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
-			glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
-			glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
+//			float * p = NULL;
+//			glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
+//			glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
+//			glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 			
 			struct LDrawDLPerTex * tptr = dl->texes;
 			
@@ -1185,18 +1322,30 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 			{
 				if(tptr->spec.tex_obj)
 				{
-					setup_tex_spec(&tptr->spec);
+					setup_tex_spec(&tptr->spec,renderEncoder);
 				}
 				else 
-					setup_tex_spec(&l->spec);
-				
+					setup_tex_spec(&l->spec, renderEncoder);
+
 				#if WANT_SMOOTH
 				if(tptr->line_count)
-					glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
+					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+										indexCount:tptr->line_count
+										 indexType:MTLIndexTypeUInt32
+									   indexBuffer:dl->indexBuffer
+								 indexBufferOffset:idx_null+tptr->line_off];
+					// was
+//					glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
 				if(tptr->tri_count)
-					glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
-				if(tptr->quad_count)
-					glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
+					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+										indexCount:tptr->tri_count
+										 indexType:MTLIndexTypeUInt32
+									   indexBuffer:dl->indexBuffer
+								 indexBufferOffset:idx_null+tptr->tri_off];
+					// was
+//					glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
+//				if(tptr->quad_count)
+//					glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 				#else
 				if(tptr->line_count)
 					glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
@@ -1210,9 +1359,9 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 		}
 	}
 	
-	glBindBuffer(GL_ARRAY_BUFFER,0);
+//	glBindBuffer(GL_ARRAY_BUFFER,0);
 	#if WANT_SMOOTH
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 	#endif
 
 	#if WANT_STATS
@@ -1249,6 +1398,7 @@ void LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session)
 //
 //================================================================================
 void LDrawDLDraw(
+									id<MTLRenderCommandEncoder>		renderEncoder,
 									struct LDrawDLSession *			session,
 									struct LDrawDL *				dl, 
 									struct LDrawTextureSpec *		spec,
@@ -1290,7 +1440,7 @@ void LDrawDLDraw(
 		// We can instance if:
 		// 1. No texture is being applied to us AND
 		// 2. There isn't any texturing baked into the DL.
-		if((spec == NULL || spec->tex_obj == 0) && (dl->flags & dl_has_tex) == 0)
+		if((spec == NULL || spec->tex_obj == nil) && (dl->flags & dl_has_tex) == 0)
 		{
 			//assert(dl->next_dl == NULL || session->dl_head != NULL);
 			
@@ -1331,39 +1481,88 @@ void LDrawDLDraw(
 		session->stats.num_btch_imm++;
 		session->stats.num_vert_imm += dl->vrt_count;
 	#endif
-	
+
+	if(immediateInstanceBuffer == nil)
+	{
+		id<MTLDevice> device = MetalGPU.device;
+		immediateInstanceBuffer = [device newBufferWithLength:sizeof(GLfloat)*24 options:MTLResourceStorageModeManaged];
+		immediateInstanceBuffer.label = @"Immediate instance buffer";
+	}
+
+	// Map our instance buffer so we can write instancing data.
+	GLfloat * inst_data = (GLfloat *)immediateInstanceBuffer.contents;
+
 	// Push current transform & color into attribute state.
-	int i;
-	for(i = 0; i < 4; ++i)
-		glVertexAttrib4f(attr_transform_x+i,transform[i],transform[4+i],transform[8+i],transform[12+i]);
+	inst_data[0] = transform[0];		// Note: copy on transpose to get matrix into right form!
+	inst_data[1] = transform[4];
+	inst_data[2] = transform[8];
+	inst_data[3] = transform[12];
+	inst_data[4] = transform[1];
+	inst_data[5] = transform[5];
+	inst_data[6] = transform[9];
+	inst_data[7] = transform[13];
+	inst_data[8] = transform[2];
+	inst_data[9] = transform[6];
+	inst_data[10] = transform[10];
+	inst_data[11] = transform[14];
+	inst_data[12] = transform[3];
+	inst_data[13] = transform[7];
+	inst_data[14] = transform[11];
+	inst_data[15] = transform[15];
+	// was
+//	int i;
+//	for(i = 0; i < 4; ++i)
+//		glVertexAttrib4f(attr_transform_x+i,transform[i],transform[4+i],transform[8+i],transform[12+i]);
 		
-	glVertexAttrib4fv(attr_color_current, cur_color);
-	glVertexAttrib4fv(attr_color_compliment, cmp_color);
-	
+	copy_vec4(inst_data+16,cur_color);
+	copy_vec4(inst_data+20,cmp_color);
+	// was
+//	glVertexAttrib4fv(attr_color_current, cur_color);
+//	glVertexAttrib4fv(attr_color_compliment, cmp_color);
+
+	[immediateInstanceBuffer didModifyRange:NSMakeRange(0, 24)];
+	[renderEncoder setVertexBuffer:immediateInstanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
+
 	assert(dl->tex_count > 0);
 	
 	// Bind our DL VBO and set up ptrs.
-	glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
+	[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+	// was
+//	glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
 	#if WANT_SMOOTH
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
+	// we don't bind index buffer, we use in in a draw call
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
 	#endif
-	float * p = NULL;
-	glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
-	glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
-	glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
+//	float * p = NULL;
+//	glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
+//	glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
+//	glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 	
 	struct LDrawDLPerTex * tptr = dl->texes;
 	
-	if(dl->tex_count == 1 && tptr->spec.tex_obj == 0 && (spec == NULL || spec->tex_obj == 0))
+	if(dl->tex_count == 1 && tptr->spec.tex_obj == nil && (spec == NULL || spec->tex_obj == nil))
 	{
 		// Special case: one untextured mesh - just draw.
 		#if WANT_SMOOTH
 		if(tptr->line_count)
-			glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+								indexCount:tptr->line_count
+								 indexType:MTLIndexTypeUInt32 // ???
+							   indexBuffer:dl->indexBuffer
+						 indexBufferOffset:idx_null+tptr->line_off
+							 instanceCount:1];
+		// was
+//			glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
 		if(tptr->tri_count)
-			glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
-		if(tptr->quad_count)
-			glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+										indexCount:tptr->tri_count
+										 indexType:MTLIndexTypeUInt32 // ???
+									   indexBuffer:dl->indexBuffer
+								 indexBufferOffset:idx_null+tptr->tri_off];
+		// was
+//			glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
+//		if(tptr->quad_count)
+//			glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 		#else
 		if(tptr->line_count)
 			glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
@@ -1382,18 +1581,31 @@ void LDrawDLDraw(
 		{
 			if(tptr->spec.tex_obj)
 			{
-				setup_tex_spec(&tptr->spec);
+				setup_tex_spec(&tptr->spec, renderEncoder);
 			}
 			else 
-				setup_tex_spec(spec);
+				setup_tex_spec(spec, renderEncoder);
 
 			#if WANT_SMOOTH			
 			if(tptr->line_count)
-				glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
+				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+									indexCount:tptr->line_count
+									 indexType:MTLIndexTypeUInt32 // ???
+								   indexBuffer:dl->indexBuffer
+							 indexBufferOffset:idx_null+tptr->line_off
+								 instanceCount:1];
+			// was
+//				glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
 			if(tptr->tri_count)
-				glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
-			if(tptr->quad_count)
-				glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
+				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+											indexCount:tptr->tri_count
+											 indexType:MTLIndexTypeUInt32 // ???
+										   indexBuffer:dl->indexBuffer
+									 indexBufferOffset:idx_null+tptr->tri_off];
+			// was
+//				glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
+//			if(tptr->quad_count)
+//				glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 			#else
 			if(tptr->line_count)
 				glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
@@ -1404,7 +1616,7 @@ void LDrawDLDraw(
 			#endif		
 		}
 
-		setup_tex_spec(spec);
+		setup_tex_spec(spec, renderEncoder);
 	}
 	
 }//end LDrawDLDraw
@@ -1435,9 +1647,9 @@ void LDrawDLDestroy(struct LDrawDL * dl)
 	assert(dl->instance_head == NULL);
 
 	#if WANT_SMOOTH
-	glDeleteBuffers(1,&dl->idx_vbo);
+//	glDeleteBuffers(1,&dl->idx_vbo);
 	#endif
-	glDeleteBuffers(1,&dl->geo_vbo);
+//	glDeleteBuffers(1,&dl->geo_vbo);
 	free(dl);
 
 }//end LDrawDLDestroy

@@ -244,6 +244,10 @@ static const char * attribs[] = {
 
 }//end drawDragHandleImm:
 
+- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx
+{
+	return LDrawDLBuilderFinish(ctx);
+}
 
 //========== dealloc: ============================================================
 //

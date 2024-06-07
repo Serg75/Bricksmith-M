@@ -62,9 +62,6 @@ extern NSString	*Category_Subparts;
 	NSMutableDictionary     *parsingGroups;				// arrays of dispatch_group_t's which have requested each file currently being parsed
 }
 
-// Initialization
-+ (PartLibrary *) sharedPartLibrary;
-
 // Accessors
 - (NSArray *) allPartCatalogRecords;
 - (NSArray *) categories;

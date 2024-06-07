@@ -10,10 +10,11 @@
 
 #if WANT_RELATED_PARTS
 
+#import "GPU.h"
 #import "RelatedParts.h"
 #import "LDrawUtilities.h"
 #import "StringCategory.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 
 
 //---------- sort_by_part_description ------------------------------------------
@@ -131,8 +132,8 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 
 		self->child = [line stringByTrimmingCharactersInSet:whitespaceCharacterSet];
 		
-		self->childName = [[PartLibrary sharedPartLibrary] descriptionForPartName:self->child];
-		
+		self->childName = [[PartLibraryGPU sharedPartLibrary] descriptionForPartName:self->child];
+
 		self->role = relation;
 		
 		self->parent = parentName;
@@ -401,7 +402,7 @@ static RelatedParts * SharedRelatedParts = nil;
 	}
 
 	NSArray * kids_sorted = [kids allObjects];
-	return [kids_sorted sortedArrayUsingFunction:sort_by_part_description context:(__bridge void *)([PartLibrary sharedPartLibrary])];
+	return [kids_sorted sortedArrayUsingFunction:sort_by_part_description context:(__bridge void *)([PartLibraryGPU sharedPartLibrary])];
 
 }//end getChildPartList:
 

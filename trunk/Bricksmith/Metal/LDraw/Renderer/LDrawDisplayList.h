@@ -7,6 +7,7 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "GPU.h"
 
 /*
 
@@ -64,8 +65,9 @@ void						LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6],
 
 // Session/drawing APIs
 struct LDrawDLSession *		LDrawDLSessionCreate(const GLfloat model_view[16]);
-void						LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session);
+void						LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session);
 void						LDrawDLDraw(
+									id<MTLRenderCommandEncoder>		renderEncoder,
 									struct LDrawDLSession *			session,
 									struct LDrawDL *				dl, 
 									struct LDrawTextureSpec *		spec,

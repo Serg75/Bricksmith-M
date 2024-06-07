@@ -40,7 +40,7 @@
 // (If we zoom in to avoid culling by size, the large model will be offscreen 
 // and the off-screen bricks are culled!
 
-#define NO_CULL_SMALL_BRICKS 0
+#define NO_CULL_SMALL_BRICKS 1
 
 @implementation LDrawModel
 

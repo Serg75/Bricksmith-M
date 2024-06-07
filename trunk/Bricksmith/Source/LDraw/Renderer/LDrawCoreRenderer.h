@@ -8,6 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#import "GPU.h"
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // TEXTURE DEFINITIONS
@@ -30,7 +32,7 @@ enum {					// Culling codes from renderer culling checks.
 
 struct	LDrawTextureSpec {
 	int		projection;
-	GLuint	tex_obj;
+	TexType	tex_obj;
 	float	plane_s[4];
 	float	plane_t[4];
 };

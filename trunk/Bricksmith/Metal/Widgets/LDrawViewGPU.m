@@ -27,6 +27,7 @@
 #import "FocusRingView.h"
 #import "LDrawApplicationMTL.h"
 #import "LDrawRendererMTL.h"
+#import "MetalGPU.h"
 #import "OverlayViewCategory.h"
 
 //========== NSSizeToSize2 =====================================================
@@ -64,8 +65,8 @@ static Size2 NSSizeToSize2(NSSize size)
 //==============================================================================
 - (id) initWithFrame:(NSRect)frameRect
 {
-	self = [super initWithFrame:frameRect];
-	
+	self = [super initWithFrame:frameRect device:MetalGPU.device];
+
 	[self internalInit];
 	
 	return self;
@@ -75,14 +76,21 @@ static Size2 NSSizeToSize2(NSSize size)
 
 //========== internalInit ======================================================
 //
-// Purpose:		Set up the beatiful OpenGL view.
+// Purpose:		Set up the beautiful Metal view.
 //
 //==============================================================================
 - (void) internalInit
 {
-//	NSOpenGLContext         *context            = nil;
-//	NSOpenGLPixelFormat     *pixelFormat        = [LDrawApplication openGLPixelFormat];
 	NSNotificationCenter    *notificationCenter = [NSNotificationCenter defaultCenter];
+
+	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+	self.framebufferOnly = YES;
+	self.sampleCount = 1;
+
+	self.presentsWithTransaction = YES;
+
+	self.paused = YES;
+	self.enableSetNeedsDisplay = YES;
 
 	selectionIsMarquee = NO;
 	marqueeSelectionMode = SelectionReplace;
@@ -204,11 +212,10 @@ static Size2 NSSizeToSize2(NSSize size)
 //==============================================================================
 - (void) draw
 {
-    [self lockContextAndExecute:^
-    {
-        [self makeCurrentContext];
+//    [self lockContextAndExecute:^
+//    {
         [self->renderer drawInMTKView:self];
-    }];
+//    }];
     
 }//end draw
 
@@ -245,8 +252,8 @@ static Size2 NSSizeToSize2(NSSize size)
 //										 blue:[rgbColor blueComponent] ];
 //	}
 //	CGLUnlockContext([[self openGLContext] CGLContextObj]);
-//
-//	[self setNeedsDisplay:YES];
+
+	[self setNeedsDisplay:YES];
 	
 }//end setBackgroundColor:
 
@@ -315,22 +322,22 @@ static Size2 NSSizeToSize2(NSSize size)
 //				gives us a chance to compensate for this problem.
 //
 //==============================================================================
-- (void) renewGState
-{
-	NSWindow *window = [self window];
-	
-	// Disabling screen updates should allow the redrawing of the surrounding
-	// window to catch up with the new position of the OpenGL hardware surface.
-	//
-	// Note: In Apple's "GLChildWindow" sample code, Apple put this in
-	//		 -splitViewWillResizeSubviews:. But that doesn't actually solve the
-	//		 problem. Putting it here *does*.
-	//
-	[window disableScreenUpdatesUntilFlush];
-	
-	[super renewGState];
-	
-}//end renewGState
+//- (void) renewGState
+//{
+//	NSWindow *window = [self window];
+//	
+//	// Disabling screen updates should allow the redrawing of the surrounding
+//	// window to catch up with the new position of the OpenGL hardware surface.
+//	//
+//	// Note: In Apple's "GLChildWindow" sample code, Apple put this in
+//	//		 -splitViewWillResizeSubviews:. But that doesn't actually solve the
+//	//		 problem. Putting it here *does*.
+//	//
+//	[window disableScreenUpdatesUntilFlush];
+//	
+//	[super renewGState];
+//	
+//}//end renewGState
 
 
 //========== reshape ===========================================================
@@ -369,14 +376,14 @@ static Size2 NSSizeToSize2(NSSize size)
 //                hideous system crashes.
 //
 //==============================================================================
-- (void) update
-{
+//- (void) update
+//{
 //    [self lockContextAndExecute:^
 //    {
 //        [super update];
 //    }];
-
-}//end update
+//
+//}//end update
 
 
 #pragma mark -
