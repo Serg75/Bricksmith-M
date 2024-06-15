@@ -242,6 +242,11 @@ struct FragmentUniform {
 }//end prepareMetal
 
 
+/// Called whenever the view orientation, layout, or size changes.
+- (void) mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
+{
+}
+
 #pragma mark -
 #pragma mark DRAWING
 #pragma mark -

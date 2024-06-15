@@ -6158,8 +6158,8 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) connectLDrawView:(LDrawView *)glView
 {
-	[glView setDelegate:self];
-	
+	[glView setLDrawDelegate:self];
+
 	[glView setTarget:self];
 	[glView setForwardAction:@selector(advanceOneStep:)];
 	[glView setBackAction:@selector(backOneStep:)];

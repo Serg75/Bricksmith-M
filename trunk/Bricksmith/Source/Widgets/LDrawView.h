@@ -43,7 +43,7 @@
 @private
 	FocusRingView	*focusRingView;
 	
-	__weak IBOutlet id		delegate;
+	__weak IBOutlet id		ldrawDelegate;
 	__weak id				target;
 	SEL						backAction;
 	SEL						forwardAction;
@@ -83,7 +83,7 @@
 - (void) setBackAction:(SEL)newAction;
 // moved to category
 //- (void) setBackgroundColor:(NSColor *)newColor;
-- (void) setDelegate:(id)object;
+- (void) setLDrawDelegate:(id)object;
 - (void) setForwardAction:(SEL)newAction;
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode;
 - (void) setLDrawDirective:(LDrawDirective *) newFile;

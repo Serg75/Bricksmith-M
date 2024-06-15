@@ -87,7 +87,7 @@ static Size2 NSSizeToSize2(NSSize size)
 	self.framebufferOnly = YES;
 	self.sampleCount = 1;
 
-	self.presentsWithTransaction = YES;
+//	self.presentsWithTransaction = YES;
 
 	self.paused = YES;
 	self.enableSetNeedsDisplay = YES;
@@ -143,6 +143,7 @@ static Size2 NSSizeToSize2(NSSize size)
 	[renderer setDelegate:self withScroller:self];
 	[renderer setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 	[renderer prepareMetal];
+	self.delegate = renderer;
 
 	[self takeBackgroundColorFromUserDefaults];
 	[self setViewOrientation:ViewOrientation3D];
@@ -193,11 +194,13 @@ static Size2 NSSizeToSize2(NSSize size)
 #pragma mark DRAWING
 #pragma mark -
 
-////========== drawRect: =========================================================
-////
-//// Purpose:        Draw the file into the view.
-////
-////==============================================================================
+// moved to renderer
+
+//========== drawRect: =========================================================
+//
+// Purpose:        Draw the file into the view.
+//
+//==============================================================================
 //- (void) drawRect:(NSRect)rect
 //{
 //    [self draw];
@@ -210,14 +213,14 @@ static Size2 NSSizeToSize2(NSSize size)
 // Purpose:        Draw the LDraw content of the view.
 //
 //==============================================================================
-- (void) draw
-{
-//    [self lockContextAndExecute:^
-//    {
-        [self->renderer drawInMTKView:self];
-//    }];
-    
-}//end draw
+//- (void) draw
+//{
+////    [self lockContextAndExecute:^
+////    {
+//        [self->renderer drawInMTKView:self];
+////    }];
+//    
+//}//end draw
 
 
 #pragma mark -

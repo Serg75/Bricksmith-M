@@ -228,23 +228,25 @@ static Box2 NSRectToBox2(NSRect rect)
 #pragma mark DRAWING
 #pragma mark -
 
+// moved to category
+
 //========== drawRect: =========================================================
 //
 // Purpose:		Draw the file into the view.
 //
 //==============================================================================
-- (void) drawRect:(NSRect)rect
-{
-	[self draw];
-		
-}//end drawRect:
+//- (void) drawRect:(NSRect)rect
+//{
+//	[self draw];
+//		
+//}//end drawRect:
 
 
-////========== draw ==============================================================
-////
-//// Purpose:		Draw the LDraw content of the view.
-////
-////==============================================================================
+//========== draw ==============================================================
+//
+// Purpose:		Draw the LDraw content of the view.
+//
+//==============================================================================
 //- (void) draw
 //{
 //	[self lockContextAndExecute:^
@@ -577,7 +579,7 @@ static Box2 NSRectToBox2(NSRect rect)
 }//end setAutosaveName:
 
 
-//========== setDelegate: ======================================================
+//========== setLDrawDelegate: =================================================
 //
 // Purpose:		Sets the object that acts as the delegate for the receiver. 
 //
@@ -589,19 +591,21 @@ static Box2 NSRectToBox2(NSRect rect)
 //				model this view supports. 
 //
 //==============================================================================
-- (void) setDelegate:(id)object
+- (void) setLDrawDelegate:(id)object
 {
+	// TODO: split delegate and document
+
 	// weak link.
-	self->delegate = object;
+	self->ldrawDelegate = object;
 	
 	// Drag and Drop support. We only accept drags if we have a document to add 
 	// them to. 
-	if([self->delegate respondsToSelector:@selector(LDrawView:acceptDrop:directives:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:acceptDrop:directives:)])
 		[self registerForDraggedTypes:[NSArray arrayWithObject:LDrawDraggingPboardType]];
 	else
 		[self unregisterDraggedTypes];
 		
-	if([self->delegate respondsToSelector:@selector(LDrawView:wantsToSelectDirective:byExtendingSelection:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:wantsToSelectDirective:byExtendingSelection:)])
 	{
 		[self->renderer setAllowsEditing:YES];
 	}
@@ -610,7 +614,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		[self->renderer setAllowsEditing:NO];
 	}
 	
-}//end setDelegate:
+}//end setLDrawDelegate:
 
 
 //========== setBackAction: ====================================================
@@ -1015,9 +1019,9 @@ static Box2 NSRectToBox2(NSRect rect)
 	
 	if(success == YES)
 	{
-		if(self->delegate != nil && [self->delegate respondsToSelector:@selector(LDrawViewBecameFirstResponder:)])
+		if(self->ldrawDelegate != nil && [self->ldrawDelegate respondsToSelector:@selector(LDrawViewBecameFirstResponder:)])
 		{
-			[self->delegate LDrawViewBecameFirstResponder:self];
+			[self->ldrawDelegate LDrawViewBecameFirstResponder:self];
 		}
 		
 		//need to draw the focus ring now
@@ -1478,9 +1482,9 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) mouseExited:(NSEvent *)theEvent
 {
-	if([self->delegate respondsToSelector:@selector(LDrawViewMouseNotPositioning:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewMouseNotPositioning:)])
 	{
-		[self->delegate LDrawViewMouseNotPositioning:self];
+		[self->ldrawDelegate LDrawViewMouseNotPositioning:self];
 	}
 }
 
@@ -1964,13 +1968,13 @@ static Box2 NSRectToBox2(NSRect rect)
 	Vector3					 displacement		= ZeroPoint3;
 	NSImage					*dragImage			= nil;
 
-	if(		self->delegate != nil
-	   &&	[self->delegate respondsToSelector:@selector(LDrawView:writeDirectivesToPasteboard:asCopy:)] )
+	if(		self->ldrawDelegate != nil
+	   &&	[self->ldrawDelegate respondsToSelector:@selector(LDrawView:writeDirectivesToPasteboard:asCopy:)] )
 	{
 		pasteboard		= [NSPasteboard pasteboardWithName:NSDragPboard];
 		beginCopy		= ([theEvent modifierFlags] & NSAlternateKeyMask) != 0;
 
-		okayToDrag		= [self->delegate LDrawView:self writeDirectivesToPasteboard:pasteboard asCopy:beginCopy];
+		okayToDrag		= [self->ldrawDelegate LDrawView:self writeDirectivesToPasteboard:pasteboard asCopy:beginCopy];
 
 		[self makeCurrentContext];
 
@@ -2007,7 +2011,7 @@ static Box2 NSRectToBox2(NSRect rect)
 			//---------- Reset event tracking flags ----------------------------
 
             //NSLog(@"DO UPDATE IN dragAndDropDragged");
-            for (LDrawDirective *directive in [delegate selectedObjects]) {
+            for (LDrawDirective *directive in [ldrawDelegate selectedObjects]) {
                 //NSLog(@"directive: %@", directive);
                 [directive sendMessageToObservers:MessageObservedChanged];
             }
@@ -2130,7 +2134,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		// we can then marquee or drag and drop.
 		selectionIsMarquee = ![self->renderer mouseSelectionClick:V2Make(viewPoint.x, viewPoint.y)
 												  selectionMode:selectionMode]
-						&& [self->delegate respondsToSelector:@selector(markPreviousSelection)];
+						&& [self->ldrawDelegate respondsToSelector:@selector(markPreviousSelection)];
 		if(selectionIsMarquee)
 		{
 			// We are starting a marquee select.  We can do this because our part selection is known to have missed
@@ -2485,7 +2489,7 @@ static Box2 NSRectToBox2(NSRect rect)
 							 constrainAxis:constrainDragAxis];
 
     // this doesn't cause a redraw.  Would be nice if it did.
-    for (LDrawDirective *directive in [delegate selectedObjects]) {
+    for (LDrawDirective *directive in [ldrawDelegate selectedObjects]) {
 //        NSLog(@"directive: %@", directive);
         [directive sendMessageToObservers:MessageObservedChanged];
     }
@@ -2531,8 +2535,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	{
 		directives = [file draggingDirectives];
 
-		if([self->delegate respondsToSelector:@selector(LDrawView:acceptDrop:directives:)])
-		   [self->delegate LDrawView:self acceptDrop:sender directives:directives];
+		if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:acceptDrop:directives:)])
+		   [self->ldrawDelegate LDrawView:self acceptDrop:sender directives:directives];
 	}
 
 	if([[sender draggingSource] respondsToSelector:@selector(LDrawDirective)])
@@ -2578,17 +2582,17 @@ static Box2 NSRectToBox2(NSRect rect)
 			 endedAt:(NSPoint)aPoint
 		   operation:(NSDragOperation)operation
 {
-	if([self->delegate respondsToSelector:@selector(LDrawViewPartDragEnded:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewPartDragEnded:)])
 	{
-		[self->delegate LDrawViewPartDragEnded:self];
+		[self->ldrawDelegate LDrawViewPartDragEnded:self];
 	}
 	
 	// If the drag didn't wind up in one of the GL views belonging to this 
 	// document, then we need to delete the part's ghost from our model.
 	if(self->dragEndedInOurDocument == NO)
 	{
-		if([self->delegate respondsToSelector:@selector(LDrawViewPartsWereDraggedIntoOblivion:)])
-			[self->delegate LDrawViewPartsWereDraggedIntoOblivion:self];
+		if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewPartsWereDraggedIntoOblivion:)])
+			[self->ldrawDelegate LDrawViewPartsWereDraggedIntoOblivion:self];
 	}
 	
 	// When nobody else received the drag and nobody cares, the part is just 
@@ -2596,7 +2600,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// otherwise obscure passing to the user's attention by running that cute 
 	// little poof animation. 
 	if(		operation == NSDragOperationNone
-	   &&	[self->delegate respondsToSelector:@selector(LDrawViewPartsWereDraggedIntoOblivion:)] )
+	   &&	[self->ldrawDelegate respondsToSelector:@selector(LDrawViewPartsWereDraggedIntoOblivion:)] )
 	{
 		NSShowAnimationEffect (NSAnimationEffectDisappearingItemDefault,
 							   aPoint, NSZeroSize, nil, NULL, NULL);
@@ -2690,9 +2694,9 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) LDrawRenderer:(LDrawRenderer*)renderer mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence
 {
-	if([self->delegate respondsToSelector:@selector(LDrawView:mouseIsOverPoint:confidence:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:mouseIsOverPoint:confidence:)])
 	{
-		[self->delegate LDrawView:self mouseIsOverPoint:modelPoint confidence:confidence];
+		[self->ldrawDelegate LDrawView:self mouseIsOverPoint:modelPoint confidence:confidence];
 	}
 }
 
@@ -2704,9 +2708,9 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) LDrawRendererMouseNotPositioning:(LDrawRenderer *)renderer
 {
-	if([self->delegate respondsToSelector:@selector(LDrawViewMouseNotPositioning:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewMouseNotPositioning:)])
 	{
-		[self->delegate LDrawViewMouseNotPositioning:self];
+		[self->ldrawDelegate LDrawViewMouseNotPositioning:self];
 	}
 }
 
@@ -2725,9 +2729,9 @@ static Box2 NSRectToBox2(NSRect rect)
 {
 	TransformComponents components = IdentityComponents;
 	
-	if([self->delegate respondsToSelector:@selector(LDrawViewPreferredPartTransform:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewPreferredPartTransform:)])
 	{
-		components = [self->delegate LDrawViewPreferredPartTransform:self];
+		components = [self->ldrawDelegate LDrawViewPreferredPartTransform:self];
 	}
 	
 	return components;
@@ -2743,9 +2747,9 @@ static Box2 NSRectToBox2(NSRect rect)
   wantsToSelectDirective:(LDrawDirective *)directiveToSelect
 	byExtendingSelection:(BOOL)shouldExtend
 {
-	if([self->delegate respondsToSelector:@selector(LDrawView:wantsToSelectDirective:byExtendingSelection:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:wantsToSelectDirective:byExtendingSelection:)])
 	{
-		[self->delegate LDrawView:self wantsToSelectDirective:directiveToSelect byExtendingSelection:shouldExtend];
+		[self->ldrawDelegate LDrawView:self wantsToSelectDirective:directiveToSelect byExtendingSelection:shouldExtend];
 	}
 }
 
@@ -2756,9 +2760,9 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode
 {
-	if([self->delegate respondsToSelector:@selector(LDrawView:wantsToSelectDirectives:selectionMode:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:wantsToSelectDirectives:selectionMode:)])
 	{
-		[self->delegate LDrawView:self wantsToSelectDirectives:directivesToSelect selectionMode:selectionMode];
+		[self->ldrawDelegate LDrawView:self wantsToSelectDirectives:directivesToSelect selectionMode:selectionMode];
 	}
 }
 
@@ -2769,8 +2773,8 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) markPreviousSelection:(LDrawRenderer*)renderer
 {
-	if([self->delegate respondsToSelector:@selector(markPreviousSelection)])
-		[self->delegate markPreviousSelection];
+	if([self->ldrawDelegate respondsToSelector:@selector(markPreviousSelection)])
+		[self->ldrawDelegate markPreviousSelection];
 }
 
 //========== unmarkPreviousSelection ============================================
@@ -2780,8 +2784,8 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) unmarkPreviousSelection:(LDrawRenderer*)renderer
 {
-	if([self->delegate respondsToSelector:@selector(unmarkPreviousSelection)])
-		[self->delegate unmarkPreviousSelection];
+	if([self->ldrawDelegate respondsToSelector:@selector(unmarkPreviousSelection)])
+		[self->ldrawDelegate unmarkPreviousSelection];
 }
 
 //========== LDrawRenderer:willBeginDraggingHandle: ============================
@@ -2793,9 +2797,9 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void)   LDrawRenderer:(LDrawRenderer*)renderer
  willBeginDraggingHandle:(LDrawDragHandle *)dragHandle
 {
-	if([self->delegate respondsToSelector:@selector(LDrawView:willBeginDraggingHandle:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:willBeginDraggingHandle:)])
 	{
-		[self->delegate LDrawView:self willBeginDraggingHandle:dragHandle];
+		[self->ldrawDelegate LDrawView:self willBeginDraggingHandle:dragHandle];
 	}
 }
 
@@ -2809,9 +2813,9 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void) LDrawRenderer:(LDrawRenderer*)renderer
 	 dragHandleDidMove:(LDrawDragHandle *)dragHandle
 {
-	if([self->delegate respondsToSelector:@selector(LDrawView:dragHandleDidMove:)])
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:dragHandleDidMove:)])
 	{
-		[self->delegate LDrawView:self dragHandleDidMove:dragHandle];
+		[self->ldrawDelegate LDrawView:self dragHandleDidMove:dragHandle];
 	}
 }
 

@@ -86,7 +86,7 @@
 		// - Part preview
 		
 		[self->partPreview setAcceptsFirstResponder:NO];
-		[self->partPreview setDelegate:self];
+		[self->partPreview setLDrawDelegate:self];
 
 		[self->zoomInButton setTarget:self->partPreview];
 		[self->zoomInButton setAction:@selector(zoomIn:)];

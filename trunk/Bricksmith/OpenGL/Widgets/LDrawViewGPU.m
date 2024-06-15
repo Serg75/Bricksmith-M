@@ -190,16 +190,16 @@ static Size2 NSSizeToSize2(NSSize size)
 #pragma mark DRAWING
 #pragma mark -
 
-////========== drawRect: =========================================================
-////
-//// Purpose:        Draw the file into the view.
-////
-////==============================================================================
-//- (void) drawRect:(NSRect)rect
-//{
-//    [self draw];
+//========== drawRect: =========================================================
 //
-//}//end drawRect:
+// Purpose:        Draw the file into the view.
+//
+//==============================================================================
+- (void) drawRect:(NSRect)rect
+{
+    [self draw];
+
+}//end drawRect:
 
 
 //========== draw ==============================================================

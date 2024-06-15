@@ -17,7 +17,7 @@
 #import OPEN_GL_HEADER
 
 
-@interface LDrawRenderer (Metal)
+@interface LDrawRenderer (Metal) <MTKViewDelegate>
 
 // Initialization
 - (void) prepareMetal;
