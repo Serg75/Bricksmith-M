@@ -231,13 +231,13 @@ static const char * attribs[] = {
 }
 
 
-//========== dealloc: ============================================================
+//========== finishDraw: =========================================================
 //
-// Purpose: Clean up our state.  Note that this "triggers" the draw from our
-//			display list session that has stored up some of our draw calls.
+// Purpose: "Triggers" the draw from our display list session that has stored up
+//			some of our draw calls.
 //
 //================================================================================
-- (void) dealloc
+- (void) finishDraw
 {
 	struct LDrawDragHandleInstance * dh;
 	LDrawDLSessionDrawAndDestroy(_renderEncoder, session);
@@ -257,7 +257,7 @@ static const char * attribs[] = {
 	
 	LDrawBDPDestroy(pool);
 	
-}//end dealloc:
+}//end finishDraw:
 
 
 @end

@@ -789,8 +789,10 @@
 //==============================================================================
 -(void) setLDrawColor:(LDrawColor *)newColor
 {
+#ifndef METAL
 	[newColor retain];
 	[self->color release];
+#endif
 	self->color = newColor;
 	
 	[self->delegate LDrawRendererNeedsRedisplay:self];
@@ -812,8 +814,10 @@
 	Box3	bounds		= InvalidBox;
 	
 	//Update our variable.
+#ifndef METAL
 	[newFile retain];
 	[self->fileBeingDrawn release];
+#endif
 	self->fileBeingDrawn = newFile;
 	
 	if(newFile)
@@ -2586,13 +2590,15 @@
 - (void) dealloc
 {
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	
+
+#ifndef METAL
 	[fileBeingDrawn	release];
 
 	[camera release];
 	
 	[super dealloc];
-	
+#endif
+
 }//end dealloc
 
 

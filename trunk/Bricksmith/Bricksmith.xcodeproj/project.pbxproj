@@ -485,7 +485,7 @@
 		956D9C6E2A30768000FA956B /* PartLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BC75338136FC878002568B8 /* PartLibrary.m */; };
 		956D9C6F2A30768000FA956B /* LDrawPaths.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BDE0EF01371070600FDB8DB /* LDrawPaths.m */; };
 		956D9C702A30768000FA956B /* PartReport.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BE524001373C26200E21FBC /* PartReport.m */; };
-		956D9C712A30768000FA956B /* LDrawRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B3B76AB13DB86AE007CCC5D /* LDrawRenderer.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		956D9C712A30768000FA956B /* LDrawRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B3B76AB13DB86AE007CCC5D /* LDrawRenderer.m */; };
 		956D9C722A30768000FA956B /* TableViewCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BBCFE7F1529492D00728A54 /* TableViewCategory.m */; };
 		956D9C732A30768000FA956B /* LDrawTexture.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B6122EC153516600085F944 /* LDrawTexture.m */; };
 		956D9C742A30768000FA956B /* ModelManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D6CB41DF15E2AA6C00730E2A /* ModelManager.m */; };
@@ -531,7 +531,7 @@
 		956D9CC02A3104E500FA956B /* LDrawDragHandleGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CBE2A3104E400FA956B /* LDrawDragHandleGPU.h */; };
 		956D9CC12A3104E500FA956B /* LDrawDragHandleGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CBF2A3104E500FA956B /* LDrawDragHandleGPU.m */; };
 		956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CC22A31056400FA956B /* LDrawRendererGPU.h */; };
-		956D9CC52A31056400FA956B /* LDrawRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC32A31056400FA956B /* LDrawRendererGPU.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		956D9CC52A31056400FA956B /* LDrawRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC32A31056400FA956B /* LDrawRendererGPU.m */; };
 		956D9CC82A31060800FA956B /* PartLibraryMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CC62A31060800FA956B /* PartLibraryMTL.h */; };
 		956D9CC92A31060800FA956B /* PartLibraryMTL.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC72A31060800FA956B /* PartLibraryMTL.m */; };
 		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };

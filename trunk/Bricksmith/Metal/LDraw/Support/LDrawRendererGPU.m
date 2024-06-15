@@ -277,11 +277,11 @@ struct FragmentUniform {
 
 	// We may need to simplify large models if we are spinning the model
 	// or doing part drag-and-drop.
-	considerFastDraw =		self->isTrackingDrag == YES
-						||	self->isGesturing == YES
-						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
-							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
-							);
+//	considerFastDraw =		self->isTrackingDrag == YES
+//						||	self->isGesturing == YES
+//						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
+//							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
+//							);
 #if DEBUG_DRAWING == 0
 	if(considerFastDraw == YES && self->rotationDrawMode == LDrawGLDrawExtremelyFast)
 	{
@@ -386,7 +386,6 @@ struct FragmentUniform {
 								 projection:[camera getProjection]];
 
 	[self->fileBeingDrawn drawSelf:ren];
-	[ren release];
 
 //	// We allow primitive drawing to leave their VAO bound to avoid setting the VAO
 //	// back to zero between every draw call.  Set it once here to avoid usign some
@@ -460,7 +459,9 @@ struct FragmentUniform {
 	
 	
 	[self->delegate LDrawRendererNeedsFlush:self];
-	
+
+	[ren finishDraw];
+
 	[renderEncoder endEncoding];
 
 	//present the drawable and buffer

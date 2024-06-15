@@ -25,4 +25,6 @@
 
 - (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
 
+- (void) finishDraw;
+
 @end
