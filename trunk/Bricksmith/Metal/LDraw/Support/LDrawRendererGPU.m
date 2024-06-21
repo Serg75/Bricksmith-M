@@ -242,10 +242,21 @@ struct FragmentUniform {
 }//end prepareMetal
 
 
-/// Called whenever the view orientation, layout, or size changes.
+//========== mtkView:drawableSizeWillChange: ===================================
+//
+// Purpose:		Called whenever the view orientation, layout, or size changes.
+//
+//==============================================================================
 - (void) mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-}
+	NSSize maxVisibleSize = view.visibleRect.size;
+
+	if(maxVisibleSize.width > 0 && maxVisibleSize.height > 0)
+	{
+		[self setGraphicsSurfaceSize:V2MakeSize(maxVisibleSize.width, maxVisibleSize.height)];
+	}
+
+}//end mtkView:drawableSizeWillChange:
 
 #pragma mark -
 #pragma mark DRAWING

@@ -343,33 +343,6 @@ static Size2 NSSizeToSize2(NSSize size)
 //}//end renewGState
 
 
-//========== reshape ===========================================================
-//
-// Purpose:		Something changed in the viewing department; we need to adjust
-//				our projection and viewing area.
-//
-//==============================================================================
-- (void) reshape
-{
-//	[super reshape];
-//
-//	[self lockContextAndExecute:^
-//	{
-//		[self makeCurrentContext];
-//
-//		NSSize maxVisibleSize = [self visibleRect].size;
-//
-//		if(maxVisibleSize.width > 0 && maxVisibleSize.height > 0)
-//		{
-//			glViewport(0,0, maxVisibleSize.width,maxVisibleSize.height);
-//
-//			[self->renderer setGraphicsSurfaceSize:V2MakeSize(maxVisibleSize.width, maxVisibleSize.height)];
-//		}
-//	}];
-
-}//end reshape
-
-
 //========== update ============================================================
 //
 // Purpose:        This method is called by the AppKit whenever our drawable area
