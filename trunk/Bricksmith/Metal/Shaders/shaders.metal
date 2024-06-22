@@ -51,22 +51,23 @@ struct TextureUniform {
 };
 
 vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
-								 constant InstanceInput& inst [[buffer(BufferIndexPerInstanceData)]],
+								 constant InstanceInput *inst [[buffer(BufferIndexPerInstanceData)]],
 								 constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]]//,
-								 /*constant TextureUniform& texGen [[buffer(BufferIndexVertexUniforms)]]*/)
+								 /*constant TextureUniform& texGen [[buffer(BufferIndexVertexUniforms)]]*/,
+								 ushort iid [[instance_id]])
 {
 	VertexOutput out;
 
 	float4 pos_obj = 0;
-	pos_obj.x = dot(in.position, inst.transform_x);
-	pos_obj.y = dot(in.position, inst.transform_y);
-	pos_obj.z = dot(in.position, inst.transform_z);
-	pos_obj.w = dot(in.position, inst.transform_w);
+	pos_obj.x = dot(in.position, inst[iid].transform_x);
+	pos_obj.y = dot(in.position, inst[iid].transform_y);
+	pos_obj.z = dot(in.position, inst[iid].transform_z);
+	pos_obj.w = dot(in.position, inst[iid].transform_w);
 
 	float3 norm_obj = 0;
-	norm_obj.x = dot(in.normal, inst.transform_x.xyz);
-	norm_obj.y = dot(in.normal, inst.transform_y.xyz);
-	norm_obj.z = dot(in.normal, inst.transform_z.xyz);
+	norm_obj.x = dot(in.normal, inst[iid].transform_x.xyz);
+	norm_obj.y = dot(in.normal, inst[iid].transform_y.xyz);
+	norm_obj.z = dot(in.normal, inst[iid].transform_z.xyz);
 
 	out.normal_eye = normalize(uni.normal_matrix * norm_obj);
 	float4 eye_pos = uni.model_view_matrix * pos_obj;
@@ -76,7 +77,7 @@ vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
 
 	float4 col = in.color;
 	if (in.color.a == 0.0) {
-		col = mix(inst.color_current, inst.color_compliment, in.color.r);
+		col = mix(inst[iid].color_current, inst[iid].color_compliment, in.color.r);
 	};
 	out.color.a = col.a;
 	out.color.rgb = col.rgb;
