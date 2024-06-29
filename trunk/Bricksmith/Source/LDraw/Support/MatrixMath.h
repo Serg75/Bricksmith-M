@@ -83,6 +83,14 @@ typedef struct Matrix3Struct
 } Matrix3;
 
 
+// 3x3 Matrix CPU aligned
+typedef struct Matrix3AlignedStruct
+{
+	float element[3][4]; // [row][column], with padding for alignment
+
+} Matrix3Aligned;
+
+
 typedef struct Ray3Struct
 {
 	Point3	origin;
@@ -306,6 +314,7 @@ extern Point3	V3Unproject(Point3 viewportPoint, Matrix4 modelview, Matrix4 proje
 
 extern float	Matrix3x3Determinant( float, float, float, float, float, float, float, float, float );
 extern Matrix3	Matrix3MakeNormalTransformFromProjMatrix(Matrix4 transformationMatrix);
+extern Matrix3Aligned	Matrix3AlignedCreate(Matrix3 matrix);
 
 // 4-D
 extern Vector4	V4Make(float x, float y, float z, float w);

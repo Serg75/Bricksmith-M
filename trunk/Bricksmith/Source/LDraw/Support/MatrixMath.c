@@ -1727,6 +1727,35 @@ Matrix3 Matrix3MakeNormalTransformFromProjMatrix(Matrix4 transformationMatrix)
 }//end Matrix3MakeNormalTransformFromProjMatrix
 
 
+//========== Matrix3AlignedCreate() ============================================
+//
+// Purpose:		Returns a GPU-aligned matrix similar to given CPU-aligned matrix.
+//
+//				+-     -+			+-       -+
+//				| a d g |			| a d g 0 |
+//				| b e h |	 -->	| b e h 0 |
+//				| c f i |			| c f i 0 |
+//				+-     -+			+-       -+
+//		   CPU-aligned matrix    GPU-aligned matrix
+//
+//==============================================================================
+Matrix3Aligned Matrix3AlignedCreate(Matrix3 matrix)
+{
+	int				row, col;
+	Matrix3Aligned	newMatrix;
+
+	for (row = 0; row < 3; row++) {
+		for (col = 0; col < 3; col++) {
+			newMatrix.element[row][col] = matrix.element[row][col];
+		}
+		newMatrix.element[row][3] = 0.0f; // Add padding
+	}
+
+	return newMatrix;
+
+}//end Matrix3AlignedCreate
+
+
 #pragma mark -
 #pragma mark 4-D LIBRARY
 #pragma mark -

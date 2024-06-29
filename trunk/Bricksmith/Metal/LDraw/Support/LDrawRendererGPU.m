@@ -50,10 +50,9 @@
 }
 
 struct VertexUniform {
-	Matrix4		model_view_matrix;
-	Matrix4		projection_matrix;
-	Matrix3		normal_matrix;
-	Point3		space;
+	Matrix4				model_view_matrix;
+	Matrix4				projection_matrix;
+	Matrix3Aligned		normal_matrix;
 };
 
 struct LightSourceParameters {
@@ -376,7 +375,8 @@ struct FragmentUniform {
 	struct VertexUniform vertexUniform;
 	vertexUniform.model_view_matrix = Matrix4CreateFromGLMatrix4([camera getModelView]);
 	vertexUniform.projection_matrix = Matrix4CreateFromGLMatrix4([camera getProjection]);
-	vertexUniform.normal_matrix = Matrix3MakeNormalTransformFromProjMatrix(vertexUniform.model_view_matrix);
+	Matrix3 normal_matrix = Matrix3MakeNormalTransformFromProjMatrix(vertexUniform.model_view_matrix);
+	vertexUniform.normal_matrix = Matrix3AlignedCreate(normal_matrix);
 
 	void *vertexUniformBufferPointer = [_vertexUniformBuffer contents];
 	memcpy(vertexUniformBufferPointer, &vertexUniform, sizeof(vertexUniform));
