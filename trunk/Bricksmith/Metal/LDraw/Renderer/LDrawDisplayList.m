@@ -35,6 +35,13 @@
 #if WANT_SMOOTH
 static const GLuint * idx_null = NULL;
 #endif
+
+// The number of float values in InstanceInput struct declared in Metal shader
+static const int InstanceInputLength = 24;
+// The size in bytes of InstanceInput struct declared in Metal shader
+static const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
+
+
 /*
 
 	INSTANCING IMPLEMENTATION NOTES
@@ -974,7 +981,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// If we do not yet have a VBO for instancing, build one now.
 		if(inst_vbo_ring[session->inst_ring] == nil)
 		{
-			id<MTLBuffer> instanceBuffer = [MetalGPU.device newBufferWithLength:INST_MAX_COUNT * sizeof(GLfloat)*24 options:MTLResourceStorageModeManaged];
+			id<MTLBuffer> instanceBuffer = [MetalGPU.device newBufferWithLength:INST_MAX_COUNT * InstanceInputStructSize options:MTLResourceStorageModeManaged];
 			instanceBuffer.label = @"Instance buffer";
 			inst_vbo_ring[session->inst_ring] = instanceBuffer;
 			// was
@@ -1024,8 +1031,6 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			
 				for (inst = dl->instance_head; inst; inst = inst->next)
 				{			
-					copy_vec4(inst_data+16,inst->color);
-					copy_vec4(inst_data+20,inst->comp);
 					inst_data[0] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
 					inst_data[1] = inst->transform[4];
 					inst_data[2] = inst->transform[8];
@@ -1042,13 +1047,12 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					inst_data[13] = inst->transform[7];
 					inst_data[14] = inst->transform[11];
 					inst_data[15] = inst->transform[15];
-					inst_data += 24;
+					copy_vec4(inst_data+16,inst->color);
+					copy_vec4(inst_data+20,inst->comp);
+					inst_data += InstanceInputLength;
 					--inst_remain;
 				}
 				++cur_segment;
-
-				[inst_vbo_ring[session->inst_ring] didModifyRange:NSMakeRange(0, 2048)]; // ???
-
 			}
 			else
 			{
@@ -1127,15 +1131,12 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 				dl->next_dl = NULL;
 			}
 		}
-		
+
+		int inst_count = INST_MAX_COUNT - inst_remain;
+		[inst_vbo_ring[session->inst_ring] didModifyRange:NSMakeRange(0, inst_count * InstanceInputStructSize)];
+
 		// Hardware instancing: unmap our hardware instance buffer and if we got data,
 		// set up the GPU for hardware instancing.
-
-		[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:0 atIndex:BufferIndexPerInstanceData];
-		// was
-//		glBindBuffer(GL_ARRAY_BUFFER, inst_vbo_ring[session->inst_ring]);
-//		glUnmapBuffer(GL_ARRAY_BUFFER);
-
 
 		if(segments != cur_segment)
 		{
@@ -1170,7 +1171,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
 //				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 
-				[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:0 atIndex:BufferIndexPerInstanceData];
+				[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:s->inst_base atIndex:BufferIndexPerInstanceData];
 				// was
 //				glBindBuffer(GL_ARRAY_BUFFER,inst_vbo_ring[session->inst_ring]);
 
@@ -1232,12 +1233,9 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 	// MAIN LOOP 3: sorted deferred drawing (!)
 
-	if(deferredInstanceBuffer == nil)
-	{
-		id<MTLDevice> device = MetalGPU.device;
-		deferredInstanceBuffer = [device newBufferWithLength:sizeof(GLfloat)*24 options:MTLResourceStorageModeManaged];
-		deferredInstanceBuffer.label = @"Deferred instance buffer";
-	}
+	int deferredInstanceBufferLength = InstanceInputStructSize * MAX(session->sort_count, 1);
+	deferredInstanceBuffer = [MetalGPU.device newBufferWithLength:deferredInstanceBufferLength options:MTLResourceStorageModeManaged];
+	deferredInstanceBuffer.label = @"Deferred instance buffer";
 
 	// Map our instance buffer so we can write instancing data.
 	GLfloat * inst_data = (GLfloat *)deferredInstanceBuffer.contents;
@@ -1295,12 +1293,15 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 			copy_vec4(inst_data+16,l->color);
 			copy_vec4(inst_data+20,l->comp);
+			inst_data += InstanceInputLength;
 			// was
 //			glVertexAttrib4fv(attr_color_current, l->color);
 //			glVertexAttrib4fv(attr_color_compliment, l->comp);
 			
-			[deferredInstanceBuffer didModifyRange:NSMakeRange(0, 24)];
-			[renderEncoder setVertexBuffer:deferredInstanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
+			[deferredInstanceBuffer didModifyRange:NSMakeRange(0, deferredInstanceBufferLength)];
+			[renderEncoder setVertexBuffer:deferredInstanceBuffer
+									offset:InstanceInputStructSize * lc
+								   atIndex:BufferIndexPerInstanceData];
 
 			dl = l->dl;
 			[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
@@ -1330,18 +1331,20 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 				#if WANT_SMOOTH
 				if(tptr->line_count)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-										indexCount:tptr->line_count
-										 indexType:MTLIndexTypeUInt32
-									   indexBuffer:dl->indexBuffer
-								 indexBufferOffset:idx_null+tptr->line_off];
+											  indexCount:tptr->line_count
+											   indexType:MTLIndexTypeUInt32
+											 indexBuffer:dl->indexBuffer
+									   indexBufferOffset:idx_null+tptr->line_off
+										   instanceCount:1];
 					// was
 //					glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
 				if(tptr->tri_count)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-										indexCount:tptr->tri_count
-										 indexType:MTLIndexTypeUInt32
-									   indexBuffer:dl->indexBuffer
-								 indexBufferOffset:idx_null+tptr->tri_off];
+											  indexCount:tptr->tri_count
+											   indexType:MTLIndexTypeUInt32
+											 indexBuffer:dl->indexBuffer
+									   indexBufferOffset:idx_null+tptr->tri_off
+										   instanceCount:1];
 					// was
 //					glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
 //				if(tptr->quad_count)
@@ -1485,7 +1488,7 @@ void LDrawDLDraw(
 	if(immediateInstanceBuffer == nil)
 	{
 		id<MTLDevice> device = MetalGPU.device;
-		immediateInstanceBuffer = [device newBufferWithLength:sizeof(GLfloat)*24 options:MTLResourceStorageModeManaged];
+		immediateInstanceBuffer = [device newBufferWithLength:InstanceInputStructSize options:MTLResourceStorageModeManaged];
 		immediateInstanceBuffer.label = @"Immediate instance buffer";
 	}
 
@@ -1520,7 +1523,7 @@ void LDrawDLDraw(
 //	glVertexAttrib4fv(attr_color_current, cur_color);
 //	glVertexAttrib4fv(attr_color_compliment, cmp_color);
 
-	[immediateInstanceBuffer didModifyRange:NSMakeRange(0, 24)];
+	[immediateInstanceBuffer didModifyRange:NSMakeRange(0, InstanceInputStructSize)];
 	[renderEncoder setVertexBuffer:immediateInstanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
 
 	assert(dl->tex_count > 0);
