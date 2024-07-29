@@ -6,6 +6,7 @@
 //  Copyright 2013. All rights reserved.
 //
 
+#import "GPU.h"
 #import "LDrawGLCamera.h"
 #import "MacLDraw.h"
 #import "GLMatrixMath.h"
@@ -477,7 +478,21 @@
 							 fabs(cameraDistance) + fieldDepth/2 );	// far
 		}
 	}
-	
+
+#if NEED_CORRECT_PROJECTION
+	// Metal defines its Normalized Device Coordinate (NDC) system as a 2x2x1 cube with its center at (0, 0, 0.5),
+	// whereas OpenGL defines NDC as a 2x2x2 cube with its center at (0,0,0).
+	// So here we transform OpenGL’s NDC to Metal’s NDC.
+
+	GLfloat m[16];
+	m[0]=1;		m[4]=0;		m[8 ]=0;		m[12]=0;
+	m[1]=0;		m[5]=1;		m[9 ]=0;		m[13]=0;
+	m[2]=0;		m[6]=0;		m[10]=0.5;		m[14]=0.5;
+	m[3]=0;		m[7]=0;		m[11]=0;		m[15]=1;
+
+	multMatrices(projection, m, projection);
+#endif
+
 }//end makeProjection
 
 

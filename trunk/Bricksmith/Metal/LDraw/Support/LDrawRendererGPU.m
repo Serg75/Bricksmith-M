@@ -354,7 +354,7 @@ struct FragmentUniform {
 	renderPassDescriptor.depthAttachment.texture = depthTexture;
 	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
 	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
-	renderPassDescriptor.depthAttachment.clearDepth = 1.0; // ???
+	renderPassDescriptor.depthAttachment.clearDepth = 1.0;
 
 	id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 	renderEncoder.label = @"Drawable Render Encoder";

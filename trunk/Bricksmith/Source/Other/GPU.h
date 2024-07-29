@@ -16,6 +16,7 @@
 #define RenderEncoder id<MTLRenderCommandEncoder>
 #define Buffer id<MTLBuffer>
 #define DepthStencilState id<MTLDepthStencilState>
+#define NEED_CORRECT_PROJECTION 1
 
 #else
 
@@ -25,6 +26,7 @@
 #define RenderEncoder id
 #define Buffer id
 #define DepthStencilState id
+#define NEED_CORRECT_PROJECTION 0
 
 #endif
 
