@@ -138,27 +138,27 @@ static GLuint   vboVertexCount  = 0;
 
 	//---------- Optimize ------------------------------------------------------
 	
-	vboVertexCount = counter;
-	
-	glGenBuffers(1, &vboTag);
-	glBindBuffer(GL_ARRAY_BUFFER, vboTag);
-	
-	glBufferData(GL_ARRAY_BUFFER, vboVertexCount * sizeof(VBOVertexData), vertexes, GL_STATIC_DRAW);
-	free(vertexes);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	// Encapsulate in a VAO
-	glGenVertexArraysAPPLE(1, &vaoTag);
-	glBindVertexArrayAPPLE(vaoTag);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glBindBuffer(GL_ARRAY_BUFFER, vboTag);
-	glVertexPointer(3, GL_FLOAT, sizeof(VBOVertexData), NULL);
-	glNormalPointer(GL_FLOAT,    sizeof(VBOVertexData), (GLvoid*)(sizeof(float)*3));
-	glColorPointer(4, GL_FLOAT,  sizeof(VBOVertexData), (GLvoid*)(sizeof(float)*3 + sizeof(float)*3) );
-	glBindVertexArrayAPPLE(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//	vboVertexCount = counter;
+//	
+//	glGenBuffers(1, &vboTag);
+//	glBindBuffer(GL_ARRAY_BUFFER, vboTag);
+//	
+//	glBufferData(GL_ARRAY_BUFFER, vboVertexCount * sizeof(VBOVertexData), vertexes, GL_STATIC_DRAW);
+//	free(vertexes);
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//	
+//	// Encapsulate in a VAO
+//	glGenVertexArraysAPPLE(1, &vaoTag);
+//	glBindVertexArrayAPPLE(vaoTag);
+//	glEnableClientState(GL_VERTEX_ARRAY);
+//	glEnableClientState(GL_NORMAL_ARRAY);
+//	glEnableClientState(GL_COLOR_ARRAY);
+//	glBindBuffer(GL_ARRAY_BUFFER, vboTag);
+//	glVertexPointer(3, GL_FLOAT, sizeof(VBOVertexData), NULL);
+//	glNormalPointer(GL_FLOAT,    sizeof(VBOVertexData), (GLvoid*)(sizeof(float)*3));
+//	glColorPointer(4, GL_FLOAT,  sizeof(VBOVertexData), (GLvoid*)(sizeof(float)*3 + sizeof(float)*3) );
+//	glBindVertexArrayAPPLE(0);
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 

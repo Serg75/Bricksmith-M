@@ -89,8 +89,11 @@ static const char * attribs[] = {
 - (void) pushWireFrame
 {
 	if(wire_frame_count++ == 0)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		
+		setWireFrameMode(YES);
+
+		// alternative wireframe drawing
+//		[_renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
+
 }//end pushWireFrame:
 
 
@@ -103,7 +106,10 @@ static const char * attribs[] = {
 - (void) popWireFrame
 {
 	if(--wire_frame_count == 0)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		setWireFrameMode(NO);
+
+		// alternative wireframe drawing
+//		[_renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
 
 }//end popWireFrame:
 

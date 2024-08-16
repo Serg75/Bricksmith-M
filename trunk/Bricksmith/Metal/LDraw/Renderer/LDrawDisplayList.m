@@ -41,6 +41,8 @@ static const int InstanceInputLength = 24;
 // The size in bytes of InstanceInput struct declared in Metal shader
 static const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
 
+BOOL isWireFrameMode = NO;
+
 
 /*
 
@@ -324,6 +326,12 @@ struct LDrawDLBuilder * LDrawDLBuilderCreate()
 	
 	return bld;
 }//end LDrawDLBuilderCreate
+
+
+void setWireFrameMode(BOOL wireFrameMode)
+{
+	isWireFrameMode = wireFrameMode;
+}
 
 
 //========== LDrawDLBuilderSetTex ================================================
@@ -1097,7 +1105,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 											 indexBufferOffset:idx_null+tptr->line_off];
 						// was
 //						glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
-					if(tptr->tri_count)
+					if(tptr->tri_count && !isWireFrameMode)
 						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 													indexCount:tptr->tri_count
 													 indexType:MTLIndexTypeUInt32
@@ -1187,16 +1195,16 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 				if(s->dl->line_count)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
 										indexCount:s->dl->line_count
-										 indexType:MTLIndexTypeUInt32 // ???
+										 indexType:MTLIndexTypeUInt32
 									   indexBuffer:s->indexBuffer
 								 indexBufferOffset:idx_null+s->dl->line_off
 									 instanceCount:s->inst_count];
 					// was
 //					glDrawElementsInstancedARB(GL_LINES,s->dl->line_count,GL_UNSIGNED_INT,idx_null+s->dl->line_off, s->inst_count);
-				if(s->dl->tri_count)
+				if(s->dl->tri_count && !isWireFrameMode)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 										indexCount:s->dl->tri_count
-										 indexType:MTLIndexTypeUInt32 // ???
+										 indexType:MTLIndexTypeUInt32
 									   indexBuffer:s->indexBuffer
 								 indexBufferOffset:idx_null+s->dl->tri_off
 									 instanceCount:s->inst_count];
@@ -1338,7 +1346,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 										   instanceCount:1];
 					// was
 //					glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
-				if(tptr->tri_count)
+				if(tptr->tri_count && !isWireFrameMode)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 											  indexCount:tptr->tri_count
 											   indexType:MTLIndexTypeUInt32
@@ -1485,7 +1493,8 @@ void LDrawDLDraw(
 		session->stats.num_vert_imm += dl->vrt_count;
 	#endif
 
-	if(immediateInstanceBuffer == nil)
+	// TODO: this fixes parts position error, but creates buffer every time, that is unproductive
+//	if(immediateInstanceBuffer == nil)
 	{
 		id<MTLDevice> device = MetalGPU.device;
 		immediateInstanceBuffer = [device newBufferWithLength:InstanceInputStructSize options:MTLResourceStorageModeManaged];
@@ -1549,19 +1558,20 @@ void LDrawDLDraw(
 		#if WANT_SMOOTH
 		if(tptr->line_count)
 			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-								indexCount:tptr->line_count
-								 indexType:MTLIndexTypeUInt32 // ???
-							   indexBuffer:dl->indexBuffer
-						 indexBufferOffset:idx_null+tptr->line_off
-							 instanceCount:1];
+									  indexCount:tptr->line_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:idx_null+tptr->line_off
+								   instanceCount:1];
 		// was
 //			glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
-		if(tptr->tri_count)
+		if(tptr->tri_count && !isWireFrameMode)
 			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-										indexCount:tptr->tri_count
-										 indexType:MTLIndexTypeUInt32 // ???
-									   indexBuffer:dl->indexBuffer
-								 indexBufferOffset:idx_null+tptr->tri_off];
+									  indexCount:tptr->tri_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:idx_null+tptr->tri_off
+								   instanceCount:1];
 		// was
 //			glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
 //		if(tptr->quad_count)
@@ -1593,16 +1603,16 @@ void LDrawDLDraw(
 			if(tptr->line_count)
 				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
 									indexCount:tptr->line_count
-									 indexType:MTLIndexTypeUInt32 // ???
+									 indexType:MTLIndexTypeUInt32
 								   indexBuffer:dl->indexBuffer
 							 indexBufferOffset:idx_null+tptr->line_off
 								 instanceCount:1];
 			// was
 //				glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
-			if(tptr->tri_count)
+			if(tptr->tri_count && !isWireFrameMode)
 				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 											indexCount:tptr->tri_count
-											 indexType:MTLIndexTypeUInt32 // ???
+											 indexType:MTLIndexTypeUInt32
 										   indexBuffer:dl->indexBuffer
 									 indexBufferOffset:idx_null+tptr->tri_off];
 			// was

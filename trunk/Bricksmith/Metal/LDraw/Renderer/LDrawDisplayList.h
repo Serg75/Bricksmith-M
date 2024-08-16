@@ -64,6 +64,7 @@ void						LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12]
 void						LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4]);
 
 // Session/drawing APIs
+void						setWireFrameMode(BOOL wireFrameMode);
 struct LDrawDLSession *		LDrawDLSessionCreate(const GLfloat model_view[16]);
 void						LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session);
 void						LDrawDLDraw(
