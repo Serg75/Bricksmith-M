@@ -119,6 +119,17 @@ struct FragmentUniform {
 	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 
+	// Blending
+	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = pipelineDescriptor.colorAttachments[0];
+	colorAttachment.blendingEnabled = YES;
+	colorAttachment.rgbBlendOperation = MTLBlendOperationAdd;
+	colorAttachment.alphaBlendOperation = MTLBlendOperationAdd;
+	colorAttachment.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+	colorAttachment.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+	colorAttachment.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+	colorAttachment.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+
+
 	NSError *error = nil;
 	_pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
 	if (!_pipelineState) {
