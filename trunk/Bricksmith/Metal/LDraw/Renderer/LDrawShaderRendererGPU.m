@@ -24,6 +24,8 @@
 #import "LDrawDisplayList.h"
 #import "ColorLibrary.h"
 #import "GLMatrixMath.h"
+#import "MetalGPU.h"
+#import "MetalCommonDefinitions.h"
 
 // This list of attribute names matches the text of the GLSL attribute declarations -
 // and its order must match the attr_position...array in the .h.
@@ -114,121 +116,177 @@ static const char * attribs[] = {
 }//end popWireFrame:
 
 
-//========== drawDragHandle:withSize: ============================================
+//========== drawDragHandles =====================================================
 //
-// Purpose:	Draw a drag handle - for realzies this time
+// Purpose:	Draw a drag handles
 //
-// Notes:	This routine builds a one-off sphere VBO as needed.  BrickSmith
-//			guarantees that we never lose our shared group of GL contexts, so we
-//			don't have to worry about the last context containing the VBO going
-//			away.
-//
-//			The vertex format for the sphere handle is just pure vertices - since
-//			the draw routine sets up its own VAO with its own internal format,
+// Notes:	The vertex format for the sphere handle is just pure vertices - since
+//			the draw routine sets up its own internal format,
 //			there's no need to depend on or conform to vertex formats for the rest
 //			of the drawing system.
 //
 //================================================================================
-- (void) drawDragHandleImm:(GLfloat *)xyz withSize:(GLfloat)size
+- (void)drawDragHandles
 {
-//	static GLuint   vaoTag          = 0;
-//	static GLuint   vboTag          = 0;
-//	static GLuint   vboVertexCount  = 0;
-//
-//	if(vaoTag == 0)
-//	{
-//		// Bail if we've already done it.
-//
-//		int latitudeSections = 8;
-//		int longitudeSections = 8;
-//
-//		float           latitudeRadians     = (M_PI / latitudeSections); // lat. wraps halfway around sphere
-//		float           longitudeRadians    = (2*M_PI / longitudeSections); // long. wraps all the way
-//		int             vertexCount         = 0;
-//		GLfloat			*vertexes           = NULL;
-//		int             latitudeCount       = 0;
-//		int             longitudeCount      = 0;
-//		float           latitude            = 0;
-//		float           longitude           = 0;
-//
-//		//---------- Generate Sphere -----------------------------------------------
-//
-//		// Each latitude strip begins with two vertexes at the prime meridian, then
-//		// has two more vertexes per segment thereafter.
-//		vertexCount = (2 + longitudeSections*2) * latitudeSections;
-//
-//		glGenBuffers(1, &vboTag);
-//		glBindBuffer(GL_ARRAY_BUFFER, vboTag);
-//		glBufferData(GL_ARRAY_BUFFER, vertexCount * 3 * sizeof(GLfloat), NULL, GL_STATIC_DRAW);
-//		vertexes = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-//
-//		// Calculate vertexes for each strip of latitude.
-//		for(latitudeCount = 0; latitudeCount < latitudeSections; latitudeCount += 1 )
-//		{
-//			latitude = (latitudeCount * latitudeRadians);
-//
-//			// Include the prime meridian twice; once to start the strip and once to
-//			// complete the last triangle of the -1 meridian.
-//			for(longitudeCount = 0; longitudeCount <= longitudeSections; longitudeCount += 1 )
-//			{
-//				longitude = longitudeCount * longitudeRadians;
-//
-//				// Ben says: when we are "pushing" vertices into a GL_WRITE_ONLY mapped buffer, we should really
-//				// never read back from the vertices that we read to - the memory we are writing to often has funky
-//				// properties like being uncached which make it expensive to do anything other than what we said we'd
-//				// do (and we said: we are only going to write to them).
-//				//
-//				// Mind you it's moot in this case since we only need to write vertices.
-//
-//				// Top vertex
-//				*vertexes++ =cos(longitude)*sin(latitude);
-//				*vertexes++ =sin(longitude)*sin(latitude);
-//				*vertexes++ =cos(latitude);
-//
-//				// Bottom vertex
-//				*vertexes++ = cos(longitude)*sin(latitude + latitudeRadians);
-//				*vertexes++ = sin(longitude)*sin(latitude + latitudeRadians);
-//				*vertexes++ = cos(latitude + latitudeRadians);
-//			}
-//		}
-//
-//		glUnmapBuffer(GL_ARRAY_BUFFER);
-//		glBindBuffer(GL_ARRAY_BUFFER, 0);
-//
-//		//---------- Optimize ------------------------------------------------------
-//
-//		vboVertexCount = vertexCount;
-//
-//		// Encapsulate in a VAO
-//		glGenVertexArraysAPPLE(1, &vaoTag);
-//		glBindVertexArrayAPPLE(vaoTag);
-//		glBindBuffer(GL_ARRAY_BUFFER, vboTag);
-//		glEnableVertexAttribArray(attr_position);
-//		glEnableVertexAttribArray(attr_normal);
-//		// Normal and vertex use the same data - in a unit sphere the normals are the vertices!
-//		glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), NULL);
-//		glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), NULL);
-//		// The sphere color is constant - no need to get it from per-vertex data.
-//		glBindVertexArrayAPPLE(0);
-//		glBindBuffer(GL_ARRAY_BUFFER, 0);
-//
-//	}
-//
-//	glDisable(GL_TEXTURE_2D);
-//
-//	int i;
-//	for(i = 0; i < 4; ++i)
-//		glVertexAttrib4f(attr_transform_x+i,transform_now[i],transform_now[4+i],transform_now[8+i],transform_now[12+i]);
-//
-//	glVertexAttrib4f(attr_color,0.50,0.53,1.00,1.00);		// Nice lavendar color for the whole sphere.
-//
-//	glBindVertexArrayAPPLE(vaoTag);
-//	glDrawArrays(GL_TRIANGLE_STRIP, 0, vboVertexCount);
-//	glBindVertexArrayAPPLE(0); // Failing to unbind can cause bizarre crashes if other VAOs are in display lists
-//
-//	glEnable(GL_TEXTURE_2D);
+	static id<MTLBuffer> 		vertexBuffer 	= nil;
+	static NSUInteger 			vertexCount 	= 0;
 
-}//end drawDragHandleImm:
+	id<MTLDevice>				device 			= MetalGPU.device;
+	id<MTLRenderPipelineState> 	pipelineState 	= nil;
+	id<MTLBuffer> 				instanceBuffer 	= nil;
+
+	if (vertexBuffer == nil)
+	{
+		// Bail if we've already done it.
+
+		int		latitudeSections	= 8;
+		int		longitudeSections	= 8;
+
+		float	latitudeRadians		= M_PI / latitudeSections; // lat. wraps halfway around sphere
+		float	longitudeRadians	= 2 * M_PI / longitudeSections; // long. wraps all the way
+		int		latitudeCount		= 0;
+		int		longitudeCount		= 0;
+		float	latitude			= 0;
+		float	longitude			= 0;
+		int		counter = 0;
+
+		//---------- Generate Sphere -----------------------------------------------
+
+		// Each latitude strip begins with two vertexes at the prime meridian, then
+		// has two more vertexes per segment thereafter.
+		vertexCount = (2 + longitudeSections * 2) * latitudeSections;
+
+		NSMutableData *vertexData = [NSMutableData dataWithLength:vertexCount * sizeof(vector_float3)];
+		vector_float3 *vertices = (vector_float3 *)vertexData.mutableBytes;
+
+		// Calculate vertexes for each strip of latitude.
+		for (latitudeCount = 0; latitudeCount < latitudeSections; latitudeCount += 1)
+		{
+			latitude = (latitudeCount * latitudeRadians);
+
+			// Include the prime meridian twice; once to start the strip and once to
+			// complete the last triangle of the -1 meridian.
+			for (longitudeCount = 0; longitudeCount <= longitudeSections; longitudeCount += 1 )
+			{
+				longitude = longitudeCount * longitudeRadians;
+
+				// Ben says: when we are "pushing" vertices into a GL_WRITE_ONLY mapped buffer, we should really
+				// never read back from the vertices that we read to - the memory we are writing to often has funky
+				// properties like being uncached which make it expensive to do anything other than what we said we'd
+				// do (and we said: we are only going to write to them).
+				//
+				// Mind you it's moot in this case since we only need to write vertices.
+
+				// Top vertex
+				vertices[counter++] = (vector_float3) {
+					cos(longitude) * sin(latitude),
+					sin(longitude) * sin(latitude),
+					cos(latitude)
+				};
+
+				// Bottom vertex
+				vertices[counter++] = (vector_float3) {
+					cos(longitude) * sin(latitude + latitudeRadians),
+					sin(longitude) * sin(latitude + latitudeRadians),
+					cos(latitude + latitudeRadians)
+				};
+			}
+
+			// Create a Metal buffer for the vertices
+			vertexBuffer = [device newBufferWithBytes:vertexData.bytes
+											   length:vertexData.length
+											  options:MTLResourceStorageModeShared];
+			vertexBuffer.label = @"Drag handle vertex buffer";
+		}
+	}
+
+	struct LDrawDragHandleInstance * dh;
+	vector_float4 color = {0.50, 0.53, 1.00, 1.00};		// Nice lavendar color for the whole sphere.
+	int instanceCount = 0;
+
+	// Go through and draw the drag handles...
+
+	for (dh = drag_handles; dh != NULL; dh = dh->next) {
+		instanceCount++;
+	}
+
+	if (instanceCount == 0) {
+		return;
+	}
+
+	// Set up the render pipeline
+	id<MTLLibrary> defaultLibrary = [device newDefaultLibrary];
+	id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexDragHandle"];
+	id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentDragHandle"];
+
+	MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+	pipelineDescriptor.vertexFunction = vertexFunction;
+	pipelineDescriptor.fragmentFunction = fragmentFunction;
+	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+
+	NSError *error = nil;
+	pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	if (!pipelineState) {
+		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+	}
+
+	int instanceBufferLength = InstanceInputStructSize * instanceCount;
+	instanceBuffer = [device newBufferWithLength:instanceBufferLength options:MTLResourceStorageModeManaged];
+	instanceBuffer.label = @"Drag handle instance buffer";
+
+	// Map our instance buffer so we can write instancing data.
+	GLfloat * inst_data = (GLfloat *)instanceBuffer.contents;
+
+	for (dh = drag_handles; dh != NULL; dh = dh->next)
+	{
+		GLfloat s = dh->size / self->scale;
+		GLfloat m[16] = {
+			s, 0, 0, 0,
+			0, s, 0, 0,
+			0, 0, s, 0,
+			dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0
+		};
+
+		[self pushMatrix:m];
+
+		inst_data[0] = transform_now[0];		// Note: copy on transpose to get matrix into right form!
+		inst_data[1] = transform_now[4];
+		inst_data[2] = transform_now[8];
+		inst_data[3] = transform_now[12];
+		inst_data[4] = transform_now[1];
+		inst_data[5] = transform_now[5];
+		inst_data[6] = transform_now[9];
+		inst_data[7] = transform_now[13];
+		inst_data[8] = transform_now[2];
+		inst_data[9] = transform_now[6];
+		inst_data[10] = transform_now[10];
+		inst_data[11] = transform_now[14];
+		inst_data[12] = transform_now[3];
+		inst_data[13] = transform_now[7];
+		inst_data[14] = transform_now[11];
+		inst_data[15] = transform_now[15];
+
+		[self popMatrix];
+
+		inst_data += InstanceInputLength;
+	}
+
+	[instanceBuffer didModifyRange:NSMakeRange(0, instanceBufferLength)];
+	[_renderEncoder setVertexBuffer:instanceBuffer
+							offset:0
+						   atIndex:BufferIndexPerInstanceData];
+
+	[_renderEncoder setRenderPipelineState:pipelineState];
+	[_renderEncoder setVertexBuffer:vertexBuffer offset:0 atIndex:0];
+	[_renderEncoder setFragmentBytes:&color length:sizeof(color) atIndex:0];
+
+	[_renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip
+					   vertexStart:0
+					   vertexCount:vertexCount
+					 instanceCount:instanceCount];
+
+}//end drawDragHandles
 
 
 - (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx
@@ -245,22 +303,11 @@ static const char * attribs[] = {
 //================================================================================
 - (void) finishDraw
 {
-	struct LDrawDragHandleInstance * dh;
 	LDrawDLSessionDrawAndDestroy(_renderEncoder, session);
 	session = nil;
 	
-	// Go through and draw the drag handles...
-	
-	for(dh = drag_handles; dh != NULL; dh = dh->next)
-	{
-		GLfloat s = dh->size / self->scale;
-		GLfloat m[16] = { s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0 };
-		
-		[self pushMatrix:m];
-		[self drawDragHandleImm:dh->xyz withSize:dh->size];
-		[self popMatrix];
-	}
-	
+	[self drawDragHandles];
+
 	LDrawBDPDestroy(pool);
 	
 }//end finishDraw:

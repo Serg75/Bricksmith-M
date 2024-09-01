@@ -176,3 +176,38 @@ fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 
 	return out;
 }
+
+
+// MARK: - Drag Handle -
+
+
+struct DragHandleVertexOutput {
+	float4 position [[position]];
+	float3 normal;
+};
+
+vertex DragHandleVertexOutput vertexDragHandle(const device float3 *vertices [[buffer(0)]],
+											   constant InstanceInput *inst [[buffer(BufferIndexPerInstanceData)]],
+											   constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]],
+											   unsigned int vid [[vertex_id]],
+											   ushort iid [[instance_id]])
+{
+	DragHandleVertexOutput out;
+
+	float4 position = float4(vertices[vid], 1.0);
+	float4 pos_obj = 0;
+	pos_obj.x = dot(position, inst[iid].transform_x);
+	pos_obj.y = dot(position, inst[iid].transform_y);
+	pos_obj.z = dot(position, inst[iid].transform_z);
+	pos_obj.w = dot(position, inst[iid].transform_w);
+
+	float4 eye_pos = uni.model_view_matrix * pos_obj;
+	out.position = uni.projection_matrix * eye_pos;
+	out.normal = normalize((uni.model_view_matrix * float4(vertices[vid], 0.0)).xyz);
+	return out;
+}
+
+fragment float4 fragmentDragHandle(const DragHandleVertexOutput in [[stage_in]],
+								   constant float4 &color [[buffer(0)]]) {
+	return color;
+}

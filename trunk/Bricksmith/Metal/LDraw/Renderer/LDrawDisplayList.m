@@ -37,9 +37,9 @@ static const GLuint * idx_null = NULL;
 #endif
 
 // The number of float values in InstanceInput struct declared in Metal shader
-static const int InstanceInputLength = 24;
+const int InstanceInputLength = 24;
 // The size in bytes of InstanceInput struct declared in Metal shader
-static const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
+const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
 
 BOOL isWireFrameMode = NO;
 
