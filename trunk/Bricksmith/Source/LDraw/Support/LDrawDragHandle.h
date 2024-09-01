@@ -44,14 +44,5 @@ static const float HandleDiameter	= 7.0;
 - (void) setPosition:(Point3)positionIn updateTarget:(BOOL)update;
 - (void) setTarget:(id)sender;
 
-// moved to category
-//// Draw
-//- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-//;
-
-// moved to category
-//// Utilities
-//+ (void) makeSphereWithLongitudinalCount:(int)longitudeSections
-//						latitudinalCount:(int)latitudeSections;
 @end
 
