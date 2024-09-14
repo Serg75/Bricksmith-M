@@ -11,7 +11,7 @@
 @import MetalKit;
 #define GPUView MTKView
 
-#define TexType					id<MTLTexture>
+#define TexType					__strong id<MTLTexture>
 
 #define LDrawTextureGPU_h		"LDrawTextureMTL.h"
 #define LDrawTextureGPU 		LDrawTextureMTL

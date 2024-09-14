@@ -881,7 +881,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 //
 // Purpose:	Set up the GL with texturing info.
 //
-// Ntes:	DL implementation uses object-plane coordinate generation; when a
+// Notes:	DL implementation uses object-plane coordinate generation; when a
 //			sub-DL inherits a projection, that projection is transformed with the
 //			sub-DL to keep things in sync.
 //
@@ -891,7 +891,6 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 //================================================================================
 static void setup_tex_spec(struct LDrawTextureSpec * spec,
 						   id<MTLRenderCommandEncoder> encoder)
-//						   float *)
 {
 	if(spec && spec->tex_obj)
 	{
@@ -902,6 +901,7 @@ static void setup_tex_spec(struct LDrawTextureSpec * spec,
 		id<MTLBuffer> texBuffer = [MetalGPU.device newBufferWithBytes:&texUniform length:sizeof(texUniform) options:MTLResourceStorageModeShared];
 		texBuffer.label = @"Texture buffer";
 		[encoder setVertexBuffer:texBuffer offset:0 atIndex:TexIndexUniforms];
+		[encoder setFragmentTexture:spec->tex_obj atIndex:0];
 		// was
 //		glVertexAttrib1f(attr_texture_mix,1.0f);
 //		glBindTexture(GL_TEXTURE_2D, spec->tex_obj);		
@@ -911,12 +911,13 @@ static void setup_tex_spec(struct LDrawTextureSpec * spec,
 	else
 	{
 		struct TextureUniform texUniform;
-//		texUniform.object_plane_s = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
-//		texUniform.object_plane_t = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
-		texUniform.texture_mix = 9.0;
+		texUniform.object_plane_s = V4Make(0.0, 0.0, 0.0, 0.0);
+		texUniform.object_plane_t = V4Make(0.0, 0.0, 0.0, 0.0);
+		texUniform.texture_mix = 0.0;
 		id<MTLBuffer> texBuffer = [MetalGPU.device newBufferWithBytes:&texUniform length:sizeof(texUniform) options:MTLResourceStorageModeShared];
 		texBuffer.label = @"Texture buffer";
 		[encoder setVertexBuffer:texBuffer offset:0 atIndex:TexIndexUniforms];
+		[encoder setFragmentTexture:nil atIndex:0];
 		//was
 //		glVertexAttrib1f(attr_texture_mix,0.0f);
 		// TODO: what texture IS bound when "untextured"?  We should
@@ -1163,6 +1164,8 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 			// Main loop 2 over DLs - for each DL that had hw-instances we built a segment
 			// in our array.  Bind the DL itself, as well as the instance pointers, and do an instanced-draw.
+
+			setup_tex_spec(NULL, renderEncoder);
 
 			struct LDrawDLSegment * s;
 			for(s = segments; s < cur_segment; ++s)
@@ -1555,6 +1558,9 @@ void LDrawDLDraw(
 	if(dl->tex_count == 1 && tptr->spec.tex_obj == nil && (spec == NULL || spec->tex_obj == nil))
 	{
 		// Special case: one untextured mesh - just draw.
+
+		setup_tex_spec(NULL, renderEncoder);
+
 		#if WANT_SMOOTH
 		if(tptr->line_count)
 			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine

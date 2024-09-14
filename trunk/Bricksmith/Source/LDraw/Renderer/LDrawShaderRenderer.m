@@ -398,10 +398,10 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 - (void) pushTexture:(struct LDrawTextureSpec *) spec;
 {
 	assert(texture_stack_top < TEXTURE_STACK_DEPTH);
-	memcpy(tex_stack+texture_stack_top,&tex_now,sizeof(tex_now));
+	tex_stack[texture_stack_top] = tex_now;
 	++texture_stack_top;
-	memcpy(&tex_now,spec,sizeof(tex_now));
-	
+	tex_now = *spec;
+
 	if(dl_stack_top)
 		LDrawDLBuilderSetTex(dl_now,&tex_now);
 		
@@ -418,7 +418,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 {
 	assert(texture_stack_top > 0);
 	--texture_stack_top;
-	memcpy(&tex_now,tex_stack+texture_stack_top,sizeof(tex_now));
+	tex_now = tex_stack[texture_stack_top];
 
 	if(dl_stack_top)
 		LDrawDLBuilderSetTex(dl_now,&tex_now);

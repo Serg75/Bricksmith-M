@@ -9,7 +9,7 @@
 
 @interface LDrawTextureMTL : LDrawTexture
 {
-	id<MTLTexture> metalTexture;
+	__strong id<MTLTexture> metalTexture;
 }
 
 @end

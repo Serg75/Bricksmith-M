@@ -87,21 +87,6 @@ static PartLibraryMTL *SharedPartLibrary = nil;
 			CGContextSetBlendMode(bitmapContext, kCGBlendModeCopy);
 			CGContextDrawImage(bitmapContext, canvasRect, image);
 			
-//			CGImageRef output = CGBitmapContextCreateImage(bitmapContext);
-//			CGImageDestinationRef myImageDest = CGImageDestinationCreateWithURL((CFURLRef)[NSURL fileURLWithPath:@"/out.png"], kUTTypePNG, 1, nil);
-//			//NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt:1.0], kCGImageDestinationLossyCompressionQuality, nil]; // Don't know if this is necessary
-//			CGImageDestinationAddImage(myImageDest, output, NULL);
-//			CGImageDestinationFinalize(myImageDest);
-//			CFRelease(myImageDest);
-			
-			// Generate a tag for the texture we're about to generate, then set it as
-			// the active texture.
-			// Note: We are using non-rectangular textures here, which started as an
-			//		 extension (_EXT) and is now ratified by the review board (_ARB)
-			// Use MTKTextureLoader to generate a Metal texture
-			MTKTextureLoader *textureLoader = [[MTKTextureLoader alloc] initWithDevice:MetalGPU.device];
-			NSDictionary *textureLoaderOptions = @{MTKTextureLoaderOptionSRGB : @NO};
-
 			NSData *imageData = [NSData dataWithBytesNoCopy:imageBuffer length:(canvasRect.size.width * canvasRect.size.height * 4) freeWhenDone:YES];
 			CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData((CFDataRef)imageData);
 			CGImageRef processedImage = CGImageCreate(
@@ -117,6 +102,16 @@ static PartLibraryMTL *SharedPartLibrary = nil;
 				false,
 				kCGRenderingIntentDefault
 			);
+
+			// Use MTKTextureLoader to generate a Metal texture
+			// Note: We are using non-rectangular textures here
+			MTKTextureLoader *textureLoader = [[MTKTextureLoader alloc] initWithDevice:MetalGPU.device];
+			NSDictionary *textureLoaderOptions = @{
+				MTKTextureLoaderOptionSRGB: @NO,
+				MTKTextureLoaderOptionTextureStorageMode: @(MTLStorageModePrivate),
+				MTKTextureLoaderOptionTextureUsage: @(MTLTextureUsageShaderRead),
+				MTKTextureLoaderOptionOrigin: MTKTextureLoaderOriginFlippedVertically
+			};
 
 			NSError *error = nil;
 			metalTexture = [textureLoader newTextureWithCGImage:processedImage options:textureLoaderOptions error:&error];
@@ -134,6 +129,10 @@ static PartLibraryMTL *SharedPartLibrary = nil;
 			CGImageRelease(processedImage);
 			CFRelease(colorSpace);
 			CFRelease(bitmapContext);
+		}
+		else
+		{
+			NSLog(@"Error loading image texture: %@", texture.imageReferenceName);
 		}
 	}
 	

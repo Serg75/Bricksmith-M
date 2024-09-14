@@ -52,8 +52,8 @@ struct TextureUniform {
 
 vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
 								 constant InstanceInput *inst [[buffer(BufferIndexPerInstanceData)]],
-								 constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]]//,
-								 /*constant TextureUniform& texGen [[buffer(BufferIndexVertexUniforms)]]*/,
+								 constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]],
+								 constant TextureUniform& texGen [[buffer(TexIndexUniforms)]],
 								 ushort iid [[instance_id]])
 {
 	VertexOutput out;
@@ -86,19 +86,13 @@ vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
 		out.color = col;
 	};
 
-//	float2 tex_coord = 0;
-//	tex_coord.x = dot(texGen.object_plane_s, in.position);
-//	tex_coord.y = dot(texGen.object_plane_t, in.position);
-//
-//	out.tex_coord = tex_coord;
+	float2 tex_coord = 0;
+	tex_coord.x = dot(texGen.object_plane_s, in.position);
+	tex_coord.y = dot(texGen.object_plane_t, in.position);
 
-	float4 eye_plane_s = float4(0); // Assuming no equivalent in Metal
-	float4 eye_plane_t = float4(0); // Assuming no equivalent in Metal
+	out.tex_coord = tex_coord;
 
-	out.tex_coord = float2(dot(eye_plane_s, in.position),
-						   dot(eye_plane_t, in.position));
-
-	out.tex_mix = 0.0; //texGen.texture_mix;
+	out.tex_mix = texGen.texture_mix;
 //	out.position.z = (out.position.z + out.position.w) / 2.0f;
 //	out.position.y /= 2.0f;
 
@@ -143,8 +137,8 @@ struct FragmentUniform {
 };
 
 fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
-									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]]//,
-//									   texture2d<float> tex [[texture(0)]]//,
+									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]],
+									   texture2d<float> tex [[texture(0)]]//,
 //									   sampler smpl [[sampler(0)]]
 									   )
 {
@@ -153,17 +147,18 @@ fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 	float3 normal = normalize(in.normal_eye);
 
 	float4 final_color = in.color;
+	float light_source0_k = dot(normal, uni.light_source[0].position.xyz);
+	float light_source1_k = dot(normal, uni.light_source[1].position.xyz);
 	final_color.rgb *=
-		(uni.light_source[0].diffuse.rgb * max(0.0, dot(normal, uni.light_source[0].position.xyz)) +
-		 uni.light_source[1].diffuse.rgb * max(0.0, dot(normal, uni.light_source[1].position.xyz)) +
+		(uni.light_source[0].diffuse.rgb * max(0.0, light_source0_k) +
+		 uni.light_source[1].diffuse.rgb * max(0.0, light_source1_k) +
 		 uni.light_model.ambient.rgb);
 
 	constexpr sampler linearSampler (mip_filter::linear,
 									 mag_filter::linear,
 									 min_filter::linear);
 
-	float4 tex_color = 0;
-//	float4 tex_color = tex.sample(linearSampler, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
+	float4 tex_color = tex.sample(linearSampler, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
 	// was
 //	float4 tex_color = tex.sample(smpl, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
 
