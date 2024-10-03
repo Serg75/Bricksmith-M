@@ -44,27 +44,26 @@ struct VertexUniform {
 	float3x3	normal_matrix;
 };
 
-struct TextureUniform {
-	float4		object_plane_t;
-	float4		object_plane_s;
-	float		texture_mix;
+struct TexturePlaneData {
+	float4		plane_s;
+	float4		plane_t;
 };
 
 vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
-								 constant InstanceInput *inst [[buffer(BufferIndexPerInstanceData)]],
-								 constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]],
-								 constant TextureUniform& texGen [[buffer(TexIndexUniforms)]],
+								 constant InstanceInput		*inst	[[buffer(BufferIndexPerInstanceData)]],
+								 constant VertexUniform&	uni		[[buffer(BufferIndexVertexUniforms)]],
+								 constant TexturePlaneData& texGen	[[buffer(BufferIndexTexturePlane)]],
 								 ushort iid [[instance_id]])
 {
 	VertexOutput out;
 
-	float4 pos_obj = 0;
+	float4 pos_obj;
 	pos_obj.x = dot(in.position, inst[iid].transform_x);
 	pos_obj.y = dot(in.position, inst[iid].transform_y);
 	pos_obj.z = dot(in.position, inst[iid].transform_z);
 	pos_obj.w = dot(in.position, inst[iid].transform_w);
 
-	float3 norm_obj = 0;
+	float3 norm_obj;
 	norm_obj.x = dot(in.normal, inst[iid].transform_x.xyz);
 	norm_obj.y = dot(in.normal, inst[iid].transform_y.xyz);
 	norm_obj.z = dot(in.normal, inst[iid].transform_z.xyz);
@@ -86,15 +85,11 @@ vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
 		out.color = col;
 	};
 
-	float2 tex_coord = 0;
-	tex_coord.x = dot(texGen.object_plane_s, in.position);
-	tex_coord.y = dot(texGen.object_plane_t, in.position);
+	float2 tex_coord;
+	tex_coord.x = dot(texGen.plane_s, in.position);
+	tex_coord.y = dot(texGen.plane_t, in.position);
 
 	out.tex_coord = tex_coord;
-
-	out.tex_mix = texGen.texture_mix;
-//	out.position.z = (out.position.z + out.position.w) / 2.0f;
-//	out.position.y /= 2.0f;
 
 	return out;
 }
@@ -105,7 +100,6 @@ vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
 struct FragmentInput {
 	float4	color;
 	float2	tex_coord;
-	float	tex_mix;
 	float3	normal_eye;
 };
 
@@ -114,12 +108,12 @@ struct FragmentOutput {
 };
 
 struct LightingUniforms {
-	float3 lightPosition0;
-	float3 lightPosition1;
-	float3 ambientColor;
-	float3 diffuseColor;
-	float3 specularColor;
-	float shininess;
+	float3	light_position_0;
+	float3	light_position_1;
+	float3	ambient_color;
+	float3	diffuse_color;
+	float3	specular_color;
+	float	shininess;
 };
 
 struct LightSourceParameters {
@@ -138,36 +132,31 @@ struct FragmentUniform {
 
 fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]],
-									   texture2d<float> tex [[texture(0)]]//,
-//									   sampler smpl [[sampler(0)]]
-									   )
+									   texture2d<float> tex [[texture(0)]])
 {
 	FragmentOutput out;
 
 	float3 normal = normalize(in.normal_eye);
 
 	float4 final_color = in.color;
-	float light_source0_k = dot(normal, uni.light_source[0].position.xyz);
-	float light_source1_k = dot(normal, uni.light_source[1].position.xyz);
+	float light_source_0_k = dot(normal, uni.light_source[0].position.xyz);
+	float light_source_1_k = dot(normal, uni.light_source[1].position.xyz);
 	final_color.rgb *=
-		(uni.light_source[0].diffuse.rgb * max(0.0, light_source0_k) +
-		 uni.light_source[1].diffuse.rgb * max(0.0, light_source1_k) +
+		(uni.light_source[0].diffuse.rgb * max(0.0, light_source_0_k) +
+		 uni.light_source[1].diffuse.rgb * max(0.0, light_source_1_k) +
 		 uni.light_model.ambient.rgb);
 
-	constexpr sampler linearSampler (mip_filter::linear,
+	constexpr sampler linear_sampler(mip_filter::linear,
 									 mag_filter::linear,
 									 min_filter::linear);
 
-	float4 tex_color = tex.sample(linearSampler, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
-	// was
-//	float4 tex_color = tex.sample(smpl, float2((in.tex_coord).x, (1.0 - (in.tex_coord).y)));
+	float4 tex_color = tex.sample(linear_sampler, float2(in.tex_coord.x, (1.0 - in.tex_coord.y)));
 
-	float4 tmp = 0;
-	tmp.rgb = 1;
-	tmp.rgb = ((float3)mix(final_color.rgb, (float3)tex_color.rgb, (float)tex_color.a));
-	tmp.a = in.color.a;
+	float4 frag_color;
+	frag_color.rgb = ((float3)mix(final_color.rgb, (float3)tex_color.rgb, (float)tex_color.a));
+	frag_color.a = in.color.a;
 
-	out.frag_color = ((float4)mix(final_color, (float4)tmp, in.tex_mix));
+	out.frag_color = frag_color;
 
 	return out;
 }
@@ -177,8 +166,8 @@ fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 
 
 struct DragHandleVertexOutput {
-	float4 position [[position]];
-	float3 normal;
+	float4	position [[position]];
+	float3	normal;
 };
 
 vertex DragHandleVertexOutput vertexDragHandle(const device float3 *vertices [[buffer(0)]],
@@ -190,7 +179,7 @@ vertex DragHandleVertexOutput vertexDragHandle(const device float3 *vertices [[b
 	DragHandleVertexOutput out;
 
 	float4 position = float4(vertices[vid], 1.0);
-	float4 pos_obj = 0;
+	float4 pos_obj;
 	pos_obj.x = dot(position, inst[iid].transform_x);
 	pos_obj.y = dot(position, inst[iid].transform_y);
 	pos_obj.z = dot(position, inst[iid].transform_z);

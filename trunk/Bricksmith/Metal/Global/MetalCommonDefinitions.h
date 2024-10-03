@@ -17,7 +17,7 @@ typedef enum BufferIndex {
 	BufferIndexInstanceInvariantData	= 0,
 	BufferIndexPerInstanceData  		= 1,
 	BufferIndexVertexUniforms      		= 2,
-	TexIndexUniforms      				= 3,
+	BufferIndexTexturePlane      		= 3,
 	BufferIndexFragmentUniforms 		= 0
 } BufferIndex;
 

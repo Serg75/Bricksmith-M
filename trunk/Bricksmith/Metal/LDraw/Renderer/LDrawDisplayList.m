@@ -99,12 +99,24 @@ enum {
 };
 
 
-struct TextureUniform {
-	Point4		object_plane_t;
-	Point4		object_plane_s;
-	float		texture_mix;
-	Point3		space;
+struct InstanceData {
+	Point4	transform_x;
+	Point4	transform_y;
+	Point4	transform_z;
+	Point4	transform_w;
+	Point4	color_current;
+	Point4	color_compliment;
 };
+
+
+struct TexturePlaneData {
+	Point4		planeS;
+	Point4		planeT;
+};
+
+struct TexturePlaneData _noTexPlaneData = {.planeS = {0}, .planeT = {0}};
+
+id<MTLTexture>	_clearTexture;
 
 
 //========== get_instance_cutoff =================================================
@@ -141,9 +153,6 @@ static void copy_vec4(GLfloat d[4], const GLfloat s[4]) { d[0] = s[0]; d[1] = s[
 
 static id<MTLBuffer> inst_vbo_ring[INST_RING_BUFFER_COUNT] = { nil };
 static int inst_ring_last = 0;
-
-static id<MTLBuffer> immediateInstanceBuffer = nil;
-static id<MTLBuffer> deferredInstanceBuffer = nil;
 
 
 //========== DISPLAY LIST DATA STRUCTURES ========================================
@@ -250,12 +259,15 @@ struct LDrawDLSession {
 	struct LDrawBDP *					alloc;					// Pool allocator for the session to rapidly save linked lists of 'stuff'.
 	struct LDrawDL *					dl_head;				// Linked list of all DLs that will be instance-drawn, with count.
 	int									dl_count;
-	
+	int									total_instance_count;	// Used in calculation the size of instance buffer
+
 	struct LDrawDLSortedInstanceLink *	sorted_head;			// Linked list + count for DLs being drawn later to Z sort.
 	int									sort_count;
 
 	GLfloat								model_view[16];			// Model-view matrix, used to Z sort translucent objects.
 	GLuint								inst_ring;				// If using more than one instancing buffer, this tells which one we use.
+
+	id<MTLTexture>						current_bound_texture;
 };
 
 
@@ -890,40 +902,47 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 //
 //================================================================================
 static void setup_tex_spec(struct LDrawTextureSpec * spec,
+						   struct LDrawDLSession * session,
 						   id<MTLRenderCommandEncoder> encoder)
 {
 	if(spec && spec->tex_obj)
 	{
-		struct TextureUniform texUniform;
-		texUniform.object_plane_s = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
-		texUniform.object_plane_t = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
-		texUniform.texture_mix = 1.0;
-		id<MTLBuffer> texBuffer = [MetalGPU.device newBufferWithBytes:&texUniform length:sizeof(texUniform) options:MTLResourceStorageModeShared];
-		texBuffer.label = @"Texture buffer";
-		[encoder setVertexBuffer:texBuffer offset:0 atIndex:TexIndexUniforms];
-		[encoder setFragmentTexture:spec->tex_obj atIndex:0];
-		// was
-//		glVertexAttrib1f(attr_texture_mix,1.0f);
-//		glBindTexture(GL_TEXTURE_2D, spec->tex_obj);		
-//		glTexGenfv(GL_S, GL_OBJECT_PLANE, spec->plane_s);
-//		glTexGenfv(GL_T, GL_OBJECT_PLANE, spec->plane_t);				
+		struct TexturePlaneData texPlaneData;
+		texPlaneData.planeS = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
+		texPlaneData.planeT = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
+
+		[encoder setVertexBytes:&texPlaneData length:64 atIndex:BufferIndexTexturePlane];
+
+		if (session->current_bound_texture != spec->tex_obj)
+		{
+			[encoder setFragmentTexture:spec->tex_obj atIndex:0];
+			session->current_bound_texture = spec->tex_obj;
+		}
 	}
 	else
 	{
-		struct TextureUniform texUniform;
-		texUniform.object_plane_s = V4Make(0.0, 0.0, 0.0, 0.0);
-		texUniform.object_plane_t = V4Make(0.0, 0.0, 0.0, 0.0);
-		texUniform.texture_mix = 0.0;
-		id<MTLBuffer> texBuffer = [MetalGPU.device newBufferWithBytes:&texUniform length:sizeof(texUniform) options:MTLResourceStorageModeShared];
-		texBuffer.label = @"Texture buffer";
-		[encoder setVertexBuffer:texBuffer offset:0 atIndex:TexIndexUniforms];
-		[encoder setFragmentTexture:nil atIndex:0];
-		//was
-//		glVertexAttrib1f(attr_texture_mix,0.0f);
-		// TODO: what texture IS bound when "untextured"?  We should
-		// set up a 'white' texture 1x1 pixel so that (1) our texture state
-		// is not illegal and (2) we waste NO bandwidth on texturing.
-//		glBindTexture(GL_TEXTURE_2D, 0);		
+		if (_clearTexture == nil)
+		{
+			MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
+			textureDescriptor.pixelFormat = MTLPixelFormatRGBA8Unorm;
+			textureDescriptor.width = 1;
+			textureDescriptor.height = 1;
+			textureDescriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+
+			_clearTexture = [MetalGPU.device newTextureWithDescriptor:textureDescriptor];
+
+			uint8_t zeroData[4] = {0, 0, 0, 0};  // RGBA (0, 0, 0, 0)
+			MTLRegion region = MTLRegionMake2D(0, 0, 1, 1);
+			[_clearTexture replaceRegion:region mipmapLevel:0 withBytes:zeroData bytesPerRow:4];
+		}
+
+		[encoder setVertexBytes:&_noTexPlaneData length:64 atIndex:BufferIndexTexturePlane];
+
+		if (session->current_bound_texture != _clearTexture)
+		{
+			[encoder setFragmentTexture:_clearTexture atIndex:0];
+			session->current_bound_texture = _clearTexture;
+		}
 	}
 }//end setup_tex_spec
 
@@ -941,6 +960,7 @@ struct LDrawDLSession * LDrawDLSessionCreate(const GLfloat model_view[16])
 	session->alloc = alloc;
 	session->dl_head = NULL;
 	session->dl_count = 0;
+	session->total_instance_count = 0;
 	session->sorted_head = NULL;
 	session->sort_count = 0;
 	#if WANT_STATS
@@ -988,13 +1008,12 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		struct LDrawDLSegment * cur_segment = segments;
 
 		// If we do not yet have a VBO for instancing, build one now.
-		if(inst_vbo_ring[session->inst_ring] == nil)
+//		if(inst_vbo_ring[session->inst_ring] == nil)
 		{
-			id<MTLBuffer> instanceBuffer = [MetalGPU.device newBufferWithLength:INST_MAX_COUNT * InstanceInputStructSize options:MTLResourceStorageModeManaged];
+			id<MTLBuffer> instanceBuffer = [MetalGPU.device newBufferWithLength:session->total_instance_count * InstanceInputStructSize
+																		options:MTLResourceStorageModeManaged];
 			instanceBuffer.label = @"Instance buffer";
 			inst_vbo_ring[session->inst_ring] = instanceBuffer;
-			// was
-//			glGenBuffers(1,&inst_vbo_ring[session->inst_ring]);
 		}
 
 			
@@ -1165,7 +1184,9 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			// Main loop 2 over DLs - for each DL that had hw-instances we built a segment
 			// in our array.  Bind the DL itself, as well as the instance pointers, and do an instanced-draw.
 
-			setup_tex_spec(NULL, renderEncoder);
+			setup_tex_spec(NULL, session, renderEncoder);
+
+			[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:0 atIndex:BufferIndexPerInstanceData];
 
 			struct LDrawDLSegment * s;
 			for(s = segments; s < cur_segment; ++s)
@@ -1182,7 +1203,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
 //				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 
-				[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:s->inst_base atIndex:BufferIndexPerInstanceData];
+				[renderEncoder setVertexBufferOffset:s->inst_base atIndex:BufferIndexPerInstanceData];
 				// was
 //				glBindBuffer(GL_ARRAY_BUFFER,inst_vbo_ring[session->inst_ring]);
 
@@ -1243,13 +1264,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	}
 
 	// MAIN LOOP 3: sorted deferred drawing (!)
-
-	int deferredInstanceBufferLength = InstanceInputStructSize * MAX(session->sort_count, 1);
-	deferredInstanceBuffer = [MetalGPU.device newBufferWithLength:deferredInstanceBufferLength options:MTLResourceStorageModeManaged];
-	deferredInstanceBuffer.label = @"Deferred instance buffer";
-
-	// Map our instance buffer so we can write instancing data.
-	GLfloat * inst_data = (GLfloat *)deferredInstanceBuffer.contents;
+	// transparent parts
 
 	struct LDrawDLSortedInstanceLink * l;
 	if(session->sorted_head)
@@ -1274,45 +1289,25 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		
 		// Now: sort our array ascending to get far to near in eye space.
 		qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
-		
+
+		struct InstanceData instData;
+
 		// NOW we can walk our sorted array and draw each brick, 1x1.  This code is a rehash of the "draw now" 
 		// code in LDrawDLDraw and could be factored.
 		l = arr;
 		int lc;
 		for(lc = 0; lc < session->sort_count; ++lc)
 		{
-			inst_data[0] = l->transform[0];		// Note: copy on transpose to get matrix into right form!
-			inst_data[1] = l->transform[4];
-			inst_data[2] = l->transform[8];
-			inst_data[3] = l->transform[12];
-			inst_data[4] = l->transform[1];
-			inst_data[5] = l->transform[5];
-			inst_data[6] = l->transform[9];
-			inst_data[7] = l->transform[13];
-			inst_data[8] = l->transform[2];
-			inst_data[9] = l->transform[6];
-			inst_data[10] = l->transform[10];
-			inst_data[11] = l->transform[14];
-			inst_data[12] = l->transform[3];
-			inst_data[13] = l->transform[7];
-			inst_data[14] = l->transform[11];
-			inst_data[15] = l->transform[15];
-			// was
-//			int i;
-//			for(i = 0; i < 4; ++i)
-//				glVertexAttrib4f(attr_transform_x+i,l->transform[i],l->transform[4+i],l->transform[8+i],l->transform[12+i]);
+			instData.transform_x = V4Make(l->transform[0], l->transform[4], l->transform[8],  l->transform[12]);
+			instData.transform_y = V4Make(l->transform[1], l->transform[5], l->transform[9],  l->transform[13]);
+			instData.transform_z = V4Make(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
+			instData.transform_w = V4Make(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
+			copy_vec4((float *)&instData.color_current, l->color);
+			copy_vec4((float *)&instData.color_compliment, l->comp);
 
-			copy_vec4(inst_data+16,l->color);
-			copy_vec4(inst_data+20,l->comp);
-			inst_data += InstanceInputLength;
-			// was
-//			glVertexAttrib4fv(attr_color_current, l->color);
-//			glVertexAttrib4fv(attr_color_compliment, l->comp);
-			
-			[deferredInstanceBuffer didModifyRange:NSMakeRange(0, deferredInstanceBufferLength)];
-			[renderEncoder setVertexBuffer:deferredInstanceBuffer
-									offset:InstanceInputStructSize * lc
-								   atIndex:BufferIndexPerInstanceData];
+			[renderEncoder setVertexBytes:&instData
+								   length:sizeof(instData)
+								  atIndex:BufferIndexPerInstanceData];
 
 			dl = l->dl;
 			[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
@@ -1334,10 +1329,10 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			{
 				if(tptr->spec.tex_obj)
 				{
-					setup_tex_spec(&tptr->spec,renderEncoder);
+					setup_tex_spec(&tptr->spec, session, renderEncoder);
 				}
 				else 
-					setup_tex_spec(&l->spec, renderEncoder);
+					setup_tex_spec(&l->spec, session, renderEncoder);
 
 				#if WANT_SMOOTH
 				if(tptr->line_count)
@@ -1480,6 +1475,7 @@ void LDrawDLDraw(
 				}
 				inst->next = NULL;
 				++dl->instance_count;
+				++session->total_instance_count;
 
 				memcpy(inst->color,cur_color,sizeof(GLfloat)*4);
 				memcpy(inst->comp,cmp_color,sizeof(GLfloat)*4);
@@ -1496,47 +1492,17 @@ void LDrawDLDraw(
 		session->stats.num_vert_imm += dl->vrt_count;
 	#endif
 
-	// TODO: this fixes parts position error, but creates buffer every time, that is unproductive
-//	if(immediateInstanceBuffer == nil)
-	{
-		id<MTLDevice> device = MetalGPU.device;
-		immediateInstanceBuffer = [device newBufferWithLength:InstanceInputStructSize options:MTLResourceStorageModeManaged];
-		immediateInstanceBuffer.label = @"Immediate instance buffer";
-	}
+	struct InstanceData instData;
+	instData.transform_x = V4Make(transform[0], transform[4], transform[8],  transform[12]);
+	instData.transform_y = V4Make(transform[1], transform[5], transform[9],  transform[13]);
+	instData.transform_z = V4Make(transform[2], transform[6], transform[10], transform[14]);
+	instData.transform_w = V4Make(transform[3], transform[7], transform[11], transform[15]);
+	copy_vec4((float *)&instData.color_current, cur_color);
+	copy_vec4((float *)&instData.color_compliment, cmp_color);
 
-	// Map our instance buffer so we can write instancing data.
-	GLfloat * inst_data = (GLfloat *)immediateInstanceBuffer.contents;
-
-	// Push current transform & color into attribute state.
-	inst_data[0] = transform[0];		// Note: copy on transpose to get matrix into right form!
-	inst_data[1] = transform[4];
-	inst_data[2] = transform[8];
-	inst_data[3] = transform[12];
-	inst_data[4] = transform[1];
-	inst_data[5] = transform[5];
-	inst_data[6] = transform[9];
-	inst_data[7] = transform[13];
-	inst_data[8] = transform[2];
-	inst_data[9] = transform[6];
-	inst_data[10] = transform[10];
-	inst_data[11] = transform[14];
-	inst_data[12] = transform[3];
-	inst_data[13] = transform[7];
-	inst_data[14] = transform[11];
-	inst_data[15] = transform[15];
-	// was
-//	int i;
-//	for(i = 0; i < 4; ++i)
-//		glVertexAttrib4f(attr_transform_x+i,transform[i],transform[4+i],transform[8+i],transform[12+i]);
-		
-	copy_vec4(inst_data+16,cur_color);
-	copy_vec4(inst_data+20,cmp_color);
-	// was
-//	glVertexAttrib4fv(attr_color_current, cur_color);
-//	glVertexAttrib4fv(attr_color_compliment, cmp_color);
-
-	[immediateInstanceBuffer didModifyRange:NSMakeRange(0, InstanceInputStructSize)];
-	[renderEncoder setVertexBuffer:immediateInstanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
+	[renderEncoder setVertexBytes:&instData
+						   length:sizeof(instData)
+						  atIndex:BufferIndexPerInstanceData];
 
 	assert(dl->tex_count > 0);
 	
@@ -1559,7 +1525,7 @@ void LDrawDLDraw(
 	{
 		// Special case: one untextured mesh - just draw.
 
-		setup_tex_spec(NULL, renderEncoder);
+		setup_tex_spec(NULL, session, renderEncoder);
 
 		#if WANT_SMOOTH
 		if(tptr->line_count)
@@ -1600,10 +1566,10 @@ void LDrawDLDraw(
 		{
 			if(tptr->spec.tex_obj)
 			{
-				setup_tex_spec(&tptr->spec, renderEncoder);
+				setup_tex_spec(&tptr->spec, session, renderEncoder);
 			}
 			else 
-				setup_tex_spec(spec, renderEncoder);
+				setup_tex_spec(spec, session, renderEncoder);
 
 			#if WANT_SMOOTH			
 			if(tptr->line_count)
@@ -1635,7 +1601,7 @@ void LDrawDLDraw(
 			#endif		
 		}
 
-		setup_tex_spec(spec, renderEncoder);
+		setup_tex_spec(spec, session, renderEncoder);
 	}
 	
 }//end LDrawDLDraw

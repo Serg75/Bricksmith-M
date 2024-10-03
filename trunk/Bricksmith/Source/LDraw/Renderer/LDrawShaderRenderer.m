@@ -25,7 +25,7 @@
 //	"transform_w",
 //	"color_current",
 //	"color_compliment",
-//	"texture_mix", NULL };
+//	"textureMix", NULL };
 
 // moved to header
 //// Drag handle linked list.  When we get drag handle requests we transform the location into eye-space (to 'capture' the 
