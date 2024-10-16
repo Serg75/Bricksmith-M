@@ -821,12 +821,23 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	#endif	
 	
 	// Generate and map a VBO for our mesh data.
-	glGenBuffers(1,&dl->geo_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, dl->geo_vbo);
-	glBufferData(GL_ARRAY_BUFFER, total_vertices * sizeof(GLfloat) * VERT_STRIDE, NULL, GL_STATIC_DRAW);
-	GLfloat * buf_ptr = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+	id<MTLBuffer> vertexBuffer = [MetalGPU.device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
+	vertexBuffer.label = @"Vertex buffer";
+
+	dl->vertexBuffer = vertexBuffer;
+
+	volatile float * buf_ptr = (volatile float *)[dl->vertexBuffer contents];
+
+	// was
+
+//	glGenBuffers(1,&dl->geo_vbo);
+//	glBindBuffer(GL_ARRAY_BUFFER, dl->geo_vbo);
+//	glBufferData(GL_ARRAY_BUFFER, total_vertices * sizeof(GLfloat) * VERT_STRIDE, NULL, GL_STATIC_DRAW);
+//	GLfloat * buf_ptr = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+
 	int cur_v = 0;
-	struct LDrawDLPerTex * cur_tex = dl->texes;	
+	struct LDrawDLPerTex * cur_tex = dl->texes;
 	dl->flags = ctx->flags;
 	
 	// Now: walk our building textures - for each non-empty one, we will copy it into
@@ -877,8 +888,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		++cur_tex;
 	}
 	
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-	glBindBuffer(GL_ARRAY_BUFFER,0);
+//	glUnmapBuffer(GL_ARRAY_BUFFER);
+//	glBindBuffer(GL_ARRAY_BUFFER,0);
 
 	// Release the BDP that contains all of the build-related junk.
 	LDrawBDPDestroy(ctx->alloc);
@@ -1137,11 +1148,19 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //						glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 					#else
 					if(tptr->line_count)
-						glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
-					if(tptr->tri_count)
-						glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
-					if(tptr->quad_count)
-						glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
+						[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+										  vertexStart:tptr->line_off
+										  vertexCount:tptr->line_count];
+						// was
+//						glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
+					if(tptr->tri_count && !isWireFrameMode)
+						[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+										  vertexStart:tptr->tri_off
+										  vertexCount:tptr->tri_count];
+						// was
+//						glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
+//					if(tptr->quad_count)
+//						glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
 					#endif					
 				}
 			}
@@ -1238,11 +1257,21 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //					glDrawElementsInstancedARB(GL_QUADS,s->dl->quad_count,GL_UNSIGNED_INT,idx_null+s->dl->quad_off, s->inst_count);
 				#else
 				if(s->dl->line_count)
-					glDrawArraysInstancedARB(GL_LINES,s->dl->line_off,s->dl->line_count, s->inst_count);
-				if(s->dl->tri_count)
-					glDrawArraysInstancedARB(GL_TRIANGLES,s->dl->tri_off,s->dl->tri_count, s->inst_count);
-				if(s->dl->quad_count)
-					glDrawArraysInstancedARB(GL_QUADS,s->dl->quad_off,s->dl->quad_count, s->inst_count);
+				   [renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+									 vertexStart:s->dl->line_off
+									 vertexCount:s->dl->line_count
+								   instanceCount:s->inst_count];
+				// was
+//					glDrawArraysInstancedARB(GL_LINES,s->dl->line_off,s->dl->line_count, s->inst_count);
+				if(s->dl->tri_count && !isWireFrameMode)
+					[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+									  vertexStart:s->dl->tri_off
+									  vertexCount:s->dl->tri_count
+									instanceCount:s->inst_count];
+				 // was
+//					glDrawArraysInstancedARB(GL_TRIANGLES,s->dl->tri_off,s->dl->tri_count, s->inst_count);
+//				if(s->dl->quad_count)
+//					glDrawArraysInstancedARB(GL_QUADS,s->dl->quad_off,s->dl->quad_count, s->inst_count);
 				#endif
 			}
 
@@ -1357,11 +1386,19 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //					glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 				#else
 				if(tptr->line_count)
-					glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
-				if(tptr->tri_count)
-					glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
-				if(tptr->quad_count)
-					glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
+					[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+									  vertexStart:tptr->line_off
+									  vertexCount:tptr->line_count];
+				//was
+//					glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
+				if(tptr->tri_count && !isWireFrameMode)
+					[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+									  vertexStart:tptr->tri_off
+									  vertexCount:tptr->tri_count];
+				//was
+//					glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
+//				if(tptr->quad_count)
+//					glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
 				#endif				
 			}
 			++l;
@@ -1550,11 +1587,19 @@ void LDrawDLDraw(
 //			glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 		#else
 		if(tptr->line_count)
-			glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
-		if(tptr->tri_count)
-			glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
-		if(tptr->quad_count)
-			glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+							  vertexStart:tptr->line_off
+							  vertexCount:tptr->line_count];
+		// was
+//			glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
+		if(tptr->tri_count && !isWireFrameMode)
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+							  vertexStart:tptr->tri_off
+							  vertexCount:tptr->tri_count];
+		// was
+//			glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
+//		if(tptr->quad_count)
+//			glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
 		#endif		
 	}
 	else
@@ -1593,11 +1638,19 @@ void LDrawDLDraw(
 //				glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
 			#else
 			if(tptr->line_count)
-				glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
-			if(tptr->tri_count)
-				glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
-			if(tptr->quad_count)
-				glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
+				[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+								  vertexStart:tptr->line_off
+								  vertexCount:tptr->line_count];
+			// was
+//				glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
+			if(tptr->tri_count && !isWireFrameMode)
+				[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+								  vertexStart:tptr->tri_off
+								  vertexCount:tptr->tri_count];
+			// was
+//				glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
+//			if(tptr->quad_count)
+//				glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
 			#endif		
 		}
 
