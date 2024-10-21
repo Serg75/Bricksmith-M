@@ -52,23 +52,22 @@ BOOL isWireFrameMode = NO;
 	(As an example, when drawing the plate with red wheels, the red color of the wheels and the shape of the part are invariant;
 	the current color used for the plate and the location of the whole part are per-instance data.)
 	
-	"Attribute" instancing means changing the instance data by changing GL attributes.  The theory is that the GL can change attribute
-	data faster than uniform data, so changing the current location and color via attributes should be quite cheap.
-	
-	"Hardware" instancing implies using one of the native GL instancing APIs like GL_ARB_instanced_arrays.  In this case, we put our instance
-	attributes into their own VBO (of consecutive interleaved "instances"), give the GL the base pointer and tell it to draw N copies of
-	our mesh, using the instanced data from the VBO.
-	
-	When hardware instancing works right, it can lead to much higher throughput than attributes, which are faster in turn than uniforms.
+	"Immediate" instancing means changing per-instance data on the fly for every instance draw.
+
+	"Hardware" instancing implies using instancing API. In this case, we put our instance attributes into their own buffer
+	(of consecutive interleaved "instances"), give Metal the base pointer and tell it to draw N copies of our mesh,
+	using the instanced data from the buffer.
+
+	When hardware instancing works right, it can lead to much higher throughput than immediate mode, which are faster in turn than uniforms.
 	In practice, this is hugely dependent on what driver we're running on.
 	
 	DEFERRING DRAWING FOR INSTANCING
 	
-	When a DL can be drawn via instancing (either attribute or hw) it is not drawn - it is saved on the session; when the session is
-	destroyed we draw out every DL we have deferred, in order (e.g. all instances of one DL) to avoid swapping VBOs.
+	When a DL can be drawn via hardware instancing, it is not drawn - it is saved on the session; when the session is
+	destroyed we draw out every DL we have deferred, in order (e.g. all instances of one DL).
 	
-	During that deferred draw-out we either build a hw instance list or simply draw.
-	
+	During that deferred draw-out we either build a hardware instance list or simply draw.
+
 	DEFERRED DARWING FOR Z SORTING
 	
 	When a DL does not have to be drawn immediately and has translucency, we always try to save it to the sorted list.
@@ -80,16 +79,15 @@ BOOL isWireFrameMode = NO;
 
 #define WANT_STATS 0
 
-#define VERT_STRIDE 10								// Stride of our vertices - we always write X Y Z	NX NY NZ		R G B A
-#define INST_CUTOFF 0								// Minimum instances to use hw case, which has higher overhead to set up.
-#define INST_MAX_COUNT (1024 * 128)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
-#define INST_RING_BUFFER_COUNT 1					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
-#define MODE_FOR_INST_STREAM GL_DYNAMIC_STATIC		// VBO mode for instancing.
+#define VERT_STRIDE 10					// Stride of our vertices - we always write  X Y Z   NX NY NZ   R G B A
+#define INST_CUTOFF 0					// Minimum instances to use hardware case, which has higher overhead to set up.
+#define INST_MAX_COUNT (1024 * 128)		// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
+#define INST_RING_BUFFER_COUNT 1		// Number of buffers to rotate for hardware instancing - doesn't actually help, it turns out.
 
 enum {
 	dl_has_alpha = 1,		// At least one prim in this DL has translucency.
 	dl_has_meta = 2,		// At least one prim in this DL uses a meta-color and thus MIGHT pick up translucency from parent state during draw.
-	dl_has_tex = 4,			// At lesat one real texture is used.
+	dl_has_tex = 4,			// At least one real texture is used.
 	dl_needs_destroy = 8	// Destroy after drawing - ptr is only around because it is queued!
 };
 
@@ -114,35 +112,6 @@ struct TexturePlaneData _noTexPlaneData = {.planeS = {0}, .planeT = {0}};
 id<MTLTexture>	_clearTexture;
 
 
-//========== get_instance_cutoff =================================================
-//
-// Purpose:	Determine whether we can use hardware instancing.
-//
-// Notes:	Pre-DX10 Mac GPUs on older operating systems don't support instancing;
-//			This routine checks for the GL_ARB_instanced_arrays extension string,
-//			which will always be present since we are using legacy 2.1-style
-//			contexts. (If we go to the core profile we'll need to also look at the
-//			GL version.)
-//
-//			If the hardware won't instance, we simply set the instancing min limit
-//			to an insanely high limit so that we never hit that case.
-//
-//================================================================================
-static int	get_instance_cutoff()
-{
-	return INST_CUTOFF;
-//	static int has_instancing = -1;
-//	if(has_instancing == -1)
-//	{
-//		const GLubyte * ext_str = glGetString(GL_EXTENSIONS);
-//		if(strstr((const char *) ext_str,"GL_ARB_instanced_arrays") != NULL)
-//			has_instancing = 1;
-//		else
-//			has_instancing = 0;
-//	}
-//	return has_instancing ? INST_CUTOFF : INT32_MAX;
-}
-
 static void copy_vec3(GLfloat d[3], const GLfloat s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
 static void copy_vec4(GLfloat d[4], const GLfloat s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
 
@@ -162,7 +131,7 @@ struct LDrawDLPerTex {
 	GLuint					tri_count;
 };
 
-// DL draw instance: this stores one request to draw an un-textured DL for intsancing.
+// DL draw instance: this stores one request to draw an un-textured DL for instancing.
 // current color/compliment color, transform, and a next ptr to build a linked list.
 struct LDrawDLInstance {
 	struct LDrawDLInstance *next;
@@ -974,13 +943,13 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		GLfloat * inst_data = inst_base;
 		int		  inst_remain = INST_MAX_COUNT;
 
-		// Main loop 1: we will walk every instanced DL and either accumulate its instances (for hardware instancing) or just draw now
-		// (For attribute instancing).
+		// Main loop 1: we will walk every instanced DL and either accumulate its instances (for hardware instancing)
+		// or just draw now (for immediate instancing).
 		while(session->dl_head)
 		{
 			dl = session->dl_head;
 
-			if(dl->instance_count >= get_instance_cutoff() && inst_remain >= dl->instance_count)
+			if(dl->instance_count >= INST_CUTOFF && inst_remain >= dl->instance_count)
 			{
 				// If we have capacity for hw instancing and this DL is used enough, create a segment record and fill it out.
 				cur_segment->vertexBuffer = dl->vertexBuffer;
@@ -1003,8 +972,8 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					session->stats.num_work_ins += dl->vrt_count;
 				#endif
 			
-				// Now walk the instance list, copying the instances into the instance VBO one by one.
-			
+				// Now walk the instance list, copying the instances into the instance buffer one by one.
+
 				for (inst = dl->instance_head; inst; inst = inst->next)
 				{			
 					inst_data[0] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
@@ -1052,10 +1021,22 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //				glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
 //				glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
 
-				// Now walk the instance list...push instance data into attributes in immediate mode and draw.
+				// Now walk the instance list...push instance data as set of bytes (which is faster than setting a real buffer) and draw.
 				for(inst = dl->instance_head; inst; inst = inst->next)
 				{
 				
+					struct InstanceData instData;
+					instData.transform_x = V4Make(inst->transform[0], inst->transform[4], inst->transform[8],  inst->transform[12]);
+					instData.transform_y = V4Make(inst->transform[1], inst->transform[5], inst->transform[9],  inst->transform[13]);
+					instData.transform_z = V4Make(inst->transform[2], inst->transform[6], inst->transform[10], inst->transform[14]);
+					instData.transform_w = V4Make(inst->transform[3], inst->transform[7], inst->transform[11], inst->transform[15]);
+					copy_vec4((float *)&instData.color_current, inst->color);
+					copy_vec4((float *)&instData.color_compliment, inst->comp);
+
+					[renderEncoder setVertexBytes:&instData
+										   length:sizeof(instData)
+										  atIndex:BufferIndexPerInstanceData];
+
 //					int i;
 //					for(i = 0; i < 4; ++i)
 //						glVertexAttrib4f(attr_transform_x+i,inst->transform[i],inst->transform[4+i],inst->transform[8+i],inst->transform[12+i]);
@@ -1063,7 +1044,9 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //					glVertexAttrib4fv(attr_color_compliment, inst->comp);
 			
 					struct LDrawDLPerTex * tptr = dl->texes;
-					
+
+					setup_tex_spec(NULL, session, renderEncoder);
+
 					#if WANT_SMOOTH
 					if(tptr->line_count)
 						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
