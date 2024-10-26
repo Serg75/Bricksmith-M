@@ -87,8 +87,6 @@ static Size2 NSSizeToSize2(NSSize size)
 	self.framebufferOnly = YES;
 	self.sampleCount = 1;
 
-//	self.presentsWithTransaction = YES;
-
 	self.paused = YES;
 	self.enableSetNeedsDisplay = YES;
 
@@ -110,34 +108,6 @@ static Size2 NSSizeToSize2(NSSize size)
 	//---------- Initialize instance variables ---------------------------------
 
 	[self setAcceptsFirstResponder:YES];
-
-//	// Set up our OpenGL context. We need to base it on a shared context so that
-//	// display-list names can be shared globally throughout the application.
-//	context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat
-//										 shareContext:[LDrawApplication sharedOpenGLContext]];
-//	[self setOpenGLContext:context];
-//	[context setView:self]; //documentation says to do this, but it generates an error. Weird.
-//	[[self openGLContext] makeCurrentContext];
-
-//	[self setPixelFormat:pixelFormat];
-
-	// Multithreading engine
-	// It turned out to be as miserable a failure as my home-spun attempts.
-	// Three times longer and display corruption to boot. Bricksmith is
-	// apparently allergic to multithreading of any kind, and darn if I know
-	// why.
-//	CGLEnable(CGLGetCurrentContext(), kCGLCEMPEngine);
-
-//	// Prevent "tearing"
-//	GLint   swapInterval    = 1;
-//	[[self openGLContext] setValues: &swapInterval
-//					   forParameter: NSOpenGLCPSwapInterval ];
-
-	// GL surface should be under window to allow Cocoa overtop.
-	// Huge FPS hit--over 40%! Don't do it!
-//	GLint   surfaceOrder    = -1;
-//	[[self openGLContext] setValues: &surfaceOrder
-//					   forParameter: NSOpenGLCPSurfaceOrder ];
 
 	renderer = [[LDrawRenderer alloc] initWithBounds:NSSizeToSize2([self bounds].size)];
 	[renderer setDelegate:self withScroller:self];
@@ -173,54 +143,6 @@ static Size2 NSSizeToSize2(NSSize size)
 	[self addTrackingArea:trackingArea];
 
 }//end internalInit
-
-
-//========== prepareOpenGL =====================================================
-//
-// Purpose:		The context is all set up; this is where we prepare our OpenGL
-//				state.
-//
-//==============================================================================
-- (void) prepareOpenGL
-{
-//	[super prepareOpenGL];
-	
-	[self takeBackgroundColorFromUserDefaults]; //glClearColor()
-	
-}//end prepareOpenGL
-
-
-#pragma mark -
-#pragma mark DRAWING
-#pragma mark -
-
-// moved to renderer
-
-//========== drawRect: =========================================================
-//
-// Purpose:        Draw the file into the view.
-//
-//==============================================================================
-//- (void) drawRect:(NSRect)rect
-//{
-//    [self draw];
-//        
-//}//end drawRect:
-
-
-//========== draw ==============================================================
-//
-// Purpose:        Draw the LDraw content of the view.
-//
-//==============================================================================
-//- (void) draw
-//{
-////    [self lockContextAndExecute:^
-////    {
-//        [self->renderer drawInMTKView:self];
-////    }];
-//    
-//}//end draw
 
 
 #pragma mark -
@@ -288,78 +210,6 @@ static Size2 NSSizeToSize2(NSSize size)
 //	CGLUnlockContext([[self openGLContext] CGLContextObj]);
 	
 }//end setViewingAngle:
-
-
-#pragma mark -
-#pragma mark RENDERER DELEGATE
-#pragma mark -
-
-
-//========== LDrawRendererNeedsFlush: ========================================
-//
-// Purpose:		Drawing is complete; do a flush.
-//
-// Notes:		This is implemented as a callback because flushing might be a
-//				time-sensitive operation, and we want to do the framerate
-//				calculation (in the renderer) after drawing is done. Otherwise,
-//				we'd just do it in -[LDrawOpenGLView draw].
-//
-//==============================================================================
-- (void) LDrawRendererNeedsFlush:(LDrawRenderer*)renderer
-{
-//	[[self openGLContext] flushBuffer];
-}
-
-
-#pragma mark -
-#pragma mark NOTIFICATIONS
-#pragma mark -
-
-
-//========== renewGState =======================================================
-//
-// Purpose:		NSOpenGLViews' content is drawn directly by a hardware surface
-//				that, when being moved, is moved before the surrounding regular
-//				window content gets drawn and flushed. This causes an annoying
-//				flicker, especially with NSSplitViews. Overriding this method
-//				gives us a chance to compensate for this problem.
-//
-//==============================================================================
-//- (void) renewGState
-//{
-//	NSWindow *window = [self window];
-//	
-//	// Disabling screen updates should allow the redrawing of the surrounding
-//	// window to catch up with the new position of the OpenGL hardware surface.
-//	//
-//	// Note: In Apple's "GLChildWindow" sample code, Apple put this in
-//	//		 -splitViewWillResizeSubviews:. But that doesn't actually solve the
-//	//		 problem. Putting it here *does*.
-//	//
-//	[window disableScreenUpdatesUntilFlush];
-//	
-//	[super renewGState];
-//	
-//}//end renewGState
-
-
-//========== update ============================================================
-//
-// Purpose:        This method is called by the AppKit whenever our drawable area
-//                changes somehow. Ordinarily, we wouldn't be concerned about what
-//                happens here. However, calling -update is highly thread-unsafe,
-//                so we guard the context with a mutex here so as to avoid truly
-//                hideous system crashes.
-//
-//==============================================================================
-//- (void) update
-//{
-//    [self lockContextAndExecute:^
-//    {
-//        [super update];
-//    }];
-//
-//}//end update
 
 
 #pragma mark -

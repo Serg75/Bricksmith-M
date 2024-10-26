@@ -27,20 +27,6 @@
 #import "MetalGPU.h"
 #import "MetalCommonDefinitions.h"
 
-// This list of attribute names matches the text of the GLSL attribute declarations -
-// and its order must match the attr_position...array in the .h.
-static const char * attribs[] = {
-	"position",
-	"normal",
-	"color",
-	"transform_x",
-	"transform_y",
-	"transform_z",
-	"transform_w",
-	"color_current",
-	"color_compliment",
-	"texture_mix", NULL };
-
 
 @implementation LDrawShaderRenderer (Metal)
 

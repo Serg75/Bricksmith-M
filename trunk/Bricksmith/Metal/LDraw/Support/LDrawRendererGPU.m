@@ -3,10 +3,10 @@
 //	LDrawRendererGPU.m
 //	Bricksmith
 //
-//	Purpose:	Draws an LDrawFile with OpenGL.
+//	Purpose:	Draws an LDrawFile with Metal.
 //
 //				This class is responsible for all platform-independent logic,
-//				including math and OpenGL operations. It also contains a number
+//				including math and Metal operations. It also contains a number
 //				of methods which would be called in response to events; it is
 //				the responsibility of the platform layer to receive and
 //				interpret those events and pass them to us.
@@ -16,8 +16,6 @@
 //				is down. The platform layer figures out stuff like that, and
 //				more importantly, figures out what it *means*. The *meaning* is
 //				what the renderer's methods care about.
-//
-//	Note:		This file uses manual reference counting.
 //
 //	Info:		This category contains Metal-related code.
 //
@@ -79,8 +77,7 @@ struct FragmentUniform {
 
 //========== prepareMetal ======================================================
 //
-// Purpose:		The context is all set up; this is where we prepare our OpenGL
-//				state.
+// Purpose:	The context is all set up; this is where we prepare our Metal state.
 //
 //==============================================================================
 - (void) prepareMetal
@@ -88,12 +85,11 @@ struct FragmentUniform {
 	id<MTLDevice> device = MetalGPU.device;
 	_commandQueue = [device newCommandQueue];
 
-	// Load shaders from your Metal shader library
+	// Load shaders from Metal shader library
 	id<MTLLibrary> defaultLibrary = [device newDefaultLibrary];
 	id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexShader"];
 	id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentShader"];
 
-	// Setup vertex descriptor
 	MTLVertexDescriptor *vertexDescriptor = [MTLVertexDescriptor new];
 
 	vertexDescriptor.attributes[VertexAttributePosition].format = MTLVertexFormatFloat3;
@@ -146,49 +142,11 @@ struct FragmentUniform {
 	_vertexUniformBuffer.label = @"Uniform buffer";
 
 
-//	glEnable(GL_BLEND);
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glEnable(GL_MULTISAMPLE); //antialiasing
-
-//	glEnable(GL_TEXTURE_2D);
-//	glEnable(GL_TEXTURE_GEN_S);
-//	glEnable(GL_TEXTURE_GEN_T);
-
-	//
-	// Define the lighting.
-	//
-
-	// Our light position is transformed by the modelview matrix. That means
-	// we need to have a standard model matrix loaded to get our light to
-	// land in the right place! But our modelview might have already been
-	// affected by someone calling -setViewOrientation:. So we restore the
-	// default here.
-//	glMatrixMode(GL_MODELVIEW);
-//	glLoadIdentity();
-//	glRotatef(180,1,0,0); //convert to standard, upside-down LDraw orientation.
-
-	//---------- Material ------------------------------------------------------
-
-//	GLfloat specular[4] = { 0.0, 0.0, 0.0, 1.0 };
-//	GLfloat shininess   = 64.0; // range [0-128]
-
-//	glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR,	specular );
-//	glMaterialf(  GL_FRONT_AND_BACK, GL_SHININESS,	shininess );
-
-//	glShadeModel(GL_SMOOTH);
-//	glEnable(GL_NORMALIZE);
-//	glEnable(GL_COLOR_MATERIAL);
-
-
 	//---------- Light Model ---------------------------------------------------
 
 	// The overall scene has ambient light to make the lighting less harsh. But
 	// too much ambient light makes everything washed out.
-	Tuple4 lightModelAmbient    = {0.3, 0.3, 0.3, 0.0};
-
-//	glLightModelf( GL_LIGHT_MODEL_TWO_SIDE,		GL_FALSE );
-//	glLightModelfv(GL_LIGHT_MODEL_AMBIENT,		lightModelAmbient);
-
+	Tuple4 lightModelAmbient = { 0.3, 0.3, 0.3, 0.0 };
 
 	//---------- Lights --------------------------------------------------------
 
@@ -199,18 +157,14 @@ struct FragmentUniform {
 	Tuple4 position1 = { 0,  0.0,  1.0, 0 };
 
 	// Lessening the diffuseness also makes lighting less extreme.
-	Tuple4 light0Ambient     = { 0.0, 0.0, 0.0, 1.0 };
-	Tuple4 light0Diffuse     = { 0.8, 0.8, 0.8, 1.0 };
-	Tuple4 light0Specular    = { 0.0, 0.0, 0.0, 1.0 };
-
-	const Point4 ZeroPointZ4 = { 0.0, 0.0, 0.0, 0.0 };
+	Tuple4 lightDiffuse = { 0.8, 0.8, 0.8, 1.0 };
 
 	struct LightSourceParameters light_source0;
 	light_source0.position = position0;
-	light_source0.diffuse = light0Diffuse;
+	light_source0.diffuse = lightDiffuse;
 	struct LightSourceParameters light_source1;
 	light_source1.position = position1;
-	light_source1.diffuse = light0Diffuse;
+	light_source1.diffuse = lightDiffuse;
 	struct LightModelParameters lightModel;
 	lightModel.ambient = lightModelAmbient;
 	struct FragmentUniform fragmentUniform;
@@ -219,35 +173,6 @@ struct FragmentUniform {
 	fragmentUniform.light_model = lightModel;
 
 	_fragmentUniformBuffer = [device newBufferWithBytes:&fragmentUniform length:sizeof(fragmentUniform) options:MTLResourceStorageModeShared];
-
-//	//normal forward light
-//	glLightfv(GL_LIGHT0, GL_POSITION, position0);
-//	glLightfv(GL_LIGHT0, GL_AMBIENT,  light0Ambient);
-//	glLightfv(GL_LIGHT0, GL_DIFFUSE,  light0Diffuse);
-//	glLightfv(GL_LIGHT0, GL_SPECULAR, light0Specular);
-//
-//	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION,	1.0);
-//	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION,		0.0);
-//	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION,	0.0);
-//
-//	//opposing light to illuminate backward normals.
-//	glLightfv(GL_LIGHT1, GL_POSITION, position1);
-//	glLightfv(GL_LIGHT1, GL_AMBIENT,  light0Ambient);
-//	glLightfv(GL_LIGHT1, GL_DIFFUSE,  light0Diffuse);
-//	glLightfv(GL_LIGHT1, GL_SPECULAR, light0Specular);
-//
-//	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION,	1.0);
-//	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION,		0.0);
-//	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION,	0.0);
-
-//	glEnable(GL_LIGHTING);
-//	glEnable(GL_LIGHT0);
-//	glEnable(GL_LIGHT1);
-
-
-	// Now that the light is positioned where we want it, we can restore the
-	// correct viewing angle.
-	[self setViewOrientation:self->viewOrientation];
 
 }//end prepareMetal
 
@@ -268,22 +193,19 @@ struct FragmentUniform {
 
 }//end mtkView:drawableSizeWillChange:
 
+
 #pragma mark -
 #pragma mark DRAWING
 #pragma mark -
 
-//========== draw ==============================================================
+//========== drawInMTKView: ====================================================
 //
 // Purpose:		Draw the LDraw content of the view.
-//
-// Notes:		This method is, in theory at least, as thread-safe as Apple's
-//				OpenGL implementation is. Which is to say, not very much.
 //
 //==============================================================================
 - (void) drawInMTKView:(nonnull MTKView *)view
 {
 	NSDate			*startTime			= nil;
-	NSUInteger		options 			= DRAW_NO_OPTIONS;
 	NSTimeInterval	drawTime			= 0;
 	BOOL			considerFastDraw	= NO;
 	
@@ -310,24 +232,19 @@ struct FragmentUniform {
 	}
 #endif //DEBUG_DRAWING
 	
-//	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
-//	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
-//	assert(glIsEnabled(GL_VERTEX_ARRAY));
-//	assert(glIsEnabled(GL_NORMAL_ARRAY));
-//	assert(glIsEnabled(GL_COLOR_ARRAY));
-
-	id<MTLCommandBuffer> commandBuffer;
-
-	commandBuffer = [_commandQueue commandBuffer];
+	id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 	commandBuffer.label = @"Drawable Command Buffer";
 	if (!commandBuffer) {
 		return;
 	}
 
 	id<CAMetalDrawable> currentDrawable = view.currentDrawable;
-
-	// Skip rendering the frame if the current drawable is nil.
 	if (!currentDrawable) {
+		return;
+	}
+
+	MTLRenderPassDescriptor *renderPassDescriptor = view.currentRenderPassDescriptor;
+	if (renderPassDescriptor == nil) {
 		return;
 	}
 
@@ -336,16 +253,6 @@ struct FragmentUniform {
 	NSColor *bgColor = [NSColor.controlBackgroundColor
 						colorUsingColorSpace: [NSColorSpace deviceRGBColorSpace]];
 
-	// Obtain a render pass descriptor generated from the view's drawable textures.
-	MTLRenderPassDescriptor *renderPassDescriptor = view.currentRenderPassDescriptor;
-
-	// If you obtained a valid render pass descriptor, render to the drawable. Otherwise, skip
-	// any rendering for this frame because there is no drawable to draw to.
-	if (renderPassDescriptor == nil) {
-		return;
-	}
-
-	// Create a depth texture descriptor
 	MTLTextureDescriptor *depthTextureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
 																									  width:view.drawableSize.width
 																									 height:view.drawableSize.height
@@ -353,12 +260,11 @@ struct FragmentUniform {
 	depthTextureDescriptor.usage = MTLTextureUsageRenderTarget;
 	depthTextureDescriptor.storageMode = MTLStorageModePrivate;
 
-	// Create the depth texture
 	id<MTLTexture> depthTexture = [MetalGPU.device newTextureWithDescriptor:depthTextureDescriptor];
 
-	renderPassDescriptor.colorAttachments[0].texture = currentDrawable.texture; // 3
-	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear; // 4
-	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore; // ???
+	renderPassDescriptor.colorAttachments[0].texture = currentDrawable.texture;
+	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 	renderPassDescriptor.colorAttachments[0]
 		.clearColor = MTLClearColorMake(bgColor.redComponent, bgColor.greenComponent, bgColor.blueComponent, 1.0);
 
@@ -401,24 +307,12 @@ struct FragmentUniform {
 
 	// DRAW!
 
-	LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc]
-								 initWithEncoder:renderEncoder
-								 scale:[self zoomPercentageForGL] / 100.
-								 modelView:[camera getModelView]
-								 projection:[camera getProjection]];
+	LDrawShaderRenderer *ren = [[LDrawShaderRenderer alloc] initWithEncoder:renderEncoder
+																	  scale:[self zoomPercentageForGL] / 100.
+																  modelView:[camera getModelView]
+																 projection:[camera getProjection]];
 
 	[self->fileBeingDrawn drawSelf:ren];
-
-//	// We allow primitive drawing to leave their VAO bound to avoid setting the VAO
-//	// back to zero between every draw call.  Set it once here to avoid usign some
-//	// poor directive to draw!
-//	glBindVertexArrayAPPLE(0);
-
-//	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
-//	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
-//	assert(glIsEnabled(GL_VERTEX_ARRAY));
-//	assert(glIsEnabled(GL_NORMAL_ARRAY));
-//	assert(glIsEnabled(GL_COLOR_ARRAY));
 
 //	#if DEBUG_BOUNDING_BOX
 //	glDepthMask(GL_FALSE);
@@ -473,23 +367,14 @@ struct FragmentUniform {
 //		glPopMatrix();
 //	}
 	
-//	assert(glCheckInteger(GL_VERTEX_ARRAY_BINDING_APPLE,0));
-//	assert(glCheckInteger(GL_ARRAY_BUFFER_BINDING,0));
-//	assert(glIsEnabled(GL_VERTEX_ARRAY));
-//	assert(glIsEnabled(GL_NORMAL_ARRAY));
-//	assert(glIsEnabled(GL_COLOR_ARRAY));
-	
-	
-	[self->delegate LDrawRendererNeedsFlush:self];
-
 	[ren finishDraw];
 
 	[renderEncoder endEncoding];
 
-	//present the drawable and buffer
+	// present the drawable and buffer
 	[commandBuffer presentDrawable:currentDrawable];
 
-	//send the commands to the GPU
+	// send the commands to the GPU
 	[commandBuffer commit];
 
 	// If we just did a full draw, let's see if rotating needs to be
@@ -521,7 +406,7 @@ struct FragmentUniform {
 	}
 #endif //DEBUG_DRAWING
 	
-}//end draw:to
+}//end drawInMTKView:
 
 
 #pragma mark -
