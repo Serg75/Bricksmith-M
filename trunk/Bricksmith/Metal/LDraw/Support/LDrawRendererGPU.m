@@ -42,6 +42,9 @@
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
 
 
+id<MTLRenderPipelineState> _marqueePipelineState;
+
+
 @interface LDrawRenderer ()
 {
 	dispatch_semaphore_t _inFlightSemaphore;
@@ -174,7 +177,37 @@ struct FragmentUniform {
 
 	_fragmentUniformBuffer = [device newBufferWithBytes:&fragmentUniform length:sizeof(fragmentUniform) options:MTLResourceStorageModeShared];
 
+	[self setupMarquee: defaultLibrary];
+
 }//end prepareMetal
+
+
+//========== setupMarquee: =====================================================
+//
+// Purpose:		Prepare everything for drawing marquee.
+//
+//==============================================================================
+- (void)setupMarquee:(id<MTLLibrary>)library
+{
+	MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+	pipelineDescriptor.vertexFunction = [library newFunctionWithName:@"vertex_shader_2D"];
+	pipelineDescriptor.fragmentFunction = [library newFunctionWithName:@"fragment_shader_2D"];
+	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // TODO: view.colorPixelFormat;
+	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+
+	// Enable blending for transparency
+	pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
+	pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+	pipelineDescriptor.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
+	pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+	pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+
+	NSError *error = nil;
+	_marqueePipelineState = [MetalGPU.device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	if (!_marqueePipelineState) {
+		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+	}
+}//end setupMarquee:
 
 
 //========== mtkView:drawableSizeWillChange: ===================================
@@ -208,7 +241,7 @@ struct FragmentUniform {
 	NSDate			*startTime			= nil;
 	NSTimeInterval	drawTime			= 0;
 	BOOL			considerFastDraw	= NO;
-	
+
 //	// TODO: learn more
 //
 //	// Wait to ensure only a maximum of `AAPLMaxBuffersInFlight` frames are being processed by any
@@ -327,47 +360,9 @@ struct FragmentUniform {
 //	glDepthMask(GL_TRUE);
 //	#endif
 
-//	// Marquee selection box -- only if non-zero.
-//	if( V2BoxWidth(self->selectionMarquee) != 0 && V2BoxHeight(self->selectionMarquee) != 0)
-//	{
-//		Point2	from	= self->selectionMarquee.origin;
-//		Point2	to		= V2Make( V2BoxMaxX(selectionMarquee), V2BoxMaxY(selectionMarquee) );
-//		Point2	p1		= [self convertPointToViewport:from];
-//		Point2	p2		= [self convertPointToViewport:to];
-//
-//		Box2	vp = [self viewport];
-//		glMatrixMode(GL_PROJECTION);
-//		glPushMatrix();
-//		glLoadIdentity();
-//		glOrtho(V2BoxMinX(vp),V2BoxMaxX(vp),V2BoxMinY(vp),V2BoxMaxY(vp),-1,1);
-//		glMatrixMode(GL_MODELVIEW);
-//		glPushMatrix();
-//		glLoadIdentity();
-//
-//		glColor4f(0,0,0,1);
-//
-//		GLfloat	vertices[8] = {
-//							p1.x,p1.y,
-//							p2.x,p1.y,
-//							p2.x,p2.y,
-//							p1.x,p2.y };
-//
-//
-//		glVertexPointer(2, GL_FLOAT, 0, vertices);
-//		glDisableClientState(GL_NORMAL_ARRAY);
-//		glDisableClientState(GL_COLOR_ARRAY);
-//
-//		glDrawArrays(GL_LINE_LOOP,0,4);
-//		glEnableClientState(GL_NORMAL_ARRAY);
-//		glEnableClientState(GL_COLOR_ARRAY);
-//
-//		glMatrixMode(GL_PROJECTION);
-//		glPopMatrix();
-//		glMatrixMode(GL_MODELVIEW);
-//		glPopMatrix();
-//	}
-	
 	[ren finishDraw];
+
+	[self drawMarqueeWithEncoder:renderEncoder];
 
 	[renderEncoder endEncoding];
 
@@ -407,6 +402,55 @@ struct FragmentUniform {
 #endif //DEBUG_DRAWING
 	
 }//end drawInMTKView:
+
+
+//========== drawMarqueeWithEncoder: ===========================================
+//
+// Purpose:		Draws marquee selection box.
+//
+//==============================================================================
+- (void)drawMarqueeWithEncoder:(id<MTLRenderCommandEncoder>)renderEncoder
+{
+	static id<MTLBuffer> vertexBuffer = nil;
+
+	if (self->selectionMarquee.size.width != 0 &&
+		self->selectionMarquee.size.height != 0)
+	{
+		Point2	from	= self->selectionMarquee.origin;
+		Point2	to		= V2Make(V2BoxMaxX(self->selectionMarquee), V2BoxMaxY(self->selectionMarquee));
+		Point2	p1		= [self convertPointToViewport:from];
+		Point2	p2		= [self convertPointToViewport:to];
+		Size2	vpSize	= self.viewport.size;
+
+		GLfloat	vertices[] = {
+			p1.x, p1.y,
+			p2.x, p1.y,
+			p2.x, p2.y,
+			p1.x, p2.y,
+			p1.x, p1.y
+		};
+
+		// Setup only once
+		if (vertexBuffer == nil)
+		{
+			vertexBuffer = [MetalGPU.device newBufferWithBytes:vertices
+														length:sizeof(vertices)
+													   options:MTLResourceStorageModeShared];
+			vertexBuffer.label = @"Marquee vertex buffer";
+		}
+
+		GLfloat * vert_data = (GLfloat *)vertexBuffer.contents;
+		memcpy(vert_data, &vertices, sizeof(vertices));
+
+		[renderEncoder setRenderPipelineState:_marqueePipelineState];
+
+		[renderEncoder setVertexBuffer:vertexBuffer offset:0 atIndex:0];
+		[renderEncoder setVertexBytes:&vpSize length:sizeof(vpSize) atIndex:1];
+
+		[renderEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:5];
+	}
+	
+}//end drawMarqueeWithEncoder:
 
 
 #pragma mark -

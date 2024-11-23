@@ -195,3 +195,24 @@ fragment float4 fragmentDragHandle(const DragHandleVertexOutput in [[stage_in]],
 								   constant float4 &color [[buffer(0)]]) {
 	return color;
 }
+
+
+// MARK: - Marquee selection box -
+
+
+struct VertexOut2D {
+	float4 position [[position]];
+};
+
+vertex VertexOut2D vertex_shader_2D(const device float2 *in [[buffer(0)]],
+									constant float2 &viewportSize [[buffer(1)]],
+									unsigned int vid [[vertex_id]]) {
+	VertexOut2D out;
+	out.position = float4(in[vid] / (viewportSize * 0.5) - 1.0, 0.0, 1.0);
+	return out;
+}
+
+
+fragment float4 fragment_shader_2D() {
+	return float4(0.0, 1.0, 0.5, 0.5);
+}
