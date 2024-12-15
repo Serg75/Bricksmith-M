@@ -19,7 +19,7 @@
 // This forces quads to be subdivided into tris at creation.
 // For unindexed geometry this is a loss - we end up pushing 50% more vertices for the quad data, which hurts vertex-bound big models.
 // To revisit: once we are indexed, will quads vs tris be a wash?
-#define ONLY_USE_TRIS 1
+#define ONLY_USE_TRIS 0
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1

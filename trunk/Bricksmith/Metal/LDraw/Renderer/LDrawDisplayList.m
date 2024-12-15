@@ -21,6 +21,10 @@
 
 
 
+// Simple wireframe mode like in OpenGL version.
+// For polygons we use triangles, but for wireframe quads look better.
+#define USE_QUADS_FOR_WIREFRAME 1
+
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
 
@@ -129,6 +133,8 @@ struct LDrawDLPerTex {
 	GLuint					line_count;
 	GLuint					tri_off;
 	GLuint					tri_count;
+	GLuint					quad_off;
+	GLuint					quad_count;
 };
 
 // DL draw instance: this stores one request to draw an un-textured DL for instancing.
@@ -251,13 +257,15 @@ struct	LDrawDLBuilderVertexLink {
 
 
 // Build structure per texture.  Textures are kept in a linked list during build
-// since we don't know how many we will have.  Each type of drawing (line, tri)
+// since we don't know how many we will have.  Each type of drawing (line, tri, quad)
 // is kept in a singly linked list of vertex links so that we can copy them consecutively when done.
 struct LDrawDLBuilderPerTex {
 	struct LDrawDLBuilderPerTex *		next;
 	struct LDrawTextureSpec				spec;
 	struct LDrawDLBuilderVertexLink *	tri_head;
 	struct LDrawDLBuilderVertexLink *	tri_tail;
+	struct LDrawDLBuilderVertexLink *	quad_head;
+	struct LDrawDLBuilderVertexLink *	quad_tail;
 	struct LDrawDLBuilderVertexLink *	line_head;
 	struct LDrawDLBuilderVertexLink *	line_tail;
 };
@@ -439,6 +447,31 @@ void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLf
 		ctx->cur->tri_tail = nl;
 	}
 
+	
+#if USE_QUADS_FOR_WIREFRAME
+
+	nl = (struct LDrawDLBuilderVertexLink *)LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 4);
+	nl->next = NULL;
+	nl->vcount = 4;
+	for(i = 0; i < 4; ++i)
+	{
+		copy_vec3(nl->data+VERT_STRIDE*i  ,v+i*3);
+		copy_vec3(nl->data+VERT_STRIDE*i+3,n    );
+		copy_vec4(nl->data+VERT_STRIDE*i+6,c    );
+	}
+	
+	if(ctx->cur->quad_tail)
+	{
+		ctx->cur->quad_tail->next = nl;
+		ctx->cur->quad_tail = nl;
+	}
+	else
+	{
+		ctx->cur->quad_head = nl;
+		ctx->cur->quad_tail = nl;
+	}
+	#endif
+
 }//end LDrawDLBuilderAddQuad
 
 
@@ -497,6 +530,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 	int total_texes = 0;
 	int total_tris = 0;
+	int total_quads = 0;
 	int total_lines = 0;
 
 
@@ -507,11 +541,15 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// as the total distinct non-empty textures.
 	for(s = ctx->head; s; s = s->next)
 	{
-		if(s->tri_head || s->line_head)
+		if(s->tri_head || s->line_head || s->quad_head)
 			++total_texes;
 		for(l = s->tri_head; l; l = l->next)
 		{
 			total_tris += l->vcount;
+		}
+		for(l = s->quad_head; l; l = l->next)
+		{
+			total_quads += l->vcount;
 		}
 		for(l = s->line_head; l; l = l->next)
 		{
@@ -544,6 +582,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	dl->flags = ctx->flags;
 
 	total_tris /= 3;
+	total_quads /= 4;
 	total_lines /= 2;
 	
 	// We use one mesh for the entire DL, even if it has multiple textures.  We have to
@@ -554,7 +593,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// to our texture list.  The mesh smoother remembers this and dumps out the tris in
 	// tid order later.
 
-	struct Mesh * M = create_mesh(total_tris, 0, total_lines);
+	struct Mesh * M = create_mesh(total_tris,total_quads,total_lines);
 
 
 	// Now: walk our building textures - for each non-empty one, we will copy it into
@@ -562,7 +601,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	int ti = 0;
 	for(s = ctx->head; s; s = s->next)
 	{
-		if(s->tri_head == NULL && s->line_head == NULL)
+		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
 		if(s->spec.tex_obj != nil)
 			dl->flags |= dl_has_tex;
@@ -574,13 +613,20 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 				l->data+6,ti);
 		}
 
+		for(l = s->quad_head; l; l = l->next)
+		{
+			add_face(M,
+				l->data, l->data+10,l->data+20,l->data+30,
+				l->data+6,ti);
+		}
+
 		++ti;
 	}
 
 	ti = 0;
 	for(s = ctx->head; s; s = s->next)
 	{
-		if(s->tri_head == NULL && s->line_head == NULL)
+		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
 		if(s->spec.tex_obj != nil)
 			dl->flags |= dl_has_tex;
@@ -647,13 +693,15 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	
 	for(s = ctx->head; s; s = s->next)
 	{
-		if(s->tri_head == NULL && s->line_head == NULL)
+		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
 
 		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
 		
+		cur_tex->quad_off = quad_start[ti];
 		cur_tex->line_off = line_start[ti];
 		cur_tex->tri_off = tri_start[ti];
+		cur_tex->quad_count = quad_count[ti];
 		cur_tex->line_count = line_count[ti];
 		cur_tex->tri_count = tri_count[ti];
 		
@@ -692,9 +740,11 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// as the total distinct non-empty textures.
 	for(s = ctx->head; s; s = s->next)
 	{
-		if(s->tri_head || s->line_head)
+		if(s->tri_head || s->line_head || s->quad_head)
 			++total_texes;
 		for(l = s->tri_head; l; l = l->next)
+			total_vertices += l->vcount;
+		for(l = s->quad_head; l; l = l->next)
 			total_vertices += l->vcount;
 		for(l = s->line_head; l; l = l->next)
 			total_vertices += l->vcount;
@@ -741,7 +791,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// the tex array and push its vertices.
 	for(s = ctx->head; s; s = s->next)
 	{
-		if(s->tri_head == NULL && s->line_head == NULL)
+		if(s->tri_head == NULL && s->line_head == NULL && s->quad_head == NULL)
 			continue;
 		if(s->spec.tex_obj != nil)
 			dl->flags |= dl_has_tex;
@@ -766,6 +816,17 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		{
 			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
 			cur_tex->tri_count += l->vcount;
+			cur_v += l->vcount;
+			buf_ptr += (VERT_STRIDE * l->vcount);
+		}
+
+		cur_tex->quad_off = cur_v;
+		cur_tex->quad_count = 0;
+
+		for(l = s->quad_head; l; l = l->next)
+		{
+			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
+			cur_tex->quad_count += l->vcount;
 			cur_v += l->vcount;
 			buf_ptr += (VERT_STRIDE * l->vcount);
 		}
@@ -1323,7 +1384,22 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
 
 	struct LDrawDLPerTex * tptr = dl->texes;
-	
+
+	id<MTLBuffer> quadsCloseIndexBuffer;
+
+	// Buffer for closing quads in wireframe.
+	// Line strip used for drawing quads contours cannot close drawing figure.
+	// We close quad manually by drawing extra line from the last quad's point to the first one.
+	if (tptr->quad_count > 0 && isWireFrameMode)
+	{
+		int quadsCloseIndexBufferSize = sizeof(GLuint) * 2 * tptr->quad_count;
+		quadsCloseIndexBuffer = [MetalGPU.device newBufferWithLength:quadsCloseIndexBufferSize
+															 options:MTLResourceStorageModeShared];
+		quadsCloseIndexBuffer.label = @"Quads close index buffer";
+	}
+
+	int quadsCloseIndex = 0;
+
 	if(dl->tex_count == 1 && tptr->spec.tex_obj == nil && (spec == NULL || spec->tex_obj == nil))
 	{
 		// Special case: one untextured mesh - just draw.
@@ -1346,6 +1422,42 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 									 indexBuffer:dl->indexBuffer
 							   indexBufferOffset:idx_null+tptr->tri_off
 								   instanceCount:1];
+
+		// Draw quads in wireframe mode
+		if(tptr->quad_count && isWireFrameMode)
+		{
+			volatile GLuint * index_ptr = (volatile GLuint *)dl->indexBuffer.contents;
+
+			for (int i = 0; i < tptr->quad_count / 4; i++) {
+
+				// Draw first 3 lines of quad
+
+				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLineStrip
+										  indexCount:4
+										   indexType:MTLIndexTypeUInt32
+										 indexBuffer:dl->indexBuffer
+								   indexBufferOffset:idx_null+tptr->quad_off + i * 4
+									   instanceCount:1];
+
+				// Close quad
+
+				GLuint firstVertexIdx = tptr->quad_off + i * 4;
+				GLuint lastVertexIdx = tptr->quad_off + i * 4 + 3;
+				GLuint closingIndices[] = {index_ptr[firstVertexIdx], index_ptr[lastVertexIdx]};
+
+				NSUInteger quadsCloseOffset = quadsCloseIndex * sizeof(closingIndices);
+
+				memcpy(quadsCloseIndexBuffer.contents + quadsCloseOffset, closingIndices, sizeof(closingIndices));
+
+				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+										  indexCount:2
+										   indexType:MTLIndexTypeUInt32
+										 indexBuffer:quadsCloseIndexBuffer
+								   indexBufferOffset:quadsCloseOffset];
+
+				quadsCloseIndex++;
+			}
+		}
 		#else
 		if(tptr->line_count)
 			[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
