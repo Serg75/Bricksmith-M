@@ -3394,7 +3394,15 @@ void AppendChoicesToNewItem(
 	LDrawConditionalLine    *newConditional = [[LDrawConditionalLine alloc] init];
 	NSUndoManager           *undoManager    = [self undoManager];
 	LDrawColor              *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	
+	Point3          position        = ZeroPoint3;
+
+	if(self->lastSelectedPart)
+	{
+		position = [lastSelectedPart position];
+	}
+	[newConditional setVertex1:position];
+	[newConditional setVertex2:V3Make(position.x + 80, position.y - 80, position.z)];
+
 	[newConditional setLDrawColor:selectedColor];
 	
 	[self addStepComponent:newConditional parent:nil index:NSNotFound];
