@@ -1519,12 +1519,13 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 
 #pragma mark -
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -1543,6 +1544,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	if(recursive == YES)
 	{
 		[super flattenIntoLines:lines
+			   conditionalLines:conditionalLines
 					  triangles:triangles
 				 quadrilaterals:quadrilaterals
 						  other:everythingElse
@@ -1574,6 +1576,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		normalTransform     = Matrix3MakeNormalTransformFromProjMatrix(combinedTransform);
 		
 		[flatCopy flattenIntoLines:lines
+				  conditionalLines:conditionalLines
 						 triangles:triangles
 					quadrilaterals:quadrilaterals
 							 other:everythingElse
@@ -1584,7 +1587,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		
 	}
 
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== collectPartReport: ================================================

@@ -999,10 +999,12 @@
 	if(self->draggingDirectives)
 	{
 		NSMutableArray  *lines              = [NSMutableArray array];
+		NSMutableArray  *conditionalLines   = [NSMutableArray array];
 		NSMutableArray  *triangles          = [NSMutableArray array];
 		NSMutableArray  *quadrilaterals     = [NSMutableArray array];
 		
 		[self->draggingDirectives flattenIntoLines:lines
+								  conditionalLines:conditionalLines
 										 triangles:triangles
 									quadrilaterals:quadrilaterals
 											 other:nil
@@ -1035,10 +1037,12 @@
 		//---------- Optimize primitives ---------------------------------------
 		
 		NSMutableArray  *lines              = [NSMutableArray array];
+		NSMutableArray  *conditionalLines   = [NSMutableArray array];
 		NSMutableArray  *triangles          = [NSMutableArray array];
 		NSMutableArray  *quadrilaterals     = [NSMutableArray array];
 		
 		[dragStep flattenIntoLines:lines
+				  conditionalLines:conditionalLines
 						 triangles:triangles
 					quadrilaterals:quadrilaterals
 							 other:nil
@@ -1342,6 +1346,7 @@
 	NSArray         *steps              = [self subdirectives];
 	
 	NSMutableArray  *lines              = [NSMutableArray array];
+	NSMutableArray  *conditionalLines   = [NSMutableArray array];
 	NSMutableArray  *triangles          = [NSMutableArray array];
 	NSMutableArray  *quadrilaterals     = [NSMutableArray array];
 	NSMutableArray  *everythingElse     = [NSMutableArray array];
@@ -1360,6 +1365,7 @@
 	// If we were to only sort without flattening, we would get a 100% speed 
 	// increase. But flattening and sorting yields over 1000%. 
 	[self flattenIntoLines:lines
+		  conditionalLines:conditionalLines
 				 triangles:triangles
 			quadrilaterals:quadrilaterals
 					 other:everythingElse
@@ -1377,9 +1383,13 @@
 	}
 	
 	// Replace the original directives with the categorized steps we've created 
-	if([lines count] > 0)
+	if([lines count] > 0 || [conditionalLines count] > 0)
 	{
 		for(id directive in lines)
+		{
+			[linesStep addDirective:directive];
+		}
+		for(id directive in conditionalLines)
 		{
 			[linesStep addDirective:directive];
 		}

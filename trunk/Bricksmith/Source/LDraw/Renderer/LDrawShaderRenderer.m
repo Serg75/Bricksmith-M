@@ -512,6 +512,24 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 }//end drawLine:normal:color:
 
 
+//========== drawConditionalLine:normal:color: ===================================
+//
+// Purpose: Adds one conditional line to the current display list.
+//
+//================================================================================
+- (void) drawConditionalLine:(GLfloat *) vertices normal:(GLfloat *)normal color:(GLfloat *)color;
+{
+	assert(dl_stack_top);
+
+	GLfloat c[4];
+
+	set_color4fv(color,c);
+	
+	LDrawDLBuilderAddCondLine(dl_now,vertices,normal,c);
+
+}//end drawConditionalLine:normal:color:
+
+
 //========== drawDragHandle:withSize: ============================================
 //
 // Purpose:	This draws one drag handle using the current transform.

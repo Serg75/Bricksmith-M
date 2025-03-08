@@ -62,6 +62,7 @@ void						LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureS
 void						LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const GLfloat v[9], GLfloat n[3], GLfloat c[4]);
 void						LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLfloat n[3], GLfloat c[4]);
 void						LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4]);
+void						LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4]);
 
 // Session/drawing APIs
 void						setWireFrameMode(BOOL wireFrameMode);

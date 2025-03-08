@@ -263,6 +263,8 @@ struct LDrawDLBuilderPerTex {
 	struct LDrawDLBuilderVertexLink *	quad_tail;
 	struct LDrawDLBuilderVertexLink *	line_head;
 	struct LDrawDLBuilderVertexLink *	line_tail;
+	struct LDrawDLBuilderVertexLink *	cond_line_head;
+	struct LDrawDLBuilderVertexLink *	cond_line_tail;
 };
 
 
@@ -497,6 +499,18 @@ void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfl
 }//end LDrawDLBuilderAddLine
 
 
+//========== LDrawDLBuilderAddCondLine ===========================================
+//
+// Purpose:	Add one conditional line to the current DL builder in the current texture.
+//
+//================================================================================
+void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4])
+{
+	// Conditional lines are ignored for OpenGL implementation
+
+}//end LDrawDLBuilderAddCondLine
+
+
 //========== LDrawDLBuilderFinish ================================================
 //
 // Purpose:	Take all of the accumulated data in a DL and bake it down to one
@@ -519,6 +533,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	int total_tris = 0;
 	int total_quads = 0;
 	int total_lines = 0;
+	int total_cond_lines = 0;
 
 
 	struct LDrawDLBuilderVertexLink * l;
@@ -530,17 +545,18 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	{
 		if(s->tri_head || s->line_head || s->quad_head)
 			++total_texes;
+
 		for(l = s->tri_head; l; l = l->next)
 		{
-			total_tris += l->vcount;
+			total_tris++;
 		}
 		for(l = s->quad_head; l; l = l->next)
 		{
-			total_quads += l->vcount;
+			total_quads++;
 		}
 		for(l = s->line_head; l; l = l->next)
 		{
-			total_lines += l->vcount;
+			total_lines++;
 		}
 	}
 	
@@ -567,10 +583,6 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	struct LDrawDLPerTex * cur_tex = dl->texes;	
 	dl->flags = ctx->flags;
 
-	total_tris /= 3;
-	total_quads /= 4;
-	total_lines /= 2;
-	
 	// We use one mesh for the entire DL, even if it has multiple textures.  We have to
 	// do this because we wnat smoothing across triangles that do not share the same
 	// texture.  (Key use case: minifig faces are part textured, part untextured.)
@@ -579,7 +591,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// to our texture list.  The mesh smoother remembers this and dumps out the tris in
 	// tid order later.
 
-	struct Mesh * M = create_mesh(total_tris,total_quads,total_lines);
+	struct Mesh * M = create_mesh(total_tris,total_quads,total_lines,total_cond_lines);
 
 
 	// Now: walk our building textures - for each non-empty one, we will copy it into
@@ -652,6 +664,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	
 	int * line_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
 	int * line_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * cond_line_start = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * cond_line_count = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
 	int * tri_start		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
 	int * tri_count		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
 	int * quad_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
@@ -666,6 +680,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		0,
 		line_start,
 		line_count,
+		cond_line_start,
+		cond_line_count,
 		tri_start,
 		tri_count,
 		quad_start,

@@ -780,12 +780,13 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -795,6 +796,7 @@
 				recursive:(BOOL)recursive
 {
 	[super flattenIntoLines:lines
+		   conditionalLines:conditionalLines
 				  triangles:triangles
 			 quadrilaterals:quadrilaterals
 					  other:everythingElse
@@ -811,7 +813,7 @@
 	
 	[triangles addObject:self];
 	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== recomputeNormal ===================================================

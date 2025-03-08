@@ -1070,13 +1070,14 @@
 }
 
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive (or a copy of the directive) into the 
 //				appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -1092,6 +1093,7 @@
 	if(recursive == YES)
 	{
 		NSMutableArray  *texLines              = [NSMutableArray array];
+		NSMutableArray  *texConditionalLines   = [NSMutableArray array];
 		NSMutableArray  *texTriangles          = [NSMutableArray array];
 		NSMutableArray  *texQuadrilaterals     = [NSMutableArray array];
 		NSMutableArray  *texEverythingElse     = [NSMutableArray array];
@@ -1105,6 +1107,7 @@
 		for(LDrawDirective *directive in [self subdirectives])
 		{
 			[directive flattenIntoLines:texLines
+					   conditionalLines:texConditionalLines
 							  triangles:texTriangles
 						 quadrilaterals:texQuadrilaterals
 								  other:texEverythingElse
@@ -1128,6 +1131,9 @@
 		for(directive in texLines)
 			[self addDirective:directive];
 		
+		for(directive in texConditionalLines)
+			[self addDirective:directive];
+		
 		for(directive in texTriangles)
 			[self addDirective:directive];
 		
@@ -1142,7 +1148,7 @@
 	// ourself to the parent, not our child geometry. 
 	[everythingElse addObject:self];
 	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 @end

@@ -104,6 +104,7 @@ struct Mesh {
 	int					quad_count;			// Number of quad faces.
 	int					poly_count;			// Number of quad + triangle faces.
 	int					line_count;			// Number of line faces.  Lines must be AFTER quads and tris.
+	int					cond_line_count;	// Number of conditional line faces.  Lines must be AFTER quads and tris.
 	int					face_capacity;		// Face capacity reserved in array.
 	struct Face *		faces;				// Malloc'd face memory.
 	
@@ -824,7 +825,7 @@ static struct Vertex * circulate_any(struct Vertex * v, int * dir)
 		ret = circulate_cw(v,&did_reverse);
 	if(did_reverse)
 		*dir *= -1;
-	return ret;		
+	return ret;
 }
 
 #pragma mark -
@@ -932,17 +933,18 @@ void validate_neighbors(struct Mesh * mesh)
 
 // Create a new mesh to smooth.  You must pass in the _exact_ number of tris,
 // quads and lines that you will later pass in.
-struct Mesh *		create_mesh(int tri_count, int quad_count, int line_count)
+struct Mesh *		create_mesh(int tri_count, int quad_count, int line_count, int cond_line_count)
 {
 	struct Mesh * ret = (struct Mesh *) malloc(sizeof(struct Mesh));
 	ret->vertex_count = 0;
-	ret->vertex_capacity = tri_count*3+quad_count*4+line_count*2;
+	ret->vertex_capacity = tri_count * 3 + quad_count * 4 + line_count * 2 + cond_line_count * 4;
 	ret->vertices = (struct Vertex *) malloc(sizeof(struct Vertex) * ret->vertex_capacity);
 	
 	ret->face_count = 0;
-	ret->face_capacity = tri_count+quad_count+line_count;
+	ret->face_capacity = tri_count + quad_count + line_count + cond_line_count;
 	ret->poly_count = tri_count + quad_count;
 	ret->line_count = line_count;
+	ret->cond_line_count = cond_line_count;
 	ret->tri_count = tri_count;
 	ret->quad_count = quad_count;
 	
@@ -1320,6 +1322,9 @@ void add_creases(struct Mesh * mesh)
 	for(fi = mesh->poly_count; fi < mesh->face_count; ++fi)
 	{
 		f = mesh->faces+fi;
+#ifdef METAL
+		if (f->degree == 4) continue;	// skip conditional lines
+#endif
 		assert(f->degree == 2);
 		add_crease(mesh, f->vertex[0]->location, f->vertex[1]->location);		
 	}
@@ -1377,6 +1382,9 @@ void				finish_creases_and_join(struct Mesh * mesh)
 					assert(compare_points(p1->location,v->location)==0);
 					
 					struct Face * n = v->face;
+#ifdef METAL
+					if (n->degree == 4) continue;	// skip conditional lines
+#endif
 					struct Vertex * dst = n->vertex[CCW(n,v->index)];
 					#if WANT_INVERTS
 					struct Vertex * inv = n->vertex[ CW(n,v->index)];
@@ -1714,13 +1722,20 @@ void				write_indexed_mesh(
 							int						index_base,
 							int						out_line_starts[],
 							int						out_line_counts[],
+							int						out_cond_line_starts[],
+							int						out_cond_line_counts[],
 							int						out_tri_starts[],
 							int						out_tri_counts[],
 							int						out_quad_starts[],
 							int						out_quad_counts[])
 {
+#ifdef METAL
+	int * starts[5] = { NULL, NULL, out_line_starts, out_tri_starts, out_cond_line_starts };
+	int * counts[5] = { NULL, NULL, out_line_counts, out_tri_counts, out_cond_line_counts };
+#else
 	int * starts[5] = { NULL, NULL, out_line_starts, out_tri_starts, out_quad_starts };
 	int * counts[5] = { NULL, NULL, out_line_counts, out_tri_counts, out_quad_counts };
+#endif
 
 	volatile float * vert_ptr = io_vertex_table;
 	#if DEBUG
@@ -2037,7 +2052,8 @@ void find_and_remove_t_junctions(struct Mesh * mesh)
 		new_mesh = create_mesh(
 							mesh->tri_count + info.inserted_pts + 2 * info.split_quads,
 							mesh->quad_count - info.split_quads,
-							mesh->line_count);
+							mesh->line_count,
+							mesh->cond_line_count);
 
 		for(f = 0; f < mesh->face_count; ++f)
 		{

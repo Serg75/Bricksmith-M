@@ -230,6 +230,7 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 // Utilities
 - (BOOL) containsReferenceTo:(NSString *)name;
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse

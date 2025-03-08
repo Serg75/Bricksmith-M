@@ -78,11 +78,13 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);			// Cleanup function ass
 - (void) pushTexture:(struct LDrawTextureSpec *)tex_spec;
 - (void) popTexture;
 
-// Raw drawing APIs to push one quad/tri/line.  Vertices are consecutive float verts, e.g. 12 for quad, 9 for tri, 6 for line/
+// Raw drawing APIs to push one quad/tri/line/cond_line.
+// Vertices are consecutive float verts, e.g. 12 for quad/cond_line, 9 for tri, 6 for line
 // Color can be null to use the current color.  Normal is a float[3] normal ptr.
 - (void) drawQuad:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
 - (void) drawTri:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
 - (void) drawLine:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
+- (void) drawConditionalLine:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
 
 @end
 
