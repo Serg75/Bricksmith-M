@@ -36,8 +36,6 @@ const int InstanceInputLength = 24;
 // The size in bytes of InstanceInput struct declared in Metal shader
 const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
 
-BOOL isWireFrameMode = NO;
-
 
 /*
 
@@ -279,6 +277,84 @@ struct	LDrawDLBuilder {
 };
 
 
+// MARK: - Internal functions -
+
+//========== setup_tex_spec ======================================================
+//
+// Purpose:	Set up the Metal with texturing info.
+//
+// Notes:	DL implementation uses object-plane coordinate generation; when a
+//			sub-DL inherits a projection, that projection is transformed with the
+//			sub-DL to keep things in sync.
+//
+//			The attr_texture_mix attribute controls whether the texture is visible
+//			or not - a temporary hack until we can get a clear texture.
+//
+//================================================================================
+static void setup_tex_spec(struct LDrawTextureSpec * spec,
+						   struct LDrawDLSession * session,
+						   id<MTLRenderCommandEncoder> encoder)
+{
+	if(spec && spec->tex_obj)
+	{
+		struct TexturePlaneData texPlaneData;
+		texPlaneData.planeS = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
+		texPlaneData.planeT = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
+
+		[encoder setVertexBytes:&texPlaneData length:64 atIndex:BufferIndexTexturePlane];
+
+		if (session->current_bound_texture != spec->tex_obj)
+		{
+			[encoder setFragmentTexture:spec->tex_obj atIndex:0];
+			session->current_bound_texture = spec->tex_obj;
+		}
+	}
+	else
+	{
+		if (_clearTexture == nil)
+		{
+			MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
+			textureDescriptor.pixelFormat = MTLPixelFormatRGBA8Unorm;
+			textureDescriptor.width = 1;
+			textureDescriptor.height = 1;
+			textureDescriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+
+			_clearTexture = [MetalGPU.device newTextureWithDescriptor:textureDescriptor];
+
+			uint8_t zeroData[4] = {0, 0, 0, 0};  // RGBA (0, 0, 0, 0)
+			MTLRegion region = MTLRegionMake2D(0, 0, 1, 1);
+			[_clearTexture replaceRegion:region mipmapLevel:0 withBytes:zeroData bytesPerRow:4];
+		}
+
+		[encoder setVertexBytes:&_noTexPlaneData length:64 atIndex:BufferIndexTexturePlane];
+
+		if (session->current_bound_texture != _clearTexture)
+		{
+			[encoder setFragmentTexture:_clearTexture atIndex:0];
+			session->current_bound_texture = _clearTexture;
+		}
+	}
+
+}//end setup_tex_spec
+
+
+//========== compare_sorted_link =================================================
+//
+// Purpose:	Functor to compare two sorted instances by their "eval" value, which
+//			is eye space Z right now. API fits C qsort.
+//
+//================================================================================
+static int compare_sorted_link(const void * lhs, const void * rhs)
+{
+	const struct LDrawDLSortedInstanceLink * a = (const struct LDrawDLSortedInstanceLink *) lhs;
+	const struct LDrawDLSortedInstanceLink * b = (const struct LDrawDLSortedInstanceLink *) rhs;
+	return a->eval - b->eval;
+
+}//end compare_sorted_link
+
+
+// MARK: - Display list creation API -
+
 
 //========== LDrawDLBuilderCreate ================================================
 //
@@ -305,10 +381,359 @@ struct LDrawDLBuilder * LDrawDLBuilderCreate()
 }//end LDrawDLBuilderCreate
 
 
-void setWireFrameMode(BOOL wireFrameMode)
+//========== LDrawDLBuilderFinish ================================================
+//
+// Purpose:	Take all of the accumulated data in a DL and bake it down to one
+//			final form.
+//
+// Notes:	The DL is, while being built, a series of linked lists in a BDP for
+//			speed. The finished DL is a malloc'd block of memory, pre-sized to
+//			fit the DL perfectly, and one buffer. So this routine does the counting,
+//			final allocations, and copying.
+//
+//================================================================================
+struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 {
-	isWireFrameMode = wireFrameMode;
-}
+#if WANT_SMOOTH
+	#if TIME_SMOOTHING
+	NSTimeInterval startTime = [NSDate timeIntervalSinceReferenceDate];
+	#endif
+
+	int total_texes = 0;
+	int total_tris = 0;
+	int total_quads = 0;
+	int total_lines = 0;
+	int total_cond_lines = 0;
+
+
+	struct LDrawDLBuilderVertexLink * l;
+	struct LDrawDLBuilderPerTex * s;
+
+	// Count up the total vertices we will need, for buffer space, as well
+	// as the total distinct non-empty textures.
+	for(s = ctx->head; s; s = s->next)
+	{
+		if(s->tri_head || s->line_head || s->cond_line_head)
+			++total_texes;
+
+		for(l = s->tri_head; l; l = l->next)
+		{
+			total_tris++;
+		}
+		for(l = s->line_head; l; l = l->next)
+		{
+			total_lines++;
+		}
+		for(l = s->cond_line_head; l; l = l->next)
+		{
+			total_cond_lines++;
+		}
+	}
+
+	// No non-empty textures?  Bail out early - nuke our
+	// context and get out.  Client code knows we get NO DL, rather than
+	// an empty one.
+	if(total_texes == 0)
+	{
+		LDrawBDPDestroy(ctx->alloc);
+		return NULL;
+	}
+
+	// Alloc DL structure with extra storage for variable-sized tex array.
+	// Use calloc to prevent undefined values and EXC_BAD_ACCESS issue.
+	struct LDrawDL * dl = (struct LDrawDL *) calloc(1, sizeof(struct LDrawDL) + sizeof(struct LDrawDLPerTex) * total_texes);
+
+	// All per-session linked list ptrs start null.
+	dl->next_dl = NULL;
+	dl->instance_head = NULL;
+	dl->instance_tail = NULL;
+	dl->instance_count = 0;
+
+	dl->tex_count = total_texes;
+
+	struct LDrawDLPerTex * cur_tex = dl->texes;
+	dl->flags = ctx->flags;
+
+	// We use one mesh for the entire DL, even if it has multiple textures.  We have to
+	// do this because we want smoothing across triangles that do not share the same
+	// texture.  (Key use case: minifig faces are part textured, part untextured.)
+	//
+	// So instead each face gets a texture ID (tid), which is an index that we will tie
+	// to our texture list.  The mesh smoother remembers this and dumps out the tris in
+	// tid order later.
+
+	struct Mesh * M = create_mesh(total_tris, total_quads, total_lines, total_cond_lines);
+
+
+	// Now: walk our building textures - for each non-empty one, we will copy it into
+	// the tex array and push its vertices.
+	int ti = 0;
+	for(s = ctx->head; s; s = s->next)
+	{
+		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
+			continue;
+
+		if(s->spec.tex_obj != nil)
+			dl->flags |= dl_has_tex;
+
+		for(l = s->tri_head; l; l = l->next)
+		{
+			add_face(M,
+				l->data, l->data+10,l->data+20,NULL,
+				l->data+6,ti);
+		}
+
+		++ti;
+	}
+
+	ti = 0;
+	for(s = ctx->head; s; s = s->next)
+	{
+		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
+			continue;
+
+		if(s->spec.tex_obj != nil)
+			dl->flags |= dl_has_tex;
+
+		for(l = s->line_head; l; l = l->next)
+		{
+			add_face(M,l->data,l->data+10,NULL,NULL,l->data+6,ti);
+		}
+
+		for(l = s->cond_line_head; l; l = l->next)
+		{
+			add_face(M,l->data,l->data+10,l->data+20,l->data+30,l->data+6,ti);
+		}
+
+		++ti;
+	}
+
+
+	finish_faces_and_sort(M);
+	add_creases(M);
+	find_and_remove_t_junctions(M);
+	finish_creases_and_join(M);
+	smooth_vertices(M);
+	merge_vertices(M);
+
+	int total_vertices, total_indices;
+	get_final_mesh_counts(M,&total_vertices,&total_indices);
+
+	id<MTLDevice> device = MetalGPU.device;
+
+	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
+	vertexBuffer.label = @"Vertex buffer";
+
+	id<MTLBuffer> indexBuffer = [device newBufferWithLength:total_indices * sizeof(GLuint) options:MTLResourceStorageModeShared];
+	indexBuffer.label = @"Index buffer";
+
+	dl->vertexBuffer = vertexBuffer;
+	dl->indexBuffer = indexBuffer;
+
+	volatile float * vertex_ptr = (volatile float *)[dl->vertexBuffer contents];
+	volatile GLuint * index_ptr = (volatile GLuint *)[dl->indexBuffer contents];
+
+
+	// Grab variable size arrays for the start/offsets of each sub-part of our big pile-o-mesh...
+	// the mesher will give us back our tris sorted by texture.
+
+	int * line_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * line_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * cond_line_start = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * cond_line_count = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * tri_start		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * tri_count		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * quad_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * quad_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+
+	write_indexed_mesh(
+		M,
+		total_vertices,
+		vertex_ptr,
+		total_indices,
+		index_ptr,
+		0,
+		line_start,
+		line_count,
+		cond_line_start,
+		cond_line_count,
+		tri_start,
+		tri_count,
+		quad_start,
+		quad_count);
+
+	ti = 0;
+
+	for(s = ctx->head; s; s = s->next)
+	{
+		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
+			continue;
+
+		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
+
+		cur_tex->line_off			= line_start[ti];
+		cur_tex->cond_line_off		= cond_line_start[ti];
+		cur_tex->tri_off			= tri_start[ti];
+		cur_tex->line_count			= line_count[ti];
+		cur_tex->cond_line_count	= cond_line_count[ti];
+		cur_tex->tri_count			= tri_count[ti];
+
+		++ti;
+		++cur_tex;
+	}
+
+	destroy_mesh(M);
+
+	#if WANT_STATS
+	dl->vrt_count = total_vertices;
+	dl->idx_count = total_indices;
+	#endif
+
+	// Release the BDP that contains all of the build-related junk.
+	LDrawBDPDestroy(ctx->alloc);
+
+	#if TIME_SMOOTHING
+	NSTimeInterval endTime = [NSDate timeIntervalSinceReferenceDate];
+	#if WANT_STATS
+	printf("Optimize took %f seconds for %d indices, %d vertices.\n",  endTime - startTime, dl->idx_count, dl->vrt_count);
+	#else
+	printf("Optimize took %f seconds.\n",  endTime - startTime);
+	#endif
+	#endif
+
+	return dl;
+#else
+	int total_texes = 0;
+	int total_vertices = 0;
+
+	struct LDrawDLBuilderVertexLink * l;
+	struct LDrawDLBuilderPerTex * s;
+
+	// Count up the total vertices we will need, for buffer space, as well
+	// as the total distinct non-empty textures.
+	for(s = ctx->head; s; s = s->next)
+	{
+		if(s->tri_head || s->line_head)
+			++total_texes;
+		for(l = s->tri_head; l; l = l->next)
+			total_vertices += l->vcount;
+		for(l = s->line_head; l; l = l->next)
+			total_vertices += l->vcount;
+	}
+
+	// No non-empty textures?  Bail out early - nuke our
+	// context and get out.  Client code knows we get NO DL, rather than
+	// an empty one.
+	if(total_texes == 0)
+	{
+		LDrawBDPDestroy(ctx->alloc);
+		return NULL;
+	}
+
+	// Malloc DL structure with extra storage for variable-sized tex array.
+	struct LDrawDL * dl = (struct LDrawDL *) malloc(sizeof(struct LDrawDL) + sizeof(struct LDrawDLPerTex) * total_texes);
+
+	// All per-session linked list ptrs start null.
+	dl->next_dl = NULL;
+	dl->instance_head = NULL;
+	dl->instance_tail = NULL;
+	dl->instance_count = 0;
+
+	dl->tex_count = total_texes;
+
+	#if WANT_STATS
+	dl->vrt_count = total_vertices;
+	#endif
+
+	// Generate and map a buffer for our mesh data.
+
+	id<MTLBuffer> vertexBuffer = [MetalGPU.device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
+	vertexBuffer.label = @"Vertex buffer";
+
+	dl->vertexBuffer = vertexBuffer;
+
+	volatile float * buf_ptr = (volatile float *)[dl->vertexBuffer contents];
+
+	int cur_v = 0;
+	struct LDrawDLPerTex * cur_tex = dl->texes;
+	dl->flags = ctx->flags;
+
+	// Now: walk our building textures - for each non-empty one, we will copy it into
+	// the tex array and push its vertices.
+	for(s = ctx->head; s; s = s->next)
+	{
+		if(s->tri_head == NULL && s->line_head == NULL)
+			continue;
+		if(s->spec.tex_obj != nil)
+			dl->flags |= dl_has_tex;
+		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
+		cur_tex->line_off = cur_v;
+		cur_tex->line_count = 0;
+
+		// These loops copy the actual geometry (in linked lists of data) into the buffer.
+
+		for(l = s->line_head; l; l = l->next)
+		{
+			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
+			cur_tex->line_count += l->vcount;
+			cur_v += l->vcount;
+			buf_ptr += (VERT_STRIDE * l->vcount);
+		}
+
+		cur_tex->tri_off = cur_v;
+		cur_tex->tri_count = 0;
+
+		for(l = s->tri_head; l; l = l->next)
+		{
+			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
+			cur_tex->tri_count += l->vcount;
+			cur_v += l->vcount;
+			buf_ptr += (VERT_STRIDE * l->vcount);
+		}
+
+		++cur_tex;
+	}
+
+	// Release the BDP that contains all of the build-related junk.
+	LDrawBDPDestroy(ctx->alloc);
+
+	return dl;
+
+#endif
+}//end LDrawDLBuilderFinish
+
+
+
+//========== LDrawDLDestroy ======================================================
+//
+// Purpose: free a display list - release GL and system memory.
+//
+//================================================================================
+void LDrawDLDestroy(struct LDrawDL * dl)
+{
+	if(dl->instance_head != NULL)
+	{
+		// Special case: if our DL is destroyed WHILE a session is using it for
+		// deferred drawing, we do NOT destroy it - we mark it for destruction
+		// later and the session nukes it.  This is needed for the case where
+		// client code creates a DL, draws it, and immediately destroys it, as
+		// a silly way to get 'immediate' drawing.  In this case, the session
+		// may have intentionally deferred the DL.
+		dl->flags |= dl_needs_destroy;
+		return;
+	}
+	// Make sure that no instances from a session are queued to this list; if we
+	// are in Q and run now, we'll cause seg faults later.  This assert hits
+	// when: (1) we build a temp DL and don't mark it as temp or (2) we for some
+	// reason inval a DL mid-draw, which is usually a sign of coding error.
+	assert(dl->instance_head == NULL);
+
+	free(dl);
+
+}//end LDrawDLDestroy
+
+
+// MARK: - Display list mesh accumulation APIs -
 
 
 //========== LDrawDLBuilderSetTex ================================================
@@ -516,384 +941,7 @@ void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[12],
 }//end LDrawDLBuilderAddCondLine
 
 
-//========== LDrawDLBuilderFinish ================================================
-//
-// Purpose:	Take all of the accumulated data in a DL and bake it down to one
-//			final form.
-//
-// Notes:	The DL is, while being built, a series of linked lists in a BDP for
-//			speed. The finished DL is a malloc'd block of memory, pre-sized to
-//			fit the DL perfectly, and one buffer. So this routine does the counting,
-//			final allocations, and copying.
-//
-//================================================================================
-struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
-{
-#if WANT_SMOOTH
-	#if TIME_SMOOTHING
-	NSTimeInterval startTime = [NSDate timeIntervalSinceReferenceDate];
-	#endif
-
-	int total_texes = 0;
-	int total_tris = 0;
-	int total_quads = 0;
-	int total_lines = 0;
-	int total_cond_lines = 0;
-
-
-	struct LDrawDLBuilderVertexLink * l;
-	struct LDrawDLBuilderPerTex * s;
-	
-	// Count up the total vertices we will need, for buffer space, as well
-	// as the total distinct non-empty textures.
-	for(s = ctx->head; s; s = s->next)
-	{
-		if(s->tri_head || s->line_head || s->cond_line_head)
-			++total_texes;
-
-		for(l = s->tri_head; l; l = l->next)
-		{
-			total_tris++;
-		}
-		for(l = s->line_head; l; l = l->next)
-		{
-			total_lines++;
-		}
-		for(l = s->cond_line_head; l; l = l->next)
-		{
-			total_cond_lines++;
-		}
-	}
-	
-	// No non-empty textures?  Bail out early - nuke our
-	// context and get out.  Client code knows we get NO DL, rather than 
-	// an empty one.
-	if(total_texes == 0)
-	{
-		LDrawBDPDestroy(ctx->alloc);
-		return NULL;
-	}
-	
-	// Alloc DL structure with extra storage for variable-sized tex array.
-	// Use calloc to prevent undefined values and EXC_BAD_ACCESS issue.
-	struct LDrawDL * dl = (struct LDrawDL *) calloc(1, sizeof(struct LDrawDL) + sizeof(struct LDrawDLPerTex) * total_texes);
-
-	// All per-session linked list ptrs start null.
-	dl->next_dl = NULL;
-	dl->instance_head = NULL;
-	dl->instance_tail = NULL;
-	dl->instance_count = 0;
-	
-	dl->tex_count = total_texes;
-
-	struct LDrawDLPerTex * cur_tex = dl->texes;	
-	dl->flags = ctx->flags;
-
-	// We use one mesh for the entire DL, even if it has multiple textures.  We have to
-	// do this because we want smoothing across triangles that do not share the same
-	// texture.  (Key use case: minifig faces are part textured, part untextured.)
-	//
-	// So instead each face gets a texture ID (tid), which is an index that we will tie
-	// to our texture list.  The mesh smoother remembers this and dumps out the tris in
-	// tid order later.
-
-	struct Mesh * M = create_mesh(total_tris, total_quads, total_lines, total_cond_lines);
-
-
-	// Now: walk our building textures - for each non-empty one, we will copy it into
-	// the tex array and push its vertices.
-	int ti = 0;
-	for(s = ctx->head; s; s = s->next)
-	{
-		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
-			continue;
-
-		if(s->spec.tex_obj != nil)
-			dl->flags |= dl_has_tex;
-
-		for(l = s->tri_head; l; l = l->next)
-		{
-			add_face(M,
-				l->data, l->data+10,l->data+20,NULL,
-				l->data+6,ti);
-		}
-
-		++ti;
-	}
-
-	ti = 0;
-	for(s = ctx->head; s; s = s->next)
-	{
-		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
-			continue;
-
-		if(s->spec.tex_obj != nil)
-			dl->flags |= dl_has_tex;
-
-		for(l = s->line_head; l; l = l->next)
-		{
-			add_face(M,l->data,l->data+10,NULL,NULL,l->data+6,ti);
-		}
-		
-		for(l = s->cond_line_head; l; l = l->next)
-		{
-			add_face(M,l->data,l->data+10,l->data+20,l->data+30,l->data+6,ti);
-		}
-		
-		++ti;
-	}
-
-
-	finish_faces_and_sort(M);
-	add_creases(M);
-	find_and_remove_t_junctions(M);
-	finish_creases_and_join(M);
-	smooth_vertices(M);
-	merge_vertices(M);
-	
-	int total_vertices, total_indices;
-	get_final_mesh_counts(M,&total_vertices,&total_indices);
-
-	id<MTLDevice> device = MetalGPU.device;
-
-	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
-	vertexBuffer.label = @"Vertex buffer";
-
-	id<MTLBuffer> indexBuffer = [device newBufferWithLength:total_indices * sizeof(GLuint) options:MTLResourceStorageModeShared];
-	indexBuffer.label = @"Index buffer";
-
-	dl->vertexBuffer = vertexBuffer;
-	dl->indexBuffer = indexBuffer;
-
-	volatile float * vertex_ptr = (volatile float *)[dl->vertexBuffer contents];
-	volatile GLuint * index_ptr = (volatile GLuint *)[dl->indexBuffer contents];
-
-
-	// Grab variable size arrays for the start/offsets of each sub-part of our big pile-o-mesh...
-	// the mesher will give us back our tris sorted by texture.
-	
-	int * line_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * line_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * cond_line_start = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * cond_line_count = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * tri_start		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * tri_count		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * quad_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * quad_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-
-	write_indexed_mesh(
-		M,
-		total_vertices,
-		vertex_ptr,
-		total_indices,
-		index_ptr,
-		0,
-		line_start,
-		line_count,
-		cond_line_start,
-		cond_line_count,
-		tri_start,
-		tri_count,
-		quad_start,
-		quad_count);
-
-	ti = 0;
-	
-	for(s = ctx->head; s; s = s->next)
-	{
-		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
-			continue;
-
-		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
-		
-		cur_tex->line_off			= line_start[ti];
-		cur_tex->cond_line_off		= cond_line_start[ti];
-		cur_tex->tri_off			= tri_start[ti];
-		cur_tex->line_count			= line_count[ti];
-		cur_tex->cond_line_count	= cond_line_count[ti];
-		cur_tex->tri_count			= tri_count[ti];
-
-		++ti;
-		++cur_tex;
-	}
-
-	destroy_mesh(M);
-
-	#if WANT_STATS
-	dl->vrt_count = total_vertices;
-	dl->idx_count = total_indices;
-	#endif	
-	
-	// Release the BDP that contains all of the build-related junk.
-	LDrawBDPDestroy(ctx->alloc);
-
-	#if TIME_SMOOTHING
-	NSTimeInterval endTime = [NSDate timeIntervalSinceReferenceDate];			
-	#if WANT_STATS
-	printf("Optimize took %f seconds for %d indices, %d vertices.\n",  endTime - startTime, dl->idx_count, dl->vrt_count);
-	#else
-	printf("Optimize took %f seconds.\n",  endTime - startTime);
-	#endif
-	#endif
-	
-	return dl;
-#else
-	int total_texes = 0;
-	int total_vertices = 0;
-	
-	struct LDrawDLBuilderVertexLink * l;
-	struct LDrawDLBuilderPerTex * s;
-	
-	// Count up the total vertices we will need, for buffer space, as well
-	// as the total distinct non-empty textures.
-	for(s = ctx->head; s; s = s->next)
-	{
-		if(s->tri_head || s->line_head)
-			++total_texes;
-		for(l = s->tri_head; l; l = l->next)
-			total_vertices += l->vcount;
-		for(l = s->line_head; l; l = l->next)
-			total_vertices += l->vcount;
-	}
-	
-	// No non-empty textures?  Bail out early - nuke our
-	// context and get out.  Client code knows we get NO DL, rather than 
-	// an empty one.
-	if(total_texes == 0)
-	{
-		LDrawBDPDestroy(ctx->alloc);
-		return NULL;
-	}
-	
-	// Malloc DL structure with extra storage for variable-sized tex array.
-	struct LDrawDL * dl = (struct LDrawDL *) malloc(sizeof(struct LDrawDL) + sizeof(struct LDrawDLPerTex) * total_texes);
-	
-	// All per-session linked list ptrs start null.
-	dl->next_dl = NULL;
-	dl->instance_head = NULL;
-	dl->instance_tail = NULL;
-	dl->instance_count = 0;
-	
-	dl->tex_count = total_texes;
-	
-	#if WANT_STATS
-	dl->vrt_count = total_vertices;
-	#endif	
-	
-	// Generate and map a buffer for our mesh data.
-
-	id<MTLBuffer> vertexBuffer = [MetalGPU.device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
-	vertexBuffer.label = @"Vertex buffer";
-
-	dl->vertexBuffer = vertexBuffer;
-
-	volatile float * buf_ptr = (volatile float *)[dl->vertexBuffer contents];
-
-	int cur_v = 0;
-	struct LDrawDLPerTex * cur_tex = dl->texes;
-	dl->flags = ctx->flags;
-	
-	// Now: walk our building textures - for each non-empty one, we will copy it into
-	// the tex array and push its vertices.
-	for(s = ctx->head; s; s = s->next)
-	{
-		if(s->tri_head == NULL && s->line_head == NULL)
-			continue;
-		if(s->spec.tex_obj != nil)
-			dl->flags |= dl_has_tex;
-		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
-		cur_tex->line_off = cur_v;
-		cur_tex->line_count = 0;
-
-		// These loops copy the actual geometry (in linked lists of data) into the buffer.
-
-		for(l = s->line_head; l; l = l->next)
-		{
-			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
-			cur_tex->line_count += l->vcount;
-			cur_v += l->vcount;
-			buf_ptr += (VERT_STRIDE * l->vcount);
-		}
-
-		cur_tex->tri_off = cur_v;
-		cur_tex->tri_count = 0;
-
-		for(l = s->tri_head; l; l = l->next)
-		{
-			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
-			cur_tex->tri_count += l->vcount;
-			cur_v += l->vcount;
-			buf_ptr += (VERT_STRIDE * l->vcount);
-		}
-
-		++cur_tex;
-	}
-	
-	// Release the BDP that contains all of the build-related junk.
-	LDrawBDPDestroy(ctx->alloc);
-	
-	return dl;
-
-#endif	
-}//end LDrawDLBuilderFinish
-
-
-//========== setup_tex_spec ======================================================
-//
-// Purpose:	Set up the GL with texturing info.
-//
-// Notes:	DL implementation uses object-plane coordinate generation; when a
-//			sub-DL inherits a projection, that projection is transformed with the
-//			sub-DL to keep things in sync.
-//
-//			The attr_texture_mix attribute controls whether the texture is visible
-//			or not - a temporary hack until we can get a clear texture.
-//
-//================================================================================
-static void setup_tex_spec(struct LDrawTextureSpec * spec,
-						   struct LDrawDLSession * session,
-						   id<MTLRenderCommandEncoder> encoder)
-{
-	if(spec && spec->tex_obj)
-	{
-		struct TexturePlaneData texPlaneData;
-		texPlaneData.planeS = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
-		texPlaneData.planeT = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
-
-		[encoder setVertexBytes:&texPlaneData length:64 atIndex:BufferIndexTexturePlane];
-
-		if (session->current_bound_texture != spec->tex_obj)
-		{
-			[encoder setFragmentTexture:spec->tex_obj atIndex:0];
-			session->current_bound_texture = spec->tex_obj;
-		}
-	}
-	else
-	{
-		if (_clearTexture == nil)
-		{
-			MTLTextureDescriptor *textureDescriptor = [[MTLTextureDescriptor alloc] init];
-			textureDescriptor.pixelFormat = MTLPixelFormatRGBA8Unorm;
-			textureDescriptor.width = 1;
-			textureDescriptor.height = 1;
-			textureDescriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
-
-			_clearTexture = [MetalGPU.device newTextureWithDescriptor:textureDescriptor];
-
-			uint8_t zeroData[4] = {0, 0, 0, 0};  // RGBA (0, 0, 0, 0)
-			MTLRegion region = MTLRegionMake2D(0, 0, 1, 1);
-			[_clearTexture replaceRegion:region mipmapLevel:0 withBytes:zeroData bytesPerRow:4];
-		}
-
-		[encoder setVertexBytes:&_noTexPlaneData length:64 atIndex:BufferIndexTexturePlane];
-
-		if (session->current_bound_texture != _clearTexture)
-		{
-			[encoder setFragmentTexture:_clearTexture atIndex:0];
-			session->current_bound_texture = _clearTexture;
-		}
-	}
-}//end setup_tex_spec
+// MARK: - Session/drawing APIs -
 
 
 //========== LDrawDLSessionCreate ================================================
@@ -921,21 +969,6 @@ struct LDrawDLSession * LDrawDLSessionCreate(const GLfloat model_view[16])
 	inst_ring_last = (inst_ring_last+1)%INST_RING_BUFFER_COUNT;
 	return session;
 }//end LDrawDLSessionCreate
-
-
-//========== compare_sorted_link =================================================
-//
-// Purpose:	Functor to compare two sorted instances by their "eval" value, which
-//			is eye space Z right now. API fits C qsort.
-//
-//================================================================================
-static int compare_sorted_link(const void * lhs, const void * rhs)
-{
-	const struct LDrawDLSortedInstanceLink * a = (const struct LDrawDLSortedInstanceLink *) lhs;
-	const struct LDrawDLSortedInstanceLink * b = (const struct LDrawDLSortedInstanceLink *) rhs;
-	return a->eval - b->eval;
-
-}//end compare_sorted_link
 
 
 //========== LDrawDLSessionDrawAndDestroy ========================================
@@ -1063,7 +1096,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 												 indexBuffer:dl->indexBuffer
 										   indexBufferOffset:idx_null+tptr->line_off];
 
-					if(tptr->tri_count && !isWireFrameMode)
+					if(tptr->tri_count)
 						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 												  indexCount:tptr->tri_count
 												   indexType:MTLIndexTypeUInt32
@@ -1075,7 +1108,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 										  vertexStart:tptr->line_off
 										  vertexCount:tptr->line_count];
 
-					if(tptr->tri_count && !isWireFrameMode)
+					if(tptr->tri_count)
 						[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
 										  vertexStart:tptr->tri_off
 										  vertexCount:tptr->tri_count];
@@ -1126,7 +1159,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 									   indexBufferOffset:idx_null+s->dl->line_off
 										   instanceCount:s->inst_count];
 
-				if(s->dl->tri_count && !isWireFrameMode)
+				if(s->dl->tri_count)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 											  indexCount:s->dl->tri_count
 											   indexType:MTLIndexTypeUInt32
@@ -1140,7 +1173,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 									 vertexCount:s->dl->line_count
 								   instanceCount:s->inst_count];
 
-				if(s->dl->tri_count && !isWireFrameMode)
+				if(s->dl->tri_count)
 					[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
 									  vertexStart:s->dl->tri_off
 									  vertexCount:s->dl->tri_count
@@ -1220,7 +1253,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 									   indexBufferOffset:idx_null+tptr->line_off
 										   instanceCount:1];
 
-				if(tptr->tri_count && !isWireFrameMode)
+				if(tptr->tri_count)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 											  indexCount:tptr->tri_count
 											   indexType:MTLIndexTypeUInt32
@@ -1233,7 +1266,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 									  vertexStart:tptr->line_off
 									  vertexCount:tptr->line_count];
 
-				if(tptr->tri_count && !isWireFrameMode)
+				if(tptr->tri_count)
 					[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
 									  vertexStart:tptr->tri_off
 									  vertexCount:tptr->tri_count];
@@ -1270,10 +1303,8 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 // Notes:	This routine takes all of the current 'state' and draws or records
 //			an instance.
 //
-//			Pass draw_now as true to FORCE immediate drawing and disable all of 
-//			the instancing/sorting stuff.  This is needed if there is extra GL 
-//			state like polygon offset that must be used now that isn't recorded
-//			by this API.
+//			Passing is_wire_frame as true will FORCE immediate drawing and disable
+//			all of the instancing/sorting stuff.
 //
 //================================================================================
 void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
@@ -1283,9 +1314,9 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 				 const GLfloat 					cur_color[4],
 				 const GLfloat 					cmp_color[4],
 				 const GLfloat					transform[16],
-				 int							draw_now)
+				 BOOL							is_wire_frame)
 {
-	if(!draw_now)
+	if(!is_wire_frame)
 	{
 		// Sort case.  We want sort if:
 		// 1. There is alpha baked into our meshes permanently or
@@ -1403,7 +1434,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 							   indexBufferOffset:idx_null+tptr->cond_line_off
 								   instanceCount:1];
 
-		if(tptr->tri_count && !isWireFrameMode)
+		if(tptr->tri_count && !is_wire_frame)
 			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 									  indexCount:tptr->tri_count
 									   indexType:MTLIndexTypeUInt32
@@ -1416,7 +1447,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 							  vertexStart:tptr->line_off
 							  vertexCount:tptr->line_count];
 
-		if(tptr->tri_count && !isWireFrameMode)
+		if(tptr->tri_count && !is_wire_frame)
 			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
 							  vertexStart:tptr->tri_off
 							  vertexCount:tptr->tri_count];
@@ -1445,7 +1476,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 								   indexBufferOffset:idx_null+tptr->line_off
 									   instanceCount:1];
 
-			if(tptr->tri_count && !isWireFrameMode)
+			if(tptr->tri_count && !is_wire_frame)
 				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 										  indexCount:tptr->tri_count
 										   indexType:MTLIndexTypeUInt32
@@ -1457,7 +1488,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 								  vertexStart:tptr->line_off
 								  vertexCount:tptr->line_count];
 
-			if(tptr->tri_count && !isWireFrameMode)
+			if(tptr->tri_count && !is_wire_frame)
 				[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
 								  vertexStart:tptr->tri_off
 								  vertexCount:tptr->tri_count];
@@ -1468,32 +1499,3 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	}
 	
 }//end LDrawDLDraw
-
-
-//========== LDrawDLDestroy ======================================================
-//
-// Purpose: free a display list - release GL and system memory.
-//
-//================================================================================	
-void LDrawDLDestroy(struct LDrawDL * dl)
-{
-	if(dl->instance_head != NULL)
-	{
-		// Special case: if our DL is destroyed WHILE a session is using it for
-		// deferred drawing, we do NOT destroy it - we mark it for destruction
-		// later and the session nukes it.  This is needed for the case where
-		// client code creates a DL, draws it, and immediately destroys it, as 
-		// a silly way to get 'immediate' drawing.  In this case, the session
-		// may have intentionally deferred the DL.
-		dl->flags |= dl_needs_destroy;
-		return;
-	}
-	// Make sure that no instances from a session are queued to this list; if we
-	// are in Q and run now, we'll cause seg faults later.  This assert hits 
-	// when: (1) we build a temp DL and don't mark it as temp or (2) we for some
-	// reason inval a DL mid-draw, which is usually a sign of coding error.
-	assert(dl->instance_head == NULL);
-
-	free(dl);
-
-}//end LDrawDLDestroy

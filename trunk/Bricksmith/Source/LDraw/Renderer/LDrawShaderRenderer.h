@@ -90,7 +90,6 @@ struct	LDrawDragHandleInstance;
 
 	// Metal
 	RenderEncoder					_renderEncoder;
-	BOOL							wireFrameMode;
 }
 
 // moved to category

@@ -76,11 +76,7 @@
 //================================================================================
 - (void) pushWireFrame
 {
-	if(wire_frame_count++ == 0)
-		setWireFrameMode(YES);
-
-		// alternative wireframe drawing
-//		[_renderEncoder setTriangleFillMode:MTLTriangleFillModeLines];
+	wire_frame_count++;
 
 }//end pushWireFrame:
 
@@ -93,11 +89,7 @@
 //================================================================================
 - (void) popWireFrame
 {
-	if(--wire_frame_count == 0)
-		setWireFrameMode(NO);
-
-		// alternative wireframe drawing
-//		[_renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
+	wire_frame_count--;
 
 }//end popWireFrame:
 
