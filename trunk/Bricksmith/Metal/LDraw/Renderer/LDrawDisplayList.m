@@ -353,6 +353,201 @@ static int compare_sorted_link(const void * lhs, const void * rhs)
 }//end compare_sorted_link
 
 
+//========== saveForSortDraw =====================================================
+//
+// Purpose:	Save DL for later sorting drawing.
+//          We use sorting drawing for transparent parts.
+//
+//================================================================================
+static void saveForSortDraw(struct LDrawDLSession *		session,
+							struct LDrawDL *			dl,
+							struct LDrawTextureSpec *	spec,
+							const GLfloat 				cur_color[4],
+							const GLfloat 				cmp_color[4],
+							const GLfloat				transform[16])
+{
+#if WANT_STATS
+	session->stats.num_btch_srt++;
+	session->stats.num_vert_srt += dl->vrt_count;
+#endif
+
+	// Build a sorted link, copy the instance data to it, and link it up to our session for later processing.
+	struct LDrawDLSortedInstanceLink * link = LDrawBDPAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
+	link->next = session->sorted_head;
+	session->sorted_head = link;
+	link->dl = dl;
+	memcpy(link->color,cur_color,sizeof(GLfloat)*4);
+	memcpy(link->comp,cmp_color,sizeof(GLfloat)*4);
+	memcpy(link->transform,transform,sizeof(GLfloat)*16);
+	session->sort_count++;
+	if(spec)
+		memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
+	else
+		memset(&link->spec,0,sizeof(struct LDrawTextureSpec));
+
+}//end saveForSortDraw
+
+
+//========== saveForInstanceDraw =================================================
+//
+// Purpose:	Save DL for later instance drawing.
+//
+//================================================================================
+static void saveForInstanceDraw(struct LDrawDLSession *	session,
+								struct LDrawDL *		dl,
+								const GLfloat 			cur_color[4],
+								const GLfloat 			cmp_color[4],
+								const GLfloat			transform[16])
+{
+	//assert(dl->next_dl == NULL || session->dl_head != NULL);
+
+	// This is the first deferred instance for this DL - link this DL into our session so that we can find it later.
+	if(dl->instance_head == NULL)
+	{
+		session->dl_count++;
+		dl->next_dl = session->dl_head;
+		session->dl_head = dl;
+	}
+	// Copy our instance data into a LDrawDLInstance and link that into the DL for later use.
+	struct LDrawDLInstance * inst = (struct LDrawDLInstance *) LDrawBDPAllocate(session->alloc,sizeof(struct LDrawDLInstance));
+	{
+		if(dl->instance_head == NULL)
+		{
+			dl->instance_head = inst;
+			dl->instance_tail = inst;
+		}
+		else
+		{
+			dl->instance_tail->next = inst;
+			dl->instance_tail = inst;
+		}
+		inst->next = NULL;
+		++dl->instance_count;
+		++session->total_instance_count;
+
+		memcpy(inst->color,cur_color,sizeof(GLfloat)*4);
+		memcpy(inst->comp,cmp_color,sizeof(GLfloat)*4);
+		memcpy(inst->transform,transform,sizeof(GLfloat)*16);
+	}
+
+}//end saveForInstanceDraw
+
+
+//========== immediateDraw =======================================================
+//
+// Purpose:	IMMEDIATE MODE DRAW CASE!
+//          We are going to draw this DL right now at this position.
+//
+//================================================================================
+static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
+						  struct LDrawDLSession *		session,
+						  struct LDrawDL *				dl,
+						  struct LDrawTextureSpec *		spec,
+						  const GLfloat 				cur_color[4],
+						  const GLfloat 				cmp_color[4],
+						  const GLfloat					transform[16],
+						  BOOL							is_wire_frame)
+{
+	#if WANT_STATS
+		session->stats.num_btch_imm++;
+		session->stats.num_vert_imm += dl->vrt_count;
+	#endif
+
+	struct InstanceData instData;
+	instData.transform_x = V4Make(transform[0], transform[4], transform[8],  transform[12]);
+	instData.transform_y = V4Make(transform[1], transform[5], transform[9],  transform[13]);
+	instData.transform_z = V4Make(transform[2], transform[6], transform[10], transform[14]);
+	instData.transform_w = V4Make(transform[3], transform[7], transform[11], transform[15]);
+	copy_vec4((float *)&instData.color_current, cur_color);
+	copy_vec4((float *)&instData.color_compliment, cmp_color);
+
+	[renderEncoder setVertexBytes:&instData
+						   length:sizeof(instData)
+						  atIndex:BufferIndexPerInstanceData];
+
+	assert(dl->tex_count > 0);
+
+	// Bind our DL buffer and set up ptrs.
+	[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+
+	struct LDrawDLPerTex * tptr = dl->texes;
+
+	if(is_wire_frame || (dl->tex_count == 1 && tptr->spec.tex_obj == nil && (spec == NULL || spec->tex_obj == nil)))
+	{
+		// Special case: wireframe or one untextured mesh - just draw.
+
+		setup_tex_spec(NULL, session, renderEncoder);
+
+		#if WANT_SMOOTH
+		if(tptr->line_count)
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+									  indexCount:tptr->line_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:idx_null+tptr->line_off
+								   instanceCount:1];
+
+		if(tptr->cond_line_count)
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+									  indexCount:tptr->cond_line_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:idx_null+tptr->cond_line_off
+								   instanceCount:1];
+		#else
+		if(tptr->line_count)
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+							  vertexStart:tptr->line_off
+							  vertexCount:tptr->line_count];
+		#endif
+	}
+	else
+	{
+		// Textured case - for each texture set up the DL texture (or current
+		// texture if none), then draw.
+		int t;
+		for(t = 0; t < dl->tex_count; ++t, ++tptr)
+		{
+			if(tptr->spec.tex_obj)
+			{
+				setup_tex_spec(&tptr->spec, session, renderEncoder);
+			}
+			else
+				setup_tex_spec(spec, session, renderEncoder);
+
+			#if WANT_SMOOTH
+			if(tptr->line_count)
+				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+										  indexCount:tptr->line_count
+										   indexType:MTLIndexTypeUInt32
+										 indexBuffer:dl->indexBuffer
+								   indexBufferOffset:idx_null+tptr->line_off
+									   instanceCount:1];
+
+			if(tptr->tri_count)
+				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+										  indexCount:tptr->tri_count
+										   indexType:MTLIndexTypeUInt32
+										 indexBuffer:dl->indexBuffer
+								   indexBufferOffset:idx_null+tptr->tri_off];
+			#else
+			if(tptr->line_count)
+				[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+								  vertexStart:tptr->line_off
+								  vertexCount:tptr->line_count];
+
+			if(tptr->tri_count)
+				[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+								  vertexStart:tptr->tri_off
+								  vertexCount:tptr->tri_count];
+			#endif
+		}
+
+		setup_tex_spec(spec, session, renderEncoder);
+	}
+}//end immediateDraw
+
+
 // MARK: - Display list creation API -
 
 
@@ -1318,184 +1513,28 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 {
 	if(!is_wire_frame)
 	{
-		// Sort case.  We want sort if:
-		// 1. There is alpha baked into our meshes permanently or
-		// 2. Our mesh uses meta colors and the current meta colors have alpha.
-	
 		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && (cur_color[3] < 1.0f || cmp_color[3] < 1.0f));
 		if(want_sort)
 		{
-			#if WANT_STATS
-				session->stats.num_btch_srt++;
-				session->stats.num_vert_srt += dl->vrt_count;
-			#endif
-		
-			// Build a sorted link, copy the instance data to it, and link it up to our session for later processing.
-			struct LDrawDLSortedInstanceLink * link = LDrawBDPAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
-			link->next = session->sorted_head;
-			session->sorted_head = link;
-			link->dl = dl;
-			memcpy(link->color,cur_color,sizeof(GLfloat)*4);
-			memcpy(link->comp,cmp_color,sizeof(GLfloat)*4);
-			memcpy(link->transform,transform,sizeof(GLfloat)*16);
-			session->sort_count++;
-			if(spec)
-				memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
-			else
-				memset(&link->spec,0,sizeof(struct LDrawTextureSpec));
+			// Sort case.  We want sort if:
+			// 1. There is alpha baked into our meshes permanently or
+			// 2. Our mesh uses meta colors and the current meta colors have alpha.
+
+			saveForSortDraw(session, dl, spec, cur_color, cmp_color, transform);
 			return;
 		}
 
-		// We can instance if:
-		// 1. No texture is being applied to us AND
-		// 2. There isn't any texturing baked into the DL.
 		if((spec == NULL || spec->tex_obj == nil) && (dl->flags & dl_has_tex) == 0)
 		{
-			//assert(dl->next_dl == NULL || session->dl_head != NULL);
-			
-			// This is the first deferred instance for this DL - link this DL into our session so that we can find it later.
-			if(dl->instance_head == NULL)
-			{
-				session->dl_count++;
-				dl->next_dl = session->dl_head;
-				session->dl_head = dl;
-			}
-			// Copy our instance data into a LDrawDLInstance and link that into the DL for later use.
-			struct LDrawDLInstance * inst = (struct LDrawDLInstance *) LDrawBDPAllocate(session->alloc,sizeof(struct LDrawDLInstance));
-			{
-				if(dl->instance_head == NULL)
-				{
-					dl->instance_head = inst;
-					dl->instance_tail = inst;				
-				}
-				else
-				{
-					dl->instance_tail->next = inst;
-					dl->instance_tail = inst;
-				}
-				inst->next = NULL;
-				++dl->instance_count;
-				++session->total_instance_count;
+			// We can instance if:
+			// 1. No texture is being applied to us AND
+			// 2. There isn't any texturing baked into the DL.
 
-				memcpy(inst->color,cur_color,sizeof(GLfloat)*4);
-				memcpy(inst->comp,cmp_color,sizeof(GLfloat)*4);
-				memcpy(inst->transform,transform,sizeof(GLfloat)*16);
-			}
+			saveForInstanceDraw(session, dl, cur_color, cmp_color, transform);
 			return;
 		}
 	}
-	
-	// IMMEDIATE MODE DRAW CASE!  If we get here, we are going to draw this DL right now at this
-	// position.
-	#if WANT_STATS
-		session->stats.num_btch_imm++;
-		session->stats.num_vert_imm += dl->vrt_count;
-	#endif
 
-	struct InstanceData instData;
-	instData.transform_x = V4Make(transform[0], transform[4], transform[8],  transform[12]);
-	instData.transform_y = V4Make(transform[1], transform[5], transform[9],  transform[13]);
-	instData.transform_z = V4Make(transform[2], transform[6], transform[10], transform[14]);
-	instData.transform_w = V4Make(transform[3], transform[7], transform[11], transform[15]);
-	copy_vec4((float *)&instData.color_current, cur_color);
-	copy_vec4((float *)&instData.color_compliment, cmp_color);
+	immediateDraw(renderEncoder, session, dl, spec, cur_color, cmp_color, transform, is_wire_frame);
 
-	[renderEncoder setVertexBytes:&instData
-						   length:sizeof(instData)
-						  atIndex:BufferIndexPerInstanceData];
-
-	assert(dl->tex_count > 0);
-	
-	// Bind our DL buffer and set up ptrs.
-	[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
-
-	struct LDrawDLPerTex * tptr = dl->texes;
-	
-	if(dl->tex_count == 1 && tptr->spec.tex_obj == nil && (spec == NULL || spec->tex_obj == nil))
-	{
-		// Special case: one untextured mesh - just draw.
-
-		setup_tex_spec(NULL, session, renderEncoder);
-
-		#if WANT_SMOOTH
-		if(tptr->line_count)
-			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-									  indexCount:tptr->line_count
-									   indexType:MTLIndexTypeUInt32
-									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:idx_null+tptr->line_off
-								   instanceCount:1];
-
-		if(tptr->cond_line_count)
-			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-									  indexCount:tptr->cond_line_count
-									   indexType:MTLIndexTypeUInt32
-									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:idx_null+tptr->cond_line_off
-								   instanceCount:1];
-
-		if(tptr->tri_count && !is_wire_frame)
-			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-									  indexCount:tptr->tri_count
-									   indexType:MTLIndexTypeUInt32
-									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:idx_null+tptr->tri_off
-								   instanceCount:1];
-		#else
-		if(tptr->line_count)
-			[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
-							  vertexStart:tptr->line_off
-							  vertexCount:tptr->line_count];
-
-		if(tptr->tri_count && !is_wire_frame)
-			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-							  vertexStart:tptr->tri_off
-							  vertexCount:tptr->tri_count];
-		#endif
-	}
-	else
-	{
-		// Textured case - for each texture set up the DL texture (or current 
-		// texture if none), then draw.
-		int t;
-		for(t = 0; t < dl->tex_count; ++t, ++tptr)
-		{
-			if(tptr->spec.tex_obj)
-			{
-				setup_tex_spec(&tptr->spec, session, renderEncoder);
-			}
-			else 
-				setup_tex_spec(spec, session, renderEncoder);
-
-			#if WANT_SMOOTH			
-			if(tptr->line_count)
-				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-										  indexCount:tptr->line_count
-										   indexType:MTLIndexTypeUInt32
-										 indexBuffer:dl->indexBuffer
-								   indexBufferOffset:idx_null+tptr->line_off
-									   instanceCount:1];
-
-			if(tptr->tri_count && !is_wire_frame)
-				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-										  indexCount:tptr->tri_count
-										   indexType:MTLIndexTypeUInt32
-										 indexBuffer:dl->indexBuffer
-								   indexBufferOffset:idx_null+tptr->tri_off];
-			#else
-			if(tptr->line_count)
-				[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
-								  vertexStart:tptr->line_off
-								  vertexCount:tptr->line_count];
-
-			if(tptr->tri_count && !is_wire_frame)
-				[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-								  vertexStart:tptr->tri_off
-								  vertexCount:tptr->tri_count];
-			#endif
-		}
-
-		setup_tex_spec(spec, session, renderEncoder);
-	}
-	
 }//end LDrawDLDraw
