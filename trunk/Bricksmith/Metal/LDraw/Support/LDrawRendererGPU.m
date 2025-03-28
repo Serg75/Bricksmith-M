@@ -117,6 +117,7 @@ struct FragmentUniform {
 	pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	pipelineDescriptor.sampleCount = MSAASampleCount;
 
 	// Blending
 	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = pipelineDescriptor.colorAttachments[0];
@@ -189,21 +190,22 @@ struct FragmentUniform {
 //==============================================================================
 - (void)setupMarquee:(id<MTLLibrary>)library
 {
-	MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-	pipelineDescriptor.vertexFunction = [library newFunctionWithName:@"vertex_shader_2D"];
-	pipelineDescriptor.fragmentFunction = [library newFunctionWithName:@"fragment_shader_2D"];
-	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // TODO: view.colorPixelFormat;
-	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	MTLRenderPipelineDescriptor *marqueeDesc = [[MTLRenderPipelineDescriptor alloc] init];
+	marqueeDesc.vertexFunction = [library newFunctionWithName:@"vertex_shader_2D"];
+	marqueeDesc.fragmentFunction = [library newFunctionWithName:@"fragment_shader_2D"];
+	marqueeDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // TODO: view.colorPixelFormat;
+	marqueeDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	marqueeDesc.sampleCount = MSAASampleCount;
 
 	// Enable blending for transparency
-	pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
-	pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
-	pipelineDescriptor.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
-	pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-	pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+	marqueeDesc.colorAttachments[0].blendingEnabled = YES;
+	marqueeDesc.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+	marqueeDesc.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
+	marqueeDesc.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+	marqueeDesc.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 
 	NSError *error = nil;
-	_marqueePipelineState = [MetalGPU.device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	_marqueePipelineState = [MetalGPU.device newRenderPipelineStateWithDescriptor:marqueeDesc error:&error];
 	if (!_marqueePipelineState) {
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
@@ -276,30 +278,50 @@ struct FragmentUniform {
 		return;
 	}
 
-	MTLRenderPassDescriptor *renderPassDescriptor = view.currentRenderPassDescriptor;
+	MTLRenderPassDescriptor *renderPassDescriptor = MTLRenderPassDescriptor.renderPassDescriptor;
 	if (renderPassDescriptor == nil) {
 		return;
 	}
 
-	// Default color. Our wrapper is responsible from applying the user's
-	// preferred color.
-	NSColor *bgColor = [NSColor.controlBackgroundColor
-						colorUsingColorSpace: [NSColorSpace deviceRGBColorSpace]];
+	// Multisample color texture
+	MTLTextureDescriptor *msaaColorTextureDescriptor =
+	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:view.colorPixelFormat
+													   width:view.drawableSize.width
+													  height:view.drawableSize.height
+												   mipmapped:NO];
 
-	MTLTextureDescriptor *depthTextureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-																									  width:view.drawableSize.width
-																									 height:view.drawableSize.height
-																								  mipmapped:NO];
+	msaaColorTextureDescriptor.sampleCount = MSAASampleCount;
+	msaaColorTextureDescriptor.textureType = MTLTextureType2DMultisample;
+	msaaColorTextureDescriptor.usage = MTLTextureUsageRenderTarget;
+	msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
+
+	id<MTLTexture> msaaColorTexture = [MetalGPU.device newTextureWithDescriptor:msaaColorTextureDescriptor];
+
+	// Depth texture (also multisampled)
+	MTLTextureDescriptor *depthTextureDescriptor =
+	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+													   width:view.drawableSize.width
+													  height:view.drawableSize.height
+												   mipmapped:NO];
+
+	depthTextureDescriptor.sampleCount = MSAASampleCount;
+	depthTextureDescriptor.textureType = MTLTextureType2DMultisample;
 	depthTextureDescriptor.usage = MTLTextureUsageRenderTarget;
 	depthTextureDescriptor.storageMode = MTLStorageModePrivate;
 
 	id<MTLTexture> depthTexture = [MetalGPU.device newTextureWithDescriptor:depthTextureDescriptor];
 
-	renderPassDescriptor.colorAttachments[0].texture = currentDrawable.texture;
+	// Default color. Our wrapper is responsible from applying the user's preferred color.
+	NSColor *bgColor = [NSColor.controlBackgroundColor colorUsingColorSpace: NSColorSpace.deviceRGBColorSpace];
+
+	renderPassDescriptor.colorAttachments[0].texture = msaaColorTexture;
+	renderPassDescriptor.colorAttachments[0].resolveTexture = currentDrawable.texture;
 	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
-	renderPassDescriptor.colorAttachments[0]
-		.clearColor = MTLClearColorMake(bgColor.redComponent, bgColor.greenComponent, bgColor.blueComponent, 1.0);
+	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+	renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(bgColor.redComponent,
+																			bgColor.greenComponent,
+																			bgColor.blueComponent,
+																			1.0);
 
 	renderPassDescriptor.depthAttachment.texture = depthTexture;
 	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;

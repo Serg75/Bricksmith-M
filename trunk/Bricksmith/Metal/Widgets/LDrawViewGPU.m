@@ -85,7 +85,7 @@ static Size2 NSSizeToSize2(NSSize size)
 
 	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
 	self.framebufferOnly = YES;
-	self.sampleCount = 1;
+	self.sampleCount = MSAASampleCount;
 
 	self.paused = YES;
 	self.enableSetNeedsDisplay = YES;

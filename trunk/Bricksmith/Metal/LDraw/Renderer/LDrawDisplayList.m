@@ -35,6 +35,8 @@ static const GLuint * idx_null = NULL;
 const int InstanceInputLength = 24;
 // The size in bytes of InstanceInput struct declared in Metal shader
 const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
+// Number of samples for multisample anti-aliasing (MSAA)
+const int MSAASampleCount = 4;
 
 
 /*

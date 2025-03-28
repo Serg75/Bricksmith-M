@@ -197,14 +197,15 @@
 	id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexDragHandle"];
 	id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentDragHandle"];
 
-	MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-	pipelineDescriptor.vertexFunction = vertexFunction;
-	pipelineDescriptor.fragmentFunction = fragmentFunction;
-	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	MTLRenderPipelineDescriptor *handlesDesc = [[MTLRenderPipelineDescriptor alloc] init];
+	handlesDesc.vertexFunction = vertexFunction;
+	handlesDesc.fragmentFunction = fragmentFunction;
+	handlesDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	handlesDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	handlesDesc.sampleCount = MSAASampleCount;
 
 	NSError *error = nil;
-	pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	pipelineState = [device newRenderPipelineStateWithDescriptor:handlesDesc error:&error];
 	if (!pipelineState) {
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}

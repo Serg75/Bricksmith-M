@@ -9,6 +9,7 @@
 
 extern const int InstanceInputLength;
 extern const int InstanceInputStructSize;
+extern const int MSAASampleCount;
 
 @interface MetalGPU : NSObject
 
