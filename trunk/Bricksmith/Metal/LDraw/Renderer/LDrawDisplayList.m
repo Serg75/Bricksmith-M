@@ -140,6 +140,7 @@ struct LDrawDLInstance {
 	GLfloat					color[4];
 	GLfloat					comp[4];
 	GLfloat					transform[16];
+	BOOL					is_wireframe;
 };
 
 // A single DL. A few notes on book-keeping:
@@ -183,6 +184,7 @@ struct LDrawDLSegment {
 	struct LDrawDLPerTex *	dl;					// Ptr to the per-tex info for that brick - only untexed bricks get instanced, so we only have one "per tex", by definition.
 	float *					inst_base;			// Buffer-relative ptr to the instance data base in the instance buffer.
 	int						inst_count;			// Number of instances starting at that offset.
+	BOOL					is_wireframe;		// Flag whether this segment should be drawn in wireframe mode
 };
 	
 
@@ -399,7 +401,8 @@ static void saveForInstanceDraw(struct LDrawDLSession *	session,
 								struct LDrawDL *		dl,
 								const GLfloat 			cur_color[4],
 								const GLfloat 			cmp_color[4],
-								const GLfloat			transform[16])
+								const GLfloat			transform[16],
+								BOOL					is_wireframe)
 {
 	//assert(dl->next_dl == NULL || session->dl_head != NULL);
 
@@ -430,6 +433,7 @@ static void saveForInstanceDraw(struct LDrawDLSession *	session,
 		memcpy(inst->color,cur_color,sizeof(GLfloat)*4);
 		memcpy(inst->comp,cmp_color,sizeof(GLfloat)*4);
 		memcpy(inst->transform,transform,sizeof(GLfloat)*16);
+		inst->is_wireframe = is_wireframe;
 	}
 
 }//end saveForInstanceDraw
@@ -548,6 +552,63 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 		setup_tex_spec(spec, session, renderEncoder);
 	}
 }//end immediateDraw
+
+
+//========== writeHardwareInstanceData ===========================================
+//
+// Purpose:	Write per-instance transform and color data for a DL into the
+//			instance buffer for use with hardware instancing.
+//
+//================================================================================
+static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
+									  struct LDrawDL *			dl,
+									  const GLfloat *			inst_base,
+									  GLfloat *					inst_data,
+									  BOOL 						is_wireframe)
+{
+	struct LDrawDLInstance *inst;
+	int inst_count = 0;
+
+	segment->is_wireframe = is_wireframe;
+	segment->vertexBuffer = dl->vertexBuffer;
+#if WANT_SMOOTH
+	segment->indexBuffer = dl->indexBuffer;
+#endif
+	segment->dl = &dl->texes[0];
+	segment->inst_base = NULL;
+	segment->inst_base += (inst_data - inst_base);
+
+	// Now walk the instance list, copying the instances into the instance buffer one by one.
+
+	for (inst = dl->instance_head; inst != NULL; inst = inst->next)
+	{
+		if (inst->is_wireframe != is_wireframe) {
+			continue;
+		}
+		inst_data[0] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
+		inst_data[1] = inst->transform[4];
+		inst_data[2] = inst->transform[8];
+		inst_data[3] = inst->transform[12];
+		inst_data[4] = inst->transform[1];
+		inst_data[5] = inst->transform[5];
+		inst_data[6] = inst->transform[9];
+		inst_data[7] = inst->transform[13];
+		inst_data[8] = inst->transform[2];
+		inst_data[9] = inst->transform[6];
+		inst_data[10] = inst->transform[10];
+		inst_data[11] = inst->transform[14];
+		inst_data[12] = inst->transform[3];
+		inst_data[13] = inst->transform[7];
+		inst_data[14] = inst->transform[11];
+		inst_data[15] = inst->transform[15];
+		copy_vec4(inst_data + 16, inst->color);
+		copy_vec4(inst_data + 20, inst->comp);
+		inst_data += InstanceInputLength;
+		++inst_count;
+	}
+	segment->inst_count = inst_count;
+
+}//end writeHardwareInstanceData
 
 
 // MARK: - Display list creation API -
@@ -1200,6 +1261,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// Map our instance buffer so we can write instancing data.
 		GLfloat * inst_base = (GLfloat *) [inst_vbo_ring[session->inst_ring] contents];
 		GLfloat * inst_data = inst_base;
+		int 	  inst_count = 0;
 		int		  inst_remain = INST_MAX_COUNT;
 
 		// Main loop 1: we will walk every instanced DL and either accumulate its instances (for hardware instancing)
@@ -1211,48 +1273,25 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			if(dl->instance_count >= INST_CUTOFF && inst_remain >= dl->instance_count)
 			{
 				// If we have capacity for hw instancing and this DL is used enough, create a segment record and fill it out.
-				cur_segment->vertexBuffer = dl->vertexBuffer;
-				#if WANT_SMOOTH
-				cur_segment->indexBuffer = dl->indexBuffer;
-				#endif
-				cur_segment->dl = &dl->texes[0];
-				cur_segment->inst_base = NULL; 
-				cur_segment->inst_base += (inst_data - inst_base);
-				cur_segment->inst_count = dl->instance_count;
-				
+
 				#if WANT_STATS
 					session->stats.num_btch_ins++;
 					session->stats.num_inst_ins += (dl->instance_count);
 					session->stats.num_vert_ins += (dl->instance_count * dl->vrt_count);
 					session->stats.num_work_ins += dl->vrt_count;
 				#endif
-			
-				// Now walk the instance list, copying the instances into the instance buffer one by one.
 
-				for (inst = dl->instance_head; inst; inst = inst->next)
-				{			
-					inst_data[0] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
-					inst_data[1] = inst->transform[4];
-					inst_data[2] = inst->transform[8];
-					inst_data[3] = inst->transform[12];
-					inst_data[4] = inst->transform[1];
-					inst_data[5] = inst->transform[5];
-					inst_data[6] = inst->transform[9];
-					inst_data[7] = inst->transform[13];
-					inst_data[8] = inst->transform[2];
-					inst_data[9] = inst->transform[6];
-					inst_data[10] = inst->transform[10];
-					inst_data[11] = inst->transform[14];
-					inst_data[12] = inst->transform[3];
-					inst_data[13] = inst->transform[7];
-					inst_data[14] = inst->transform[11];
-					inst_data[15] = inst->transform[15];
-					copy_vec4(inst_data+16,inst->color);
-					copy_vec4(inst_data+20,inst->comp);
-					inst_data += InstanceInputLength;
-					--inst_remain;
-				}
-				++cur_segment;
+				writeHardwareInstanceData(cur_segment, dl, inst_base, inst_data, NO);
+				inst_count += cur_segment->inst_count;
+				inst_remain -= cur_segment->inst_count;
+				inst_data += InstanceInputLength * cur_segment->inst_count;
+				if (cur_segment->inst_count > 0) ++cur_segment;
+
+				writeHardwareInstanceData(cur_segment, dl, inst_base, inst_data, YES);
+				inst_count += cur_segment->inst_count;
+				inst_remain -= cur_segment->inst_count;
+				inst_data += InstanceInputLength * cur_segment->inst_count;
+				if (cur_segment->inst_count > 0) ++cur_segment;
 			}
 			else
 			{
@@ -1327,7 +1366,6 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			}
 		}
 
-		int inst_count = INST_MAX_COUNT - inst_remain;
 		[inst_vbo_ring[session->inst_ring] didModifyRange:NSMakeRange(0, inst_count * InstanceInputStructSize)];
 
 		// Hardware instancing
@@ -1356,7 +1394,15 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 									   indexBufferOffset:idx_null+s->dl->line_off
 										   instanceCount:s->inst_count];
 
-				if(s->dl->tri_count)
+				if(s->dl->cond_line_count && s->is_wireframe)
+					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+											  indexCount:s->dl->cond_line_count
+											   indexType:MTLIndexTypeUInt32
+											 indexBuffer:s->indexBuffer
+									   indexBufferOffset:idx_null+s->dl->cond_line_off
+										   instanceCount:s->inst_count];
+
+				if(s->dl->tri_count && !s->is_wireframe)
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 											  indexCount:s->dl->tri_count
 											   indexType:MTLIndexTypeUInt32
@@ -1532,11 +1578,15 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 			// 1. No texture is being applied to us AND
 			// 2. There isn't any texturing baked into the DL.
 
-			saveForInstanceDraw(session, dl, cur_color, cmp_color, transform);
+			saveForInstanceDraw(session, dl, cur_color, cmp_color, transform, NO);
 			return;
 		}
 	}
 
-	immediateDraw(renderEncoder, session, dl, spec, cur_color, cmp_color, transform, is_wire_frame);
+	if (is_wire_frame) {
+		saveForInstanceDraw(session, dl, cur_color, cmp_color, transform, YES);
+	} else {
+		immediateDraw(renderEncoder, session, dl, spec, cur_color, cmp_color, transform, NO);
+	}
 
 }//end LDrawDLDraw
