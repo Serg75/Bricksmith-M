@@ -570,11 +570,6 @@ static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 	int inst_count = 0;
 
 	segment->is_wireframe = is_wireframe;
-	segment->vertexBuffer = dl->vertexBuffer;
-#if WANT_SMOOTH
-	segment->indexBuffer = dl->indexBuffer;
-#endif
-	segment->dl = &dl->texes[0];
 	segment->inst_base = NULL;
 	segment->inst_base += (inst_data - inst_base);
 
@@ -607,6 +602,14 @@ static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 		++inst_count;
 	}
 	segment->inst_count = inst_count;
+
+	if (inst_count > 0) {
+		if (segment->vertexBuffer != dl->vertexBuffer) segment->vertexBuffer = dl->vertexBuffer;
+#if WANT_SMOOTH
+		segment->indexBuffer = dl->indexBuffer;
+#endif
+		segment->dl = &dl->texes[0];
+	}
 
 }//end writeHardwareInstanceData
 
