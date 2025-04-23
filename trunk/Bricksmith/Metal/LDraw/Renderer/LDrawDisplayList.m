@@ -1245,7 +1245,8 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	if(session->dl_head)
 	{
 		// Build a var-sized array of segments to record our instances for hardware instancing.  We may not need it for every DL but that's okay.
-		struct LDrawDLSegment * segments = (struct LDrawDLSegment *) LDrawBDPAllocate(session->alloc, sizeof(struct LDrawDLSegment) * session->dl_count);
+		// We need twice the space because each DL can have both wireframe and non-wireframe instances that need to be drawn separately.
+		struct LDrawDLSegment * segments = (struct LDrawDLSegment *) LDrawBDPAllocate(session->alloc, sizeof(struct LDrawDLSegment) * session->dl_count * 2);
 		struct LDrawDLSegment * cur_segment = segments;
 
 		// If we do not yet have a buffer for instancing, build one now.
