@@ -998,7 +998,14 @@ void				add_face(struct Mesh * mesh, const float p1[3], const float p2[3], const
 	f->tid = tid;
 	if(tid > mesh->highest_tid) 
 		mesh->highest_tid = tid;
-	if(p3)
+
+	bool is_polygon;
+#ifdef METAL
+	is_polygon = p3 != NULL && p4 == NULL;
+#else
+	is_polygon = p3 != NULL;
+#endif
+	if(is_polygon)
 	{
 		float	v1[3] = { p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]};
 		float	v2[3] = { p3[0]-p1[0],p3[1]-p1[1],p3[2]-p1[2]};
