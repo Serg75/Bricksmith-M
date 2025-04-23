@@ -823,6 +823,18 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		quad_start,
 		quad_count);
 
+	if (*cond_line_count > 0) {
+		GLuint * in_ptr = index_ptr + *cond_line_start;
+		GLuint * out_ptr = in_ptr;
+		for (int i = 0; i < *cond_line_count; i += 4) {
+			*out_ptr++ = *in_ptr++;
+			*out_ptr++ = *in_ptr++;
+			in_ptr++;
+			in_ptr++;
+		}
+		*cond_line_count /= 2;
+	}
+
 	ti = 0;
 
 	for(s = ctx->head; s; s = s->next)
