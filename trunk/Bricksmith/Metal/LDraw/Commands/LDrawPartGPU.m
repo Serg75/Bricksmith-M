@@ -103,28 +103,17 @@
 }//end drawElement:parentColor:
 
 
-//========== debugDrawboundingBox ==============================================
+//========== debugDrawBoundingBox ==============================================
 //
 // Purpose:		Draw a translucent visualization of our bounding box to test
 //				bounding box caching.
 //
+// Notes:		This part is not implemented in Metal as being of not much value
+//
 //==============================================================================
-- (void) debugDrawboundingBox
+- (void) debugDrawBoundingBox
 {
-	[self resolvePart];
-	LDrawModel	*modelToDraw	= cacheModel;
-	
-	//If the model can't be found, we can't draw good bounds for it!
-	if(modelToDraw != nil)
-	{
-		glPushMatrix();
-		glMultMatrixf(glTransformation);
-		[modelToDraw debugDrawboundingBox];
-		glPopMatrix();
-	}
-	
-	[super debugDrawboundingBox];
-}//end debugDrawboundingBox
+}
 
 
 @end

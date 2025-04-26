@@ -103,13 +103,13 @@
 }//end drawElement:parentColor:
 
 
-//========== debugDrawboundingBox ==============================================
+//========== debugDrawBoundingBox ==============================================
 //
 // Purpose:		Draw a translucent visualization of our bounding box to test
 //				bounding box caching.
 //
 //==============================================================================
-- (void) debugDrawboundingBox
+- (void) debugDrawBoundingBox
 {
 	[self resolvePart];
 	LDrawModel	*modelToDraw	= cacheModel;
@@ -119,12 +119,12 @@
 	{
 		glPushMatrix();
 		glMultMatrixf(glTransformation);
-		[modelToDraw debugDrawboundingBox];
+		[modelToDraw debugDrawBoundingBox];
 		glPopMatrix();
 	}
 	
-	[super debugDrawboundingBox];
-}//end debugDrawboundingBox
+	[super debugDrawBoundingBox];
+}//end debugDrawBoundingBox
 
 
 @end

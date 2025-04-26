@@ -11,11 +11,11 @@
 //
 //==============================================================================
 
-#import "LDrawDirectiveGPU.h"
+#import "LDrawDirective.h"
 
 @implementation LDrawDirective (OpenGL)
 
-//========== debugDrawboundingBox ==============================================
+//========== debugDrawBoundingBox ==============================================
 //
 // Purpose:		Draw a translucent visualization of our bounding box to test
 //				bounding box caching.
@@ -26,7 +26,7 @@
 //				The calling code gets us into our GL state ahead of time.
 //
 //==============================================================================
-- (void) debugDrawboundingBox
+- (void) debugDrawBoundingBox
 {
 	Box3	my_bounds = [self boundingBox3];
 	if(my_bounds.min.x <= my_bounds.max.x &&
@@ -69,7 +69,7 @@
 		glVertexPointer(3, GL_FLOAT, 0, verts);
 		glDrawArrays(GL_QUADS,0,24);
 	}
-}//end debugDrawboundingBox
+}//end debugDrawBoundingBox
 
 
 @end

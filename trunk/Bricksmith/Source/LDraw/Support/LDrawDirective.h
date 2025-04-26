@@ -200,8 +200,7 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 - (void) drawSelf:(id<LDrawCoreRenderer>)renderer;
 - (void) collectSelf:(id<LDrawCollector>)renderer;
 - (Box3) boundingBox3;
-// moved to category
-//- (void) debugDrawboundingBox;
+- (void) debugDrawBoundingBox;
 
 // Hit testing primitives
 - (void) hitTest:(Ray3)pickRay transform:(Matrix4)transform viewScale:(float)scaleFactor boundsOnly:(BOOL)boundsOnly creditObject:(id)creditObject hits:(NSMutableDictionary *)hits;

@@ -261,7 +261,6 @@
 		9526F9842A0B8FA10083A86A /* LDrawShaderRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F9822A0B8FA10083A86A /* LDrawShaderRendererGPU.m */; };
 		9526F9892A0BA1A50083A86A /* LDrawApplicationGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 9526F9872A0BA1A50083A86A /* LDrawApplicationGPU.h */; };
 		9526F98A2A0BA1A50083A86A /* LDrawApplicationGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F9882A0BA1A50083A86A /* LDrawApplicationGPU.m */; };
-		9526F98D2A0BBA590083A86A /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 9526F98B2A0BBA590083A86A /* LDrawDirectiveGPU.h */; };
 		9526F98E2A0BBA590083A86A /* LDrawDirectiveGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F98C2A0BBA590083A86A /* LDrawDirectiveGPU.m */; };
 		9533FA112992F4E30032FEBF /* LPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */; };
 		9533FA122992F4E30032FEBF /* LPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */; };
@@ -526,7 +525,6 @@
 		956D9CB52A3102C600FA956B /* LDrawShaderRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */; };
 		956D9CB82A31038800FA956B /* LDrawPartGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CB62A31038800FA956B /* LDrawPartGPU.h */; };
 		956D9CB92A31038800FA956B /* LDrawPartGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CB72A31038800FA956B /* LDrawPartGPU.m */; };
-		956D9CBC2A31042D00FA956B /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CBA2A31042D00FA956B /* LDrawDirectiveGPU.h */; };
 		956D9CBD2A31042D00FA956B /* LDrawDirectiveGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */; };
 		956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CC22A31056400FA956B /* LDrawRendererGPU.h */; };
 		956D9CC52A31056400FA956B /* LDrawRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC32A31056400FA956B /* LDrawRendererGPU.m */; };
@@ -940,7 +938,6 @@
 		9526F9822A0B8FA10083A86A /* LDrawShaderRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawShaderRendererGPU.m; sourceTree = "<group>"; };
 		9526F9872A0BA1A50083A86A /* LDrawApplicationGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawApplicationGPU.h; sourceTree = "<group>"; };
 		9526F9882A0BA1A50083A86A /* LDrawApplicationGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawApplicationGPU.m; sourceTree = "<group>"; };
-		9526F98B2A0BBA590083A86A /* LDrawDirectiveGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDirectiveGPU.h; sourceTree = "<group>"; };
 		9526F98C2A0BBA590083A86A /* LDrawDirectiveGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDirectiveGPU.m; sourceTree = "<group>"; };
 		9533FA0F2992F4E20032FEBF /* LPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LPubRemoveGroup.h; sourceTree = "<group>"; };
 		9533FA102992F4E30032FEBF /* LPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup.m; sourceTree = "<group>"; };
@@ -965,7 +962,6 @@
 		956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawShaderRendererGPU.m; sourceTree = "<group>"; };
 		956D9CB62A31038800FA956B /* LDrawPartGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawPartGPU.h; sourceTree = "<group>"; };
 		956D9CB72A31038800FA956B /* LDrawPartGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawPartGPU.m; sourceTree = "<group>"; };
-		956D9CBA2A31042D00FA956B /* LDrawDirectiveGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDirectiveGPU.h; sourceTree = "<group>"; };
 		956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDirectiveGPU.m; sourceTree = "<group>"; };
 		956D9CC22A31056400FA956B /* LDrawRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawRendererGPU.h; sourceTree = "<group>"; };
 		956D9CC32A31056400FA956B /* LDrawRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawRendererGPU.m; sourceTree = "<group>"; };
@@ -1584,7 +1580,6 @@
 		953912D529D5A78F00C6802D /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				9526F98B2A0BBA590083A86A /* LDrawDirectiveGPU.h */,
 				9526F98C2A0BBA590083A86A /* LDrawDirectiveGPU.m */,
 				95C773CB2A27670C00058D75 /* LDrawRendererGPU.h */,
 				95C773CC2A27670C00058D75 /* LDrawRendererGPU.m */,
@@ -1704,7 +1699,6 @@
 		956D9CB12A3101D400FA956B /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				956D9CBA2A31042D00FA956B /* LDrawDirectiveGPU.h */,
 				956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */,
 				95E1082D2A41DDA50091D579 /* LDrawRendererMTL.h */,
 				956D9CC22A31056400FA956B /* LDrawRendererGPU.h */,
@@ -1887,7 +1881,6 @@
 				95E108322A4254370091D579 /* GPU.h in Headers */,
 				95F759A227BC67AD00CFE5ED /* FastSet.h in Headers */,
 				0BF729BE08AD849300E3DA53 /* LDrawColorPanelController.h in Headers */,
-				9526F98D2A0BBA590083A86A /* LDrawDirectiveGPU.h in Headers */,
 				0BF729C008AD849300E3DA53 /* PartBrowserDataSource.h in Headers */,
 				0BF729C608AD849300E3DA53 /* PreferencesDialogController.h in Headers */,
 				0BC6992B08B5719000DAF996 /* LDrawMPDModel.h in Headers */,
@@ -2016,7 +2009,6 @@
 				956D9C9C2A30769B00FA956B /* MTL.h in Headers */,
 				956D9B912A30768000FA956B /* FastSet.h in Headers */,
 				956D9B922A30768000FA956B /* LDrawColorPanelController.h in Headers */,
-				956D9CBC2A31042D00FA956B /* LDrawDirectiveGPU.h in Headers */,
 				956D9B942A30768000FA956B /* PartBrowserDataSource.h in Headers */,
 				956D9B952A30768000FA956B /* PreferencesDialogController.h in Headers */,
 				956D9B962A30768000FA956B /* LDrawMPDModel.h in Headers */,

@@ -446,13 +446,13 @@
 }//end collectSelf:
 
 
-//========== debugDrawboundingBox ==============================================
+//========== debugDrawBoundingBox ==============================================
 //
 // Purpose:		Draw a translucent visualization of our bounding box to test
 //				bounding box caching.
 //
 //==============================================================================
-- (void) debugDrawboundingBox
+- (void) debugDrawBoundingBox
 {
 	NSArray     *steps              = [self subdirectives];
 	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
@@ -463,11 +463,11 @@
 	for(counter = 0; counter <= maxIndex; counter++)
 	{
 		currentDirective = [steps objectAtIndex:counter];
-		[currentDirective debugDrawboundingBox];
+		[currentDirective debugDrawBoundingBox];
 	}
 	
-	[super debugDrawboundingBox];
-}//end debugDrawboundingBox
+	[super debugDrawBoundingBox];
+}//end debugDrawBoundingBox
 
 
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======

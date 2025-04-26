@@ -36,7 +36,6 @@
 
 
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
-#define DEBUG_BOUNDING_BOX			0	// attempts to draw debug bounding box visualization on the model.
 
 #define DEBUG_DRAWING				1	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
@@ -368,19 +367,6 @@ struct FragmentUniform {
 																 projection:[camera getProjection]];
 
 	[self->fileBeingDrawn drawSelf:ren];
-
-//	#if DEBUG_BOUNDING_BOX
-//	glDepthMask(GL_FALSE);
-//	glDisableClientState(GL_COLOR_ARRAY);
-//	glDisableClientState(GL_NORMAL_ARRAY);
-//	glDisable(GL_LIGHTING);
-//	glColor4f(0.5,0.5,0.5,0.1);
-//	[self->fileBeingDrawn debugDrawboundingBox];
-//	glEnableClientState(GL_COLOR_ARRAY);
-//	glEnableClientState(GL_NORMAL_ARRAY);
-//	glEnable(GL_LIGHTING);
-//	glDepthMask(GL_TRUE);
-//	#endif
 
 	[ren finishDraw];
 

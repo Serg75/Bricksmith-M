@@ -249,7 +249,7 @@
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisable(GL_LIGHTING);
 	glColor4f(0.5,0.5,0.5,0.1);
-	[self->fileBeingDrawn debugDrawboundingBox];
+	[self->fileBeingDrawn debugDrawBoundingBox];
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnable(GL_LIGHTING);
