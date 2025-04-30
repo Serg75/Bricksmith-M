@@ -196,7 +196,6 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 + (NSRange) rangeOfDirectiveBeginningAtIndex:(NSUInteger)index inLines:(NSArray *)lines maxIndex:(NSUInteger)maxIndex;
 
 // Directives
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor;
 - (void) drawSelf:(id<LDrawCoreRenderer>)renderer;
 - (void) collectSelf:(id<LDrawCollector>)renderer;
 - (Box3) boundingBox3;

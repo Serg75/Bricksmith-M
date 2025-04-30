@@ -257,19 +257,6 @@ static NSArray<Class>	*subclasses;
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Draws the part.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	// Nothing to do here.
-	
-}//end draw:viewScale:parentColor:
-
-
 //========== write =============================================================
 //
 // Purpose:		Returns a line that can be written out to a file.

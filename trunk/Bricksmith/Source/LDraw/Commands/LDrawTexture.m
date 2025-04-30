@@ -293,18 +293,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Bind the texture and draw all the subparts in it.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-{
-	assert(!"Not used.");
-
-}//end draw:viewScale:parentColor:
-
-
 // moved to category
 ////========== drawSelf: ===========================================================
 ////

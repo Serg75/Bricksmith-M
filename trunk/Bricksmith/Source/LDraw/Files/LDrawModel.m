@@ -265,34 +265,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Simply draw all the steps; they will worry about drawing all 
-//				their constituents.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	NSArray     *steps              = [self subdirectives];
-	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
-	LDrawStep   *currentDirective   = nil;
-	NSUInteger  counter             = 0;
-	
-	// Draw all the steps in the model
-	for(counter = 0; counter <= maxIndex; counter++)
-	{
-		currentDirective = [steps objectAtIndex:counter];
-		[currentDirective draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
-	}
-	
-	// Draw Drag-and-Drop pieces if we've got 'em.
-	if(self->draggingDirectives != nil)
-		[self->draggingDirectives draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
-		
-}//end draw:viewScale:parentColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 

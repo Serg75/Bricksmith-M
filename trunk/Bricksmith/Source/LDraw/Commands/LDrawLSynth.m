@@ -412,7 +412,7 @@
                           object:self];
 }
 
-//========== draw:viewScale:parentColor: =======================================
+//========== drawSelf: =========================================================
 //
 // Purpose:		Draw the synthesized part.
 //

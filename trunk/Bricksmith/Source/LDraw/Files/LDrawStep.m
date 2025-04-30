@@ -351,30 +351,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Draw all the commands in the step.
-//
-//				Certain steps are marked as having been optimized for fast 
-//				drawing. Such steps consist entirely of one kind of directive, 
-//				so we need call glBegin only once for the entire step.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	NSArray         *commandsInStep     = [self subdirectives];
-	LDrawDirective  *currentDirective   = nil;
-	
-	//Draw each element in the step.
-	for(currentDirective in commandsInStep)
-	{
-		[currentDirective draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
-	}
-
-}//end draw:viewScale:parentColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -420,6 +396,7 @@
 	}
 	[self revalCache:DisplayList];
 }//end collectSelf:
+
 
 //========== debugDrawBoundingBox ==============================================
 //

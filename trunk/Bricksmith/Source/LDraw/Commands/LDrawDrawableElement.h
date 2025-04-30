@@ -34,12 +34,6 @@ typedef struct
 	BOOL        hidden;		//YES if we don't draw this.
 }
 
-// Directives
-- (VBOVertexData *) writeToVertexBuffer:(VBOVertexData *)vertexBuffer parentColor:(LDrawColor *)parentColor wireframe:(BOOL)wireframe;
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor;
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer withColor:(LDrawColor *)drawingColor wireframe:(BOOL)wireframe;
-
-
 // Accessors
 - (Box3) projectedBoundingBoxWithModelView:(Matrix4)modelView
 								projection:(Matrix4)projection

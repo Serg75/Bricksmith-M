@@ -204,36 +204,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:optionsMask: =================================================
-//
-// Purpose:		We have completely disabled these conditional lines. They add 
-//				little to the modern shaded LDraw experience, and they would 
-//				absolutely kill performance. 
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	//do nothing.
-	
-}//end draw:optionsMask:
-
-
-//========== drawElement:viewScale:withColor: ==================================
-//
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
-//
-// Note:		DISABLED. See -draw:parentColor:
-//
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	[super drawElement:optionsMask viewScale:scaleFactor withColor:drawingColor];
-	
-}//end drawElement:withColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on
@@ -330,23 +300,6 @@
 				[LDrawUtilities outputStringForFloat:conditionalVertex2.z]		
 			];
 }//end write
-
-
-//========== writeElementToVertexBuffer:withColor:wireframe: ===================
-//
-// Purpose:		Writes this object into the specified vertex buffer, which is a 
-//				pointer to the offset into which the first vertex point's data 
-//				is to be stored. Store subsequent vertexs after the first.
-//
-//==============================================================================
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer
-									 withColor:(LDrawColor *)drawingColor
-									 wireframe:(BOOL)wireframe
-{
-	// This should never be called, but just in case...
-	return NULL;
-
-}//end writeElementToVertexBuffer:withColor:
 
 
 #pragma mark -

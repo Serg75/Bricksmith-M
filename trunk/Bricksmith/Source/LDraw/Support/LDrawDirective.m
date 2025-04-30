@@ -215,21 +215,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Issues the OpenGL code necessary to draw this element.
-//
-//				This method is intended to be overridden by subclasses.
-//				LDrawDirective's implementation does nothing.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-{
-	//subclasses should override this with OpenGL code to draw the line.
-	
-}//end draw:viewScale:parentColor:
-
-
 // moved to category
 ////========== debugDrawBoundingBox ==============================================
 ////

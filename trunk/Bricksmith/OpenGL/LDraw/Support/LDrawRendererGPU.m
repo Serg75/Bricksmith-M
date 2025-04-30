@@ -34,8 +34,6 @@
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
 #define DEBUG_BOUNDING_BOX			0	// attempts to draw debug bounding box visualization on the model.
 
-#define NEW_RENDERER				1	// runs Ben's new shader-based renderer, not 2.6-era fixed-function renderer.
-
 
 #define DEBUG_DRAWING				0	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
@@ -218,20 +216,10 @@
 	glLoadMatrixf([camera getModelView]);
 
 	// DRAW!
-	#if !NEW_RENDERER
-	
-		[self->fileBeingDrawn draw:options
-						 viewScale:[self zoomPercentageForGL]/100.
-					   parentColor:color];
-	
-	#else
+	LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForGL]/100. modelView:[camera getModelView] projection:[camera getProjection]];
+	[self->fileBeingDrawn drawSelf:ren];
+	[ren release];
 
-		LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForGL]/100. modelView:[camera getModelView] projection:[camera getProjection]];
-		[self->fileBeingDrawn drawSelf:ren];
-		[ren release];
-
-	#endif
-  
 	// We allow primitive drawing to leave their VAO bound to avoid setting the VAO
 	// back to zero between every draw call.  Set it once here to avoid usign some
 	// poor directive to draw!

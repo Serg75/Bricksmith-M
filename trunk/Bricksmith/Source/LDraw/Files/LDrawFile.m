@@ -273,32 +273,23 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
+//========== collectAllColors ==================================================
 //
-// Purpose:		Draw only the active model. The other submodels in an MPD file 
-//				are only meant to be seen when they are are referenced from the 
-//				active submodel.
+// Purpose:		Collects all the colors in the library by reading config file.
 //
-// Threading:	Drawing and editing are mutually-exclusive tasks. However, 
-//				drawing and drawing are NOT exclusive. So, we maintain a lock 
-//				here which keeps track of the number of threads that are 
-//				currently drawing the File. The mutex is never locked DURING a 
-//				draw, so we can have as many simultaneous drawing threads as we 
-//				please. However, an editing task would request this lock with a 
-//				condition (draw count) of 0, and not unlock until editing is 
-//				complete. Thus, no draws can happen during that time.
+// Notes:		This method should be called ONLY on config file!
+//				Pass nil as collector since we don't need to collect mesh data,
+//				we need only colors.
 //
 //==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
+- (void) collectColorsFromConfig
 {
 	//
-	// Draw!
-	//	(only the active model.)
+	// Calls "collectSelf" to record all the colors in the library
 	//
-	[activeModel draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
+	[activeModel collectSelf:nil];
 
-}//end draw:viewScale:parentColor:
+}//end collectAllColors
 
 
 //========== drawSelf: ===========================================================

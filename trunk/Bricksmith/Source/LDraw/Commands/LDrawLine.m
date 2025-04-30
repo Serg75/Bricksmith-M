@@ -177,25 +177,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== drawElement:viewScale:withColor: ==================================
-//
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
-//
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	if(self->dragHandles)
-	{
-		for(LDrawDragHandle *handle in self->dragHandles)
-		{
-			[handle draw:optionsMask viewScale:scaleFactor parentColor:drawingColor];
-		}
-	}
-	
-}//end drawElement:drawingColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -401,37 +382,6 @@
 				[LDrawUtilities outputStringForFloat:vertex2.z]				
 			];
 }//end write
-
-
-//========== writeElementToVertexBuffer:withColor:wireframe: ===================
-//
-// Purpose:		Writes this object into the specified vertex buffer, which is a 
-//				pointer to the offset into which the first vertex point's data 
-//				is to be stored. Store subsequent vertexs after the first.
-//
-//==============================================================================
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer
-									 withColor:(LDrawColor *)drawingColor
-									 wireframe:(BOOL)wireframe
-{
-	#pragma unused(wireframe)
-	
-	Vector3 normal          = V3Make(0.0, -1.0, 0.0); //lines need normals! Who knew?
-	GLfloat components[4]   = {};
-	
-	[drawingColor getColorRGBA:components];
-	
-	memcpy(&vertexBuffer[0].position, &vertex1,     sizeof(Point3));
-	memcpy(&vertexBuffer[0].normal,   &normal,      sizeof(Point3));
-	memcpy(&vertexBuffer[0].color,    components,   sizeof(GLfloat)*4);
-	
-	memcpy(&vertexBuffer[1].position, &vertex2,     sizeof(Point3));
-	memcpy(&vertexBuffer[1].normal,   &normal,      sizeof(Point3));
-	memcpy(&vertexBuffer[1].color,    components,   sizeof(GLfloat)*4);
-	
-	return vertexBuffer + 2;
-	
-}//end writeElementToVertexBuffer:withColor:
 
 
 #pragma mark -
