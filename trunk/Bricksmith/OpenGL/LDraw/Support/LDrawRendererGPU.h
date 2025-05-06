@@ -12,7 +12,6 @@
 //==============================================================================
 
 #import "LDrawRenderer.h"
-#import OPEN_GL_HEADER
 
 NS_ASSUME_NONNULL_BEGIN
 

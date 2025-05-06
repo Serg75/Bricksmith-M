@@ -336,15 +336,15 @@
 //==============================================================================
 - (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue
 {
-	glBackgroundColor[0] = red;
-	glBackgroundColor[1] = green;
-	glBackgroundColor[2] = blue;
-	glBackgroundColor[3] = 1.0;
+	backgroundColor[0] = red;
+	backgroundColor[1] = green;
+	backgroundColor[2] = blue;
+	backgroundColor[3] = 1.0;
 
-	glClearColor(glBackgroundColor[0],
-				 glBackgroundColor[1],
-				 glBackgroundColor[2],
-				 glBackgroundColor[3] );
+	glClearColor(backgroundColor[0],
+				 backgroundColor[1],
+				 backgroundColor[2],
+				 backgroundColor[3] );
 				 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 }

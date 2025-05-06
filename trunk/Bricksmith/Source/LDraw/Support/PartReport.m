@@ -24,10 +24,10 @@
 //==============================================================================
 #import "PartReport.h"
 
-#import "GPU.h"
 #import "LDrawContainer.h"
 #import "LDrawKeywords.h"
 #import "LDrawPart.h"
+
 #import PartLibraryGPU_h
 
 NSString    *PART_REPORT_NUMBER_KEY     = @"Part Number";

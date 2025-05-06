@@ -13,8 +13,7 @@
 
 #import "PartLibrary.h"
 
-#import "GPU.h"
-#import LDrawTextureGPU_h
+#import "LDrawTextureGL.h"
 
 
 @interface PartLibraryGL : PartLibrary
@@ -22,6 +21,6 @@
 // Initialization
 + (PartLibraryGL *) sharedPartLibrary;
 
-- (GLuint) textureTagForTexture:(LDrawTextureGPU*)texture;
+- (GLuint) textureTagForTexture:(LDrawTextureGL *)texture;
 
 @end

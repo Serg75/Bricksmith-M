@@ -66,8 +66,8 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 		
 		LDrawColor	*currentColor			= [[LDrawColor alloc] init];
 		LDrawColor	*edgeColor				= [[LDrawColor alloc] init];
-		GLfloat		 currentColorRGBA[4]	= {1.0, 1.0, 0.81, 1.0};
-		GLfloat		 edgeColorRGBA[4]		= {0.75, 0.75, 0.75, 1.0};
+		float		 currentColorRGBA[4]	= {1.0, 1.0, 0.81, 1.0};
+		float		 edgeColorRGBA[4]		= {0.75, 0.75, 0.75, 1.0};
 		
 		// Make the "current color" a blah sort of beige. We display parts in 
 		// the part browser using this "color"; that's the only time we'll ever 
@@ -196,7 +196,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 //				say, pink. 
 //
 //==============================================================================
-- (void) getComplimentRGBA:(GLfloat *)complimentRGBA
+- (void) getComplimentRGBA:(float *)complimentRGBA
 				   forCode:(LDrawColorT)colorCode
 {
 	LDrawColor	*mainColor		= [self colorForCode:colorCode];
@@ -272,7 +272,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 //				stands out in the original color, but maintains the same hue.
 //
 //==============================================================================
-void complimentColor(const GLfloat *originalColor, GLfloat *complimentColor)
+void complimentColor(const float *originalColor, float *complimentColor)
 {
 	float	brightness		= 0.0;
 	

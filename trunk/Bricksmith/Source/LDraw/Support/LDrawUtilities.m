@@ -10,7 +10,6 @@
 //==============================================================================
 #import "LDrawUtilities.h"
 
-#import "GPU.h"
 #import "LDrawColor.h"
 #import "LDrawConditionalLine.h"
 #import "LDrawContainer.h"
@@ -21,11 +20,12 @@
 #import "LDrawPart.h"
 #import "LDrawQuadrilateral.h"
 #import "LDrawStep.h"
-#import LDrawTextureGPU_h
 #import "LDrawTriangle.h"
-#import PartLibraryGPU_h
 #import "LDrawLSynth.h"
 #import "RegexKitLite.h"
+
+#import LDrawTextureGPU_h
+#import PartLibraryGPU_h
 
 
 static BOOL                 ColumnizesOutput    = NO;
@@ -164,9 +164,9 @@ static NSString				*defaultAuthor		= @"anonymous";
 {
 	NSScanner   *scanner        = [NSScanner scannerWithString:colorField];
 	LDrawColorT colorCode       = LDrawColorBogus;
-	unsigned    hexBytes        = 0;
-	int         customCodeType  = 0;
-	GLfloat     components[4]   = {};
+	unsigned	hexBytes        = 0;
+	int			customCodeType  = 0;
+	float		components[4]   = {};
 	LDrawColor	*color			= nil;
 
 	// Custom RGB?
@@ -185,34 +185,34 @@ static NSString				*defaultAuthor		= @"anonymous";
 		{
 			// Solid color
 			case 2:
-				components[0] = (GLfloat) ((hexBytes >> 2*8) & 0xFF) / 255; // Red
-				components[1] = (GLfloat) ((hexBytes >> 1*8) & 0xFF) / 255; // Green
-				components[2] = (GLfloat) ((hexBytes >> 0*8) & 0xFF) / 255; // Blue
-				components[3] = (GLfloat) 1.0; // alpha
+				components[0] = (float) ((hexBytes >> 2*8) & 0xFF) / 255; // Red
+				components[1] = (float) ((hexBytes >> 1*8) & 0xFF) / 255; // Green
+				components[2] = (float) ((hexBytes >> 0*8) & 0xFF) / 255; // Blue
+				components[3] = (float) 1.0; // alpha
 				break;
 			
 			// Transparent color
 			case 3:
-				components[0] = (GLfloat) ((hexBytes >> 2*8) & 0xFF) / 255; // Red
-				components[1] = (GLfloat) ((hexBytes >> 1*8) & 0xFF) / 255; // Green
-				components[2] = (GLfloat) ((hexBytes >> 0*8) & 0xFF) / 255; // Blue
-				components[3] = (GLfloat) 0.5; // alpha
+				components[0] = (float) ((hexBytes >> 2*8) & 0xFF) / 255; // Red
+				components[1] = (float) ((hexBytes >> 1*8) & 0xFF) / 255; // Green
+				components[2] = (float) ((hexBytes >> 0*8) & 0xFF) / 255; // Blue
+				components[3] = (float) 0.5; // alpha
 				break;
 			
 			// combined opaque color
 			case 4:
-				components[0] = (GLfloat) (((hexBytes >> 5*4) & 0xF) + ((hexBytes >> 2*4) & 0xF))/2 / 255; // Red
-				components[0] = (GLfloat) (((hexBytes >> 4*4) & 0xF) + ((hexBytes >> 1*4) & 0xF))/2 / 255; // Green
-				components[0] = (GLfloat) (((hexBytes >> 3*4) & 0xF) + ((hexBytes >> 0*4) & 0xF))/2 / 255; // Blue
-				components[3] = (GLfloat) 1.0; // alpha
+				components[0] = (float) (((hexBytes >> 5*4) & 0xF) + ((hexBytes >> 2*4) & 0xF))/2 / 255; // Red
+				components[0] = (float) (((hexBytes >> 4*4) & 0xF) + ((hexBytes >> 1*4) & 0xF))/2 / 255; // Green
+				components[0] = (float) (((hexBytes >> 3*4) & 0xF) + ((hexBytes >> 0*4) & 0xF))/2 / 255; // Blue
+				components[3] = (float) 1.0; // alpha
 				break;
 				
 			// bad-looking transparent color
 			case 5:
-				components[0] = (GLfloat) ((hexBytes >> 5*4) & 0xF) / 15; // Red
-				components[0] = (GLfloat) ((hexBytes >> 4*4) & 0xF) / 15; // Green
-				components[0] = (GLfloat) ((hexBytes >> 3*4) & 0xF) / 15; // Blue
-				components[3] = (GLfloat) 0.5; // alpha
+				components[0] = (float) ((hexBytes >> 5*4) & 0xF) / 15; // Red
+				components[0] = (float) ((hexBytes >> 4*4) & 0xF) / 15; // Green
+				components[0] = (float) ((hexBytes >> 3*4) & 0xF) / 15; // Blue
+				components[3] = (float) 0.5; // alpha
 				break;
 			
 			default:
@@ -429,7 +429,7 @@ static NSString				*defaultAuthor		= @"anonymous";
 + (NSString *) outputStringForColor:(LDrawColor *)color
 {
 	NSString        *outputString   = nil;
-	GLfloat			components[4]	= {};
+	float			components[4]	= {};
 	LDrawColorT		colorCode		= LDrawColorBogus;
 	
 	colorCode = [color colorCode];

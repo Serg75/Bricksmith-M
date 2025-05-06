@@ -88,7 +88,7 @@
 - (void) setLDrawColor:(LDrawColor *) newColor
 {
 	NSString    *description    = nil;
-	GLfloat     components[4];
+	float       components[4];
 	
 	// assign ivar
 	self->color = newColor;

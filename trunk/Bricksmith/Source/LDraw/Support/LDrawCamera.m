@@ -1,15 +1,14 @@
 //
-//  LDrawGLCamera.m
+//  LDrawCamera.m
 //  Bricksmith
 //
 //  Created by bsupnik on 9/23/13.
 //  Copyright 2013. All rights reserved.
 //
 
-#import "GPU.h"
-#import "LDrawGLCamera.h"
+#import "LDrawCamera.h"
 #import "MacLDraw.h"
-#import "GLMatrixMath.h"
+#import "MatrixMathEx.h"
 
 // Normally the doc size is rounded so that it doesn't jump per frame as we nudge; we can turn this OFF to debug editing.
 #define NO_ROUNDING_DOC_SIZE		0
@@ -24,32 +23,32 @@
 #define WALKTHROUGH_NEAR	20.0
 #define WALKTHROUGH_FAR		20000.0
 
-@interface LDrawGLCamera ()
+@interface LDrawCamera ()
 {
-	__weak id<LDrawGLCameraScroller>	scroller;
+	__weak id<LDrawCameraScroller>	scroller;
 	
-	GLfloat					projection[16];
-	GLfloat					modelView[16];
-	GLfloat					orientation[16];
+	float				projection[16];
+	float				modelView[16];
+	float				orientation[16];
 
-	ProjectionModeT         projectionMode;
-	LocationModeT			locationMode;
-	Box3					modelSize;
+	ProjectionModeT		projectionMode;
+	LocationModeT		locationMode;
+	Box3				modelSize;
 
-	float					zoomFactor;
+	float				zoomFactor;
 
-	GLfloat                 cameraDistance;			// location of camera on the z-axis; distance from (0,0,0);
-	Point3					rotationCenter;
-	Size2					snugFrameSize;
-	
-	int						mute;					// Counted 'mute' to stop re-entrant calls to tickle...
+	float				cameraDistance;			// location of camera on the z-axis; distance from (0,0,0);
+	Point3				rotationCenter;
+	Size2				snugFrameSize;
+
+	int					mute;					// Counted 'mute' to stop re-entrant calls to tickle...
 }
 
 @property (nonatomic, assign) Box2 visibleRect;
 
 @end
 
-@implementation LDrawGLCamera
+@implementation LDrawCamera
 
 #pragma mark -
 #pragma mark SETUP
@@ -97,7 +96,7 @@
 /// 			the camera.
 ///
 //==============================================================================
-- (void) setScroller:(id<LDrawGLCameraScroller>)newScroller
+- (void) setScroller:(id<LDrawCameraScroller>)newScroller
 {
 	scroller = newScroller;
 }//end setScroller:
@@ -121,7 +120,7 @@
 ///				custom shaders.
 ///
 //==============================================================================
-- (GLfloat*)getProjection
+- (float*)getProjection
 {
 	return projection;
 	
@@ -135,7 +134,7 @@
 //				rotation and model center changes.
 //
 //==============================================================================
-- (GLfloat*)getModelView
+- (float*)getModelView
 {
 	return modelView;
 	
@@ -484,7 +483,7 @@
 	// whereas OpenGL defines NDC as a 2x2x2 cube with its center at (0,0,0).
 	// So here we transform OpenGL’s NDC to Metal’s NDC.
 
-	GLfloat m[16];
+	float m[16];
 	m[0]=1;		m[4]=0;		m[8 ]=0;		m[12]=0;
 	m[1]=0;		m[5]=1;		m[9 ]=0;		m[13]=0;
 	m[2]=0;		m[6]=0;		m[10]=0.5;		m[14]=0.5;
@@ -504,7 +503,7 @@
 //==============================================================================
 - (void) makeModelView
 {
-	GLfloat cam_trans[16], center_trans[16], flip[16], temp1[16], temp2[16];
+	float cam_trans[16], center_trans[16], flip[16], temp1[16], temp2[16];
 	
 	buildRotationMatrix(flip,0,1,0,0);
 	buildTranslationMatrix(cam_trans, 0, 0, self->cameraDistance);
@@ -884,7 +883,7 @@
 //==============================================================================
 - (void) setViewingAngle:(Tuple3)newAngle
 {
-	GLfloat gl_angle[16],gl_flip[16];
+	float gl_angle[16],gl_flip[16];
 	Matrix4 angle = Matrix4RotateModelview(IdentityMatrix4, newAngle);
 
 	Matrix4GetGLMatrix4(angle,gl_angle);	

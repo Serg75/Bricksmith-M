@@ -33,7 +33,6 @@
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
 #import "LDrawShaderRenderer.h"
-#include "OpenGLUtilities.h"
 #include "MacLDraw.h"
 
 // moved to category
@@ -57,9 +56,9 @@
 {
 	// moved to header
 	//	id<LDrawRendererDelegate> delegate;
-	id<LDrawGLCameraScroller>	scroller;
-	id							target;
-	BOOL						allowsEditing;
+	id<LDrawCameraScroller>	scroller;
+	id						target;
+	BOOL					allowsEditing;
 
 	// moved to header
 	//	LDrawDirective          *fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
@@ -68,13 +67,13 @@
 	//													// and here in -mouseUp: to handle such cases.
 
 	// moved to header
-	//	LDrawGLCamera *			camera;
+	//	LDrawCamera *			camera;
 
 	// Drawing Environment
 	LDrawColor				*color;					// default color to draw parts if none is specified
 
 	// moved to header
-	//	GLfloat                 glBackgroundColor[4];
+	//	GLfloat                 backgroundColor[4];
 	//	Box2					selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
 	//	RotationDrawModeT       rotationDrawMode;		// drawing detail while rotating.
 	//	ViewOrientationT        viewOrientation;		// our orientation
@@ -122,7 +121,7 @@
 	
 	[self setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 	
-	camera = [[LDrawGLCamera alloc] init];
+	camera = [[LDrawCamera alloc] init];
 	camera.graphicsSurfaceSize = boundsIn;
 	
 	isTrackingDrag					= NO;
@@ -696,7 +695,7 @@
 //				window manager to do things like scrolling. 
 //
 //==============================================================================
-- (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawGLCameraScroller>)newScroller
+- (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawCameraScroller>)newScroller
 {
 	// weak link.
 	self->delegate = object;
@@ -714,15 +713,15 @@
 ////==============================================================================
 //- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue
 //{
-//	glBackgroundColor[0] = red;
-//	glBackgroundColor[1] = green;
-//	glBackgroundColor[2] = blue;
-//	glBackgroundColor[3] = 1.0;
+//	backgroundColor[0] = red;
+//	backgroundColor[1] = green;
+//	backgroundColor[2] = blue;
+//	backgroundColor[3] = 1.0;
 //
-//	glClearColor(glBackgroundColor[0],
-//				 glBackgroundColor[1],
-//				 glBackgroundColor[2],
-//				 glBackgroundColor[3] );
+//	glClearColor(backgroundColor[0],
+//				 backgroundColor[1],
+//				 backgroundColor[2],
+//				 backgroundColor[3] );
 //
 //	[self->delegate LDrawRendererNeedsRedisplay:self];
 //}
@@ -1253,12 +1252,12 @@
 	   &&	self->allowsEditing == YES
 	   &&	[self->delegate respondsToSelector:@selector(LDrawRenderer:wantsToSelectDirective:byExtendingSelection:)] )
 	{
-		Point2	point_viewport			= [self convertPointToViewport:point_view];
-		Point2	bl						= V2Make(point_viewport.x-HANDLE_SIZE,point_viewport.y-HANDLE_SIZE);
-		Point2	tr						= V2Make(point_viewport.x+HANDLE_SIZE,point_viewport.y+HANDLE_SIZE);
-		GLfloat depth					= 1.0;
+		Point2	point_viewport	= [self convertPointToViewport:point_view];
+		Point2	bl				= V2Make(point_viewport.x-HANDLE_SIZE,point_viewport.y-HANDLE_SIZE);
+		Point2	tr				= V2Make(point_viewport.x+HANDLE_SIZE,point_viewport.y+HANDLE_SIZE);
+		float depth				= 1.0;
 
-		Box2	viewport				= [self viewport];
+		Box2	viewport		= [self viewport];
 		// Get view and projection
 		Point2 point_clip = V2Make( (point_viewport.x - viewport.origin.x) * 2.0 / V2BoxWidth(viewport)  - 1.0,
 								    (point_viewport.y - viewport.origin.y) * 2.0 / V2BoxHeight(viewport) - 1.0 );
@@ -1929,12 +1928,12 @@
 //==============================================================================
 - (float) getDepthUnderPoint:(Point2)point_view
 {
-	Point2	point_viewport			= [self convertPointToViewport:point_view];
-	Point2	bl						= V2Make(point_viewport.x-HANDLE_SIZE,point_viewport.y-HANDLE_SIZE);
-	Point2	tr						= V2Make(point_viewport.x+HANDLE_SIZE,point_viewport.y+HANDLE_SIZE);
-	GLfloat depth					= 1.0;
+	Point2	point_viewport	= [self convertPointToViewport:point_view];
+	Point2	bl				= V2Make(point_viewport.x-HANDLE_SIZE,point_viewport.y-HANDLE_SIZE);
+	Point2	tr				= V2Make(point_viewport.x+HANDLE_SIZE,point_viewport.y+HANDLE_SIZE);
+	float	depth			= 1.0;
 
-	Box2	viewport				= [self viewport];
+	Box2	viewport		= [self viewport];
 
 	Point2 point_clip = {
 				(point_viewport.x - viewport.origin.x) * 2.0 / V2BoxWidth(viewport) - 1.0,

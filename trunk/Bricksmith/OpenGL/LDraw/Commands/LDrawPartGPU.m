@@ -22,10 +22,12 @@
 //
 //==============================================================================
 
-#import "LDrawPartGPU.h"
+#import "LDrawPart.h"
 
 #import "LDrawModel.h"
 #import "PartLibraryGL.h"
+
+#include OPEN_GL_HEADER
 
 @implementation LDrawPart (OpenGL)
 

@@ -15,7 +15,7 @@
 #import "ColorLibrary.h"
 #import "GPU.h"
 #import "LDrawRenderer.h"
-#import "LDrawGLCamera.h"
+#import "LDrawCamera.h"
 #import "LDrawUtilities.h"
 #import "MatrixMath.h"
 #import "ToolPalette.h"
@@ -32,7 +32,7 @@
 //		LDrawView
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawGLCameraScroller>
+@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller>
 {
 	// The renderer is responsible for viewport math and OpenGL calls. Because
 	// of the latter, there is NO PUBLIC ACCESS, since each OpenGL call must be 

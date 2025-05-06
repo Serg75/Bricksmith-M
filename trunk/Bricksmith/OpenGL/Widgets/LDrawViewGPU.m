@@ -29,6 +29,8 @@
 #import "LDrawRendererGPU.h"
 #import "OverlayViewCategory.h"
 
+#include OPEN_GL_HEADER
+
 //========== NSSizeToSize2 =====================================================
 //
 // Purpose:		Convert Cocoa sizes to our internal format.

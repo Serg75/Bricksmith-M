@@ -1,5 +1,5 @@
 //
-//  LDrawGLCamera.h
+//  LDrawCamera.h
 //  Bricksmith
 //
 //  Created by bsupnik on 9/23/13.
@@ -23,12 +23,12 @@ typedef enum
 	LocationModeWalkthrough = 1
 } LocationModeT;
 
-@protocol LDrawGLCameraScroller;
+@protocol LDrawCameraScroller;
 
 
 //------------------------------------------------------------------------------
 ///
-/// @class		LDrawGLCamera
+/// @class		LDrawCamera
 ///
 /// @abstract	Computes the modelview and projection matrices based off current
 /// 			viewport dimensions and user viewing options.
@@ -68,15 +68,15 @@ typedef enum
 /// 			viewport. It is scaled according to the zoom factor.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawGLCamera : NSObject
+@interface LDrawCamera : NSObject
 
 @property (nonatomic, assign) Size2	graphicsSurfaceSize;
 
-- (void)	setScroller:(id<LDrawGLCameraScroller>)newScroller;
+- (void)	setScroller:(id<LDrawCameraScroller>)newScroller;
 
 // Output - the official OpenGL transform.
-- (GLfloat*)getProjection;
-- (GLfloat*)getModelView;
+- (float*)getProjection;
+- (float*)getModelView;
 
 // Output - camera meta-data for UI/persistence.  The camera outpust perspective/orthographic and a Euler viewing angle; 
 // the client code creates the "known" views.
@@ -108,14 +108,14 @@ typedef enum
 
 
 
-//---------- LDrawGLCameraScroller ---------------------------------------------
+//---------- LDrawCameraScroller ---------------------------------------------
 ///
 /// The camera scroller protocol abstracts a scrolling view that the camera
 ///	works within.  The camera owns scrolling information. It has to be told
 ///	about the view size, and works out the rest. The view container can be
 ///	notified of scroll/zoom changes via this protocol.
 ///
-@protocol LDrawGLCameraScroller <NSObject>
+@protocol LDrawCameraScroller <NSObject>
 
 @required
 

@@ -9,8 +9,8 @@
 #import "LDrawShaderRenderer.h"
 #import "LDrawDisplayList.h"
 #import "LDrawBDPAllocator.h"
+#import "MatrixMathEx.h"
 #import "ColorLibrary.h"
-#import "GLMatrixMath.h"
 
 // moved to category
 //// This list of attribute names matches the text of the GLSL attribute declarations -
@@ -47,7 +47,7 @@
 //			current, red = 1 is compliment.
 //
 //================================================================================
-static void set_color4fv(GLfloat * c, GLfloat storage[4])
+static void set_color4fv(float * c, float storage[4])
 {
 	if(c == LDrawRenderCurrentColor)
 	{
@@ -65,7 +65,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 	}
 	else 
 	{
-		memcpy(storage,c,sizeof(GLfloat)*4);
+		memcpy(storage,c,sizeof(float)*4);
 	}
 }//end set_color4fv
 
@@ -83,8 +83,8 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 ////
 ////================================================================================
 //- (id) initWithScale:(float)initial_scale
-//		   modelView:(GLfloat *)mv_matrix
-//		  projection:(GLfloat *)proj_matrix
+//		   modelView:(float *)mv_matrix
+//		  projection:(float *)proj_matrix
 //{
 //	pool = LDrawBDPCreate();
 //	// Build our shader if it doesn't exist yet.  For now, just stash the GL
@@ -155,8 +155,8 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //
 //	for(dh = drag_handles; dh != NULL; dh = dh->next)
 //	{
-//		GLfloat s = dh->size / self->scale;
-//		GLfloat m[16] = { s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0 };
+//		float s = dh->size / self->scale;
+//		float m[16] = { s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0 };
 //
 //		[self pushMatrix:m];
 //		[self drawDragHandleImm:dh->xyz withSize:dh->size];
@@ -193,7 +193,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //			shader.
 //
 //================================================================================
-- (void) pushMatrix:(GLfloat *)matrix
+- (void) pushMatrix:(float *)matrix
 {
 	assert(transform_stack_top < TRANSFORM_STACK_DEPTH);
 	memcpy(transform_stack + 16 * transform_stack_top, transform_now, sizeof(transform_now));
@@ -205,7 +205,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 	{
 		// If we have a current texture, transform the tetxure by "matrix".
 		// TODO: doc _why_ this works mathematically.
-		GLfloat	s[4], t[4];
+		float	s[4], t[4];
 		applyMatrixTranspose(s,matrix,tex_now.plane_s);
 		applyMatrixTranspose(t,matrix,tex_now.plane_t);
 		memcpy(tex_now.plane_s,s,sizeof(s));
@@ -228,14 +228,14 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 // TODO:	change hard-coded values to be compensated for aspect ratio, etc.
 //
 //================================================================================
-- (int) checkCull:(GLfloat *)minXYZ to:(GLfloat *)maxXYZ
+- (int) checkCull:(float *)minXYZ to:(float *)maxXYZ
 {
 	if (minXYZ[0] > maxXYZ[0] ||
 		minXYZ[1] > maxXYZ[1] ||
 		minXYZ[2] > maxXYZ[2])		return cull_skip;
 		
-	GLfloat aabb_model[6] = { minXYZ[0], minXYZ[1], minXYZ[2], maxXYZ[0], maxXYZ[1], maxXYZ[2] };
-	GLfloat aabb_ndc[6];
+	float aabb_model[6] = { minXYZ[0], minXYZ[1], minXYZ[2], maxXYZ[0], maxXYZ[1], maxXYZ[2] };
+	float aabb_ndc[6];
 	
 	aabbToClipbox(aabb_model, cull_now, aabb_ndc);
 	
@@ -270,7 +270,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //			keep the cube statically.
 //
 //================================================================================
-- (void) drawBoxFrom:(GLfloat *)minXyz to:(GLfloat *)maxXyz
+- (void) drawBoxFrom:(float *)minXyz to:(float *)maxXyz
 {
 	static struct LDrawDL * unit_cube = NULL;
 	if(!unit_cube)
@@ -286,15 +286,15 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 		#define LTF 0,1,1
 		#define RTF 1,1,1
 
-		GLfloat top[12] = { LTF,RTF,RTR,LTR };
-		GLfloat bot[12] = { LBF,LBR,RBR,RBF };
-		GLfloat lft[12] = { LBR,LBF,LTF,LTR };
-		GLfloat rgt[12] = { RBF,RBR,RTR,RTF };
-		GLfloat frt[12] = { LBF,RBF,RTF,LTF };
-		GLfloat bak[12] = { RBR,LBR,LTR,RTR };
+		float top[12] = { LTF,RTF,RTR,LTR };
+		float bot[12] = { LBF,LBR,RBR,RBF };
+		float lft[12] = { LBR,LBF,LTF,LTR };
+		float rgt[12] = { RBF,RBR,RTR,RTF };
+		float frt[12] = { LBF,RBF,RTF,LTF };
+		float bak[12] = { RBR,LBR,LTR,RTR };
 		
-		GLfloat c[4] = { 0 };
-		GLfloat n[3] = { 0, 1, 0 };
+		float c[4] = { 0 };
+		float n[3] = { 0, 1, 0 };
 		
 		LDrawDLBuilderAddQuad(builder,top,n,c);
 		LDrawDLBuilderAddQuad(builder,bot,n,c);
@@ -307,16 +307,18 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 		
 	}
 	
-	GLfloat	dim[3] = { 
-					maxXyz[0] - minXyz[0],
-					maxXyz[1] - minXyz[1],
-					maxXyz[2] - minXyz[2] };
-	
-	GLfloat rescale[16] = { dim[0], 0, 0, 0,
-							0,dim[1], 0, 0,
-							0,0,dim[2], 0,
-							minXyz[0],minXyz[1],minXyz[2],1};
-	[self pushMatrix:rescale];	
+	float dim[3] = {
+		maxXyz[0] - minXyz[0],
+		maxXyz[1] - minXyz[1],
+		maxXyz[2] - minXyz[2] };
+
+	float rescale[16] = {
+		dim[0], 	0,			0,			0,
+		0,			dim[1],		0,			0,
+		0,			0,			dim[2],		0,
+		minXyz[0],	minXyz[1],	minXyz[2],	1 };
+
+	[self pushMatrix:rescale];
 	[self drawDL:unit_cube];
 	[self popMatrix];	
 				
@@ -349,10 +351,10 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //			current and compliment color for DLs that use the current color.
 //
 //================================================================================
-- (void) pushColor:(GLfloat *)color
+- (void) pushColor:(float *)color
 {
 	assert(color_stack_top < COLOR_STACK_DEPTH);
-	GLfloat * top = color_stack + color_stack_top * 4;
+	float * top = color_stack + color_stack_top * 4;
 	top[0] = color_now[0];
 	top[1] = color_now[1];
 	top[2] = color_now[2];
@@ -380,7 +382,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 {
 	assert(color_stack_top > 0);
 	--color_stack_top;
-	GLfloat * top = color_stack + color_stack_top * 4;
+	float * top = color_stack + color_stack_top * 4;
 	color_now[0] = top[0];
 	color_now[1] = top[1];
 	color_now[2] = top[2];
@@ -465,10 +467,10 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //			first.
 //
 //================================================================================
-- (void) drawQuad:(GLfloat *) vertices normal:(GLfloat *)normal color:(GLfloat *)color;
+- (void) drawQuad:(float *) vertices normal:(float *)normal color:(float *)color;
 {
 	assert(dl_stack_top);
-	GLfloat c[4];
+	float c[4];
 
 	set_color4fv(color,c);
 	
@@ -482,11 +484,11 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 // Purpose: Adds one triangle to the current display list.
 //
 //================================================================================
-- (void) drawTri:(GLfloat *) vertices normal:(GLfloat *)normal color:(GLfloat *)color;
+- (void) drawTri:(float *) vertices normal:(float *)normal color:(float *)color;
 {
 	assert(dl_stack_top);
 
-	GLfloat c[4];
+	float c[4];
 
 	set_color4fv(color,c);
 	
@@ -500,11 +502,11 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 // Purpose: Adds one line to the current display list.
 //
 //================================================================================
-- (void) drawLine:(GLfloat *) vertices normal:(GLfloat *)normal color:(GLfloat *)color;
+- (void) drawLine:(float *) vertices normal:(float *)normal color:(float *)color;
 {
 	assert(dl_stack_top);
 
-	GLfloat c[4];
+	float c[4];
 
 	set_color4fv(color,c);
 	
@@ -517,11 +519,11 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 // Purpose: Adds one conditional line to the current display list.
 //
 //================================================================================
-- (void) drawConditionalLine:(GLfloat *) vertices normal:(GLfloat *)normal color:(GLfloat *)color;
+- (void) drawConditionalLine:(float *) vertices normal:(float *)normal color:(float *)color;
 {
 	assert(dl_stack_top);
 
-	GLfloat c[4];
+	float c[4];
 
 	set_color4fv(color,c);
 	
@@ -542,7 +544,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //			that could deform our handle.
 //
 //================================================================================
-- (void) drawDragHandle:(GLfloat *)xyz withSize:(GLfloat)size
+- (void) drawDragHandle:(float *)xyz withSize:(float)size
 {
 	struct LDrawDragHandleInstance * dh = (struct LDrawDragHandleInstance *) LDrawBDPAllocate(pool,sizeof(struct LDrawDragHandleInstance));
 	
@@ -550,8 +552,8 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 	drag_handles = dh;
 	dh->size = 7.0;
 	
-	GLfloat handle_local[4] = { xyz[0], xyz[1], xyz[2], 1.0f };
-	GLfloat handle_world[4];
+	float handle_local[4] = { xyz[0], xyz[1], xyz[2], 1.0f };
+	float handle_world[4];
 	
 	applyMatrix(handle_world,transform_now, handle_local);
 	
@@ -579,7 +581,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 ////			of the drawing system.
 ////
 ////================================================================================
-//- (void) drawDragHandleImm:(GLfloat *)xyz withSize:(GLfloat)size
+//- (void) drawDragHandleImm:(float *)xyz withSize:(float)size
 //{
 //	static GLuint   vaoTag          = 0;
 //	static GLuint   vboTag          = 0;
@@ -595,7 +597,7 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //		float           latitudeRadians     = (M_PI / latitudeSections); // lat. wraps halfway around sphere
 //		float           longitudeRadians    = (2*M_PI / longitudeSections); // long. wraps all the way
 //		int             vertexCount         = 0;
-//		GLfloat			*vertexes           = NULL;
+//		float			*vertexes           = NULL;
 //		int             latitudeCount       = 0;
 //		int             longitudeCount      = 0;
 //		float           latitude            = 0;
@@ -609,8 +611,8 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //
 //		glGenBuffers(1, &vboTag);
 //		glBindBuffer(GL_ARRAY_BUFFER, vboTag);
-//		glBufferData(GL_ARRAY_BUFFER, vertexCount * 3 * sizeof(GLfloat), NULL, GL_STATIC_DRAW);
-//		vertexes = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+//		glBufferData(GL_ARRAY_BUFFER, vertexCount * 3 * sizeof(float), NULL, GL_STATIC_DRAW);
+//		vertexes = (float *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 //
 //		// Calculate vertexes for each strip of latitude.
 //		for(latitudeCount = 0; latitudeCount < latitudeSections; latitudeCount += 1 )
@@ -656,8 +658,8 @@ static void set_color4fv(GLfloat * c, GLfloat storage[4])
 //		glEnableVertexAttribArray(attr_position);
 //		glEnableVertexAttribArray(attr_normal);
 //		// Normal and vertex use the same data - in a unit sphere the normals are the vertices!
-//		glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), NULL);
-//		glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), NULL);
+//		glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), NULL);
+//		glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), NULL);
 //		// The sphere color is constant - no need to get it from per-vertex data.
 //		glBindVertexArrayAPPLE(0);
 //		glBindBuffer(GL_ARRAY_BUFFER, 0);

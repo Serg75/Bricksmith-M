@@ -3,7 +3,7 @@
 //	LDrawRendererGPU.h
 //	Bricksmith
 //
-//	Purpose:	Draws an LDrawFile with OpenGL.
+//	Purpose:	Draws an LDrawFile with Metal.
 //
 //	Info:		This category contains Metal-related code.
 //
@@ -14,7 +14,6 @@
 @import MetalKit;
 
 #import "LDrawRenderer.h"
-#import OPEN_GL_HEADER
 
 
 @interface LDrawRenderer (Metal) <MTKViewDelegate>

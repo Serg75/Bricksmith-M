@@ -19,7 +19,6 @@
 
 #import "PartLibraryMTL.h"
 
-#import <MetalKit/MetalKit.h>
 #import "MetalGPU.h"
 
 @implementation PartLibraryMTL
@@ -83,7 +82,7 @@ static PartLibraryMTL *SharedPartLibrary = nil;
 			
 			// Draw the image into the bitmap context. By doing so, we use the mighty
 			// power of Quartz handle the nasty conversion details necessary to fill up
-			// a pixel buffer in an OpenGL-friendly storage format and color space.
+			// a pixel buffer in an Metal-friendly storage format and color space.
 			CGContextSetBlendMode(bitmapContext, kCGBlendModeCopy);
 			CGContextDrawImage(bitmapContext, canvasRect, image);
 			

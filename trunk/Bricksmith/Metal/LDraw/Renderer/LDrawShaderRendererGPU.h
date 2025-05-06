@@ -3,12 +3,7 @@
 //	LDrawShaderRendererGPU.h
 //	Bricksmith
 //
-//	Purpose:	an implementation of the LDrawCoreRenderer API using GL shaders.
-//
-//				The renderer maintains a stack view of OpenGL state; as
-//				directives push their info to the renderer, containing LDraw
-//				parts push and pop state to affect the child parts that are
-//				drawn via the depth-first traversal.
+//	Purpose:	an implementation of the LDrawCoreRenderer API using shaders.
 //
 //	Info:		This category contains Metal-related code.
 //
@@ -21,7 +16,7 @@
 
 @interface LDrawShaderRenderer (Metal)
 
-- (id) initWithEncoder:(id<MTLRenderCommandEncoder>)encoder scale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
+- (id) initWithEncoder:(id<MTLRenderCommandEncoder>)encoder scale:(float)scale modelView:(float *)mv_matrix projection:(float *)proj_matrix;
 
 - (void) finishDraw;
 

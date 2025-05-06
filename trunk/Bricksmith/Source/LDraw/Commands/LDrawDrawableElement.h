@@ -17,9 +17,9 @@
 
 typedef struct
 {
-	GLfloat position[3];
-	GLfloat normal[3];
-	GLfloat color[4];
+	float position[3];
+	float normal[3];
+	float color[4];
 	
 } VBOVertexData;
 

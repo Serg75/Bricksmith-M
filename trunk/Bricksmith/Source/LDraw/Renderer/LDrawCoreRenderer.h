@@ -81,10 +81,10 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);			// Cleanup function ass
 // Raw drawing APIs to push one quad/tri/line/cond_line.
 // Vertices are consecutive float verts, e.g. 12 for quad/cond_line, 9 for tri, 6 for line
 // Color can be null to use the current color.  Normal is a float[3] normal ptr.
-- (void) drawQuad:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
-- (void) drawTri:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
-- (void) drawLine:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
-- (void) drawConditionalLine:(GLfloat *) vertices normal:(GLfloat *) normal color:(GLfloat *)color;
+- (void) drawQuad:(float *) vertices normal:(float *) normal color:(float *)color;
+- (void) drawTri:(float *) vertices normal:(float *) normal color:(float *)color;
+- (void) drawLine:(float *) vertices normal:(float *) normal color:(float *)color;
+- (void) drawConditionalLine:(float *) vertices normal:(float *) normal color:(float *)color;
 
 @end
 
@@ -106,20 +106,20 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);			// Cleanup function ass
 @required
 
 // Matrix stack.  The new matrix is accumulated onto the existing transform.
-- (void) pushMatrix:(GLfloat *)matrix;
+- (void) pushMatrix:(float *)matrix;
 - (void) popMatrix;
 
 // Returns a cull code indicating whether the AABB from minXYZ to maxXYZ is on screen and big enough
 // to be worth drawing.
-- (int) checkCull:(GLfloat *)minXYZ to:(GLfloat *)maxXYZ;
+- (int) checkCull:(float *)minXYZ to:(float *)maxXYZ;
 
 // This draws a plane AABB cube in the current color from minXYZ to maxXYZ.
 // It can be used for cheap bouding-box approximations of small bricks.
-- (void) drawBoxFrom:(GLfloat *)minXyz to:(GLfloat *)maxXyz;
+- (void) drawBoxFrom:(float *)minXyz to:(float *)maxXyz;
 
 // Color stack.  Pushing a color overrides the current color.  If no one ever sets the current color we get
 // that generic beige that is the RGBA of color 16.
-- (void) pushColor:(GLfloat *)color;
+- (void) pushColor:(float *)color;
 - (void) popColor;
 
 // Wire frame count - if a non-zero number of wire frame requests are outstanding, we render in wireframe.
@@ -132,7 +132,7 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);			// Cleanup function ass
 
 // Draw drag handle at a given location (3 floats).  The coordinates are within the current
 // transform.  The size is in screen pixels.
-- (void) drawDragHandle:(GLfloat *)xyz withSize:(GLfloat)size;
+- (void) drawDragHandle:(float *)xyz withSize:(float)size;
 
 // Begin/end for a display list.  Multiple display lists can be "open" for recording at one time;
 // each one returns its own collector object.  However, only the most recently (innermost)

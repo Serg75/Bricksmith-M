@@ -9,8 +9,6 @@
 //==============================================================================
 #import "LDrawDragHandle.h"
 
-#import OPEN_GL_HEADER
-#import OPEN_GL_EXT_HEADER
 #import <stdlib.h>
 
 #import "LDrawUtilities.h"
@@ -169,7 +167,7 @@
 //================================================================================
 - (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
-	GLfloat xyz[3] = { position.x, position.y, position.z };	
+	float xyz[3] = { position.x, position.y, position.z };	
 	[renderer drawDragHandle:xyz withSize:HandleDiameter/2];
 
 }//end drawSelf:

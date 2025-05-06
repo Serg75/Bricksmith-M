@@ -9,7 +9,6 @@
 //==============================================================================
 #import "LDrawTexture.h"
 
-#import "GPU.h"
 #import "LDrawDragHandle.h"
 #import "LDrawKeywords.h"
 #import "LDrawStep.h"

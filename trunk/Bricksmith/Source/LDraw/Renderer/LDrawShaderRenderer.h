@@ -13,7 +13,7 @@
 
 /*
 
-	LDrawShaderRenderer - an implementation of the LDrawCoreRenderer API using GL shaders.
+	LDrawShaderRenderer - an implementation of the LDrawCoreRenderer API using shaders.
 
 	The renderer maintains a stack view of OpenGL state; as directives push their
 	info to the renderer, containing LDraw parts push and pop state to affect the
@@ -61,9 +61,9 @@ struct	LDrawDragHandleInstance;
 	struct LDrawDLSession *			session;										// DL session - this accumulates draw calls and sorts them.
 	struct LDrawBDP *				pool;
 
-	GLfloat							color_now[4];									// Color stack.
-	GLfloat							compl_now[4];
-	GLfloat							color_stack[COLOR_STACK_DEPTH*4];
+	float							color_now[4];									// Color stack.
+	float							compl_now[4];
+	float							color_stack[COLOR_STACK_DEPTH*4];
 	int								color_stack_top;
 
 	int								wire_frame_count;								// wire frame stack is just a count.
@@ -73,19 +73,19 @@ struct	LDrawDragHandleInstance;
 	int								texture_stack_top;
 	struct LDrawTextureSpec			tex_now;
 
-	GLfloat							transform_stack[TRANSFORM_STACK_DEPTH*16];		// Transform stack from push/pop matrix.
+	float							transform_stack[TRANSFORM_STACK_DEPTH*16];		// Transform stack from push/pop matrix.
 	int								transform_stack_top;
-	GLfloat							transform_now[16];
-	GLfloat							cull_now[16];
+	float							transform_now[16];
+	float							cull_now[16];
 
 	struct LDrawDLBuilder*			dl_stack[DL_STACK_DEPTH];						// DL stack from begin/end DL builds.
 	int								dl_stack_top;
 	struct LDrawDLBuilder*			dl_now;											// This is the DL being built "right now".
 
-	GLfloat							mvp[16];										// Cached MVP from when shader is built.
+	float							mvp[16];										// Cached MVP from when shader is built.
 
 	struct LDrawDragHandleInstance *drag_handles;									// List of drag handles - deferred to draw at the end for perf and correct scaling.
-	GLfloat							scale;											// Needed to code Allen's res-independent drag handles...someday get this from viewport?
+	float							scale;											// Needed to code Allen's res-independent drag handles...someday get this from viewport?
 
 
 	// Metal
@@ -93,10 +93,10 @@ struct	LDrawDragHandleInstance;
 }
 
 // moved to category
-//- (id) initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
+//- (id) initWithScale:(float)scale modelView:(float *)mv_matrix projection:(float *)proj_matrix;
 
 // moved to category
-//- (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
+//- (void) drawDragHandleImm:(float*)xyz withSize:(float)size;
 
 - (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
 

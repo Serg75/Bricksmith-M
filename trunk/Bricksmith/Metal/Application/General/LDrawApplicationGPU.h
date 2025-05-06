@@ -16,21 +16,11 @@
 #import "LDrawApplication.h"
 
 
-@interface LDrawApplication ()
-{
-//	NSOpenGLContext			*sharedGLContext;		// OpenGL variables like display list numbers are shared through this.
-}
-
-@end
-
-
 @interface LDrawApplication (Metal)
 
 //Accessors
-//+ (NSOpenGLPixelFormat *) openGLPixelFormat;
-//+ (NSOpenGLContext *) sharedOpenGLContext;
 + (void) makeCurrentSharedContext;
 
--(void) makeSharedContext;
+- (void) makeSharedContext;
 
 @end

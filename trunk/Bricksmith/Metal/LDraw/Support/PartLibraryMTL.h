@@ -13,8 +13,7 @@
 
 #import "PartLibrary.h"
 
-#import "GPU.h"
-#import LDrawTextureGPU_h
+#import "LDrawTextureMTL.h"
 
 
 @interface PartLibraryMTL : PartLibrary
@@ -22,6 +21,6 @@
 // Initialization
 + (PartLibraryMTL *) sharedPartLibrary;
 
-- (id<MTLTexture>)metalTextureForTexture:(LDrawTextureGPU*)texture;
+- (id<MTLTexture>)metalTextureForTexture:(LDrawTextureMTL *)texture;
 
 @end

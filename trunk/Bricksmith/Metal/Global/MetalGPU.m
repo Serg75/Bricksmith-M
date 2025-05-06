@@ -7,8 +7,6 @@
 
 #import "MetalGPU.h"
 
-@import MetalKit;
-
 @implementation MetalGPU
 
 + (id<MTLDevice>)device

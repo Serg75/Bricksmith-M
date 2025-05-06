@@ -12,15 +12,14 @@
 #import "ColorLibrary.h"
 #import "MacLDraw.h"
 #import "MatrixMath.h"
-#import "LDrawGLCamera.h"
+#import "LDrawCamera.h"
 #import "LDrawUtilities.h"
-#import "GPU.h"
 
 //Forward declarations
 @class LDrawDirective;
 @class LDrawDragHandle;
 @protocol LDrawRendererDelegate;
-@protocol LDrawGLCameraScroller;
+@protocol LDrawCameraScroller;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -53,9 +52,9 @@ typedef enum
 												// tweak the selection code in LDrawDrawableElement
 												// and here in -mouseUp: to handle such cases.
 
-	LDrawGLCamera		*camera;
+	LDrawCamera			*camera;
 
-	GLfloat				glBackgroundColor[4];
+	float				backgroundColor[4];
 	Box2				selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
 	RotationDrawModeT	rotationDrawMode;		// drawing detail while rotating.
 	ViewOrientationT	viewOrientation;		// our orientation
@@ -101,7 +100,7 @@ typedef enum
 - (void) setAllowsEditing:(BOOL)flag;
 // moved to category
 //- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
-- (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawGLCameraScroller>)scroller;
+- (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawCameraScroller>)scroller;
 - (void) setDraggingOffset:(Vector3)offsetIn;
 - (void) setGridSpacing:(float)newValue;
 - (void) setLDrawDirective:(LDrawDirective *) newFile;

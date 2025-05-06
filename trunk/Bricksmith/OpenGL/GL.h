@@ -8,14 +8,17 @@
 #ifndef GL_h
 #define GL_h
 
-#define GPUView NSOpenGLView
+#define OPEN_GL_HEADER		<OpenGL/gl.h>
+#define OPEN_GL_EXT_HEADER	<OpenGL/glext.h>
 
-#define TexType					GLuint
+#define GPUView				NSOpenGLView
 
-#define LDrawTextureGPU_h		"LDrawTextureGL.h"
-#define LDrawTextureGPU 		LDrawTextureGL
+#define TexType				GLuint
 
-#define PartLibraryGPU_h		"PartLibraryGL.h"
-#define PartLibraryGPU			PartLibraryGL
+#define LDrawTextureGPU_h	"LDrawTextureGL.h"
+#define LDrawTextureGPU 	LDrawTextureGL
+
+#define PartLibraryGPU_h	"PartLibraryGL.h"
+#define PartLibraryGPU		PartLibraryGL
 
 #endif /* GL_h */

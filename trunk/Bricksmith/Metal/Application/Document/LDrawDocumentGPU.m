@@ -50,7 +50,7 @@
 //========== outlineViewSelectionDidChange: ====================================
 //
 // Purpose:		We have selected a different something in the file contents.
-//				We need to show it as selected in the OpenGL viewing area.
+//				We need to show it as selected in the Metal viewing area.
 //				This means we may have to change the active model or step in
 //				order to display the selection.
 //
@@ -65,14 +65,6 @@
 	NSInteger		selectedStepIndex	= 0;
 	NSInteger       counter             = 0;
 	
-	// This method can be called from LDrawOpenGLView (in which case we already
-	// have a context we want to use) or it might be called on its own. Since
-	// selecting parts can trigger OpenGL commands, we should make sure we have
-	// a context active, but we should also restore the current context when
-	// we're done.
-//	NSOpenGLContext *originalContext = [NSOpenGLContext currentContext];
-//	[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-
 	//Deselect all the previously-selected directives
 	// (clears the internal directive flag used for drawing)
 	for(counter = 0; counter < [self->selectedDirectives count]; counter++)
@@ -117,7 +109,6 @@
 		[self setLastSelectedPart:lastSelectedItem];
 
 	[self buildRelatedPartsMenus];
-//	[originalContext makeCurrentContext];
 	
 }//end outlineViewSelectionDidChange:
 

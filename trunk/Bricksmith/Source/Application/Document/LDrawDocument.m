@@ -446,8 +446,8 @@ void AppendChoicesToNewItem(
 	__block	BOOL        success         = NO;
 	
 	//Parse the model.
-	// - optimizing models can result in OpenGL calls, so to be ultra-safe we 
-	//   set a context and lock on it. We can't use any of the documents GL 
+	// - optimizing models can result in GPU calls, so to be ultra-safe we
+	//   set a context and lock on it. We can't use any of the documents GPU
 	//   views because the Nib may not have been loaded yet.
 	[self lockContextAndExecute:^
 	{

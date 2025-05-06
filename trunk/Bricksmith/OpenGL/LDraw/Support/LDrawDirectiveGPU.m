@@ -13,6 +13,8 @@
 
 #import "LDrawDirective.h"
 
+#include OPEN_GL_HEADER
+
 @implementation LDrawDirective (OpenGL)
 
 //========== debugDrawBoundingBox ==============================================

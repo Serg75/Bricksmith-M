@@ -24,43 +24,8 @@
 #pragma mark ACCESSORS
 #pragma mark -
 
-////---------- openGLPixelFormat ---------------------------------------[static]--
-////
-//// Purpose:		Returns the pixel format used in Bricksmith OpenGL views.
-////
-////------------------------------------------------------------------------------
-//+ (NSOpenGLPixelFormat *) openGLPixelFormat
-//{
-//	NSOpenGLPixelFormat				*pixelFormat		= nil;
-//	NSOpenGLPixelFormatAttribute	pixelAttributes[]	= {
-//															NSOpenGLPFANoRecovery, // Enable automatic use of OpenGL "share" contexts for Core Animation.
-//															NSOpenGLPFADoubleBuffer,
-//															NSOpenGLPFADepthSize,		32,
-//															NSOpenGLPFASampleBuffers,	1, // enable line antialiasing
-//															NSOpenGLPFASamples,			4, // antialiasing beauty
-//															0};
-//
-//	pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes: pixelAttributes];
-//	return pixelFormat;
-//}
-
 + (void) makeCurrentSharedContext { }
 
-////---------- sharedOpenGLContext -------------------------------------[static]--
-////
-//// Purpose:		Returns the OpenGLContext which unifies our display-list tags.
-////				Every LDrawGLView should share this context.
-////
-////------------------------------------------------------------------------------
-//+ (NSOpenGLContext *) sharedOpenGLContext
-//{
-//	return [LDrawApplication shared]->sharedGLContext;
-//
-//}//end sharedOpenGLContext
-
-
-#pragma mark -
-
--(void) makeSharedContext { }
+- (void) makeSharedContext { }
 
 @end

@@ -1,5 +1,5 @@
 /*
- *  GLMatrixMath.c
+ *  MatrixMathEx.c
  *  Bricksmith
  *
  *  Created by bsupnik on 9/24/13.
@@ -7,7 +7,7 @@
  *
  */
 
-#include "GLMatrixMath.h"
+#include "MatrixMathEx.h"
 
 
 #if !defined(MIN)
@@ -26,7 +26,7 @@
 // Notes:	This routine takes data in direct "OpenGL" format.
 //
 //================================================================================
-void applyMatrix(GLfloat dst[4], const GLfloat m[16], const GLfloat v[4])
+void applyMatrix(float dst[4], const float m[16], const float v[4])
 {
 	dst[0] = v[0] * m[0] + v[1] * m[4] + v[2] * m[8] + v[3] * m[12];
 	dst[1] = v[0] * m[1] + v[1] * m[5] + v[2] * m[9] + v[3] * m[13];
@@ -42,7 +42,7 @@ void applyMatrix(GLfloat dst[4], const GLfloat m[16], const GLfloat v[4])
 // Notes:	This routine takes data in direct "OpenGL" format.
 //
 //================================================================================
-void applyMatrixInPlace(GLfloat dst[4], const GLfloat m[16])
+void applyMatrixInPlace(float dst[4], const float m[16])
 {
 	float v[4] = { dst[0], dst[1], dst[2], dst[3] };
 	applyMatrix(dst,m,v);
@@ -56,7 +56,7 @@ void applyMatrixInPlace(GLfloat dst[4], const GLfloat m[16])
 //			coordinates.
 //
 //================================================================================
-void perspectiveDivideInPlace(GLfloat p[4])
+void perspectiveDivideInPlace(float p[4])
 {
 	if(p[3] != 0.0f)
 	{
@@ -76,7 +76,7 @@ void perspectiveDivideInPlace(GLfloat p[4])
 //			coordinates.
 //
 //================================================================================
-void perspectiveDivide(GLfloat o[3], const GLfloat p[4])
+void perspectiveDivide(float o[3], const float p[4])
 {
 	if(p[3] != 0.0f)
 	{
@@ -94,7 +94,7 @@ void perspectiveDivide(GLfloat o[3], const GLfloat p[4])
 //			saves us from having to transpose our matrices that we've stashed.
 //
 //================================================================================
-void applyMatrixTranspose(GLfloat dst[4], const GLfloat m[16], const GLfloat v[4])
+void applyMatrixTranspose(float dst[4], const float m[16], const float v[4])
 {
 	dst[0] = v[0] * m[0 ] + v[1] * m[1 ] + v[2] * m[2 ] + v[3] * m[3 ];
 	dst[1] = v[0] * m[4 ] + v[1] * m[5 ] + v[2] * m[6 ] + v[3] * m[7 ];
@@ -108,7 +108,7 @@ void applyMatrixTranspose(GLfloat dst[4], const GLfloat m[16], const GLfloat v[4
 // Purpose: compose two matrices in OpenGL format.
 //
 //================================================================================
-void multMatrices(GLfloat dst[16], const GLfloat a[16], const GLfloat b[16])
+void multMatrices(float dst[16], const float a[16], const float b[16])
 {
 	dst[0 ] = b[0 ]*a[0] + b[1 ]*a[4] + b[2 ]*a[8 ] + b[3 ]*a[12];
 	dst[1 ] = b[0 ]*a[1] + b[1 ]*a[5] + b[2 ]*a[9 ] + b[3 ]*a[13];
@@ -139,15 +139,15 @@ void multMatrices(GLfloat dst[16], const GLfloat a[16], const GLfloat b[16])
 // http://www.gamedev.net/topic/600537-instead-of-glrotatef-build-a-matrix/
 //
 //================================================================================
-void buildRotationMatrix(GLfloat m[16], GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
+void buildRotationMatrix(float m[16], float angle, float x, float y, float z)
 {
 //			|	x^2*(1-c)+c		x*y*(1-c)-z*s	x*z*(1-c)+y*s	0	|
 //	R = 	|	y*x*(1-c)+z*s	y^2*(1-c)+c		y*z*(1-c)-x*s	0	|
 //			|	x*z*(1-c)-y*s	y*z*(1-c)+x*s	z^2*(1-c)+c		0	|
 //			|	0				0				0				1	|
 
-	GLfloat c = cos(angle * M_PI / 180.0f);
-	GLfloat s = sin(angle * M_PI / 180.0f);
+	float c = cos(angle * M_PI / 180.0f);
+	float s = sin(angle * M_PI / 180.0f);
 
 	m[0] = x*x*(1-c)+c;		m[4] = x*y*(1-c)-z*s;		m[8 ] = x*z*(1-c)+y*s;		m[12] = 0;
 	m[1] = y*x*(1-c)+z*s;	m[5] = y*y*(1-c)+c;			m[9 ] = y*z*(1-c)-x*s;		m[13] = 0;
@@ -163,7 +163,7 @@ void buildRotationMatrix(GLfloat m[16], GLfloat angle, GLfloat x, GLfloat y, GLf
 //			the behavior of glTranslatef.
 //
 //================================================================================
-void buildTranslationMatrix(GLfloat m[16], GLfloat x, GLfloat y, GLfloat z)
+void buildTranslationMatrix(float m[16], float x, float y, float z)
 {
 	m[0] = 1;	m[4] = 0;	m[8 ] = 0;	m[12] = x;
 	m[1] = 0;	m[5] = 1;	m[9 ] = 0;	m[13] = y;
@@ -177,7 +177,7 @@ void buildTranslationMatrix(GLfloat m[16], GLfloat x, GLfloat y, GLfloat z)
 // Purpose: sets the passed in matrix to an identiy matrix.
 //
 //================================================================================
-void buildIdentity(GLfloat m[16])
+void buildIdentity(float m[16])
 {
 	m[0] = 1;	m[4] = 0;	m[8 ] = 0;	m[12] = 0;
 	m[1] = 0;	m[5] = 1;	m[9 ] = 0;	m[13] = 0;
@@ -192,11 +192,11 @@ void buildIdentity(GLfloat m[16])
 //			This matches the math of glFrustum.
 //
 //================================================================================
-void buildFrustumMatrix(GLfloat m[16], GLfloat left, GLfloat right, GLfloat bottom, GLfloat top, GLfloat zNear, GLfloat zFar)
+void buildFrustumMatrix(float m[16], float left, float right, float bottom, float top, float zNear, float zFar)
 {
-	GLfloat dx=right-left;
-	GLfloat dy=top-bottom;
-	GLfloat dz=zFar-zNear;
+	float dx=right-left;
+	float dy=top-bottom;
+	float dz=zFar-zNear;
 
 	m[0]=2.0f*zNear/dx;		m[4]=0;					m[8 ]=(right+left)/dx;		m[12]=0;
 	m[1]=0;					m[5]=2.0f*zNear/dy;		m[9 ]=(top+bottom)/dy;		m[13]=0;
@@ -211,11 +211,11 @@ void buildFrustumMatrix(GLfloat m[16], GLfloat left, GLfloat right, GLfloat bott
 //			parameters; matches the behavior of glOrtho.
 //
 //================================================================================
-void buildOrthoMatrix(GLfloat m[16], GLfloat left, GLfloat right, GLfloat bottom, GLfloat top, GLfloat zNear, GLfloat zFar)
+void buildOrthoMatrix(float m[16], float left, float right, float bottom, float top, float zNear, float zFar)
 {
-	GLfloat dx=right-left;
-	GLfloat dy=top-bottom;
-	GLfloat dz=zFar-zNear;
+	float dx=right-left;
+	float dy=top-bottom;
+	float dz=zFar-zNear;
 
 	m[0]=2.0f/dx;		m[4]=0;			m[8 ]=0;		m[12]=-(right+left)/dx;
 	m[1]=0;				m[5]=2.0f/dy;	m[9 ]=0;		m[13]=-(top+bottom)/dy;
@@ -230,9 +230,9 @@ void buildOrthoMatrix(GLfloat m[16], GLfloat left, GLfloat right, GLfloat bottom
 //			function, since often rotations need to be stacked up.
 //
 //================================================================================
-void applyRotationMatrix(GLfloat m[16], GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
+void applyRotationMatrix(float m[16], float angle, float x, float y, float z)
 {
-	GLfloat temp[16], r[16];
+	float temp[16], r[16];
 	buildRotationMatrix(r, angle, x, y, z);
 	memcpy(temp,m,sizeof(temp));
 	multMatrices(m, temp, r);
@@ -413,11 +413,11 @@ static void accum_bounds(const float a[4], const float b[4], float aabb[6])
 //
 //================================================================================
 void meshToClipbox(
-				GLfloat *			vertices, 
-				int					vcount, 
-				const int *			lines, 
-				const GLfloat		m[16], 
-				GLfloat				out_aabb_ndc[6])
+				float *			vertices, 
+				int				vcount,
+				const int *		lines,
+				const float		m[16], 
+				float			out_aabb_ndc[6])
 {
 	int i; 
 	
@@ -498,24 +498,24 @@ void meshToClipbox(
 //
 //================================================================================
 void aabbToClipbox(
-				const GLfloat			aabb_mv[6], 
-				const GLfloat			m[16], 
-				GLfloat					aabb_ndc[6])
+				const float		aabb_mv[6],
+				const float		m[16],
+				float			aabb_ndc[6])
 {
 	// We basically use the utility meshToClipbox to do the heavy lifting; we
 	// have a hard coded 'index list' for the 12 edges of a box.
 
-	GLfloat  vin[32] = {	
-							aabb_mv[0], aabb_mv[1], aabb_mv[2],1.0f,
-							aabb_mv[0], aabb_mv[1], aabb_mv[5],1.0f,
-							aabb_mv[0], aabb_mv[4], aabb_mv[2],1.0f,
-							aabb_mv[0], aabb_mv[4], aabb_mv[5],1.0f,
-							
-							aabb_mv[3], aabb_mv[1], aabb_mv[2],1.0f,
-							aabb_mv[3], aabb_mv[1], aabb_mv[5],1.0f,
-							aabb_mv[3], aabb_mv[4], aabb_mv[2],1.0f,
-							aabb_mv[3], aabb_mv[4], aabb_mv[5],1.0f,
-						  };
+	float vin[32] = {
+		aabb_mv[0], aabb_mv[1], aabb_mv[2],1.0f,
+		aabb_mv[0], aabb_mv[1], aabb_mv[5],1.0f,
+		aabb_mv[0], aabb_mv[4], aabb_mv[2],1.0f,
+		aabb_mv[0], aabb_mv[4], aabb_mv[5],1.0f,
+
+		aabb_mv[3], aabb_mv[1], aabb_mv[2],1.0f,
+		aabb_mv[3], aabb_mv[1], aabb_mv[5],1.0f,
+		aabb_mv[3], aabb_mv[4], aabb_mv[2],1.0f,
+		aabb_mv[3], aabb_mv[4], aabb_mv[5],1.0f,
+	};
 
 	static const int line_list[] = {
 		0, 1, 2, 3, 4, 5, 6, 7,
@@ -550,7 +550,7 @@ void aabbToClipbox(
 //				then two adjacent triangles are returned).
 //
 //================================================================================
-int clipTriangle(const GLfloat in_tri[12], GLfloat out_tri[18])
+int clipTriangle(const float in_tri[12], float out_tri[18])
 {
 	// Ihe idea is that we determine whether each of the three
 	// vertices is outside our clip plane.  Then based on the

@@ -248,12 +248,12 @@
 	if(self->hidden == NO)
 	{
 		#if !NO_LINE_DRWAING
-		GLfloat	v[12] = {
+		float v[12] = {
 			vertex1.x, vertex1.y, vertex1.z,
 			vertex2.x, vertex2.y, vertex2.z,
 			conditionalVertex1.x, conditionalVertex1.y, conditionalVertex1.z,
 			conditionalVertex2.x, conditionalVertex2.y, conditionalVertex2.z };
-		GLfloat n[3] = { 0, -1, 0 };
+		float n[3] = { 0, -1, 0 };
 
 		if([self->color colorCode] == LDrawCurrentColor)
 			[renderer drawConditionalLine:v normal:n color:LDrawRenderCurrentColor];
@@ -261,7 +261,7 @@
 			[renderer drawConditionalLine:v normal:n color:LDrawRenderComplimentColor];
 		else
 		{
-			GLfloat	rgba[4];
+			float rgba[4];
 			[self->color getColorRGBA:rgba];
 			[renderer drawConditionalLine:v normal:n color:rgba];
 		}

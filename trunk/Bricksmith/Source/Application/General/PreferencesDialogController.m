@@ -1010,7 +1010,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	// Initial Window State
 	//
 	
-	// OpenGL viewer settings -- see -restoreConfiguration in LDrawView.
+	// GPU viewer settings -- see -restoreConfiguration in LDrawView.
 	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientation3D]			forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" fileGraphicView_0"]];
 	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModePerspective]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" fileGraphicView_0"]];
 	
@@ -1117,7 +1117,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	
 	[initialDefaults setObject:[NSNumber numberWithFloat:4.0]			forKey:MINIFIGURE_HEAD_ELEVATION];
 	
-	//OpenGL viewer settings -- see -restoreConfiguration in LDrawView.
+	// GPU viewer settings -- see -restoreConfiguration in LDrawView.
 	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientationFront]		forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" MinifigureGeneratorView"]];
 	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModeOrthographic]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" MinifigureGeneratorView"]];
 	

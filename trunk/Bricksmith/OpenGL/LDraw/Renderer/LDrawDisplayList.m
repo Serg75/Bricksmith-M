@@ -10,10 +10,10 @@
 #import "LDrawCoreRenderer.h"
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderRenderer.h"
+#import "MatrixMathEx.h"
 #import "MeshSmooth.h"
-#import "GLMatrixMath.h"
-#import OPEN_GL_HEADER
-#import OPEN_GL_EXT_HEADER
+
+#include OPEN_GL_HEADER
 
 
 // This forces quads to be subdivided into tris at creation.

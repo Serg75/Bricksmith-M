@@ -20,14 +20,13 @@
 //==============================================================================
 #import "LDrawTriangle.h"
 
-#import OPEN_GL_HEADER
 #import <string.h>
 
 #import "LDrawColor.h"
 #import "LDrawDragHandle.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#include "GLMatrixMath.h"
+#import "MatrixMathEx.h"
 
 
 @implementation LDrawTriangle
@@ -247,12 +246,12 @@
 	
 	if(self->hidden == NO)
 	{
-		GLfloat	v[9] = { 
+		float v[9] = {
 			vertex1.x, vertex1.y, vertex1.z,
 			vertex2.x, vertex2.y, vertex2.z,
 			vertex3.x, vertex3.y, vertex3.z };
 
-		GLfloat n[3] = { normal.x, normal.y, normal.z };
+		float n[3] = { normal.x, normal.y, normal.z };
 
 		if([self->color colorCode] == LDrawCurrentColor)	
 			[renderer drawTri:v normal:n color:LDrawRenderCurrentColor];
@@ -260,7 +259,7 @@
 			[renderer drawTri:v normal:n color:LDrawRenderComplimentColor];
 		else
 		{
-			GLfloat	rgba[4];
+			float rgba[4];
 			[self->color getColorRGBA:rgba];
 			[renderer drawTri:v normal:n color:rgba];
 		}

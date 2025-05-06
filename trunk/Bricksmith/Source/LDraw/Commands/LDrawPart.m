@@ -20,20 +20,21 @@
 //  Copyright (c) 2005. All rights reserved.
 //==============================================================================
 #import "LDrawPart.h"
-#import "MacLDraw.h"
+
 #import <math.h>
 #import <string.h>
-#import "GPU.h"
+
+#import "MacLDraw.h"
 #import "LDrawColor.h"
 #import "LDrawFile.h"
 #import "LDrawModel.h"
+#import "LDrawPaths.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import PartLibraryGPU_h
-#import "LDrawPaths.h"
-#import "PartReport.h"
 #import "ModelManager.h"
+#import "PartReport.h"
 #import "StringCategory.h"
+#import PartLibraryGPU_h
 
 // This is experimental for now: one way to draw the gaps between lego bricks 
 // without using lines is to simply shrink the entire brick by a tiny amount,
@@ -245,7 +246,7 @@ int floatNearGrid(float v, float grid, float epsi)
 
 	//Decoding structures is a bit messy.
 	temporary	= [decoder decodeBytesForKey:@"glTransformation" returnedLength:NULL];
-	memcpy(glTransformation, temporary, sizeof(GLfloat)*16 );
+	memcpy(glTransformation, temporary, sizeof(float)*16 );
 	
 	return self;
 	
@@ -268,7 +269,7 @@ int floatNearGrid(float v, float grid, float epsi)
     // Parts may have icons other than the standard "Brick", i.e. LSynth constraints
 	[encoder encodeObject:[self iconName] forKey:@"iconName"];
 	[encoder encodeBytes:(void *)glTransformation
-				  length:sizeof(GLfloat)*16
+				  length:sizeof(float)*16
 				  forKey:@"glTransformation"];
 	
 }//end encodeWithCoder:
@@ -327,7 +328,7 @@ int floatNearGrid(float v, float grid, float epsi)
 					[renderer pushColor:LDrawRenderComplimentColor];
 				else
 				{
-					GLfloat c[4];
+					float c[4];
 					[self->color getColorRGBA:c];				
 					[renderer pushColor:c];
 				}
@@ -340,15 +341,15 @@ int floatNearGrid(float v, float grid, float epsi)
 			
 			Box3 bbox = [cacheModel boundingBox3];
 			int i;
-			GLfloat dim[3] = {	bbox.max.x - bbox.min.x,
+			float dim[3] = {	bbox.max.x - bbox.min.x,
 								bbox.max.y - bbox.min.y,
 								bbox.max.z - bbox.min.z };
 
-			GLfloat ctr[3] = {	(bbox.max.x + bbox.min.x) * 0.5f,
+			float ctr[3] = {	(bbox.max.x + bbox.min.x) * 0.5f,
 								(bbox.max.y + bbox.min.y) * 0.5f,
 								(bbox.max.z + bbox.min.z) * 0.5f };
 
-			GLfloat	shrinkMatrix[16] = { 0 };
+			float	shrinkMatrix[16] = { 0 };
 			shrinkMatrix[15] = 1.0f;
 			
 			for(i = 0; i < 3; ++i)

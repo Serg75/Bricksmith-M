@@ -23,16 +23,12 @@
 //
 //==============================================================================
 
-@import simd;
-@import ModelIO;
-@import MetalKit;
-
 #import "LDrawRendererGPU.h"
+
+#include "MetalCommonDefinitions.h"
 
 #import "LDrawShaderRendererMTL.h"
 #import "MetalGPU.h"
-#include "OpenGLUtilities.h"
-#include "MetalCommonDefinitions.h"
 
 
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
@@ -310,17 +306,29 @@ struct FragmentUniform {
 
 	id<MTLTexture> depthTexture = [MetalGPU.device newTextureWithDescriptor:depthTextureDescriptor];
 
-	// Default color. Our wrapper is responsible from applying the user's preferred color.
-	NSColor *bgColor = [NSColor.controlBackgroundColor colorUsingColorSpace: NSColorSpace.deviceRGBColorSpace];
+	float bgColor[4];
+	if (backgroundColor[3] == 0.0) {
+		// Default color. Our wrapper is responsible from applying the user's preferred color.
+		NSColor *controlColor = [NSColor.controlBackgroundColor colorUsingColorSpace: NSColorSpace.deviceRGBColorSpace];
+		bgColor[0] = controlColor.redComponent;
+		bgColor[1] = controlColor.greenComponent;
+		bgColor[2] = controlColor.blueComponent;
+		bgColor[3] = 1.0;
+	} else {
+		bgColor[0] = backgroundColor[0];
+		bgColor[1] = backgroundColor[1];
+		bgColor[2] = backgroundColor[2];
+		bgColor[3] = backgroundColor[3];
+	}
 
 	renderPassDescriptor.colorAttachments[0].texture = msaaColorTexture;
 	renderPassDescriptor.colorAttachments[0].resolveTexture = currentDrawable.texture;
 	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
 	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
-	renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(bgColor.redComponent,
-																			bgColor.greenComponent,
-																			bgColor.blueComponent,
-																			1.0);
+	renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(bgColor[0],
+																			bgColor[1],
+																			bgColor[2],
+																			bgColor[3]);
 
 	renderPassDescriptor.depthAttachment.texture = depthTexture;
 	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
@@ -430,7 +438,7 @@ struct FragmentUniform {
 		Point2	p2		= [self convertPointToViewport:to];
 		Size2	vpSize	= self.viewport.size;
 
-		GLfloat	vertices[] = {
+		float vertices[] = {
 			p1.x, p1.y,
 			p2.x, p1.y,
 			p2.x, p2.y,
@@ -447,7 +455,7 @@ struct FragmentUniform {
 			vertexBuffer.label = @"Marquee vertex buffer";
 		}
 
-		GLfloat * vert_data = (GLfloat *)vertexBuffer.contents;
+		float * vert_data = (float *)vertexBuffer.contents;
 		memcpy(vert_data, &vertices, sizeof(vertices));
 
 		[renderEncoder setRenderPipelineState:_marqueePipelineState];
@@ -472,15 +480,10 @@ struct FragmentUniform {
 //==============================================================================
 - (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue
 {
-	glBackgroundColor[0] = red;
-	glBackgroundColor[1] = green;
-	glBackgroundColor[2] = blue;
-	glBackgroundColor[3] = 1.0;
-
-	glClearColor(glBackgroundColor[0],
-				 glBackgroundColor[1],
-				 glBackgroundColor[2],
-				 glBackgroundColor[3] );
+	backgroundColor[0] = red;
+	backgroundColor[1] = green;
+	backgroundColor[2] = blue;
+	backgroundColor[3] = 1.0;
 				 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 }

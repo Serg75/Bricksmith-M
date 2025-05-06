@@ -25,7 +25,7 @@
 #import "LDrawDragHandle.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "GLMatrixMath.h"
+#import "MatrixMathEx.h"
 
 @implementation LDrawQuadrilateral
 
@@ -259,13 +259,13 @@
 	[self revalCache:DisplayList];
 	if(self->hidden == NO)
 	{
-		GLfloat	v[12] = { 
+		float v[12] = {
 			vertex1.x, vertex1.y, vertex1.z,
 			vertex2.x, vertex2.y, vertex2.z,
 			vertex3.x, vertex3.y, vertex3.z,
 			vertex4.x, vertex4.y, vertex4.z };
 
-		GLfloat n[3] = { normal.x, normal.y, normal.z };
+		float n[3] = { normal.x, normal.y, normal.z };
 
 		if([self->color colorCode] == LDrawCurrentColor)	
 			[renderer drawQuad:v normal:n color:LDrawRenderCurrentColor];
@@ -273,7 +273,7 @@
 			[renderer drawQuad:v normal:n color:LDrawRenderComplimentColor];
 		else
 		{
-			GLfloat	rgba[4];
+			float rgba[4];
 			[self->color getColorRGBA:rgba];
 			[renderer drawQuad:v normal:n color:rgba];
 		}

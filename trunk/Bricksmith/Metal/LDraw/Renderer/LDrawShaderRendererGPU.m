@@ -3,9 +3,10 @@
 //	LDrawShaderRendererGPU.m
 //	Bricksmith
 //
-//	Purpose:	an implementation of the LDrawCoreRenderer API using GL shaders.
+//	Purpose:	an implementation of the LDrawCoreRenderer API using Metal
+//				shaders.
 //
-//				The renderer maintains a stack view of OpenGL state; as
+//				The renderer maintains a stack view of GPU state; as
 //				directives push their info to the renderer, containing LDraw
 //				parts push and pop state to affect the child parts that are
 //				drawn via the depth-first traversal.
@@ -19,12 +20,13 @@
 #import "LDrawShaderRendererGPU.h"
 
 @import MetalKit;
+@import simd;
 
 #import "LDrawBDPAllocator.h"
 #import "LDrawDisplayList.h"
 #import "ColorLibrary.h"
-#import "GLMatrixMath.h"
 #import "MetalGPU.h"
+#import "MetalUtilities.h"
 #import "MetalCommonDefinitions.h"
 
 
@@ -32,13 +34,13 @@
 
 //========== init: ===============================================================
 //
-// Purpose: initialize our renderer, and grab all basic OpenGL state we need.
+// Purpose: initialize our renderer, and grab all basic Metal state we need.
 //
 //================================================================================
 - (id) initWithEncoder:(id<MTLRenderCommandEncoder>)renderEncoder
 				 scale:(float)initial_scale
-			 modelView:(GLfloat *)mv_matrix
-			projection:(GLfloat *)proj_matrix
+			 modelView:(float *)mv_matrix
+			projection:(float *)proj_matrix
 {
 	pool = LDrawBDPCreate();
 
@@ -55,10 +57,16 @@
 	memset(transform_now,0,sizeof(transform_now));
 	transform_now[0] = transform_now[5] = transform_now[10] = transform_now[15] = 1.0f;
 
-	// "Rip" the MVP matrix from OpenGL.  (TODO: does LDraw just have this info?)
+	// "Rip" the MVP matrix from Metal.  (TODO: does LDraw just have this info?)
 	// We use this for culling.
-	multMatrices(mvp,proj_matrix,mv_matrix);
-	memcpy(cull_now,mvp,sizeof(mvp));
+	
+	simd_float4x4 projMatrix = simd_matrix_from_array(proj_matrix);
+	simd_float4x4 mvMatrix = simd_matrix_from_array(mv_matrix);
+	
+	simd_float4x4 mvpMatrix = simd_mul(projMatrix, mvMatrix);
+	
+	simd_matrix_to_array(mvpMatrix, mvp);
+	memcpy(cull_now, mvp, sizeof(mvp));
 
 	// Create a DL session to match our lifetime.
 	session = LDrawDLSessionCreate(mv_matrix);
@@ -215,12 +223,12 @@
 	instanceBuffer.label = @"Drag handle instance buffer";
 
 	// Map our instance buffer so we can write instancing data.
-	GLfloat * inst_data = (GLfloat *)instanceBuffer.contents;
+	float * inst_data = (float *)instanceBuffer.contents;
 
 	for (dh = drag_handles; dh != NULL; dh = dh->next)
 	{
-		GLfloat s = dh->size / self->scale;
-		GLfloat m[16] = {
+		float s = dh->size / self->scale;
+		float m[16] = {
 			s, 0, 0, 0,
 			0, s, 0, 0,
 			0, 0, s, 0,

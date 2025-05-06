@@ -366,8 +366,8 @@
 		956D9BEC2A30768000FA956B /* LDrawBDPAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDBB4516508D7200B4062B /* LDrawBDPAllocator.h */; };
 		956D9BEF2A30768000FA956B /* MeshSmooth.h in Headers */ = {isa = PBXBuildFile; fileRef = D608724616ED61F500828B4E /* MeshSmooth.h */; };
 		956D9BF02A30768000FA956B /* RelatedParts.h in Headers */ = {isa = PBXBuildFile; fileRef = D6C0C5CD16DABE70007E4266 /* RelatedParts.h */; };
-		956D9BF12A30768000FA956B /* LDrawGLCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */; };
-		956D9BF22A30768000FA956B /* GLMatrixMath.h in Headers */ = {isa = PBXBuildFile; fileRef = D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */; };
+		956D9BF12A30768000FA956B /* LDrawCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawCamera.h */; };
+		956D9BF22A30768000FA956B /* MatrixMathEx.h in Headers */ = {isa = PBXBuildFile; fileRef = D6191B9B17F277B600B5DF44 /* MatrixMathEx.h */; };
 		956D9BF42A30768000FA956B /* Bricksmith_Sparkle_signature_public.pem in Resources */ = {isa = PBXBuildFile; fileRef = 0B040CD6164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem */; };
 		956D9BF52A30768000FA956B /* Bum.ldr in Resources */ = {isa = PBXBuildFile; fileRef = 0B2FAE5F101972DF007BA948 /* Bum.ldr */; };
 		956D9BF62A30768000FA956B /* SearchPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9506E0FE18AA74BE0006CE9C /* SearchPanel.xib */; };
@@ -498,8 +498,8 @@
 		956D9C812A30768000FA956B /* InspectionLSynth.m in Sources */ = {isa = PBXBuildFile; fileRef = 737728C3A3DF6166BE9183ED /* InspectionLSynth.m */; };
 		956D9C832A30768000FA956B /* MeshSmooth.c in Sources */ = {isa = PBXBuildFile; fileRef = D608724716ED61F500828B4E /* MeshSmooth.c */; };
 		956D9C842A30768000FA956B /* RegexKitLite.m in Sources */ = {isa = PBXBuildFile; fileRef = 737725695C55F263D18C33B9 /* RegexKitLite.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		956D9C852A30768000FA956B /* LDrawGLCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D619130017F004A300B5DF44 /* LDrawGLCamera.m */; };
-		956D9C862A30768000FA956B /* GLMatrixMath.c in Sources */ = {isa = PBXBuildFile; fileRef = D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */; };
+		956D9C852A30768000FA956B /* LDrawCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D619130017F004A300B5DF44 /* LDrawCamera.m */; };
+		956D9C862A30768000FA956B /* MatrixMathEx.c in Sources */ = {isa = PBXBuildFile; fileRef = D6191B9C17F277B600B5DF44 /* MatrixMathEx.c */; };
 		956D9C872A30768000FA956B /* PartCatalogBuilder.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B0B6CCC2787D87800F6E225 /* PartCatalogBuilder.m */; };
 		956D9C892A30768000FA956B /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */; };
 		956D9C8B2A30768000FA956B /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B655439081367E800EA7F4F /* GLUT.framework */; };
@@ -522,8 +522,6 @@
 		956D9CAD2A30ADC400FA956B /* LDrawViewAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9631093BB4200E201EE /* LDrawViewAccessories.xib */; };
 		956D9CB42A3102C600FA956B /* LDrawShaderRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CB22A3102C600FA956B /* LDrawShaderRendererGPU.h */; };
 		956D9CB52A3102C600FA956B /* LDrawShaderRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */; };
-		956D9CB82A31038800FA956B /* LDrawPartGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CB62A31038800FA956B /* LDrawPartGPU.h */; };
-		956D9CB92A31038800FA956B /* LDrawPartGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CB72A31038800FA956B /* LDrawPartGPU.m */; };
 		956D9CBD2A31042D00FA956B /* LDrawDirectiveGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */; };
 		956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9CC22A31056400FA956B /* LDrawRendererGPU.h */; };
 		956D9CC52A31056400FA956B /* LDrawRendererGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC32A31056400FA956B /* LDrawRendererGPU.m */; };
@@ -531,11 +529,12 @@
 		956D9CC92A31060800FA956B /* PartLibraryMTL.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC72A31060800FA956B /* PartLibraryMTL.m */; };
 		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
 		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
+		95AA25A52DC1E57900EB929E /* MetalUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 95AA25A42DC1E57900EB929E /* MetalUtilities.m */; };
+		95AA25A62DC1E57900EB929E /* MetalUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 95AA25A32DC1E57900EB929E /* MetalUtilities.h */; };
 		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
 		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
 		95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
 		95C0387228BFFF86005C6346 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
-		95C773C02A24D01800058D75 /* LDrawPartGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773BE2A24D01700058D75 /* LDrawPartGPU.h */; };
 		95C773C12A24D01800058D75 /* LDrawPartGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773BF2A24D01800058D75 /* LDrawPartGPU.m */; };
 		95C773C52A24D6ED00058D75 /* LDrawDocumentGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773C32A24D6ED00058D75 /* LDrawDocumentGPU.h */; };
 		95C773C62A24D6ED00058D75 /* LDrawDocumentGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773C42A24D6ED00058D75 /* LDrawDocumentGPU.m */; };
@@ -574,10 +573,10 @@
 		95FBD68129C4A5A900E84D2F /* ClassInspector_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */; };
 		D608724816ED61F500828B4E /* MeshSmooth.h in Headers */ = {isa = PBXBuildFile; fileRef = D608724616ED61F500828B4E /* MeshSmooth.h */; };
 		D608724916ED61F500828B4E /* MeshSmooth.c in Sources */ = {isa = PBXBuildFile; fileRef = D608724716ED61F500828B4E /* MeshSmooth.c */; };
-		D619130117F004A300B5DF44 /* LDrawGLCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */; };
-		D619130217F004A300B5DF44 /* LDrawGLCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D619130017F004A300B5DF44 /* LDrawGLCamera.m */; };
-		D6191B9D17F277B600B5DF44 /* GLMatrixMath.h in Headers */ = {isa = PBXBuildFile; fileRef = D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */; };
-		D6191B9E17F277B600B5DF44 /* GLMatrixMath.c in Sources */ = {isa = PBXBuildFile; fileRef = D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */; };
+		D619130117F004A300B5DF44 /* LDrawCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawCamera.h */; };
+		D619130217F004A300B5DF44 /* LDrawCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D619130017F004A300B5DF44 /* LDrawCamera.m */; };
+		D6191B9D17F277B600B5DF44 /* MatrixMathEx.h in Headers */ = {isa = PBXBuildFile; fileRef = D6191B9B17F277B600B5DF44 /* MatrixMathEx.h */; };
+		D6191B9E17F277B600B5DF44 /* MatrixMathEx.c in Sources */ = {isa = PBXBuildFile; fileRef = D6191B9C17F277B600B5DF44 /* MatrixMathEx.c */; };
 		D687D424170A6DF3007300E2 /* related.ldr in Resources */ = {isa = PBXBuildFile; fileRef = D687D423170A6DF3007300E2 /* related.ldr */; };
 		D6C0C5CF16DABE70007E4266 /* RelatedParts.h in Headers */ = {isa = PBXBuildFile; fileRef = D6C0C5CD16DABE70007E4266 /* RelatedParts.h */; };
 		D6C0C5D016DABE70007E4266 /* RelatedParts.m in Sources */ = {isa = PBXBuildFile; fileRef = D6C0C5CE16DABE70007E4266 /* RelatedParts.m */; };
@@ -958,8 +957,6 @@
 		956D9CAA2A30AADE00FA956B /* LDrawViewGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawViewGPU.m; sourceTree = "<group>"; };
 		956D9CB22A3102C600FA956B /* LDrawShaderRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawShaderRendererGPU.h; sourceTree = "<group>"; };
 		956D9CB32A3102C600FA956B /* LDrawShaderRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawShaderRendererGPU.m; sourceTree = "<group>"; };
-		956D9CB62A31038800FA956B /* LDrawPartGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawPartGPU.h; sourceTree = "<group>"; };
-		956D9CB72A31038800FA956B /* LDrawPartGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawPartGPU.m; sourceTree = "<group>"; };
 		956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDirectiveGPU.m; sourceTree = "<group>"; };
 		956D9CC22A31056400FA956B /* LDrawRendererGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawRendererGPU.h; sourceTree = "<group>"; };
 		956D9CC32A31056400FA956B /* LDrawRendererGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawRendererGPU.m; sourceTree = "<group>"; };
@@ -967,12 +964,13 @@
 		956D9CC72A31060800FA956B /* PartLibraryMTL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PartLibraryMTL.m; sourceTree = "<group>"; };
 		957B9724294D308D007EF76C /* LDrawObjectWithValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawObjectWithValue.h; sourceTree = "<group>"; };
 		957B9725294D308D007EF76C /* LDrawObjectWithValue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawObjectWithValue.m; sourceTree = "<group>"; };
+		95AA25A32DC1E57900EB929E /* MetalUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MetalUtilities.h; sourceTree = "<group>"; };
+		95AA25A42DC1E57900EB929E /* MetalUtilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MetalUtilities.m; sourceTree = "<group>"; };
 		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
 		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
 		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
 		95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawHighResPrimitives.h; sourceTree = "<group>"; };
 		95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawHighResPrimitives.m; sourceTree = "<group>"; };
-		95C773BE2A24D01700058D75 /* LDrawPartGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawPartGPU.h; sourceTree = "<group>"; };
 		95C773BF2A24D01800058D75 /* LDrawPartGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawPartGPU.m; sourceTree = "<group>"; };
 		95C773C32A24D6ED00058D75 /* LDrawDocumentGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDocumentGPU.h; sourceTree = "<group>"; };
 		95C773C42A24D6ED00058D75 /* LDrawDocumentGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDocumentGPU.m; sourceTree = "<group>"; };
@@ -1016,10 +1014,10 @@
 		95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClassInspector_Tests.m; sourceTree = "<group>"; };
 		D608724616ED61F500828B4E /* MeshSmooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MeshSmooth.h; sourceTree = "<group>"; };
 		D608724716ED61F500828B4E /* MeshSmooth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = MeshSmooth.c; sourceTree = "<group>"; };
-		D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawGLCamera.h; sourceTree = "<group>"; };
-		D619130017F004A300B5DF44 /* LDrawGLCamera.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawGLCamera.m; sourceTree = "<group>"; };
-		D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLMatrixMath.h; sourceTree = "<group>"; };
-		D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = GLMatrixMath.c; sourceTree = "<group>"; };
+		D61912FF17F004A300B5DF44 /* LDrawCamera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawCamera.h; sourceTree = "<group>"; };
+		D619130017F004A300B5DF44 /* LDrawCamera.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawCamera.m; sourceTree = "<group>"; };
+		D6191B9B17F277B600B5DF44 /* MatrixMathEx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MatrixMathEx.h; sourceTree = "<group>"; };
+		D6191B9C17F277B600B5DF44 /* MatrixMathEx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = MatrixMathEx.c; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 		D6C0C5CD16DABE70007E4266 /* RelatedParts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RelatedParts.h; sourceTree = "<group>"; };
 		D6C0C5CE16DABE70007E4266 /* RelatedParts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RelatedParts.m; sourceTree = "<group>"; };
@@ -1109,16 +1107,14 @@
 				73772C8BCC3A6435E0AE9103 /* ComputationalGeometry.m */,
 				95F759A027BC67AD00CFE5ED /* FastSet.h */,
 				95F7599F27BC67AD00CFE5ED /* FastSet.m */,
-				D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */,
-				D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */,
 				0B1DA5A213172DA700E14960 /* LDrawDirective.h */,
 				0B1DA5A313172DA700E14960 /* LDrawDirective.m */,
 				955459F22996FDA400E23691 /* LDrawDocumentTree.h */,
 				955459F32996FDA400E23691 /* LDrawDocumentTree.m */,
 				0B27CFA81318AA0F005C7E1A /* LDrawDragHandle.h */,
 				0B27CFA91318AA0F005C7E1A /* LDrawDragHandle.m */,
-				D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */,
-				D619130017F004A300B5DF44 /* LDrawGLCamera.m */,
+				D61912FF17F004A300B5DF44 /* LDrawCamera.h */,
+				D619130017F004A300B5DF44 /* LDrawCamera.m */,
 				0B3B76AA13DB86AE007CCC5D /* LDrawRenderer.h */,
 				0B3B76AB13DB86AE007CCC5D /* LDrawRenderer.m */,
 				95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */,
@@ -1132,8 +1128,10 @@
 				0BDE0EF01371070600FDB8DB /* LDrawPaths.m */,
 				0B1DA5A413172DA700E14960 /* LDrawUtilities.h */,
 				0B1DA5A513172DA700E14960 /* LDrawUtilities.m */,
-				0B491DA307F5555B00AC0C10 /* MatrixMath.c */,
 				0B491DA207F5555B00AC0C10 /* MatrixMath.h */,
+				0B491DA307F5555B00AC0C10 /* MatrixMath.c */,
+				D6191B9B17F277B600B5DF44 /* MatrixMathEx.h */,
+				D6191B9C17F277B600B5DF44 /* MatrixMathEx.c */,
 				D6CB41DE15E2AA6C00730E2A /* ModelManager.h */,
 				D6CB41DF15E2AA6C00730E2A /* ModelManager.m */,
 				0B0B6CCB2787D87800F6E225 /* PartCatalogBuilder.h */,
@@ -1686,8 +1684,6 @@
 			children = (
 				186919362BEED0BA0038CEAB /* LDrawTextureMTL.h */,
 				186919372BEED0BA0038CEAB /* LDrawTextureMTL.m */,
-				956D9CB62A31038800FA956B /* LDrawPartGPU.h */,
-				956D9CB72A31038800FA956B /* LDrawPartGPU.m */,
 			);
 			path = Commands;
 			sourceTree = "<group>";
@@ -1699,6 +1695,8 @@
 				95E1082D2A41DDA50091D579 /* LDrawRendererMTL.h */,
 				956D9CC22A31056400FA956B /* LDrawRendererGPU.h */,
 				956D9CC32A31056400FA956B /* LDrawRendererGPU.m */,
+				95AA25A32DC1E57900EB929E /* MetalUtilities.h */,
+				95AA25A42DC1E57900EB929E /* MetalUtilities.m */,
 				956D9CC62A31060800FA956B /* PartLibraryMTL.h */,
 				956D9CC72A31060800FA956B /* PartLibraryMTL.m */,
 			);
@@ -1710,7 +1708,6 @@
 			children = (
 				186919322BEECCE80038CEAB /* LDrawTextureGL.h */,
 				186919332BEECCE80038CEAB /* LDrawTextureGL.m */,
-				95C773BE2A24D01700058D75 /* LDrawPartGPU.h */,
 				95C773BF2A24D01800058D75 /* LDrawPartGPU.m */,
 			);
 			path = Commands;
@@ -1923,7 +1920,6 @@
 				95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */,
 				0B2700870981FCEA0058A7BE /* ToolPalette.h in Headers */,
 				2BF2E3030AB0FC5E0026D5DB /* MovePanel.h in Headers */,
-				95C773C02A24D01800058D75 /* LDrawPartGPU.h in Headers */,
 				2BF2E3050AB0FC5E0026D5DB /* RotationPanelController.h in Headers */,
 				2BF2E30F0AB0FC840026D5DB /* MinifigureDialogController.h in Headers */,
 				2BF2E3150AB0FCAB0026D5DB /* MLCadIni.h in Headers */,
@@ -1976,8 +1972,8 @@
 				D6EDBC251650B9E200B4062B /* LDrawDisplayList.h in Headers */,
 				D608724816ED61F500828B4E /* MeshSmooth.h in Headers */,
 				D6C0C5CF16DABE70007E4266 /* RelatedParts.h in Headers */,
-				D619130117F004A300B5DF44 /* LDrawGLCamera.h in Headers */,
-				D6191B9D17F277B600B5DF44 /* GLMatrixMath.h in Headers */,
+				D619130117F004A300B5DF44 /* LDrawCamera.h in Headers */,
+				D6191B9D17F277B600B5DF44 /* MatrixMathEx.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2011,6 +2007,7 @@
 				956D9B992A30768000FA956B /* LDrawLine.h in Headers */,
 				956D9B9A2A30768000FA956B /* LDrawModel.h in Headers */,
 				956D9B9B2A30768000FA956B /* LDrawPart.h in Headers */,
+				95AA25A62DC1E57900EB929E /* MetalUtilities.h in Headers */,
 				18B32A6A2B9A0EFD00A97084 /* LPubRemoveGroup.h in Headers */,
 				956D9CAB2A30AADE00FA956B /* LDrawViewGPU.h in Headers */,
 				956D9B9C2A30768000FA956B /* LDrawFile.h in Headers */,
@@ -2100,12 +2097,11 @@
 				956D9BE92A30768000FA956B /* LDrawShaderRenderer.h in Headers */,
 				956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */,
 				956D9BEC2A30768000FA956B /* LDrawBDPAllocator.h in Headers */,
-				956D9CB82A31038800FA956B /* LDrawPartGPU.h in Headers */,
 				18B32A5D2B9A0E5300A97084 /* ClassInspector.h in Headers */,
 				956D9BEF2A30768000FA956B /* MeshSmooth.h in Headers */,
 				956D9BF02A30768000FA956B /* RelatedParts.h in Headers */,
-				956D9BF12A30768000FA956B /* LDrawGLCamera.h in Headers */,
-				956D9BF22A30768000FA956B /* GLMatrixMath.h in Headers */,
+				956D9BF12A30768000FA956B /* LDrawCamera.h in Headers */,
+				956D9BF22A30768000FA956B /* MatrixMathEx.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2465,8 +2461,8 @@
 				73772B77F842475786994924 /* InspectionLSynth.m in Sources */,
 				D608724916ED61F500828B4E /* MeshSmooth.c in Sources */,
 				73772E2FDEFC3AB2B54D58D3 /* RegexKitLite.m in Sources */,
-				D619130217F004A300B5DF44 /* LDrawGLCamera.m in Sources */,
-				D6191B9E17F277B600B5DF44 /* GLMatrixMath.c in Sources */,
+				D619130217F004A300B5DF44 /* LDrawCamera.m in Sources */,
+				D6191B9E17F277B600B5DF44 /* MatrixMathEx.c in Sources */,
 				0B0B6CCE2787D87800F6E225 /* PartCatalogBuilder.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2496,7 +2492,6 @@
 				956D9C2A2A30768000FA956B /* MatrixMath.c in Sources */,
 				956D9C2B2A30768000FA956B /* LDrawContainer.m in Sources */,
 				956D9C2C2A30768000FA956B /* LDrawDrawableElement.m in Sources */,
-				956D9CB92A31038800FA956B /* LDrawPartGPU.m in Sources */,
 				956D9C2E2A30768000FA956B /* DocumentToolbarController.m in Sources */,
 				956D9C2F2A30768000FA956B /* LDrawDocument.m in Sources */,
 				956D9CBD2A31042D00FA956B /* LDrawDirectiveGPU.m in Sources */,
@@ -2577,6 +2572,7 @@
 				956D9C732A30768000FA956B /* LDrawTexture.m in Sources */,
 				956D9C742A30768000FA956B /* ModelManager.m in Sources */,
 				956D9C752A30768000FA956B /* LSynthConfiguration.m in Sources */,
+				95AA25A52DC1E57900EB929E /* MetalUtilities.m in Sources */,
 				956D9C762A30768000FA956B /* LDrawLSynth.m in Sources */,
 				956D9C772A30768000FA956B /* LDrawShaderRenderer.m in Sources */,
 				956D9C782A30768000FA956B /* LDrawViewerContainer.m in Sources */,
@@ -2589,8 +2585,8 @@
 				956D9C812A30768000FA956B /* InspectionLSynth.m in Sources */,
 				956D9C832A30768000FA956B /* MeshSmooth.c in Sources */,
 				956D9C842A30768000FA956B /* RegexKitLite.m in Sources */,
-				956D9C852A30768000FA956B /* LDrawGLCamera.m in Sources */,
-				956D9C862A30768000FA956B /* GLMatrixMath.c in Sources */,
+				956D9C852A30768000FA956B /* LDrawCamera.m in Sources */,
+				956D9C862A30768000FA956B /* MatrixMathEx.c in Sources */,
 				956D9C872A30768000FA956B /* PartCatalogBuilder.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

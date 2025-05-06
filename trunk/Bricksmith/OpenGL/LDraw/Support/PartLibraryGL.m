@@ -19,6 +19,8 @@
 
 #import "PartLibraryGL.h"
 
+#include OPEN_GL_HEADER
+
 @implementation PartLibraryGL
 
 static PartLibraryGL *SharedPartLibrary = nil;

@@ -122,7 +122,7 @@ static LDrawColorWell *sharedActiveColorWell = nil;
 //==============================================================================
 - (void) setLDrawColor:(LDrawColor *)newColor
 {
-	GLfloat		 components[4];
+	float		 components[4];
 	
 	// assign ivar
 	self->color = newColor;

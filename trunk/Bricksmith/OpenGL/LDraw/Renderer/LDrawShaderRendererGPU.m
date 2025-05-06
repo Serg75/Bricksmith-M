@@ -18,11 +18,11 @@
 
 #import "LDrawShaderRendererGPU.h"
 
+#import "ColorLibrary.h"
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderLoader.h"
 #import "LDrawDisplayList.h"
-#import "ColorLibrary.h"
-#import "GLMatrixMath.h"
+#import "MatrixMathEx.h"
 
 // This list of attribute names matches the text of the GLSL attribute declarations -
 // and its order must match the attr_position...array in the .h.

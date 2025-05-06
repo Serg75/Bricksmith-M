@@ -24,13 +24,13 @@
 	NSString		*child;
 	NSString		*childName;
 	NSString		*role;
-	GLfloat			transform[16];
+	float			transform[16];
 }
 
-- (id)			initWithParent:(NSString *) parentName
-						offset:(GLfloat *) offset
-					  relation:(NSString *) relation
-					 childLine:(NSString *) line;
+- (id) initWithParent:(NSString *) parentName
+			   offset:(float *)	offset
+			 relation:(NSString *) relation
+			childLine:(NSString *) line;
 					 
 - (void)		dump;
 

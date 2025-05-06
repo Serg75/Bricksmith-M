@@ -6,20 +6,19 @@
 //  Copyright 2012 __MyCompanyName__. All rights reserved.
 //
 
+@import MetalKit;
+@import simd;
+
+#include "MetalCommonDefinitions.h"
+
 #import "LDrawDisplayList.h"
 #import "LDrawCoreRenderer.h"
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderRenderer.h"
 #import "MeshSmooth.h"
 #import "MetalGPU.h"
-#import "GLMatrixMath.h"
+#import "MetalUtilities.h"
 #import "MatrixMath.h"
-#import OPEN_GL_HEADER
-#import OPEN_GL_EXT_HEADER
-#import "GPU.h"
-#include "MetalCommonDefinitions.h"
-
-
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
@@ -28,7 +27,7 @@
 #define TIME_SMOOTHING 0
 
 #if WANT_SMOOTH
-static const GLuint * idx_null = NULL;
+static const uint32_t * idx_null = NULL;
 #endif
 
 // The number of float values in InstanceInput struct declared in Metal shader
@@ -112,8 +111,8 @@ struct TexturePlaneData _noTexPlaneData = {.planeS = {0}, .planeT = {0}};
 id<MTLTexture>	_clearTexture;
 
 
-static void copy_vec3(GLfloat d[3], const GLfloat s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
-static void copy_vec4(GLfloat d[4], const GLfloat s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
+static void copy_vec3(float d[3], const float s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
+static void copy_vec4(float d[4], const float s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
 
 static id<MTLBuffer> inst_vbo_ring[INST_RING_BUFFER_COUNT] = { nil };
 static int inst_ring_last = 0;
@@ -125,21 +124,21 @@ static int inst_ring_last = 0;
 // This is used in a finished DL.
 struct LDrawDLPerTex {
 	struct LDrawTextureSpec	spec;
-	GLuint					line_off;
-	GLuint					line_count;
-	GLuint					cond_line_off;
-	GLuint					cond_line_count;
-	GLuint					tri_off;
-	GLuint					tri_count;
+	uint32_t				line_off;
+	uint32_t				line_count;
+	uint32_t				cond_line_off;
+	uint32_t				cond_line_count;
+	uint32_t				tri_off;
+	uint32_t				tri_count;
 };
 
 // DL draw instance: this stores one request to draw an un-textured DL for instancing.
 // current color/compliment color, transform, and a next ptr to build a linked list.
 struct LDrawDLInstance {
 	struct LDrawDLInstance *next;
-	GLfloat					color[4];
-	GLfloat					comp[4];
-	GLfloat					transform[16];
+	float					color[4];
+	float					comp[4];
+	float					transform[16];
 	BOOL					is_wireframe;
 };
 
@@ -198,9 +197,9 @@ struct LDrawDLSortedInstanceLink {
 	};														// Maybe someday we could merge-sort the linked list, but use qsort for now to get shipped.
 	struct	LDrawDL *						dl;
 	struct LDrawTextureSpec					spec;
-	GLfloat									color[4];
-	GLfloat									comp[4];
-	GLfloat									transform[16];
+	float									color[4];
+	float									comp[4];
+	float									transform[16];
 };
 
 
@@ -230,8 +229,8 @@ struct LDrawDLSession {
 	struct LDrawDLSortedInstanceLink *	sorted_head;			// Linked list + count for DLs being drawn later to Z sort.
 	int									sort_count;
 
-	GLfloat								model_view[16];			// Model-view matrix, used to Z sort translucent objects.
-	GLuint								inst_ring;				// If using more than one instancing buffer, this tells which one we use.
+	float								model_view[16];			// Model-view matrix, used to Z sort translucent objects.
+	unsigned int						inst_ring;				// If using more than one instancing buffer, this tells which one we use.
 
 	id<MTLTexture>						current_bound_texture;
 };
@@ -366,9 +365,9 @@ static int compare_sorted_link(const void * lhs, const void * rhs)
 static void saveForSortDraw(struct LDrawDLSession *		session,
 							struct LDrawDL *			dl,
 							struct LDrawTextureSpec *	spec,
-							const GLfloat 				cur_color[4],
-							const GLfloat 				cmp_color[4],
-							const GLfloat				transform[16])
+							const float 				cur_color[4],
+							const float 				cmp_color[4],
+							const float					transform[16])
 {
 #if WANT_STATS
 	session->stats.num_btch_srt++;
@@ -380,9 +379,9 @@ static void saveForSortDraw(struct LDrawDLSession *		session,
 	link->next = session->sorted_head;
 	session->sorted_head = link;
 	link->dl = dl;
-	memcpy(link->color,cur_color,sizeof(GLfloat)*4);
-	memcpy(link->comp,cmp_color,sizeof(GLfloat)*4);
-	memcpy(link->transform,transform,sizeof(GLfloat)*16);
+	memcpy(link->color,cur_color,sizeof(float)*4);
+	memcpy(link->comp,cmp_color,sizeof(float)*4);
+	memcpy(link->transform,transform,sizeof(float)*16);
 	session->sort_count++;
 	if(spec)
 		memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
@@ -399,9 +398,9 @@ static void saveForSortDraw(struct LDrawDLSession *		session,
 //================================================================================
 static void saveForInstanceDraw(struct LDrawDLSession *	session,
 								struct LDrawDL *		dl,
-								const GLfloat 			cur_color[4],
-								const GLfloat 			cmp_color[4],
-								const GLfloat			transform[16],
+								const float 			cur_color[4],
+								const float 			cmp_color[4],
+								const float				transform[16],
 								BOOL					is_wireframe)
 {
 	//assert(dl->next_dl == NULL || session->dl_head != NULL);
@@ -430,9 +429,9 @@ static void saveForInstanceDraw(struct LDrawDLSession *	session,
 		++dl->instance_count;
 		++session->total_instance_count;
 
-		memcpy(inst->color,cur_color,sizeof(GLfloat)*4);
-		memcpy(inst->comp,cmp_color,sizeof(GLfloat)*4);
-		memcpy(inst->transform,transform,sizeof(GLfloat)*16);
+		memcpy(inst->color,cur_color,sizeof(float)*4);
+		memcpy(inst->comp,cmp_color,sizeof(float)*4);
+		memcpy(inst->transform,transform,sizeof(float)*16);
 		inst->is_wireframe = is_wireframe;
 	}
 
@@ -449,9 +448,9 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 						  struct LDrawDLSession *		session,
 						  struct LDrawDL *				dl,
 						  struct LDrawTextureSpec *		spec,
-						  const GLfloat 				cur_color[4],
-						  const GLfloat 				cmp_color[4],
-						  const GLfloat					transform[16],
+						  const float	 				cur_color[4],
+						  const float 					cmp_color[4],
+						  const float					transform[16],
 						  BOOL							is_wire_frame)
 {
 	#if WANT_STATS
@@ -562,8 +561,8 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 //================================================================================
 static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 									  struct LDrawDL *			dl,
-									  const GLfloat *			inst_base,
-									  GLfloat *					inst_data,
+									  const float *				inst_base,
+									  float *					inst_data,
 									  BOOL 						is_wireframe)
 {
 	struct LDrawDLInstance *inst;
@@ -785,14 +784,14 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
 	vertexBuffer.label = @"Vertex buffer";
 
-	id<MTLBuffer> indexBuffer = [device newBufferWithLength:total_indices * sizeof(GLuint) options:MTLResourceStorageModeShared];
+	id<MTLBuffer> indexBuffer = [device newBufferWithLength:total_indices * sizeof(uint32_t) options:MTLResourceStorageModeShared];
 	indexBuffer.label = @"Index buffer";
 
 	dl->vertexBuffer = vertexBuffer;
 	dl->indexBuffer = indexBuffer;
 
 	volatile float * vertex_ptr = (volatile float *)[dl->vertexBuffer contents];
-	volatile GLuint * index_ptr = (volatile GLuint *)[dl->indexBuffer contents];
+	volatile uint32_t * index_ptr = (volatile uint32_t *)[dl->indexBuffer contents];
 
 
 	// Grab variable size arrays for the start/offsets of each sub-part of our big pile-o-mesh...
@@ -824,8 +823,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		quad_count);
 
 	if (*cond_line_count > 0) {
-		GLuint * in_ptr = index_ptr + *cond_line_start;
-		GLuint * out_ptr = in_ptr;
+		uint32_t * in_ptr = index_ptr + *cond_line_start;
+		uint32_t * out_ptr = in_ptr;
 		for (int i = 0; i < *cond_line_count; i += 4) {
 			*out_ptr++ = *in_ptr++;
 			*out_ptr++ = *in_ptr++;
@@ -947,7 +946,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 		for(l = s->line_head; l; l = l->next)
 		{
-			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
+			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(float) * l->vcount);
 			cur_tex->line_count += l->vcount;
 			cur_v += l->vcount;
 			buf_ptr += (VERT_STRIDE * l->vcount);
@@ -958,7 +957,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 		for(l = s->tri_head; l; l = l->next)
 		{
-			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(GLfloat) * l->vcount);
+			memcpy(buf_ptr,l->data,VERT_STRIDE * sizeof(float) * l->vcount);
 			cur_tex->tri_count += l->vcount;
 			cur_v += l->vcount;
 			buf_ptr += (VERT_STRIDE * l->vcount);
@@ -1051,14 +1050,14 @@ void LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec *
 //			onto the triangle list for the current texture.
 //
 //================================================================================
-void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const GLfloat v[9], GLfloat n[3], GLfloat c[4])
+void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const float v[9], float n[3], float c[4])
 {
 	// Alpha = 0 means meta color.  0 < Alpha < 1 means translucency.	
 		 if(c[3] == 0.0f)	ctx->flags |= dl_has_meta;
 	else if(c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
 	
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 3);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
 	nl->next = NULL;
 	nl->vcount = 3;
 	for(i = 0; i < 3; ++i)
@@ -1087,7 +1086,7 @@ void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const GLfloat v[9], GLflo
 // Purpose:	Add one quad to the current DL builder in the current texture.
 //
 //================================================================================
-void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLfloat n[3], GLfloat c[4])
+void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4])
 {
 		 if(c[3] == 0.0f)	ctx->flags |= dl_has_meta;
 	else if(c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
@@ -1095,7 +1094,7 @@ void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLf
 	// Convert quad to triangles
 
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 3);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
 	nl->next = NULL;
 	nl->vcount = 3;
 	for(i = 0; i < 3; ++i)
@@ -1117,7 +1116,7 @@ void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLf
 	}
 
 
-	nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 3);
+	nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
 	nl->next = NULL;
 	nl->vcount = 3;
 	for(i = 0; i < 3; ++i)
@@ -1149,13 +1148,13 @@ void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLf
 // Purpose:	Add one line to the current DL builder in the current texture.
 //
 //================================================================================
-void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4])
+void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const float v[6], float n[3], float c[4])
 {
 		 if(c[3] == 0.0f)	ctx->flags |= dl_has_meta;
 	else if(c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
 
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 2);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 2);
 	nl->next = NULL;
 	nl->vcount = 2;
 	for(i = 0; i < 2; ++i)
@@ -1184,13 +1183,13 @@ void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfl
 // Purpose:	Add one conditional line to the current DL builder in the current texture.
 //
 //================================================================================
-void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLfloat n[3], GLfloat c[4])
+void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4])
 {
 		 if(c[3] == 0.0f)	ctx->flags |= dl_has_meta;
 	else if(c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
 
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 4);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 4);
 	nl->next = NULL;
 	nl->vcount = 4;
 	for(i = 0; i < 4; ++i)
@@ -1223,7 +1222,7 @@ void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[12],
 //			for speed - most of our linked lists are just NULL.
 //
 //================================================================================
-struct LDrawDLSession * LDrawDLSessionCreate(const GLfloat model_view[16])
+struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 {
 	struct LDrawBDP * alloc = LDrawBDPCreate();
 	struct LDrawDLSession * session = (struct LDrawDLSession *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLSession));
@@ -1236,7 +1235,7 @@ struct LDrawDLSession * LDrawDLSessionCreate(const GLfloat model_view[16])
 	#if WANT_STATS
 	memset(&session->stats,0,sizeof(session->stats));
 	#endif
-	memcpy(session->model_view,model_view,sizeof(GLfloat)*16);
+	memcpy(session->model_view,model_view,sizeof(float)*16);
 	session->inst_ring = inst_ring_last;
 	// each session picks up a new buffer in the ring of instance buffers.
 	inst_ring_last = (inst_ring_last+1)%INST_RING_BUFFER_COUNT;
@@ -1275,10 +1274,10 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 			
 		// Map our instance buffer so we can write instancing data.
-		GLfloat * inst_base = (GLfloat *) [inst_vbo_ring[session->inst_ring] contents];
-		GLfloat * inst_data = inst_base;
-		int 	  inst_count = 0;
-		int		  inst_remain = INST_MAX_COUNT;
+		float * inst_base = (float *) [inst_vbo_ring[session->inst_ring] contents];
+		float * inst_data = inst_base;
+		int 	inst_count = 0;
+		int		inst_remain = INST_MAX_COUNT;
 
 		// Main loop 1: we will walk every instanced DL and either accumulate its instances (for hardware instancing)
 		// or just draw now (for immediate instancing).
@@ -1455,14 +1454,16 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// Copy each sorted instance into our array.  "Eval" is the measurement of distance - calculate eye-space Z and use that.
 		for(l = session->sorted_head; l; l = l->next)
 		{
-			float v[4] = { 
-				l->transform[12], 
-				l->transform[13],
-				l->transform[14], 1.0f };
 			memcpy(p,l,sizeof(struct LDrawDLSortedInstanceLink));
-			float v_eye[4];
-			applyMatrix(v_eye,session->model_view,v);
-			p->eval = v_eye[2];
+
+			simd_float4x4 modelView = simd_matrix_from_array(session->model_view);
+			simd_float4 v = simd_make_float4(l->transform[12],
+											 l->transform[13],
+											 l->transform[14], 1.0f);
+
+			simd_float4 v_eye = simd_mul(modelView, v);
+
+			p->eval = v_eye.z;
 			++p;
 		}
 		
@@ -1544,7 +1545,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					(session->stats.num_vert_srt + 
 					 session->stats.num_vert_imm + 
 					 session->stats.num_work_ins +
-					 session->stats.num_work_att) * VERT_STRIDE * sizeof(GLfloat) / (1024 * 1024));
+					 session->stats.num_work_att) * VERT_STRIDE * sizeof(float) / (1024 * 1024));
 	#endif
 	
 	// Finally done - all allocations for session (including our own obj) come from a BDP, so cleanup is quick.  
@@ -1570,9 +1571,9 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 				 struct LDrawDLSession *		session,
 				 struct LDrawDL *				dl,
 				 struct LDrawTextureSpec *		spec,
-				 const GLfloat 					cur_color[4],
-				 const GLfloat 					cmp_color[4],
-				 const GLfloat					transform[16],
+				 const float 					cur_color[4],
+				 const float 					cmp_color[4],
+				 const float					transform[16],
 				 BOOL							is_wire_frame)
 {
 	if(!is_wire_frame)

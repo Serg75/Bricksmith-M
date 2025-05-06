@@ -9,9 +9,9 @@
 //
 //==============================================================================
 #import <Foundation/Foundation.h>
-#import OPEN_GL_HEADER
 
 #import "LDrawMetaCommand.h"
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -131,9 +131,9 @@ typedef enum LDrawColorMaterial
 @interface LDrawColor : LDrawMetaCommand
 {
 	LDrawColorT			 colorCode;
-	GLfloat				 colorRGBA[4];		// range [0.0 - 1.0]
+	float				 colorRGBA[4];		// range [0.0 - 1.0]
 	LDrawColorT			 edgeColorCode;		// == LDrawColorBogus if not used
-	GLfloat				 edgeColorRGBA[4];
+	float				 edgeColorRGBA[4];
 	BOOL				 hasExplicitAlpha;
 	BOOL				 hasLuminance;
 	uint8_t				 luminance;
@@ -149,12 +149,12 @@ typedef enum LDrawColorMaterial
 
 // Accessors
 
-- (GLfloat)				alpha;
+- (float)				alpha;
 - (LDrawColorT)			colorCode;
 - (LDrawColor *)		complimentColor;
 - (LDrawColorT)			edgeColorCode;
-- (void)				getColorRGBA:(GLfloat *)inComponents;
-- (void)				getEdgeColorRGBA:(GLfloat *)inComponents;
+- (void)				getColorRGBA:(float *)inComponents;
+- (void)				getEdgeColorRGBA:(float *)inComponents;
 - (NSString *)			localizedName;
 - (uint8_t)				luminance;
 - (LDrawColorMaterialT)	material;
@@ -162,9 +162,9 @@ typedef enum LDrawColorMaterial
 - (NSString *)			name;
 
 - (void) setColorCode:(LDrawColorT)newCode;
-- (void) setColorRGBA:(GLfloat *)newComponents;
+- (void) setColorRGBA:(float *)newComponents;
 - (void) setEdgeColorCode:(LDrawColorT)newCode;
-- (void) setEdgeColorRGBA:(GLfloat *)newComponents;
+- (void) setEdgeColorRGBA:(float *)newComponents;
 - (void) setLuminance:(uint8_t)newValue;
 - (void) setMaterial:(LDrawColorMaterialT)newValue;
 - (void) setMaterialParameters:(NSString *)newValue;
@@ -172,8 +172,8 @@ typedef enum LDrawColorMaterial
 
 // Utilities
 - (NSComparisonResult) HSVACompare:(LDrawColor *)otherColor;
-- (NSString *) hexStringForRGB:(GLfloat *)components;
-- (BOOL) scanHexString:(NSScanner *)hexScanner intoRGB:(GLfloat *)components;
+- (NSString *) hexStringForRGB:(float *)components;
+- (BOOL) scanHexString:(NSScanner *)hexScanner intoRGB:(float *)components;
 - (id)fullCopyWithZone:(NSZone *)zone;
 
 @end
