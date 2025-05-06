@@ -364,7 +364,6 @@
 		956D9BE82A30768000FA956B /* LDrawCoreRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDB980164DEB0000B4062B /* LDrawCoreRenderer.h */; };
 		956D9BE92A30768000FA956B /* LDrawShaderRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDB981164DEB0000B4062B /* LDrawShaderRenderer.h */; };
 		956D9BEC2A30768000FA956B /* LDrawBDPAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = D6EDBB4516508D7200B4062B /* LDrawBDPAllocator.h */; };
-		956D9BEE2A30768000FA956B /* LDrawDataStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D62E73C31659C5D50044E2E9 /* LDrawDataStream.h */; };
 		956D9BEF2A30768000FA956B /* MeshSmooth.h in Headers */ = {isa = PBXBuildFile; fileRef = D608724616ED61F500828B4E /* MeshSmooth.h */; };
 		956D9BF02A30768000FA956B /* RelatedParts.h in Headers */ = {isa = PBXBuildFile; fileRef = D6C0C5CD16DABE70007E4266 /* RelatedParts.h */; };
 		956D9BF12A30768000FA956B /* LDrawGLCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = D61912FF17F004A300B5DF44 /* LDrawGLCamera.h */; };
@@ -579,7 +578,6 @@
 		D619130217F004A300B5DF44 /* LDrawGLCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = D619130017F004A300B5DF44 /* LDrawGLCamera.m */; };
 		D6191B9D17F277B600B5DF44 /* GLMatrixMath.h in Headers */ = {isa = PBXBuildFile; fileRef = D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */; };
 		D6191B9E17F277B600B5DF44 /* GLMatrixMath.c in Sources */ = {isa = PBXBuildFile; fileRef = D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */; };
-		D62E73C51659C5D50044E2E9 /* LDrawDataStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D62E73C31659C5D50044E2E9 /* LDrawDataStream.h */; };
 		D687D424170A6DF3007300E2 /* related.ldr in Resources */ = {isa = PBXBuildFile; fileRef = D687D423170A6DF3007300E2 /* related.ldr */; };
 		D6C0C5CF16DABE70007E4266 /* RelatedParts.h in Headers */ = {isa = PBXBuildFile; fileRef = D6C0C5CD16DABE70007E4266 /* RelatedParts.h */; };
 		D6C0C5D016DABE70007E4266 /* RelatedParts.m in Sources */ = {isa = PBXBuildFile; fileRef = D6C0C5CE16DABE70007E4266 /* RelatedParts.m */; };
@@ -1022,8 +1020,6 @@
 		D619130017F004A300B5DF44 /* LDrawGLCamera.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawGLCamera.m; sourceTree = "<group>"; };
 		D6191B9B17F277B600B5DF44 /* GLMatrixMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GLMatrixMath.h; sourceTree = "<group>"; };
 		D6191B9C17F277B600B5DF44 /* GLMatrixMath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = GLMatrixMath.c; sourceTree = "<group>"; };
-		D62E73C31659C5D50044E2E9 /* LDrawDataStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawDataStream.h; sourceTree = "<group>"; };
-		D62E73C41659C5D50044E2E9 /* LDrawDataStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawDataStream.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 		D6C0C5CD16DABE70007E4266 /* RelatedParts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RelatedParts.h; sourceTree = "<group>"; };
 		D6C0C5CE16DABE70007E4266 /* RelatedParts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RelatedParts.m; sourceTree = "<group>"; };
@@ -1851,8 +1847,6 @@
 				D6EDB982164DEB0000B4062B /* LDrawShaderRenderer.m */,
 				D6EDBB4516508D7200B4062B /* LDrawBDPAllocator.h */,
 				D6EDBB4616508D7200B4062B /* LDrawBDPAllocator.m */,
-				D62E73C31659C5D50044E2E9 /* LDrawDataStream.h */,
-				D62E73C41659C5D50044E2E9 /* LDrawDataStream.m */,
 				D608724616ED61F500828B4E /* MeshSmooth.h */,
 				D608724716ED61F500828B4E /* MeshSmooth.c */,
 			);
@@ -1980,7 +1974,6 @@
 				D6EDB9C8164DF28100B4062B /* LDrawShaderLoader.h in Headers */,
 				D6EDBB4716508D7200B4062B /* LDrawBDPAllocator.h in Headers */,
 				D6EDBC251650B9E200B4062B /* LDrawDisplayList.h in Headers */,
-				D62E73C51659C5D50044E2E9 /* LDrawDataStream.h in Headers */,
 				D608724816ED61F500828B4E /* MeshSmooth.h in Headers */,
 				D6C0C5CF16DABE70007E4266 /* RelatedParts.h in Headers */,
 				D619130117F004A300B5DF44 /* LDrawGLCamera.h in Headers */,
@@ -2107,7 +2100,6 @@
 				956D9BE92A30768000FA956B /* LDrawShaderRenderer.h in Headers */,
 				956D9CC42A31056400FA956B /* LDrawRendererGPU.h in Headers */,
 				956D9BEC2A30768000FA956B /* LDrawBDPAllocator.h in Headers */,
-				956D9BEE2A30768000FA956B /* LDrawDataStream.h in Headers */,
 				956D9CB82A31038800FA956B /* LDrawPartGPU.h in Headers */,
 				18B32A5D2B9A0E5300A97084 /* ClassInspector.h in Headers */,
 				956D9BEF2A30768000FA956B /* MeshSmooth.h in Headers */,
