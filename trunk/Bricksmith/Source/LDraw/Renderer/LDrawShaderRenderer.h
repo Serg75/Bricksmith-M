@@ -98,6 +98,7 @@ struct	LDrawDragHandleInstance;
 // moved to category
 //- (void) drawDragHandleImm:(float*)xyz withSize:(float)size;
 
-- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+// moved to category
+//- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
 
 @end

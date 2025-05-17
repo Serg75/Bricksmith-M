@@ -67,7 +67,7 @@
 //- (void) internalInit;
 
 // Drawing
-- (void) draw;
+//- (void) draw;
 
 // Accessors
 - (LDrawDirective *) LDrawDirective;

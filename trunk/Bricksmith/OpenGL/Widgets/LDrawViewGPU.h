@@ -24,10 +24,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void) internalInit;
 
+// Drawing
+- (void) draw;
+
 // Accessors
 - (void) setBackgroundColor:(NSColor *)newColor;
 - (void) setViewingAngle:(Tuple3)newAngle;
-- (void) LDrawRendererNeedsFlush:(LDrawRenderer*)renderer;
 
 // Utilities
 - (void) saveImageToPath:(NSString *)path;

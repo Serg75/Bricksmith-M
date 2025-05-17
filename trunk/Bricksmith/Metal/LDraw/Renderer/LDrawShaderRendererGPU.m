@@ -76,6 +76,11 @@
 }//end init:
 
 
+// Suppress warning "Category is implementing a method which will also be implemented by its primary class."
+// These two methods have declaration only without implementation in the primary class.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
+
 //========== pushWireFrame: ======================================================
 //
 // Purpose: push a change to wire frame mode.  This is nested - when the last
@@ -100,6 +105,8 @@
 	wire_frame_count--;
 
 }//end popWireFrame:
+
+#pragma clang diagnostic pop
 
 
 //========== drawDragHandles =====================================================

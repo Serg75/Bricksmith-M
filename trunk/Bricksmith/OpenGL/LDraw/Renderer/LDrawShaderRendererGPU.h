@@ -23,6 +23,8 @@
 
 - (id) initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
 
+- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+
 - (void) drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
 
 @end

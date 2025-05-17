@@ -6,7 +6,8 @@
 //  Copyright 2012 __MyCompanyName__. All rights reserved.
 //
 
-#import "LDrawShaderRenderer.h"
+#import "LDrawShaderRendererGPU.h"
+
 #import "LDrawDisplayList.h"
 #import "LDrawBDPAllocator.h"
 #import "MatrixMathEx.h"

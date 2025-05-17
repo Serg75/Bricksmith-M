@@ -24,6 +24,7 @@
 
 #import "LDrawPart.h"
 
+#import "LDrawDirectiveGPU.h"
 #import "LDrawModel.h"
 #import "PartLibraryGL.h"
 

@@ -21,6 +21,7 @@
 #import "ColorLibrary.h"
 #import "LDrawColor.h"
 #import "LDrawConditionalLine.h"
+#import "LDrawDirectiveGPU.h"
 #import "LDrawFile.h"
 #import "LDrawKeywords.h"
 #import "LDrawLine.h"

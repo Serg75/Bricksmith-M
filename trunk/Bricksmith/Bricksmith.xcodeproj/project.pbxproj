@@ -529,6 +529,8 @@
 		956D9CC92A31060800FA956B /* PartLibraryMTL.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC72A31060800FA956B /* PartLibraryMTL.m */; };
 		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
 		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
+		959776BE2DD9271600EE7DD5 /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 959776BD2DD9271600EE7DD5 /* LDrawDirectiveGPU.h */; };
+		959776C02DD9292E00EE7DD5 /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 959776BF2DD9292E00EE7DD5 /* LDrawDirectiveGPU.h */; };
 		95AA25A52DC1E57900EB929E /* MetalUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 95AA25A42DC1E57900EB929E /* MetalUtilities.m */; };
 		95AA25A62DC1E57900EB929E /* MetalUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 95AA25A32DC1E57900EB929E /* MetalUtilities.h */; };
 		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
@@ -964,6 +966,8 @@
 		956D9CC72A31060800FA956B /* PartLibraryMTL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PartLibraryMTL.m; sourceTree = "<group>"; };
 		957B9724294D308D007EF76C /* LDrawObjectWithValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawObjectWithValue.h; sourceTree = "<group>"; };
 		957B9725294D308D007EF76C /* LDrawObjectWithValue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawObjectWithValue.m; sourceTree = "<group>"; };
+		959776BD2DD9271600EE7DD5 /* LDrawDirectiveGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDirectiveGPU.h; sourceTree = "<group>"; };
+		959776BF2DD9292E00EE7DD5 /* LDrawDirectiveGPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDirectiveGPU.h; sourceTree = "<group>"; };
 		95AA25A32DC1E57900EB929E /* MetalUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MetalUtilities.h; sourceTree = "<group>"; };
 		95AA25A42DC1E57900EB929E /* MetalUtilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MetalUtilities.m; sourceTree = "<group>"; };
 		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
@@ -1574,6 +1578,7 @@
 		953912D529D5A78F00C6802D /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				959776BF2DD9292E00EE7DD5 /* LDrawDirectiveGPU.h */,
 				9526F98C2A0BBA590083A86A /* LDrawDirectiveGPU.m */,
 				95C773CB2A27670C00058D75 /* LDrawRendererGPU.h */,
 				95C773CC2A27670C00058D75 /* LDrawRendererGPU.m */,
@@ -1691,6 +1696,7 @@
 		956D9CB12A3101D400FA956B /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				959776BD2DD9271600EE7DD5 /* LDrawDirectiveGPU.h */,
 				956D9CBB2A31042D00FA956B /* LDrawDirectiveGPU.m */,
 				95E1082D2A41DDA50091D579 /* LDrawRendererMTL.h */,
 				956D9CC22A31056400FA956B /* LDrawRendererGPU.h */,
@@ -1931,6 +1937,7 @@
 				0B0B6CCD2787D87800F6E225 /* PartCatalogBuilder.h in Headers */,
 				0B2DD14E0CD810F20093E8E5 /* BezierPathCategory.h in Headers */,
 				957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */,
+				959776C02DD9292E00EE7DD5 /* LDrawDirectiveGPU.h in Headers */,
 				0B7588D80D8DC4DD00357703 /* ColorLibrary.h in Headers */,
 				0B9907D80DDD540D003F6B13 /* LDrawColor.h in Headers */,
 				0B76F2F90E74CC1700349D03 /* InspectionStep.h in Headers */,
@@ -2061,6 +2068,7 @@
 				956D9BCC2A30768000FA956B /* InspectionStep.h in Headers */,
 				956D9BCD2A30768000FA956B /* StringUtilities.h in Headers */,
 				956D9BCE2A30768000FA956B /* PartLibraryController.h in Headers */,
+				959776BE2DD9271600EE7DD5 /* LDrawDirectiveGPU.h in Headers */,
 				18201AEC2BD9AB160049A01B /* MetalCommonDefinitions.h in Headers */,
 				956D9BCF2A30768000FA956B /* ExtendedTableView.h in Headers */,
 				956D9BD02A30768000FA956B /* DonationDialogController.h in Headers */,

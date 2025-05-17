@@ -19,6 +19,7 @@
 #endif
 
 #import "MacLDraw.h"
+#import "LDrawDirectiveGPU.h"
 #import "LDrawMPDModel.h"
 #import "LDrawPart.h"
 #import "LDrawUtilities.h"

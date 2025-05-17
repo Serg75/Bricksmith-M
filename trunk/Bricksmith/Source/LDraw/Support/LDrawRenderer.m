@@ -32,7 +32,7 @@
 #import "LDrawPart.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "LDrawShaderRenderer.h"
+#import "LDrawShaderRendererGPU.h"
 #include "MacLDraw.h"
 
 // moved to category

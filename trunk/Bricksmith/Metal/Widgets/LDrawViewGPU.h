@@ -26,7 +26,6 @@
 // Accessors
 - (void) setBackgroundColor:(NSColor *)newColor;
 - (void) setViewingAngle:(Tuple3)newAngle;
-- (void) LDrawRendererNeedsFlush:(LDrawRenderer*)renderer;
 
 // Utilities
 - (void) saveImageToPath:(NSString *)path;

@@ -18,6 +18,8 @@
 
 - (id) initWithEncoder:(id<MTLRenderCommandEncoder>)encoder scale:(float)scale modelView:(float *)mv_matrix projection:(float *)proj_matrix;
 
+- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+
 - (void) finishDraw;
 
 @end
