@@ -74,13 +74,7 @@ typedef enum
 }
 
 // Initialization
-- (id) initWithBounds:(Size2)boundsIn;
-// moved to category
-//- (void) prepareOpenGL;
-
-// Drawing
-// moved to category
-//- (void) draw;
+- (id) initWithBounds:(NSSize)boundsIn;
 
 // Accessors
 - (LDrawDragHandle*) activeDragHandle;
@@ -98,8 +92,6 @@ typedef enum
 - (CGFloat) zoomPercentageForGL;
 
 - (void) setAllowsEditing:(BOOL)flag;
-// moved to category
-//- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
 - (void) setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawCameraScroller>)scroller;
 - (void) setDraggingOffset:(Vector3)offsetIn;
 - (void) setGridSpacing:(float)newValue;

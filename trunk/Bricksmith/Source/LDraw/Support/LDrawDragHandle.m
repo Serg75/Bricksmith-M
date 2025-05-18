@@ -13,15 +13,6 @@
 
 #import "LDrawUtilities.h"
 
-// moved to category
-//// Shared tag to draw the standard drag handle sphere
-//static GLuint   vaoTag          = 0;
-//static GLuint   vboTag          = 0;
-//static GLuint   vboVertexCount  = 0;
-
-// moved to header
-//static const float HandleDiameter	= 7.0;
-
 
 @implementation LDrawDragHandle
 

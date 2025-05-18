@@ -30,18 +30,6 @@
 #import "MetalGPU.h"
 #import "OverlayViewCategory.h"
 
-//========== NSSizeToSize2 =====================================================
-//
-// Purpose:		Convert Cocoa sizes to our internal format.
-//
-//==============================================================================
-static Size2 NSSizeToSize2(NSSize size)
-{
-	Size2 sizeOut = V2MakeSize(size.width, size.height);
-
-	return sizeOut;
-}
-
 
 @implementation LDrawView (Metal)
 
@@ -109,7 +97,7 @@ static Size2 NSSizeToSize2(NSSize size)
 
 	[self setAcceptsFirstResponder:YES];
 
-	renderer = [[LDrawRenderer alloc] initWithBounds:NSSizeToSize2([self bounds].size)];
+	renderer = [[LDrawRenderer alloc] initWithBounds:[self bounds].size];
 	[renderer setDelegate:self withScroller:self];
 	[renderer setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 	[renderer prepareMetal];

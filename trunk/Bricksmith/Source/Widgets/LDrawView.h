@@ -63,12 +63,6 @@
 	Vector3					nudgeVector;			// direction of nudge action (valid only in nudgeAction callback)
 }
 
-// moved to category
-//- (void) internalInit;
-
-// Drawing
-//- (void) draw;
-
 // Accessors
 - (LDrawDirective *) LDrawDirective;
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix;
@@ -81,8 +75,6 @@
 - (void) setAcceptsFirstResponder:(BOOL)flag;
 - (void) setAutosaveName:(NSString *)newName;
 - (void) setBackAction:(SEL)newAction;
-// moved to category
-//- (void) setBackgroundColor:(NSColor *)newColor;
 - (void) setLDrawDelegate:(id)object;
 - (void) setForwardAction:(SEL)newAction;
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode;
@@ -91,8 +83,6 @@
 - (void) setProjectionMode:(ProjectionModeT) newProjectionMode;
 - (void) setLocationMode:(LocationModeT) newLocationMode;
 - (void) setTarget:(id)target;
-// moved to category
-//- (void) setViewingAngle:(Tuple3)newAngle;
 - (void) setViewOrientation:(ViewOrientationT) newAngle;
 - (void) setZoomPercentage:(CGFloat) newPercentage;
 - (void) setFocusRingVisible:(BOOL)isVisible;
@@ -122,8 +112,6 @@
 // Utilities
 - (void) restoreConfiguration;
 - (void) saveConfiguration;
-// moved to category
-//- (void) saveImageToPath:(NSString *)path;
 - (void) scrollCameraVisibleRectToPoint:(Point2)visibleRectOrigin;
 - (void) scrollCenterToModelPoint:(Point3)modelPoint;
 - (void) takeBackgroundColorFromUserDefaults;

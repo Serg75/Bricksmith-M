@@ -405,31 +405,6 @@ int floatNearGrid(float v, float grid, float epsi)
 }//end drawBounds
 
 
-// moved to category
-////========== debugDrawBoundingBox ==============================================
-////
-//// Purpose:		Draw a translucent visualization of our bounding box to test
-////				bounding box caching.
-////
-////==============================================================================
-//- (void) debugDrawBoundingBox
-//{
-//	[self resolvePart];
-//	LDrawModel	*modelToDraw	= cacheModel;
-//
-//	//If the model can't be found, we can't draw good bounds for it!
-//	if(modelToDraw != nil)
-//	{
-//		glPushMatrix();
-//		glMultMatrixf(glTransformation);
-//		[modelToDraw debugDrawBoundingBox];
-//		glPopMatrix();
-//	}
-//
-//	[super debugDrawBoundingBox];
-//}//end debugDrawBoundingBox
-
-
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======
 //
 // Purpose:		Hit-test the geometry.

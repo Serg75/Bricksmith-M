@@ -97,8 +97,6 @@ extern NSString	*Category_Subparts;
 - (LDrawModel *) modelForName_threadSafe:(NSString *) partName;
 
 - (LDrawDirective *) optimizedDrawableForPart:(LDrawPart *) part color:(LDrawColor *)color;
-// moved to category
-//- (GLuint) textureTagForTexture:(LDrawTexture*)texture;
 
 // Utilites
 - (NSString *)descriptionForPart:(LDrawPart *)part;

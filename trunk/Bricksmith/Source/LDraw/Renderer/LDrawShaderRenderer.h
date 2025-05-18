@@ -92,13 +92,4 @@ struct	LDrawDragHandleInstance;
 	RenderEncoder					_renderEncoder;
 }
 
-// moved to category
-//- (id) initWithScale:(float)scale modelView:(float *)mv_matrix projection:(float *)proj_matrix;
-
-// moved to category
-//- (void) drawDragHandleImm:(float*)xyz withSize:(float)size;
-
-// moved to category
-//- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
-
 @end
