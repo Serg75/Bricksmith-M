@@ -237,8 +237,8 @@ static Size2 NSSizeToSize2(NSSize size)
 		newColor = [NSColor windowBackgroundColor];
 	
 	// the new color may not be in the RGB colorspace, so we need to convert.
-	rgbColor = [newColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-	
+	rgbColor = [newColor colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+
 	CGLLockContext([[self openGLContext] CGLContextObj]);
 	{
 		//This method can get called from -prepareOpenGL, which is itself called

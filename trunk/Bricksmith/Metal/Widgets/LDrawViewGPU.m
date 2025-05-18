@@ -156,30 +156,19 @@ static Size2 NSSizeToSize2(NSSize size)
 //==============================================================================
 - (void) setBackgroundColor:(NSColor *)newColor
 {
-//	NSColor			*rgbColor		= nil;
-//
-//	if(newColor == nil)
-//		newColor = [NSColor windowBackgroundColor];
-//
-//	// the new color may not be in the RGB colorspace, so we need to convert.
-//	rgbColor = [newColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
-//
-//	CGLLockContext([[self openGLContext] CGLContextObj]);
-//	{
-//		//This method can get called from -prepareOpenGL, which is itself called
-//		// from -makeCurrentContext. That's a recipe for infinite recursion. So,
-//		// we only makeCurrentContext if we *need* to.
-//		if([NSOpenGLContext currentContext] != [self openGLContext])
-//			[[self openGLContext] makeCurrentContext];
-//
-//		[self->renderer setBackgroundColorRed:[rgbColor redComponent]
-//										green:[rgbColor greenComponent]
-//										 blue:[rgbColor blueComponent] ];
-//	}
-//	CGLUnlockContext([[self openGLContext] CGLContextObj]);
+	NSColor			*rgbColor		= nil;
 
+	if(newColor == nil)
+		newColor = [NSColor windowBackgroundColor];
+
+	// the new color may not be in the RGB colorspace, so we need to convert.
+	rgbColor = [newColor colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+
+	[self->renderer setBackgroundColorRed:[rgbColor redComponent]
+									green:[rgbColor greenComponent]
+									 blue:[rgbColor blueComponent] ];
 	[self setNeedsDisplay:YES];
-	
+
 }//end setBackgroundColor:
 
 
