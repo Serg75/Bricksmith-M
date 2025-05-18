@@ -93,7 +93,7 @@
 		// Advance to the current step (if we need to)
 		if(selectedStep != nil)
 		{
-			selectedStepIndex = [selectedModel indexOfDirective:selectedStep];
+			selectedStepIndex = [selectedModel indexOfDirective:(LDrawDirective *)selectedStep];
 
 			if(selectedStepIndex > [selectedModel maxStepIndexToOutput])
 			{

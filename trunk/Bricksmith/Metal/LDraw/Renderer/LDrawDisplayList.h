@@ -62,7 +62,7 @@ void					LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSp
 void					LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const float v[9], float n[3], float c[4]);
 void					LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4]);
 void					LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const float v[6], float n[3], float c[4]);
-void					LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[6], float n[3], float c[4]);
+void					LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4]);
 
 // Session/drawing APIs
 struct LDrawDLSession *	LDrawDLSessionCreate(const float model_view[16]);

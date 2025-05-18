@@ -384,9 +384,9 @@ static void saveForSortDraw(struct LDrawDLSession *		session,
 	memcpy(link->transform,transform,sizeof(float)*16);
 	session->sort_count++;
 	if(spec)
-		memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
+		memcpy((void*)&link->spec, (void*)spec, sizeof(struct LDrawTextureSpec));
 	else
-		memset(&link->spec,0,sizeof(struct LDrawTextureSpec));
+		memset((void*)&link->spec, 0, sizeof(struct LDrawTextureSpec));
 
 }//end saveForSortDraw
 
@@ -628,7 +628,7 @@ struct LDrawDLBuilder * LDrawDLBuilderCreate()
 
 	// Build one tex struct now for the untextured set of meshes, which are the default state.
 	struct LDrawDLBuilderPerTex * untex = (struct LDrawDLBuilderPerTex *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLBuilderPerTex));
-	memset(untex,0,sizeof(struct LDrawDLBuilderPerTex));
+	memset((void*)untex, 0, sizeof(struct LDrawDLBuilderPerTex));
 
 	struct LDrawDLBuilder * bld = (struct LDrawDLBuilder *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLBuilder));
 	bld->cur = bld->head = untex;
@@ -823,8 +823,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		quad_count);
 
 	if (*cond_line_count > 0) {
-		uint32_t * in_ptr = index_ptr + *cond_line_start;
-		uint32_t * out_ptr = in_ptr;
+		volatile uint32_t * in_ptr = index_ptr + *cond_line_start;
+		volatile uint32_t * out_ptr = in_ptr;
 		for (int i = 0; i < *cond_line_count; i += 4) {
 			*out_ptr++ = *in_ptr++;
 			*out_ptr++ = *in_ptr++;
@@ -841,7 +841,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		if(s->tri_head == NULL && s->line_head == NULL && s->cond_line_head == NULL)
 			continue;
 
-		memcpy(&cur_tex->spec, &s->spec, sizeof(struct LDrawTextureSpec));
+		memcpy((void*)&cur_tex->spec, (void*)&s->spec, sizeof(struct LDrawTextureSpec));
 
 		cur_tex->line_off			= line_start[ti];
 		cur_tex->cond_line_off		= cond_line_start[ti];
@@ -1030,8 +1030,8 @@ void LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec *
 		// If we get here, we have never seen this texture before in this builder and
 		// we need to allocate a new per-texture chunk of build state.
 		struct LDrawDLBuilderPerTex * new_tex = (struct LDrawDLBuilderPerTex *) LDrawBDPAllocate(ctx->alloc,sizeof(struct LDrawDLBuilderPerTex));
-		memset(new_tex,0,sizeof(struct LDrawDLBuilderPerTex));
-		memcpy(&new_tex->spec,spec,sizeof(struct LDrawTextureSpec));
+		memset((void*)new_tex, 0, sizeof(struct LDrawDLBuilderPerTex));
+		memcpy((void*)&new_tex->spec, (void*)spec, sizeof(struct LDrawTextureSpec));
 		prev->next = new_tex;
 		ctx->cur = new_tex;
 	}
@@ -1352,7 +1352,8 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 												  indexCount:tptr->tri_count
 												   indexType:MTLIndexTypeUInt32
 												 indexBuffer:dl->indexBuffer
-										   indexBufferOffset:idx_null+tptr->tri_off];
+										   indexBufferOffset:idx_null+tptr->tri_off
+										   instanceCount:1];
 					#else
 					if(tptr->line_count)
 						[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
@@ -1454,7 +1455,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// Copy each sorted instance into our array.  "Eval" is the measurement of distance - calculate eye-space Z and use that.
 		for(l = session->sorted_head; l; l = l->next)
 		{
-			memcpy(p,l,sizeof(struct LDrawDLSortedInstanceLink));
+			memcpy((void*)p, (void*)l, sizeof(struct LDrawDLSortedInstanceLink));
 
 			simd_float4x4 modelView = simd_matrix_from_array(session->model_view);
 			simd_float4 v = simd_make_float4(l->transform[12],
