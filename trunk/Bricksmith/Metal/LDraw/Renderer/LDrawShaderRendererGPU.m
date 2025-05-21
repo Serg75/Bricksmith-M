@@ -32,6 +32,10 @@
 
 @implementation LDrawShaderRenderer (Metal)
 
+static id<MTLRenderPipelineState>	_dragHandlePipelineState	= nil;
+static id<MTLBuffer>				_dragHandleVertexBuffer		= nil;
+static NSUInteger					_dragHandleVertexCount		= 0;
+
 //========== init: ===============================================================
 //
 // Purpose: initialize our renderer, and grab all basic Metal state we need.
@@ -70,6 +74,85 @@
 
 	// Create a DL session to match our lifetime.
 	session = LDrawDLSessionCreate(mv_matrix);
+
+	// Create drag handle pipeline state if not already created
+	if (_dragHandlePipelineState == nil) {
+		id<MTLDevice> device = MetalGPU.device;
+		id<MTLLibrary> defaultLibrary = [device newDefaultLibrary];
+		id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexDragHandle"];
+		id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentDragHandle"];
+
+		MTLRenderPipelineDescriptor *handlesDesc = [[MTLRenderPipelineDescriptor alloc] init];
+		handlesDesc.vertexFunction = vertexFunction;
+		handlesDesc.fragmentFunction = fragmentFunction;
+		handlesDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+		handlesDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+		handlesDesc.sampleCount = MSAASampleCount;
+
+		NSError *error = nil;
+		_dragHandlePipelineState = [device newRenderPipelineStateWithDescriptor:handlesDesc error:&error];
+		if (!_dragHandlePipelineState) {
+			NSLog(@"Error occurred when creating render pipeline state: %@", error);
+		}
+	}
+
+	if (_dragHandleVertexBuffer == nil)
+	{
+		// Bail if we've already done it.
+
+		int		latitudeSections	= 8;
+		int		longitudeSections	= 8;
+
+		float	latitudeRadians		= 1 * M_PI / latitudeSections;	// lat. wraps halfway around sphere
+		float	longitudeRadians	= 2 * M_PI / longitudeSections;	// long. wraps all the way
+		int		latitudeCount		= 0;
+		int		longitudeCount		= 0;
+		float	latitude			= 0;
+		float	longitude			= 0;
+		int		counter = 0;
+
+		//---------- Generate Sphere -----------------------------------------------
+
+		// Each latitude strip begins with two vertexes at the prime meridian, then
+		// has two more vertexes per segment thereafter.
+		_dragHandleVertexCount = (2 + longitudeSections * 2) * latitudeSections;
+
+		NSMutableData *vertexData = [NSMutableData dataWithLength:_dragHandleVertexCount * sizeof(vector_float3)];
+		vector_float3 *vertices = (vector_float3 *)vertexData.mutableBytes;
+
+		// Calculate vertexes for each strip of latitude.
+		for (latitudeCount = 0; latitudeCount < latitudeSections; latitudeCount += 1)
+		{
+			latitude = (latitudeCount * latitudeRadians);
+
+			// Include the prime meridian twice; once to start the strip and once to
+			// complete the last triangle of the -1 meridian.
+			for (longitudeCount = 0; longitudeCount <= longitudeSections; longitudeCount += 1 )
+			{
+				longitude = longitudeCount * longitudeRadians;
+
+				// Top vertex
+				vertices[counter++] = (vector_float3) {
+					cos(longitude) * sin(latitude),
+					sin(longitude) * sin(latitude),
+					cos(latitude)
+				};
+
+				// Bottom vertex
+				vertices[counter++] = (vector_float3) {
+					cos(longitude) * sin(latitude + latitudeRadians),
+					sin(longitude) * sin(latitude + latitudeRadians),
+					cos(latitude + latitudeRadians)
+				};
+			}
+		}
+
+		// Create a single Metal buffer for all vertices
+		_dragHandleVertexBuffer = [MetalGPU.device newBufferWithBytes:vertexData.bytes
+															   length:vertexData.length
+															  options:MTLResourceStorageModeShared];
+		_dragHandleVertexBuffer.label = @"Drag handle vertex buffer";
+	}
 
 	return self;
 
@@ -121,81 +204,11 @@
 //================================================================================
 - (void)drawDragHandles
 {
-	static id<MTLBuffer> 		vertexBuffer 	= nil;
-	static NSUInteger 			vertexCount 	= 0;
-
-	id<MTLDevice>				device 			= MetalGPU.device;
-	id<MTLRenderPipelineState> 	pipelineState 	= nil;
-	id<MTLBuffer> 				instanceBuffer 	= nil;
-
-	if (vertexBuffer == nil)
-	{
-		// Bail if we've already done it.
-
-		int		latitudeSections	= 8;
-		int		longitudeSections	= 8;
-
-		float	latitudeRadians		= M_PI / latitudeSections; // lat. wraps halfway around sphere
-		float	longitudeRadians	= 2 * M_PI / longitudeSections; // long. wraps all the way
-		int		latitudeCount		= 0;
-		int		longitudeCount		= 0;
-		float	latitude			= 0;
-		float	longitude			= 0;
-		int		counter = 0;
-
-		//---------- Generate Sphere -----------------------------------------------
-
-		// Each latitude strip begins with two vertexes at the prime meridian, then
-		// has two more vertexes per segment thereafter.
-		vertexCount = (2 + longitudeSections * 2) * latitudeSections;
-
-		NSMutableData *vertexData = [NSMutableData dataWithLength:vertexCount * sizeof(vector_float3)];
-		vector_float3 *vertices = (vector_float3 *)vertexData.mutableBytes;
-
-		// Calculate vertexes for each strip of latitude.
-		for (latitudeCount = 0; latitudeCount < latitudeSections; latitudeCount += 1)
-		{
-			latitude = (latitudeCount * latitudeRadians);
-
-			// Include the prime meridian twice; once to start the strip and once to
-			// complete the last triangle of the -1 meridian.
-			for (longitudeCount = 0; longitudeCount <= longitudeSections; longitudeCount += 1 )
-			{
-				longitude = longitudeCount * longitudeRadians;
-
-				// Ben says: when we are "pushing" vertices into a GL_WRITE_ONLY mapped buffer, we should really
-				// never read back from the vertices that we read to - the memory we are writing to often has funky
-				// properties like being uncached which make it expensive to do anything other than what we said we'd
-				// do (and we said: we are only going to write to them).
-				//
-				// Mind you it's moot in this case since we only need to write vertices.
-
-				// Top vertex
-				vertices[counter++] = (vector_float3) {
-					cos(longitude) * sin(latitude),
-					sin(longitude) * sin(latitude),
-					cos(latitude)
-				};
-
-				// Bottom vertex
-				vertices[counter++] = (vector_float3) {
-					cos(longitude) * sin(latitude + latitudeRadians),
-					sin(longitude) * sin(latitude + latitudeRadians),
-					cos(latitude + latitudeRadians)
-				};
-			}
-
-			// Create a Metal buffer for the vertices
-			vertexBuffer = [device newBufferWithBytes:vertexData.bytes
-											   length:vertexData.length
-											  options:MTLResourceStorageModeShared];
-			vertexBuffer.label = @"Drag handle vertex buffer";
-		}
-	}
+	static id<MTLBuffer>	instanceBuffer	= nil;
 
 	struct LDrawDragHandleInstance * dh;
-	vector_float4 color = {0.50, 0.53, 1.00, 1.00};		// Nice lavendar color for the whole sphere.
-	int instanceCount = 0;
+	vector_float4			color			= {0.50, 0.53, 1.00, 1.00};	// Nice lavendar color for the whole sphere.
+	int						instanceCount	= 0;
 
 	// Go through and draw the drag handles...
 
@@ -207,27 +220,12 @@
 		return;
 	}
 
-	// Set up the render pipeline
-	id<MTLLibrary> defaultLibrary = [device newDefaultLibrary];
-	id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexDragHandle"];
-	id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentDragHandle"];
-
-	MTLRenderPipelineDescriptor *handlesDesc = [[MTLRenderPipelineDescriptor alloc] init];
-	handlesDesc.vertexFunction = vertexFunction;
-	handlesDesc.fragmentFunction = fragmentFunction;
-	handlesDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-	handlesDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
-	handlesDesc.sampleCount = MSAASampleCount;
-
-	NSError *error = nil;
-	pipelineState = [device newRenderPipelineStateWithDescriptor:handlesDesc error:&error];
-	if (!pipelineState) {
-		NSLog(@"Error occurred when creating render pipeline state: %@", error);
-	}
-
 	int instanceBufferLength = InstanceInputStructSize * instanceCount;
-	instanceBuffer = [device newBufferWithLength:instanceBufferLength options:MTLResourceStorageModeManaged];
-	instanceBuffer.label = @"Drag handle instance buffer";
+	if (instanceBuffer == nil || instanceBuffer.length < instanceBufferLength) {
+		instanceBuffer = [MetalGPU.device newBufferWithLength:instanceBufferLength
+													  options:MTLResourceStorageModeManaged];
+		instanceBuffer.label = @"Drag handle instance buffer";
+	}
 
 	// Map our instance buffer so we can write instancing data.
 	float * inst_data = (float *)instanceBuffer.contents;
@@ -239,7 +237,7 @@
 			s, 0, 0, 0,
 			0, s, 0, 0,
 			0, 0, s, 0,
-			dh->xyz[0], dh->xyz[1],dh->xyz[2], 1.0
+			dh->xyz[0], dh->xyz[1], dh->xyz[2], 1.0
 		};
 
 		[self pushMatrix:m];
@@ -268,16 +266,16 @@
 
 	[instanceBuffer didModifyRange:NSMakeRange(0, instanceBufferLength)];
 	[_renderEncoder setVertexBuffer:instanceBuffer
-							offset:0
-						   atIndex:BufferIndexPerInstanceData];
+							 offset:0
+							atIndex:BufferIndexPerInstanceData];
 
-	[_renderEncoder setRenderPipelineState:pipelineState];
-	[_renderEncoder setVertexBuffer:vertexBuffer offset:0 atIndex:0];
+	[_renderEncoder setRenderPipelineState:_dragHandlePipelineState];
+	[_renderEncoder setVertexBuffer:_dragHandleVertexBuffer offset:0 atIndex:0];
 	[_renderEncoder setFragmentBytes:&color length:sizeof(color) atIndex:0];
 
 	[_renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip
 					   vertexStart:0
-					   vertexCount:vertexCount
+					   vertexCount:_dragHandleVertexCount
 					 instanceCount:instanceCount];
 
 }//end drawDragHandles
