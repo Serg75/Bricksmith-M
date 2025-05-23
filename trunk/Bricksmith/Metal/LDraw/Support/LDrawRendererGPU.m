@@ -36,14 +36,16 @@
 #define DEBUG_DRAWING				1	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
 
-
-id<MTLRenderPipelineState> _marqueePipelineState;
+static id<MTLCommandQueue>			_commandQueue;
+static id<MTLRenderPipelineState>	_pipelineState;
+static id<MTLRenderPipelineState>	_marqueePipelineState;
+static id<MTLDepthStencilState>		_depthStencilState;
 
 
 @interface LDrawRenderer ()
-{
-	dispatch_semaphore_t _inFlightSemaphore;
-}
+//{
+//	dispatch_semaphore_t _inFlightSemaphore;
+//}
 
 struct VertexUniform {
 	Matrix4				model_view_matrix;
@@ -75,19 +77,24 @@ struct FragmentUniform {
 
 //========== prepareMetal ======================================================
 //
-// Purpose:	The context is all set up; this is where we prepare our Metal state.
+// Purpose:		Set up Metal for rendering.
 //
 //==============================================================================
 - (void) prepareMetal
 {
 	id<MTLDevice> device = MetalGPU.device;
 	_commandQueue = [device newCommandQueue];
-
-	// Load shaders from Metal shader library
+	_commandQueue.label = @"Main Command Queue";
+	
+	// Create a default library
 	id<MTLLibrary> defaultLibrary = [device newDefaultLibrary];
-	id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexShader"];
-	id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentShader"];
+	
+	// Create pipeline state
+	MTLRenderPipelineDescriptor *pipelineDescriptor = [MTLRenderPipelineDescriptor new];
+	pipelineDescriptor.vertexFunction = [defaultLibrary newFunctionWithName:@"vertexShader"];
+	pipelineDescriptor.fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentShader"];
 
+	// Set up vertex descriptor
 	MTLVertexDescriptor *vertexDescriptor = [MTLVertexDescriptor new];
 
 	vertexDescriptor.attributes[VertexAttributePosition].format = MTLVertexFormatFloat3;
@@ -102,13 +109,10 @@ struct FragmentUniform {
 	vertexDescriptor.attributes[VertexAttributeColor].offset = sizeof(float) * 6;
 	vertexDescriptor.attributes[VertexAttributeColor].bufferIndex = BufferIndexInstanceInvariantData;
 
-	vertexDescriptor.layouts[BufferIndexInstanceInvariantData].stride = sizeof(float) * 10;
+	vertexDescriptor.layouts[BufferIndexInstanceInvariantData].stride = VERT_STRIDE * sizeof(float);
+	vertexDescriptor.layouts[BufferIndexInstanceInvariantData].stepRate = 1;
 	vertexDescriptor.layouts[BufferIndexInstanceInvariantData].stepFunction = MTLVertexStepFunctionPerVertex;
 
-	// Create pipeline state
-	MTLRenderPipelineDescriptor *pipelineDescriptor = [MTLRenderPipelineDescriptor new];
-	pipelineDescriptor.vertexFunction = vertexFunction;
-	pipelineDescriptor.fragmentFunction = fragmentFunction;
 	pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
@@ -185,6 +189,8 @@ struct FragmentUniform {
 //==============================================================================
 - (void)setupMarquee:(id<MTLLibrary>)library
 {
+	if (_marqueePipelineState) { return; }
+
 	MTLRenderPipelineDescriptor *marqueeDesc = [[MTLRenderPipelineDescriptor alloc] init];
 	marqueeDesc.vertexFunction = [library newFunctionWithName:@"vertex_shader_2D"];
 	marqueeDesc.fragmentFunction = [library newFunctionWithName:@"fragment_shader_2D"];
@@ -205,6 +211,49 @@ struct FragmentUniform {
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
 }//end setupMarquee:
+
+
+//========== createTexturesForSize: ============================================
+//
+// Purpose:		Create or update MSAA color and depth textures for the given size.
+//
+//==============================================================================
+- (void) createTexturesForSize:(CGSize)size
+{
+	if (CGSizeEqualToSize(size, _lastDrawableSize)) { return; }
+
+	// Multisample color texture
+	MTLTextureDescriptor *msaaColorTextureDescriptor =
+	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+													   width:size.width
+													  height:size.height
+												   mipmapped:NO];
+	
+	msaaColorTextureDescriptor.sampleCount = MSAASampleCount;
+	msaaColorTextureDescriptor.textureType = MTLTextureType2DMultisample;
+	msaaColorTextureDescriptor.usage = MTLTextureUsageRenderTarget;
+	msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
+	
+	_msaaColorTexture = [MetalGPU.device newTextureWithDescriptor:msaaColorTextureDescriptor];
+	_msaaColorTexture.label = @"MSAA Color Texture";
+	
+	// Depth texture (also multisampled)
+	MTLTextureDescriptor *depthTextureDescriptor =
+	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+													   width:size.width
+													  height:size.height
+												   mipmapped:NO];
+	
+	depthTextureDescriptor.sampleCount = MSAASampleCount;
+	depthTextureDescriptor.textureType = MTLTextureType2DMultisample;
+	depthTextureDescriptor.usage = MTLTextureUsageRenderTarget;
+	depthTextureDescriptor.storageMode = MTLStorageModePrivate;
+	
+	_depthTexture = [MetalGPU.device newTextureWithDescriptor:depthTextureDescriptor];
+	_depthTexture.label = @"Depth Texture";
+	
+	_lastDrawableSize = size;
+}
 
 
 //========== mtkView:drawableSizeWillChange: ===================================
@@ -273,38 +322,13 @@ struct FragmentUniform {
 		return;
 	}
 
+	// Create or update textures if needed
+	[self createTexturesForSize:view.drawableSize];
+
 	MTLRenderPassDescriptor *renderPassDescriptor = MTLRenderPassDescriptor.renderPassDescriptor;
 	if (renderPassDescriptor == nil) {
 		return;
 	}
-
-	// Multisample color texture
-	MTLTextureDescriptor *msaaColorTextureDescriptor =
-	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:view.colorPixelFormat
-													   width:view.drawableSize.width
-													  height:view.drawableSize.height
-												   mipmapped:NO];
-
-	msaaColorTextureDescriptor.sampleCount = MSAASampleCount;
-	msaaColorTextureDescriptor.textureType = MTLTextureType2DMultisample;
-	msaaColorTextureDescriptor.usage = MTLTextureUsageRenderTarget;
-	msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
-
-	id<MTLTexture> msaaColorTexture = [MetalGPU.device newTextureWithDescriptor:msaaColorTextureDescriptor];
-
-	// Depth texture (also multisampled)
-	MTLTextureDescriptor *depthTextureDescriptor =
-	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-													   width:view.drawableSize.width
-													  height:view.drawableSize.height
-												   mipmapped:NO];
-
-	depthTextureDescriptor.sampleCount = MSAASampleCount;
-	depthTextureDescriptor.textureType = MTLTextureType2DMultisample;
-	depthTextureDescriptor.usage = MTLTextureUsageRenderTarget;
-	depthTextureDescriptor.storageMode = MTLStorageModePrivate;
-
-	id<MTLTexture> depthTexture = [MetalGPU.device newTextureWithDescriptor:depthTextureDescriptor];
 
 	float bgColor[4];
 	if (backgroundColor[3] == 0.0) {
@@ -321,7 +345,7 @@ struct FragmentUniform {
 		bgColor[3] = backgroundColor[3];
 	}
 
-	renderPassDescriptor.colorAttachments[0].texture = msaaColorTexture;
+	renderPassDescriptor.colorAttachments[0].texture = _msaaColorTexture;
 	renderPassDescriptor.colorAttachments[0].resolveTexture = currentDrawable.texture;
 	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
 	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
@@ -330,7 +354,7 @@ struct FragmentUniform {
 																			bgColor[2],
 																			bgColor[3]);
 
-	renderPassDescriptor.depthAttachment.texture = depthTexture;
+	renderPassDescriptor.depthAttachment.texture = _depthTexture;
 	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
 	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
 	renderPassDescriptor.depthAttachment.clearDepth = 1.0;

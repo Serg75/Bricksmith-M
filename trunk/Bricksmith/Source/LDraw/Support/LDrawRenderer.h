@@ -66,11 +66,11 @@ typedef enum
 	BOOL				isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
 
 	// Metal
-	CommandQueue	_commandQueue;
-	PipelineState	_pipelineState;
-	Buffer			_vertexUniformBuffer;
-	Buffer			_fragmentUniformBuffer;
-	DepthStencilState _depthStencilState;
+	Buffer				_vertexUniformBuffer;
+	Buffer				_fragmentUniformBuffer;
+	Texture				_msaaColorTexture;
+	Texture				_depthTexture;
+	CGSize				_lastDrawableSize;
 }
 
 // Initialization

@@ -78,10 +78,10 @@ const int MSAASampleCount = 4;
 
 #define WANT_STATS 0
 
-#define VERT_STRIDE 10					// Stride of our vertices - we always write  X Y Z   NX NY NZ   R G B A
 #define INST_CUTOFF 0					// Minimum instances to use hardware case, which has higher overhead to set up.
 #define INST_MAX_COUNT (1024 * 128)		// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
-#define INST_RING_BUFFER_COUNT 1		// Number of buffers to rotate for hardware instancing - doesn't actually help, it turns out.
+#define INST_RING_BUFFER_COUNT 4		// Number of buffers to rotate for hardware instancing
+#define INST_BUFFER_SIZE (1024 * 1024)	// 1MB initial size for instance buffers
 
 enum {
 	dl_has_alpha = 1,		// At least one prim in this DL has translucency.
@@ -114,9 +114,9 @@ id<MTLTexture>	_clearTexture;
 static void copy_vec3(float d[3], const float s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
 static void copy_vec4(float d[4], const float s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
 
-static id<MTLBuffer> inst_vbo_ring[INST_RING_BUFFER_COUNT] = { nil };
-static int inst_ring_last = 0;
-
+static id<MTLBuffer>	inst_vbo_ring[INST_RING_BUFFER_COUNT]	= { nil };
+static NSUInteger		inst_vbo_sizes[INST_RING_BUFFER_COUNT]	= { 0 };
+static int				inst_ring_last							= 0;
 
 //========== DISPLAY LIST DATA STRUCTURES ========================================
 
@@ -281,6 +281,37 @@ struct	LDrawDLBuilder {
 
 
 // MARK: - Internal functions -
+
+//========== getInstanceBuffer ===================================================
+//
+// Purpose:	Get or create an instance buffer of appropriate size for hardware
+//			instancing.
+//
+// Notes:	We create a new buffer with double the required size or minimum size.
+//			This helps reduce reallocations and improves performance by reusing
+//			buffers when possible.
+//
+//================================================================================
+static id<MTLBuffer> getInstanceBuffer(NSUInteger requiredSize, int ringIndex)
+{
+	// If we don't have a buffer or it's too small, create a new one
+	if (inst_vbo_ring[ringIndex] == nil || inst_vbo_sizes[ringIndex] < requiredSize)
+	{
+		NSUInteger newSize = MAX(INST_BUFFER_SIZE, requiredSize * 2);
+
+		// Create new buffer
+		id<MTLBuffer> newBuffer = [MetalGPU.device newBufferWithLength:newSize
+															   options:MTLResourceStorageModeManaged];
+		newBuffer.label = [NSString stringWithFormat:@"Instance buffer %d", ringIndex];
+
+		// Store the new buffer and its size
+		inst_vbo_ring[ringIndex] = newBuffer;
+		inst_vbo_sizes[ringIndex] = newSize;
+	}
+	return inst_vbo_ring[ringIndex];
+
+}//end getInstanceBuffer
+
 
 //========== setup_tex_spec ======================================================
 //
@@ -1260,21 +1291,16 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	{
 		// Build a var-sized array of segments to record our instances for hardware instancing.  We may not need it for every DL but that's okay.
 		// We need twice the space because each DL can have both wireframe and non-wireframe instances that need to be drawn separately.
-		struct LDrawDLSegment * segments = (struct LDrawDLSegment *) LDrawBDPAllocate(session->alloc, sizeof(struct LDrawDLSegment) * session->dl_count * 2);
+		size_t segmentsSize = sizeof(struct LDrawDLSegment) * session->dl_count * 2;
+		struct LDrawDLSegment * segments = (struct LDrawDLSegment *) LDrawBDPAllocate(session->alloc, segmentsSize);
 		struct LDrawDLSegment * cur_segment = segments;
 
-		// If we do not yet have a buffer for instancing, build one now.
-//		if(inst_vbo_ring[session->inst_ring] == nil)
-		{
-			id<MTLBuffer> instanceBuffer = [MetalGPU.device newBufferWithLength:session->total_instance_count * InstanceInputStructSize
-																		options:MTLResourceStorageModeManaged];
-			instanceBuffer.label = @"Instance buffer";
-			inst_vbo_ring[session->inst_ring] = instanceBuffer;
-		}
-
-			
+		// Get or create an instance buffer of appropriate size
+		NSUInteger requiredSize = session->total_instance_count * InstanceInputStructSize;
+		id<MTLBuffer> instanceBuffer = getInstanceBuffer(requiredSize, session->inst_ring);
+            
 		// Map our instance buffer so we can write instancing data.
-		float * inst_base = (float *) [inst_vbo_ring[session->inst_ring] contents];
+        float * inst_base = (float *) [instanceBuffer contents];
 		float * inst_data = inst_base;
 		int 	inst_count = 0;
 		int		inst_remain = INST_MAX_COUNT;
@@ -1382,7 +1408,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			}
 		}
 
-		[inst_vbo_ring[session->inst_ring] didModifyRange:NSMakeRange(0, inst_count * InstanceInputStructSize)];
+		[instanceBuffer didModifyRange:NSMakeRange(0, inst_count * InstanceInputStructSize)];
 
 		// Hardware instancing
 
@@ -1393,7 +1419,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 			setup_tex_spec(NULL, session, renderEncoder);
 
-			[renderEncoder setVertexBuffer:inst_vbo_ring[session->inst_ring] offset:0 atIndex:BufferIndexPerInstanceData];
+			[renderEncoder setVertexBuffer:instanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
 
 			struct LDrawDLSegment * s;
 			for(s = segments; s < cur_segment; ++s)

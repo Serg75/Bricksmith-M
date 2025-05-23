@@ -11,6 +11,8 @@
 #ifndef MetalCommonDefinitions_h
 #define MetalCommonDefinitions_h
 
+#define VERT_STRIDE 10					// Stride of our vertices - we always write  X Y Z   NX NY NZ   R G B A
+
 // Buffer index values shared between shader and C code to ensure Metal shader buffer inputs match Metal API
 // buffer set calls.
 typedef enum BufferIndex {
