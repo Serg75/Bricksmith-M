@@ -7,6 +7,8 @@
 //
 
 #import "LDrawCamera.h"
+
+#import "GPU.h"
 #import "MacLDraw.h"
 #import "MatrixMathEx.h"
 
