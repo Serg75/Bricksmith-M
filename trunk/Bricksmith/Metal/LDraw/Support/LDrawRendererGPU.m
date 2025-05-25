@@ -222,6 +222,8 @@ struct FragmentUniform {
 {
 	if (CGSizeEqualToSize(size, _lastDrawableSize)) { return; }
 
+	id<MTLDevice> device = MetalGPU.device;
+
 	// Multisample color texture
 	MTLTextureDescriptor *msaaColorTextureDescriptor =
 	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
@@ -232,9 +234,17 @@ struct FragmentUniform {
 	msaaColorTextureDescriptor.sampleCount = MSAASampleCount;
 	msaaColorTextureDescriptor.textureType = MTLTextureType2DMultisample;
 	msaaColorTextureDescriptor.usage = MTLTextureUsageRenderTarget;
-	msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
-	
-	_msaaColorTexture = [MetalGPU.device newTextureWithDescriptor:msaaColorTextureDescriptor];
+	if (@available(macOS 11.0, *)) {
+		if ([device supportsFamily:MTLGPUFamilyApple1]) {
+			msaaColorTextureDescriptor.storageMode = MTLStorageModeMemoryless;
+		} else {
+			msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
+		}
+	} else {
+		msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
+	}
+
+	_msaaColorTexture = [device newTextureWithDescriptor:msaaColorTextureDescriptor];
 	_msaaColorTexture.label = @"MSAA Color Texture";
 	
 	// Depth texture (also multisampled)
@@ -247,9 +257,18 @@ struct FragmentUniform {
 	depthTextureDescriptor.sampleCount = MSAASampleCount;
 	depthTextureDescriptor.textureType = MTLTextureType2DMultisample;
 	depthTextureDescriptor.usage = MTLTextureUsageRenderTarget;
-	depthTextureDescriptor.storageMode = MTLStorageModePrivate;
 	
-	_depthTexture = [MetalGPU.device newTextureWithDescriptor:depthTextureDescriptor];
+	if (@available(macOS 11.0, *)) {
+		if ([device supportsFamily:MTLGPUFamilyApple1]) {
+			depthTextureDescriptor.storageMode = MTLStorageModeMemoryless;
+		} else {
+			depthTextureDescriptor.storageMode = MTLStorageModePrivate;
+		}
+	} else {
+		depthTextureDescriptor.storageMode = MTLStorageModePrivate;
+	}
+
+	_depthTexture = [device newTextureWithDescriptor:depthTextureDescriptor];
 	_depthTexture.label = @"Depth Texture";
 	
 	_lastDrawableSize = size;
