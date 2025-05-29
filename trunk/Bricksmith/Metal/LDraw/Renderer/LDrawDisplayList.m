@@ -80,7 +80,12 @@ const int MSAASampleCount = 4;
 
 #define INST_CUTOFF 0					// Minimum instances to use hardware case, which has higher overhead to set up.
 #define INST_MAX_COUNT (1024 * 128)		// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
+
+// Previously, using several buffers (one per view) helped avoid rendering artefacts when rapidly selecting
+// or deselecting parts on slow computers — this was before the shader address space was fixed.
+// With the shader fix in place, this buffer rotation is likely no longer necessary.
 #define INST_RING_BUFFER_COUNT 4		// Number of buffers to rotate for hardware instancing
+
 #define INST_BUFFER_SIZE (1024 * 1024)	// 1MB initial size for instance buffers
 
 enum {

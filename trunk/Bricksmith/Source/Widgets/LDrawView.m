@@ -2101,7 +2101,6 @@ static Box2 NSRectToBox2(NSRect rect)
 			[self makeCurrentContext];
 
 			[self->renderer rotateByDegrees:angle];
-			[self setNeedsDisplay: YES];
 		}];
 	}
 

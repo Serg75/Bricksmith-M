@@ -42,7 +42,9 @@ static id<MTLRenderPipelineState>	_marqueePipelineState;
 static id<MTLDepthStencilState>		_depthStencilState;
 static dispatch_semaphore_t			_inFlightSemaphore;
 
-static const NSUInteger				MaxBuffersInFlight = 3;		// The maximum number of command buffers in flight.
+// Controls the number uniform buffers in flight to prevent the CPU from overwriting GPU resources still in use.
+// This is essential for avoiding rendering artefacts, especially on slower systems.
+static const NSUInteger				MaxBuffersInFlight = 3;		// The maximum number of command buffers in flight
 
 static id<MTLBuffer>				_vertexUniformBuffers[MaxBuffersInFlight];
 static NSUInteger					_currentUniformBufferIndex = 0;
@@ -313,25 +315,11 @@ struct FragmentUniform {
 	BOOL			considerFastDraw	= NO;
 
 	// Wait to ensure only a maximum of `MaxBuffersInFlight` frames are being processed by the GPU at any time.
-	// This mechanism prevents the CPU from overwriting dynamic buffer data before the GPU has read it.
+	// This prevents the CPU from overwriting buffer data still in use by the GPU, avoiding rendering artefacts.
 	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
 
 	startTime	= [NSDate date];
 
-	// We may need to simplify large models if we are spinning the model
-	// or doing part drag-and-drop.
-//	considerFastDraw =		self->isTrackingDrag == YES
-//						||	self->isGesturing == YES
-//						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
-//							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
-//							);
-#if DEBUG_DRAWING == 0
-	if(considerFastDraw == YES && self->rotationDrawMode == LDrawGLDrawExtremelyFast)
-	{
-		options |= DRAW_BOUNDS_ONLY;
-	}
-#endif //DEBUG_DRAWING
-	
 	id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 	commandBuffer.label = @"Drawable Command Buffer";
 	if (!commandBuffer) {
@@ -402,9 +390,6 @@ struct FragmentUniform {
 	[renderEncoder setVertexBuffer:vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
 
 	[renderEncoder setFragmentBuffer:_fragmentUniformBuffer offset:0 atIndex:BufferIndexFragmentUniforms];
-
-	// Make lines look a little nicer; Max width 1.0; 0.5 at 100% zoom
-//	glLineWidth(MIN([self zoomPercentageForGL]/100 * 0.5, 1.0));
 
 	// DRAW!
 
