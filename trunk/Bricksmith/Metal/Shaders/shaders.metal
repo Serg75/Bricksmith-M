@@ -49,11 +49,11 @@ struct TexturePlaneData {
 	float4		plane_t;
 };
 
-vertex VertexOutput vertexShader(VertexInput in [[stage_in]],
-								 constant InstanceInput		*inst	[[buffer(BufferIndexPerInstanceData)]],
+vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
+								 device const InstanceInput	*inst	[[buffer(BufferIndexPerInstanceData)]],
 								 constant VertexUniform&	uni		[[buffer(BufferIndexVertexUniforms)]],
-								 constant TexturePlaneData& texGen	[[buffer(BufferIndexTexturePlane)]],
-								 ushort iid [[instance_id]])
+								 constant TexturePlaneData&	texGen	[[buffer(BufferIndexTexturePlane)]],
+								 ushort						iid		[[instance_id]])
 {
 	VertexOutput out;
 
