@@ -40,12 +40,14 @@ static id<MTLCommandQueue>			_commandQueue;
 static id<MTLRenderPipelineState>	_pipelineState;
 static id<MTLRenderPipelineState>	_marqueePipelineState;
 static id<MTLDepthStencilState>		_depthStencilState;
+static dispatch_semaphore_t			_inFlightSemaphore;
 
+static const NSUInteger				MaxBuffersInFlight = 3;		// The maximum number of command buffers in flight.
+
+static id<MTLBuffer>				_vertexUniformBuffers[MaxBuffersInFlight];
+static NSUInteger					_currentUniformBufferIndex = 0;
 
 @interface LDrawRenderer ()
-//{
-//	dispatch_semaphore_t _inFlightSemaphore;
-//}
 
 struct VertexUniform {
 	Matrix4				model_view_matrix;
@@ -85,7 +87,8 @@ struct FragmentUniform {
 	id<MTLDevice> device = MetalGPU.device;
 	_commandQueue = [device newCommandQueue];
 	_commandQueue.label = @"Main Command Queue";
-	
+	_inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
+
 	// Create a default library
 	id<MTLLibrary> defaultLibrary = [device newDefaultLibrary];
 	
@@ -141,8 +144,10 @@ struct FragmentUniform {
 	depthStencilDescriptor.depthWriteEnabled = YES;
 	_depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
 
-	_vertexUniformBuffer = [device newBufferWithLength:sizeof(struct VertexUniform) options:MTLResourceStorageModeShared];
-	_vertexUniformBuffer.label = @"Uniform buffer";
+	for (NSUInteger i = 0; i < MaxBuffersInFlight; ++i) {
+		_vertexUniformBuffers[i] = [device newBufferWithLength:sizeof(struct VertexUniform) options:MTLResourceStorageModeShared];
+		_vertexUniformBuffers[i].label = [NSString stringWithFormat:@"Uniform buffer %lu", (unsigned long)i];
+	}
 
 
 	//---------- Light Model ---------------------------------------------------
@@ -307,12 +312,9 @@ struct FragmentUniform {
 	NSTimeInterval	drawTime			= 0;
 	BOOL			considerFastDraw	= NO;
 
-//	// TODO: learn more
-//
-//	// Wait to ensure only a maximum of `AAPLMaxBuffersInFlight` frames are being processed by any
-//	// stage in the Metal pipeline (e.g. app, Metal, drivers, GPU, etc.) at any time. This mechanism
-//	// prevents the CPU from overwriting dynamic buffer data before the GPU has read it.
-//	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
+	// Wait to ensure only a maximum of `MaxBuffersInFlight` frames are being processed by the GPU at any time.
+	// This mechanism prevents the CPU from overwriting dynamic buffer data before the GPU has read it.
+	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
 
 	startTime	= [NSDate date];
 
@@ -384,15 +386,9 @@ struct FragmentUniform {
 	[renderEncoder setRenderPipelineState:_pipelineState];
 	[renderEncoder setDepthStencilState:_depthStencilState];
 
-	// Add a completion hander that signals `_inFlightSemaphore` when Metal and the GPU have fully
-	// finished processing the commands encoded this frame. This indicates that the dynamic bufers,
-	// written to this frame, are no longer be needed by Metal or the GPU, meaning that you can
-	// change the buffer contents without corrupting any rendering.
-//	__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
-//	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer)
-//	{
-//		dispatch_semaphore_signal(block_sema);
-//	}];
+	// Advance the buffer index for multiple buffering
+	_currentUniformBufferIndex = (_currentUniformBufferIndex + 1) % MaxBuffersInFlight;
+	id<MTLBuffer> vertexUniformBuffer = _vertexUniformBuffers[_currentUniformBufferIndex];
 
 	struct VertexUniform vertexUniform;
 	vertexUniform.model_view_matrix = Matrix4CreateFromGLMatrix4([camera getModelView]);
@@ -400,10 +396,10 @@ struct FragmentUniform {
 	Matrix3 normal_matrix = Matrix3MakeNormalTransformFromProjMatrix(vertexUniform.model_view_matrix);
 	vertexUniform.normal_matrix = Matrix3AlignedCreate(normal_matrix);
 
-	void *vertexUniformBufferPointer = [_vertexUniformBuffer contents];
+	void *vertexUniformBufferPointer = [vertexUniformBuffer contents];
 	memcpy(vertexUniformBufferPointer, &vertexUniform, sizeof(vertexUniform));
 
-	[renderEncoder setVertexBuffer:_vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
+	[renderEncoder setVertexBuffer:vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
 
 	[renderEncoder setFragmentBuffer:_fragmentUniformBuffer offset:0 atIndex:BufferIndexFragmentUniforms];
 
@@ -430,6 +426,13 @@ struct FragmentUniform {
 
 	// send the commands to the GPU
 	[commandBuffer commit];
+
+	// Add a completion handler that signals the semaphore when the GPU is done with this frame.
+	// This indicates that we can change the buffer contents without corrupting any rendering.
+	__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
+	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+		dispatch_semaphore_signal(block_sema);
+	}];
 
 	// If we just did a full draw, let's see if rotating needs to be
 	// done simply.
