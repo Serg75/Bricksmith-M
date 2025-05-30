@@ -17,8 +17,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-simd_float4x4 simd_matrix_from_array(const float *matrix);
-void simd_matrix_to_array(simd_float4x4 matrix, float *result);
+// Converts a float[16] array (row-major) to a Metal-compatible 4x4 matrix.
+matrix_float4x4 simd_matrix4x4_from_array(const float *matrix);
+// Converts a float[16] array (row-major) to a 4x4 matrix, then returns its transpose.
+matrix_float4x4 simd_matrix4x4_from_array_transposed(const float *matrix);
+// Converts a 4x4 matrix to a float[16] array (row-major, Metal layout).
+void simd_matrix_to_array(matrix_float4x4 matrix, float *result);
+// Computes the normal matrix (inverse transpose of the upper-left 3x3 of a 4x4 matrix).
+matrix_float3x3 simd_normal_matrix_from_matrix4x4(matrix_float4x4 m);
 
 NS_ASSUME_NONNULL_END
 

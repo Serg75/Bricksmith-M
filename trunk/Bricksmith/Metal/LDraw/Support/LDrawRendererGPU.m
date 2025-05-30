@@ -29,6 +29,8 @@
 
 #import "LDrawShaderRendererMTL.h"
 #import "MetalGPU.h"
+#import "MetalUtilities.h"
+#import "SIMDConversions.h"
 
 
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
@@ -49,29 +51,6 @@ static const NSUInteger				MaxBuffersInFlight = 3;		// The maximum number of com
 static id<MTLBuffer>				_vertexUniformBuffers[MaxBuffersInFlight];
 static NSUInteger					_currentUniformBufferIndex = 0;
 
-@interface LDrawRenderer ()
-
-struct VertexUniform {
-	Matrix4				model_view_matrix;
-	Matrix4				projection_matrix;
-	Matrix3Aligned		normal_matrix;
-};
-
-struct LightSourceParameters {
-	Tuple4	diffuse;
-	Tuple4	position;
-};
-
-struct LightModelParameters {
-	Tuple4	ambient;
-};
-
-struct FragmentUniform {
-	struct LightSourceParameters	light_source[2];
-	struct LightModelParameters		light_model;
-};
-
-@end
 
 @implementation LDrawRenderer (Metal)
 
@@ -170,17 +149,17 @@ struct FragmentUniform {
 	Tuple4 lightDiffuse = { 0.8, 0.8, 0.8, 1.0 };
 
 	struct LightSourceParameters light_source0;
-	light_source0.position = position0;
-	light_source0.diffuse = lightDiffuse;
+	light_source0.position			= tuple4_to_float4(position0);
+	light_source0.diffuse			= tuple4_to_float4(lightDiffuse);
 	struct LightSourceParameters light_source1;
-	light_source1.position = position1;
-	light_source1.diffuse = lightDiffuse;
+	light_source1.position			= tuple4_to_float4(position1);
+	light_source1.diffuse			= tuple4_to_float4(lightDiffuse);
 	struct LightModelParameters lightModel;
-	lightModel.ambient = lightModelAmbient;
+	lightModel.ambient				= tuple4_to_float4(lightModelAmbient);
 	struct FragmentUniform fragmentUniform;
-	fragmentUniform.light_source[0] = light_source0;
-	fragmentUniform.light_source[1] = light_source1;
-	fragmentUniform.light_model = lightModel;
+	fragmentUniform.light_source[0]	= light_source0;
+	fragmentUniform.light_source[1]	= light_source1;
+	fragmentUniform.light_model		= lightModel;
 
 	_fragmentUniformBuffer = [device newBufferWithBytes:&fragmentUniform length:sizeof(fragmentUniform) options:MTLResourceStorageModeShared];
 
@@ -379,10 +358,9 @@ struct FragmentUniform {
 	id<MTLBuffer> vertexUniformBuffer = _vertexUniformBuffers[_currentUniformBufferIndex];
 
 	struct VertexUniform vertexUniform;
-	vertexUniform.model_view_matrix = Matrix4CreateFromGLMatrix4([camera getModelView]);
-	vertexUniform.projection_matrix = Matrix4CreateFromGLMatrix4([camera getProjection]);
-	Matrix3 normal_matrix = Matrix3MakeNormalTransformFromProjMatrix(vertexUniform.model_view_matrix);
-	vertexUniform.normal_matrix = Matrix3AlignedCreate(normal_matrix);
+	vertexUniform.model_view_matrix	= simd_matrix4x4_from_array_transposed([camera getModelView]);
+	vertexUniform.projection_matrix	= simd_matrix4x4_from_array_transposed([camera getProjection]);
+	vertexUniform.normal_matrix		= simd_normal_matrix_from_matrix4x4(vertexUniform.model_view_matrix);
 
 	void *vertexUniformBufferPointer = [vertexUniformBuffer contents];
 	memcpy(vertexUniformBufferPointer, &vertexUniform, sizeof(vertexUniform));

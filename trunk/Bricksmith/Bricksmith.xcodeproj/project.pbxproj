@@ -535,6 +535,7 @@
 		95AA25A62DC1E57900EB929E /* MetalUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 95AA25A32DC1E57900EB929E /* MetalUtilities.h */; };
 		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
 		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
+		95B46C142DEA39E900D322AB /* SIMDConversions.h in Headers */ = {isa = PBXBuildFile; fileRef = 95B46C132DEA39E900D322AB /* SIMDConversions.h */; };
 		95C0387128BFFF86005C6346 /* LDrawHighResPrimitives.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */; };
 		95C0387228BFFF86005C6346 /* LDrawHighResPrimitives.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */; };
 		95C773C12A24D01800058D75 /* LDrawPartGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773BF2A24D01800058D75 /* LDrawPartGPU.m */; };
@@ -973,6 +974,7 @@
 		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
 		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
 		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
+		95B46C132DEA39E900D322AB /* SIMDConversions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SIMDConversions.h; sourceTree = "<group>"; };
 		95C0386F28BFFF86005C6346 /* LDrawHighResPrimitives.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawHighResPrimitives.h; sourceTree = "<group>"; };
 		95C0387028BFFF86005C6346 /* LDrawHighResPrimitives.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawHighResPrimitives.m; sourceTree = "<group>"; };
 		95C773BF2A24D01800058D75 /* LDrawPartGPU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawPartGPU.m; sourceTree = "<group>"; };
@@ -1705,6 +1707,7 @@
 				95AA25A42DC1E57900EB929E /* MetalUtilities.m */,
 				956D9CC62A31060800FA956B /* PartLibraryMTL.h */,
 				956D9CC72A31060800FA956B /* PartLibraryMTL.m */,
+				95B46C132DEA39E900D322AB /* SIMDConversions.h */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -2096,6 +2099,7 @@
 				956D9BE12A30768000FA956B /* LDrawRenderer.h in Headers */,
 				956D9BE22A30768000FA956B /* TableViewCategory.h in Headers */,
 				956D9CA62A30AA0800FA956B /* LDrawDocumentGPU.h in Headers */,
+				95B46C142DEA39E900D322AB /* SIMDConversions.h in Headers */,
 				18B32A682B9A0EDC00A97084 /* InspectionLPubCommand.h in Headers */,
 				956D9BE32A30768000FA956B /* LDrawTexture.h in Headers */,
 				956D9BE42A30768000FA956B /* ModelManager.h in Headers */,

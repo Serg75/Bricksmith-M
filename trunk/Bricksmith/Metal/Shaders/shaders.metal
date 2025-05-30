@@ -20,15 +20,6 @@ struct VertexInput {
 	float4	color		[[attribute(VertexAttributeColor)]];
 };
 
-struct InstanceInput {
-	float4	transform_x;
-	float4	transform_y;
-	float4	transform_z;
-	float4	transform_w;
-	float4	color_current;
-	float4	color_compliment;
-};
-
 struct VertexOutput {
 	float4	position [[position]];
 	float4	color;
@@ -36,17 +27,6 @@ struct VertexOutput {
 	float3	normal_eye;
 	float	tex_mix;
 	float2	tex_coord;
-};
-
-struct VertexUniform {
-	float4x4	model_view_matrix;
-	float4x4	projection_matrix;
-	float3x3	normal_matrix;
-};
-
-struct TexturePlaneData {
-	float4		plane_s;
-	float4		plane_t;
 };
 
 vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
@@ -105,29 +85,6 @@ struct FragmentInput {
 
 struct FragmentOutput {
 	float4	frag_color;
-};
-
-struct LightingUniforms {
-	float3	light_position_0;
-	float3	light_position_1;
-	float3	ambient_color;
-	float3	diffuse_color;
-	float3	specular_color;
-	float	shininess;
-};
-
-struct LightSourceParameters {
-	float4	diffuse;
-	float4	position;
-};
-
-struct LightModelParameters {
-	float4	ambient;
-};
-
-struct FragmentUniform {
-	LightSourceParameters	light_source[2];
-	LightModelParameters	light_model;
 };
 
 fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],

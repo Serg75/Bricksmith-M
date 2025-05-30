@@ -64,10 +64,10 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	// "Rip" the MVP matrix from Metal.  (TODO: does LDraw just have this info?)
 	// We use this for culling.
 	
-	simd_float4x4 projMatrix = simd_matrix_from_array(proj_matrix);
-	simd_float4x4 mvMatrix = simd_matrix_from_array(mv_matrix);
+	matrix_float4x4 projMatrix = simd_matrix4x4_from_array(proj_matrix);
+	matrix_float4x4 mvMatrix = simd_matrix4x4_from_array(mv_matrix);
 	
-	simd_float4x4 mvpMatrix = simd_mul(projMatrix, mvMatrix);
+	matrix_float4x4 mvpMatrix = simd_mul(projMatrix, mvMatrix);
 	
 	simd_matrix_to_array(mvpMatrix, mvp);
 	memcpy(cull_now, mvp, sizeof(mvp));

@@ -19,6 +19,7 @@
 #import "MetalGPU.h"
 #import "MetalUtilities.h"
 #import "MatrixMath.h"
+#import "SIMDConversions.h"
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
@@ -30,10 +31,6 @@
 static const uint32_t * idx_null = NULL;
 #endif
 
-// The number of float values in InstanceInput struct declared in Metal shader
-const int InstanceInputLength = 24;
-// The size in bytes of InstanceInput struct declared in Metal shader
-const int InstanceInputStructSize = InstanceInputLength * sizeof(float);
 // Number of samples for multisample anti-aliasing (MSAA)
 const int MSAASampleCount = 4;
 
@@ -95,23 +92,7 @@ enum {
 	dl_needs_destroy = 8	// Destroy after drawing - ptr is only around because it is queued!
 };
 
-
-struct InstanceData {
-	Point4	transform_x;
-	Point4	transform_y;
-	Point4	transform_z;
-	Point4	transform_w;
-	Point4	color_current;
-	Point4	color_compliment;
-};
-
-
-struct TexturePlaneData {
-	Point4		planeS;
-	Point4		planeT;
-};
-
-struct TexturePlaneData _noTexPlaneData = {.planeS = {0}, .planeT = {0}};
+struct TexturePlaneData _noTexPlaneData = {.plane_s = {0}, .plane_t = {0}};
 
 id<MTLTexture>	_clearTexture;
 
@@ -337,8 +318,8 @@ static void setup_tex_spec(struct LDrawTextureSpec * spec,
 	if(spec && spec->tex_obj)
 	{
 		struct TexturePlaneData texPlaneData;
-		texPlaneData.planeS = V4Make(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
-		texPlaneData.planeT = V4Make(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
+		texPlaneData.plane_s = simd_make_float4(spec->plane_s[0], spec->plane_s[1], spec->plane_s[2], spec->plane_s[3]);
+		texPlaneData.plane_t = simd_make_float4(spec->plane_t[0], spec->plane_t[1], spec->plane_t[2], spec->plane_t[3]);
 
 		[encoder setVertexBytes:&texPlaneData length:64 atIndex:BufferIndexTexturePlane];
 
@@ -494,11 +475,11 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 		session->stats.num_vert_imm += dl->vrt_count;
 	#endif
 
-	struct InstanceData instData;
-	instData.transform_x = V4Make(transform[0], transform[4], transform[8],  transform[12]);
-	instData.transform_y = V4Make(transform[1], transform[5], transform[9],  transform[13]);
-	instData.transform_z = V4Make(transform[2], transform[6], transform[10], transform[14]);
-	instData.transform_w = V4Make(transform[3], transform[7], transform[11], transform[15]);
+	struct InstanceInput instData;
+	instData.transform_x = simd_make_float4(transform[0], transform[4], transform[8],  transform[12]);
+	instData.transform_y = simd_make_float4(transform[1], transform[5], transform[9],  transform[13]);
+	instData.transform_z = simd_make_float4(transform[2], transform[6], transform[10], transform[14]);
+	instData.transform_w = simd_make_float4(transform[3], transform[7], transform[11], transform[15]);
 	copy_vec4((float *)&instData.color_current, cur_color);
 	copy_vec4((float *)&instData.color_compliment, cmp_color);
 
@@ -1354,11 +1335,11 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 				// Now walk the instance list...push instance data as set of bytes (which is faster than setting a real buffer) and draw.
 				for(inst = dl->instance_head; inst; inst = inst->next)
 				{
-					struct InstanceData instData;
-					instData.transform_x = V4Make(inst->transform[0], inst->transform[4], inst->transform[8],  inst->transform[12]);
-					instData.transform_y = V4Make(inst->transform[1], inst->transform[5], inst->transform[9],  inst->transform[13]);
-					instData.transform_z = V4Make(inst->transform[2], inst->transform[6], inst->transform[10], inst->transform[14]);
-					instData.transform_w = V4Make(inst->transform[3], inst->transform[7], inst->transform[11], inst->transform[15]);
+					struct InstanceInput instData;
+					instData.transform_x = simd_make_float4(inst->transform[0], inst->transform[4], inst->transform[8],  inst->transform[12]);
+					instData.transform_y = simd_make_float4(inst->transform[1], inst->transform[5], inst->transform[9],  inst->transform[13]);
+					instData.transform_z = simd_make_float4(inst->transform[2], inst->transform[6], inst->transform[10], inst->transform[14]);
+					instData.transform_w = simd_make_float4(inst->transform[3], inst->transform[7], inst->transform[11], inst->transform[15]);
 					copy_vec4((float *)&instData.color_current, inst->color);
 					copy_vec4((float *)&instData.color_compliment, inst->comp);
 
@@ -1488,7 +1469,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		{
 			memcpy((void*)p, (void*)l, sizeof(struct LDrawDLSortedInstanceLink));
 
-			simd_float4x4 modelView = simd_matrix_from_array(session->model_view);
+			simd_float4x4 modelView = simd_matrix4x4_from_array(session->model_view);
 			simd_float4 v = simd_make_float4(l->transform[12],
 											 l->transform[13],
 											 l->transform[14], 1.0f);
@@ -1502,7 +1483,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// Now: sort our array ascending to get far to near in eye space.
 		qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
 
-		struct InstanceData instData;
+		struct InstanceInput instData;
 
 		// NOW we can walk our sorted array and draw each brick, 1x1.  This code is a rehash of the "draw now" 
 		// code in LDrawDLDraw and could be factored.
@@ -1510,10 +1491,10 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		int lc;
 		for(lc = 0; lc < session->sort_count; ++lc)
 		{
-			instData.transform_x = V4Make(l->transform[0], l->transform[4], l->transform[8],  l->transform[12]);
-			instData.transform_y = V4Make(l->transform[1], l->transform[5], l->transform[9],  l->transform[13]);
-			instData.transform_z = V4Make(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
-			instData.transform_w = V4Make(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
+			instData.transform_x = simd_make_float4(l->transform[0], l->transform[4], l->transform[8],  l->transform[12]);
+			instData.transform_y = simd_make_float4(l->transform[1], l->transform[5], l->transform[9],  l->transform[13]);
+			instData.transform_z = simd_make_float4(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
+			instData.transform_w = simd_make_float4(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
 			copy_vec4((float *)&instData.color_current, l->color);
 			copy_vec4((float *)&instData.color_compliment, l->comp);
 

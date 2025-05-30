@@ -7,10 +7,8 @@
 
 #import <Foundation/Foundation.h>
 @import MetalKit;
-
-extern const int InstanceInputLength;
-extern const int InstanceInputStructSize;
 extern const int MSAASampleCount;
+#include "MetalCommonDefinitions.h"
 
 @interface MetalGPU : NSObject
 
