@@ -10,10 +10,11 @@
 
 #if WANT_RELATED_PARTS
 
+#import "GPU.h"
 #import "RelatedParts.h"
 #import "LDrawUtilities.h"
 #import "StringCategory.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 
 
 //---------- sort_by_part_description ------------------------------------------
@@ -78,10 +79,10 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 //				identifier, which has been pulled off already.
 //
 //==============================================================================
-- (id)			initWithParent:(NSString *) parentName
-						offset:(GLfloat *) offset
-					  relation:(NSString *) relation
-					 childLine:(NSString *) line
+- (id) initWithParent:(NSString *) parentName
+			   offset:(float *)	   offset
+			 relation:(NSString *) relation
+			childLine:(NSString *) line
 {
 	NSCharacterSet	*whitespaceCharacterSet = [NSCharacterSet whitespaceCharacterSet];
 
@@ -102,7 +103,7 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 		transform[14] = [parsedField floatValue] - offset[2];
 		
 		// Matrix rotation 3x3.  LDraw format is transpose of what we are
-		// used to from OpenGL.
+		// used to from GPU side.
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
 		transform[0] = [parsedField floatValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
@@ -131,8 +132,8 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 
 		self->child = [line stringByTrimmingCharactersInSet:whitespaceCharacterSet];
 		
-		self->childName = [[PartLibrary sharedPartLibrary] descriptionForPartName:self->child];
-		
+		self->childName = [[PartLibraryGPU sharedPartLibrary] descriptionForPartName:self->child];
+
 		self->role = relation;
 		
 		self->parent = parentName;
@@ -289,7 +290,7 @@ static RelatedParts * SharedRelatedParts = nil;
 	arr				= [[NSMutableArray alloc] initWithCapacity:count];
 
 	NSMutableArray * parents = [NSMutableArray arrayWithCapacity:5];
-	GLfloat offset[3] = { 0, 0, 0 };
+	float offset[3] = { 0, 0, 0 };
 	NSString * relName = nil;
 	
 	for(i = 0; i < count; ++i)
@@ -401,7 +402,7 @@ static RelatedParts * SharedRelatedParts = nil;
 	}
 
 	NSArray * kids_sorted = [kids allObjects];
-	return [kids_sorted sortedArrayUsingFunction:sort_by_part_description context:(__bridge void *)([PartLibrary sharedPartLibrary])];
+	return [kids_sorted sortedArrayUsingFunction:sort_by_part_description context:(__bridge void *)([PartLibraryGPU sharedPartLibrary])];
 
 }//end getChildPartList:
 

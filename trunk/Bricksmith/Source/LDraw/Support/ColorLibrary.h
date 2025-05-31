@@ -12,7 +12,6 @@
 //  Copyright 2005. All rights reserved.
 //==============================================================================
 #import <Foundation/Foundation.h>
-#import OPEN_GL_HEADER
 
 #import "LDrawColor.h"
 
@@ -50,7 +49,7 @@
 // Accessors
 - (NSArray *) colors;
 - (LDrawColor *) colorForCode:(LDrawColorT)colorCode;
-- (void) getComplimentRGBA:(GLfloat *)complimentRGBA forCode:(LDrawColorT)colorCode;
+- (void) getComplimentRGBA:(float *)complimentRGBA forCode:(LDrawColorT)colorCode;
 
 // Registering Colors
 - (void) addColor:(LDrawColor *)newColor;
@@ -58,6 +57,6 @@
 
 // Utilities
 
-void complimentColor(const GLfloat *originalColor, GLfloat *complimentColor);
+void complimentColor(const float *originalColor, float *complimentColor);
 
 @end

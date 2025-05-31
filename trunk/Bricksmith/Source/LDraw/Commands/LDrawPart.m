@@ -20,19 +20,21 @@
 //  Copyright (c) 2005. All rights reserved.
 //==============================================================================
 #import "LDrawPart.h"
-#import "MacLDraw.h"
+
 #import <math.h>
 #import <string.h>
+
+#import "MacLDraw.h"
 #import "LDrawColor.h"
 #import "LDrawFile.h"
 #import "LDrawModel.h"
+#import "LDrawPaths.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "PartLibrary.h"
-#import "LDrawPaths.h"
-#import "PartReport.h"
 #import "ModelManager.h"
+#import "PartReport.h"
 #import "StringCategory.h"
+#import PartLibraryGPU_h
 
 // This is experimental for now: one way to draw the gaps between lego bricks 
 // without using lines is to simply shrink the entire brick by a tiny amount,
@@ -244,7 +246,7 @@ int floatNearGrid(float v, float grid, float epsi)
 
 	//Decoding structures is a bit messy.
 	temporary	= [decoder decodeBytesForKey:@"glTransformation" returnedLength:NULL];
-	memcpy(glTransformation, temporary, sizeof(GLfloat)*16 );
+	memcpy(glTransformation, temporary, sizeof(float)*16 );
 	
 	return self;
 	
@@ -267,7 +269,7 @@ int floatNearGrid(float v, float grid, float epsi)
     // Parts may have icons other than the standard "Brick", i.e. LSynth constraints
 	[encoder encodeObject:[self iconName] forKey:@"iconName"];
 	[encoder encodeBytes:(void *)glTransformation
-				  length:sizeof(GLfloat)*16
+				  length:sizeof(float)*16
 				  forKey:@"glTransformation"];
 	
 }//end encodeWithCoder:
@@ -295,76 +297,6 @@ int floatNearGrid(float v, float grid, float epsi)
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== drawElement:viewScale:withColor: ==================================
-//
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
-//
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	LDrawDirective  *drawable       = nil;
-	BOOL            drawBoundsOnly  = ((optionsMask & DRAW_BOUNDS_ONLY) != 0);
-	
-	// If the part is selected, we need to give some indication. We do this 
-	// by drawing it as a wireframe instead of a filled color. This setting 
-	// also conveniently applies to all referenced parts herein. 
-	if([self isSelected] == YES)
-	{
-#if (USE_AUTOMATIC_WIREFRAMES)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-#else
-		optionsMask = optionsMask | DRAW_WIREFRAME;
-#endif
-	}
-
-	// Multithreading finally works with one display list per displayed part 
-	// AND mutexes around the glCallList. But the mutex contention causes a 
-	// 50% increase in drawing time. Gah! 
-	
-	glPushMatrix();
-	{
-		glMultMatrixf(glTransformation);
-		
-		[self resolvePart];
-
-		drawable = cacheDrawable;
-
-		if (cacheType == PartTypeLibrary && cacheDrawable == nil)
-		{
-			// Parts assigned to LDrawCurrentColor may get drawn in many 
-			// different colors in one draw, so we can't cache their 
-			// optimized drawable. We have to retrieve their optimized 
-			// drawable on-the-fly. 
-			
-			// Parts that have a SPECIFIC color have been linked DIRECTLY to 
-			// their specific colored VBO during -optimizeOpenGL. 
-			
-			drawable = [[PartLibrary sharedPartLibrary] optimizedDrawableForPart:self color:drawingColor];
-		}
-		
-		if(drawBoundsOnly == NO)
-		{
-			[drawable draw:optionsMask viewScale:scaleFactor parentColor:drawingColor];
-		}
-		else
-		{
-			[self drawBoundsWithColor:drawingColor];
-		}
-	}
-	glPopMatrix();
-
-	// Done drawing a selected part? Then switch back to normal filled drawing. 
-	if([self isSelected] == YES)
-	{
-#if (USE_AUTOMATIC_WIREFRAMES)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-#endif
-	}
-
-}//end drawElement:parentColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -375,7 +307,7 @@ int floatNearGrid(float v, float grid, float epsi)
 //				backing the part, if it exists.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	if(self->hidden == NO)
 	{
@@ -396,7 +328,7 @@ int floatNearGrid(float v, float grid, float epsi)
 					[renderer pushColor:LDrawRenderComplimentColor];
 				else
 				{
-					GLfloat c[4];
+					float c[4];
 					[self->color getColorRGBA:c];				
 					[renderer pushColor:c];
 				}
@@ -409,15 +341,15 @@ int floatNearGrid(float v, float grid, float epsi)
 			
 			Box3 bbox = [cacheModel boundingBox3];
 			int i;
-			GLfloat dim[3] = {	bbox.max.x - bbox.min.x,
+			float dim[3] = {	bbox.max.x - bbox.min.x,
 								bbox.max.y - bbox.min.y,
 								bbox.max.z - bbox.min.z };
 
-			GLfloat ctr[3] = {	(bbox.max.x + bbox.min.x) * 0.5f,
+			float ctr[3] = {	(bbox.max.x + bbox.min.x) * 0.5f,
 								(bbox.max.y + bbox.min.y) * 0.5f,
 								(bbox.max.z + bbox.min.z) * 0.5f };
 
-			GLfloat	shrinkMatrix[16] = { 0 };
+			float	shrinkMatrix[16] = { 0 };
 			shrinkMatrix[15] = 1.0f;
 			
 			for(i = 0; i < 3; ++i)
@@ -471,30 +403,6 @@ int floatNearGrid(float v, float grid, float epsi)
 	// draw and let the model matrix transform our drawing appropriately.
 	[self resolvePart];
 }//end drawBounds
-
-
-//========== debugDrawboundingBox ==============================================
-//
-// Purpose:		Draw a translucent visualization of our bounding box to test
-//				bounding box caching.
-//
-//==============================================================================
-- (void) debugDrawboundingBox
-{
-	[self resolvePart];
-	LDrawModel	*modelToDraw	= cacheModel;
-	
-	//If the model can't be found, we can't draw good bounds for it!
-	if(modelToDraw != nil)
-	{
-		glPushMatrix();
-		glMultMatrixf(glTransformation);
-		[modelToDraw debugDrawboundingBox];
-		glPopMatrix();
-	}
-	
-	[super debugDrawboundingBox];	
-}//end debugDrawboundingBox
 
 
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======
@@ -663,7 +571,7 @@ int floatNearGrid(float v, float grid, float epsi)
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	NSString *description = [[PartLibrary sharedPartLibrary] descriptionForPart:self];
+	NSString *description = [[PartLibraryGPU sharedPartLibrary] descriptionForPart:self];
 	if (self.group.length > 0) {
 		description = [NSString stringWithFormat:@"[%@] %@", self.group, description];
 	}
@@ -992,8 +900,8 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		else
 			parseGroup = parentGroup;
 #endif
-		[[PartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
-		
+		[[PartLibraryGPU sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
+
 #if USE_BLOCKS
 		if(parentGroup == NULL)
 		{
@@ -1516,12 +1424,13 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 
 #pragma mark -
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -1540,6 +1449,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	if(recursive == YES)
 	{
 		[super flattenIntoLines:lines
+			   conditionalLines:conditionalLines
 					  triangles:triangles
 				 quadrilaterals:quadrilaterals
 						  other:everythingElse
@@ -1560,8 +1470,8 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		modelToDraw = [self referencedMPDSubmodel];
 		
 		if(modelToDraw == nil)
-			modelToDraw = [[PartLibrary sharedPartLibrary] modelForName_threadSafe:referenceName];
-		
+			modelToDraw = [[PartLibraryGPU sharedPartLibrary] modelForName_threadSafe:referenceName];
+
 		flatCopy    = [modelToDraw copy];
 		
 		// concatenate the transform and pass it down
@@ -1571,6 +1481,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		normalTransform     = Matrix3MakeNormalTransformFromProjMatrix(combinedTransform);
 		
 		[flatCopy flattenIntoLines:lines
+				  conditionalLines:conditionalLines
 						 triangles:triangles
 					quadrilaterals:quadrilaterals
 							 other:everythingElse
@@ -1581,7 +1492,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		
 	}
 
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== collectPartReport: ================================================
@@ -1675,7 +1586,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		else 
 		{
 			// Try the part library first for speed - sub-paths will thrash the modelmanager.
-			cacheModel = [[PartLibrary sharedPartLibrary] modelForName:referenceName];
+			cacheModel = [[PartLibraryGPU sharedPartLibrary] modelForName:referenceName];
 			if(cacheModel != nil)
 			{
 				// Intentional: do not observe library parts - they are immutable so 

@@ -215,78 +215,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Issues the OpenGL code necessary to draw this element.
-//
-//				This method is intended to be overridden by subclasses.
-//				LDrawDirective's implementation does nothing.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-{
-	//subclasses should override this with OpenGL code to draw the line.
-	
-}//end draw:viewScale:parentColor:
-
-
-//========== debugDrawboundingBox ==============================================
-//
-// Purpose:		Draw a translucent visualization of our bounding box to test
-//				bounding box caching.
-//
-// Notes:		The base class draws the geometry; derived classes can add 
-//				iteration to sub-directives and transforms.
-//
-//				The calling code gets us into our GL state ahead of time.
-//
-//==============================================================================
-- (void) debugDrawboundingBox
-{
-	Box3	my_bounds = [self boundingBox3];
-	if(my_bounds.min.x <= my_bounds.max.x &&
-	   my_bounds.min.y <= my_bounds.max.y &&
-	   my_bounds.min.z <= my_bounds.max.z)
-	{
-		GLfloat	verts[6*4*3] = {
-			my_bounds.min.x,	my_bounds.min.y,	my_bounds.min.z,
-			my_bounds.min.x,	my_bounds.min.y,	my_bounds.max.z,
-			my_bounds.min.x,	my_bounds.max.y,	my_bounds.max.z,
-			my_bounds.min.x,	my_bounds.max.y,	my_bounds.min.z,
-
-			my_bounds.max.x,	my_bounds.min.y,	my_bounds.min.z,
-			my_bounds.max.x,	my_bounds.min.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.max.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.max.y,	my_bounds.min.z,
-
-
-			my_bounds.min.x,	my_bounds.min.y,	my_bounds.min.z,
-			my_bounds.min.x,	my_bounds.max.y,	my_bounds.min.z,
-			my_bounds.max.x,	my_bounds.max.y,	my_bounds.min.z,
-			my_bounds.max.x,	my_bounds.min.y,	my_bounds.min.z,
-
-			my_bounds.min.x,	my_bounds.min.y,	my_bounds.max.z,
-			my_bounds.min.x,	my_bounds.max.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.max.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.min.y,	my_bounds.max.z,
-
-
-			my_bounds.min.x,	my_bounds.min.y,	my_bounds.min.z,
-			my_bounds.min.x,	my_bounds.min.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.min.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.min.y,	my_bounds.min.z,
-
-			my_bounds.min.x,	my_bounds.max.y,	my_bounds.min.z,
-			my_bounds.min.x,	my_bounds.max.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.max.y,	my_bounds.max.z,
-			my_bounds.max.x,	my_bounds.max.y,	my_bounds.min.z };
-		
-		glVertexPointer(3, GL_FLOAT, 0, verts);
-		glDrawArrays(GL_QUADS,0,24);
-	}
-}//end debugDrawboundingBox
-
-
 
 //========== boundingBox3 ======================================================
 //
@@ -713,7 +641,7 @@
 }//end description
 
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive (or a copy of the directive) into the 
 //				appropriate container. 
@@ -729,6 +657,7 @@
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -741,7 +670,7 @@
 	// that it is not drawn. Subclasses override this routine to add themselves 
 	// to the appropriate list. 
 
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== isAncestorInList: =================================================
@@ -854,7 +783,7 @@
 //				on document-open - only the ones we can see!
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	// Default implementation does ... nothing.
 }//end drawSelf:

@@ -9,7 +9,7 @@
 
 #import "MatrixMath.h"
 
-@class LDrawGLView;
+@class LDrawView;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @class		LDrawViewerContainer
 ///
-/// @abstract	Holds an LDrawGLView. You should always use an
+/// @abstract	Holds an LDrawView. You should always use an
 /// 			LDrawViewerContainer instead of instantiating a 3D view
 /// 			directly; this level of abstraction allows more flexibility in
 /// 			decorating the view with other Cocoa components.
@@ -25,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LDrawViewerContainer : NSView
 
-@property (nonatomic, weak, readonly) LDrawGLView* glView;
+@property (nonatomic, weak, readonly) LDrawView* glView;
 @property (nonatomic) BOOL showsScrollbars;
 
 - (void) setVerticalPlacard:(NSView *)placardView;

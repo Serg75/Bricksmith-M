@@ -21,6 +21,7 @@
 #import "ColorLibrary.h"
 #import "LDrawColor.h"
 #import "LDrawConditionalLine.h"
+#import "LDrawDirectiveGPU.h"
 #import "LDrawFile.h"
 #import "LDrawKeywords.h"
 #import "LDrawLine.h"
@@ -40,7 +41,7 @@
 // (If we zoom in to avoid culling by size, the large model will be offscreen 
 // and the off-screen bricks are culled!
 
-#define NO_CULL_SMALL_BRICKS 0
+#define NO_CULL_SMALL_BRICKS 1
 
 @implementation LDrawModel
 
@@ -265,34 +266,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Simply draw all the steps; they will worry about drawing all 
-//				their constituents.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	NSArray     *steps              = [self subdirectives];
-	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
-	LDrawStep   *currentDirective   = nil;
-	NSUInteger  counter             = 0;
-	
-	// Draw all the steps in the model
-	for(counter = 0; counter <= maxIndex; counter++)
-	{
-		currentDirective = [steps objectAtIndex:counter];
-		[currentDirective draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
-	}
-	
-	// Draw Drag-and-Drop pieces if we've got 'em.
-	if(self->draggingDirectives != nil)
-		[self->draggingDirectives draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
-		
-}//end draw:viewScale:parentColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -309,15 +282,15 @@
 //				flattened to ensure one VBO per library part.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	// First: cull check!  In my last perf look, draw time was bottlenecked
 	// on the GPU not eating data fast enough, _not_ on CPU.  So burning a
 	// tiny bit of CPU time per part to cull draw calls is a win!
 	
 	Box3	my_bounds = [self boundingBox3];
-	GLfloat minxyz[3] = { my_bounds.min.x, my_bounds.min.y, my_bounds.min.z };
-	GLfloat maxxyz[3] = { my_bounds.max.x, my_bounds.max.y, my_bounds.max.z };
+	float	minxyz[3] = { my_bounds.min.x, my_bounds.min.y, my_bounds.min.z };
+	float	maxxyz[3] = { my_bounds.max.x, my_bounds.max.y, my_bounds.max.z };
 
 	int cull_result = [renderer checkCull:minxyz to:maxxyz];
 	
@@ -446,13 +419,13 @@
 }//end collectSelf:
 
 
-//========== debugDrawboundingBox ==============================================
+//========== debugDrawBoundingBox ==============================================
 //
 // Purpose:		Draw a translucent visualization of our bounding box to test
 //				bounding box caching.
 //
 //==============================================================================
-- (void) debugDrawboundingBox
+- (void) debugDrawBoundingBox
 {
 	NSArray     *steps              = [self subdirectives];
 	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
@@ -463,11 +436,11 @@
 	for(counter = 0; counter <= maxIndex; counter++)
 	{
 		currentDirective = [steps objectAtIndex:counter];
-		[currentDirective debugDrawboundingBox];
+		[currentDirective debugDrawBoundingBox];
 	}
 	
-	[super debugDrawboundingBox];
-}//end debugDrawboundingBox
+	[super debugDrawBoundingBox];
+}//end debugDrawBoundingBox
 
 
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======
@@ -999,10 +972,12 @@
 	if(self->draggingDirectives)
 	{
 		NSMutableArray  *lines              = [NSMutableArray array];
+		NSMutableArray  *conditionalLines   = [NSMutableArray array];
 		NSMutableArray  *triangles          = [NSMutableArray array];
 		NSMutableArray  *quadrilaterals     = [NSMutableArray array];
 		
 		[self->draggingDirectives flattenIntoLines:lines
+								  conditionalLines:conditionalLines
 										 triangles:triangles
 									quadrilaterals:quadrilaterals
 											 other:nil
@@ -1035,10 +1010,12 @@
 		//---------- Optimize primitives ---------------------------------------
 		
 		NSMutableArray  *lines              = [NSMutableArray array];
+		NSMutableArray  *conditionalLines   = [NSMutableArray array];
 		NSMutableArray  *triangles          = [NSMutableArray array];
 		NSMutableArray  *quadrilaterals     = [NSMutableArray array];
 		
 		[dragStep flattenIntoLines:lines
+				  conditionalLines:conditionalLines
 						 triangles:triangles
 					quadrilaterals:quadrilaterals
 							 other:nil
@@ -1342,6 +1319,7 @@
 	NSArray         *steps              = [self subdirectives];
 	
 	NSMutableArray  *lines              = [NSMutableArray array];
+	NSMutableArray  *conditionalLines   = [NSMutableArray array];
 	NSMutableArray  *triangles          = [NSMutableArray array];
 	NSMutableArray  *quadrilaterals     = [NSMutableArray array];
 	NSMutableArray  *everythingElse     = [NSMutableArray array];
@@ -1360,6 +1338,7 @@
 	// If we were to only sort without flattening, we would get a 100% speed 
 	// increase. But flattening and sorting yields over 1000%. 
 	[self flattenIntoLines:lines
+		  conditionalLines:conditionalLines
 				 triangles:triangles
 			quadrilaterals:quadrilaterals
 					 other:everythingElse
@@ -1377,9 +1356,13 @@
 	}
 	
 	// Replace the original directives with the categorized steps we've created 
-	if([lines count] > 0)
+	if([lines count] > 0 || [conditionalLines count] > 0)
 	{
 		for(id directive in lines)
+		{
+			[linesStep addDirective:directive];
+		}
+		for(id directive in conditionalLines)
 		{
 			[linesStep addDirective:directive];
 		}

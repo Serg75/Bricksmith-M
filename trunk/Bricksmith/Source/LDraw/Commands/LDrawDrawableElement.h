@@ -17,9 +17,9 @@
 
 typedef struct
 {
-	GLfloat position[3];
-	GLfloat normal[3];
-	GLfloat color[4];
+	float position[3];
+	float normal[3];
+	float color[4];
 	
 } VBOVertexData;
 
@@ -33,12 +33,6 @@ typedef struct
 	LDrawColor  *color;
 	BOOL        hidden;		//YES if we don't draw this.
 }
-
-// Directives
-- (VBOVertexData *) writeToVertexBuffer:(VBOVertexData *)vertexBuffer parentColor:(LDrawColor *)parentColor wireframe:(BOOL)wireframe;
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor;
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer withColor:(LDrawColor *)drawingColor wireframe:(BOOL)wireframe;
-
 
 // Accessors
 - (Box3) projectedBoundingBoxWithModelView:(Matrix4)modelView

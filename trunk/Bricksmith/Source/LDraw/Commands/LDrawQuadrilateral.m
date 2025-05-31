@@ -25,7 +25,7 @@
 #import "LDrawDragHandle.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "GLMatrixMath.h"
+#import "MatrixMathEx.h"
 
 @implementation LDrawQuadrilateral
 
@@ -217,25 +217,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== drawElement:viewScale:withColor: ==================================
-//
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
-//
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	if(self->dragHandles)
-	{
-		for(LDrawDragHandle *handle in self->dragHandles)
-		{
-			[handle draw:optionsMask viewScale:scaleFactor parentColor:drawingColor];
-		}
-	}
-	
-}//end drawElement:parentColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -247,7 +228,7 @@
 //				accumulating a mesh.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	if(self->hidden == NO)
 	{
@@ -278,13 +259,13 @@
 	[self revalCache:DisplayList];
 	if(self->hidden == NO)
 	{
-		GLfloat	v[12] = { 
+		float v[12] = {
 			vertex1.x, vertex1.y, vertex1.z,
 			vertex2.x, vertex2.y, vertex2.z,
 			vertex3.x, vertex3.y, vertex3.z,
 			vertex4.x, vertex4.y, vertex4.z };
 
-		GLfloat n[3] = { normal.x, normal.y, normal.z };
+		float n[3] = { normal.x, normal.y, normal.z };
 
 		if([self->color colorCode] == LDrawCurrentColor)	
 			[renderer drawQuad:v normal:n color:LDrawRenderCurrentColor];
@@ -292,7 +273,7 @@
 			[renderer drawQuad:v normal:n color:LDrawRenderComplimentColor];
 		else
 		{
-			GLfloat	rgba[4];
+			float rgba[4];
 			[self->color getColorRGBA:rgba];
 			[renderer drawQuad:v normal:n color:rgba];
 		}
@@ -504,119 +485,6 @@
 		
 			];
 }//end write
-
-
-//========== writeElementToVertexBuffer:withColor:wireframe: ===================
-//
-// Purpose:		Writes this object into the specified vertex buffer, which is a 
-//				pointer to the offset into which the first vertex point's data 
-//				is to be stored. Store subsequent vertexs after the first.
-//
-//==============================================================================
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer
-									 withColor:(LDrawColor *)drawingColor
-									 wireframe:(BOOL)wireframe
-{
-	GLfloat components[4]   = {};
-	int     vertexCount     = 0;
-	
-	[drawingColor getColorRGBA:components];
-
-	if(wireframe == NO)
-	{
-	#if TESSELATE_QUADS
-		memcpy(&vertexBuffer[0].position, &vertex1,		sizeof(Point3));
-		memcpy(&vertexBuffer[0].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[0].color,    components,	sizeof(GLfloat)*4);
-
-		memcpy(&vertexBuffer[1].position, &vertex2,		sizeof(Point3));
-		memcpy(&vertexBuffer[1].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[1].color,    components,	sizeof(GLfloat)*4);
-
-		memcpy(&vertexBuffer[2].position, &vertex3,		sizeof(Point3));
-		memcpy(&vertexBuffer[2].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[2].color,    components,	sizeof(GLfloat)*4);
-
-		// Draw the quad as two triangles
-		memcpy(&vertexBuffer[3].position, &vertex3,		sizeof(Point3));
-		memcpy(&vertexBuffer[3].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[3].color,    components,	sizeof(GLfloat)*4);
-
-		memcpy(&vertexBuffer[4].position, &vertex4,		sizeof(Point3));
-		memcpy(&vertexBuffer[4].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[4].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[5].position, &vertex1,		sizeof(Point3));
-		memcpy(&vertexBuffer[5].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[5].color,    components,	sizeof(GLfloat)*4);
-
-		vertexCount = 6;
-		
-	#else
-		memcpy(&vertexBuffer[0].position, &vertex1,		sizeof(Point3));
-		memcpy(&vertexBuffer[0].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[0].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[1].position, &vertex2,		sizeof(Point3));
-		memcpy(&vertexBuffer[1].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[1].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[2].position, &vertex3,		sizeof(Point3));
-		memcpy(&vertexBuffer[2].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[2].color,    components,	sizeof(GLfloat)*4);
-
-		// Last vertex makes the full quad
-		memcpy(&vertexBuffer[3].position, &vertex4,		sizeof(Point3));
-		memcpy(&vertexBuffer[3].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[3].color,    components,	sizeof(GLfloat)*4);
-		
-		vertexCount = 4;
-	#endif
-	}
-	else
-	{
-		// edge1
-		memcpy(&vertexBuffer[0].position, &vertex1,		sizeof(Point3));
-		memcpy(&vertexBuffer[0].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[0].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[1].position, &vertex2,		sizeof(Point3));
-		memcpy(&vertexBuffer[1].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[1].color,    components,	sizeof(GLfloat)*4);
-		
-		// edge2
-		memcpy(&vertexBuffer[2].position, &vertex2,		sizeof(Point3));
-		memcpy(&vertexBuffer[2].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[2].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[3].position, &vertex3,		sizeof(Point3));
-		memcpy(&vertexBuffer[3].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[3].color,    components,	sizeof(GLfloat)*4);
-		
-		// edge3
-		memcpy(&vertexBuffer[4].position, &vertex3,		sizeof(Point3));
-		memcpy(&vertexBuffer[4].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[4].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[5].position, &vertex4,		sizeof(Point3));
-		memcpy(&vertexBuffer[5].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[5].color,    components,	sizeof(GLfloat)*4);
-		
-		// edge4
-		memcpy(&vertexBuffer[6].position, &vertex4,		sizeof(Point3));
-		memcpy(&vertexBuffer[6].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[6].color,    components,	sizeof(GLfloat)*4);
-		
-		memcpy(&vertexBuffer[7].position, &vertex1,		sizeof(Point3));
-		memcpy(&vertexBuffer[7].normal,   &normal,		sizeof(Point3));
-		memcpy(&vertexBuffer[7].color,    components,	sizeof(GLfloat)*4);
-		
-		vertexCount = 8;
-	}
-
-	return vertexBuffer + vertexCount;
-	
-}//end writeElementToVertexBuffer:withColor:
 
 
 #pragma mark -
@@ -968,12 +836,13 @@
 }//end fixBowtie
 
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -983,6 +852,7 @@
 				recursive:(BOOL)recursive
 {
 	[super flattenIntoLines:lines
+		   conditionalLines:conditionalLines
 				  triangles:triangles
 			 quadrilaterals:quadrilaterals
 					  other:everythingElse
@@ -1000,7 +870,7 @@
 	
 	[quadrilaterals addObject:self];
 	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== recomputeNormal ===================================================

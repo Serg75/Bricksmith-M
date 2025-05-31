@@ -31,6 +31,7 @@
 #import <dispatch/dispatch.h>
 #endif
 
+#import "LDrawDirectiveGPU.h"
 #import "LDrawKeywords.h"
 #import "LDrawModel.h"
 #import "LDrawMPDModel.h"
@@ -351,30 +352,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Draw all the commands in the step.
-//
-//				Certain steps are marked as having been optimized for fast 
-//				drawing. Such steps consist entirely of one kind of directive, 
-//				so we need call glBegin only once for the entire step.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	NSArray         *commandsInStep     = [self subdirectives];
-	LDrawDirective  *currentDirective   = nil;
-	
-	//Draw each element in the step.
-	for(currentDirective in commandsInStep)
-	{
-		[currentDirective draw:optionsMask viewScale:scaleFactor parentColor:parentColor];
-	}
-
-}//end draw:viewScale:parentColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -385,7 +362,7 @@
 //				not "collect" themselves.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	NSArray         *commandsInStep     = [self subdirectives];
 	LDrawDirective  *currentDirective   = nil;
@@ -421,13 +398,14 @@
 	[self revalCache:DisplayList];
 }//end collectSelf:
 
-//========== debugDrawboundingBox ==============================================
+
+//========== debugDrawBoundingBox ==============================================
 //
 // Purpose:		Draw a translucent visualization of our bounding box to test
 //				bounding box caching.
 //
 //==============================================================================
-- (void) debugDrawboundingBox
+- (void) debugDrawBoundingBox
 {
 	NSArray         *commandsInStep     = [self subdirectives];
 	LDrawDirective  *currentDirective   = nil;
@@ -435,11 +413,11 @@
 	//Draw each element in the step.
 	for(currentDirective in commandsInStep)
 	{
-		[currentDirective debugDrawboundingBox];
+		[currentDirective debugDrawBoundingBox];
 	}
 	
-	[super debugDrawboundingBox];	
-}//end debugDrawboundingBox
+	[super debugDrawBoundingBox];	
+}//end debugDrawBoundingBox
 
 
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======

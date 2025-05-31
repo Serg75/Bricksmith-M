@@ -23,7 +23,7 @@
 {
 	LDrawColor  *colorObject    = [self objectValue];
 	NSColor     *cellColor      = nil;
-	GLfloat     components[4];
+	float       components[4];
 	
 	// Get the color components and covert them. Discard alpha.
 	[colorObject getColorRGBA:components];

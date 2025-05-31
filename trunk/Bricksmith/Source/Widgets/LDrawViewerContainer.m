@@ -7,11 +7,11 @@
 
 #import "LDrawViewerContainer.h"
 
-#import "LDrawGLView.h"
+#import "LDrawView.h"
 
 @interface LDrawViewerContainer ()
 
-@property (nonatomic, weak) LDrawGLView* glView;
+@property (nonatomic, weak) LDrawView* glView;
 @property (nonatomic, weak) NSView* verticalPlacard;
 
 @property (nonatomic, weak) NSScroller* horizontalScroller;
@@ -34,8 +34,8 @@
 {
 	self = [super initWithFrame:frameRect];
 	
-    LDrawGLView *glView = [[LDrawGLView alloc] initWithFrame:self.bounds];
-    _glView = glView;
+	LDrawView *glView = [[LDrawView alloc] initWithFrame:self.bounds];
+	_glView = glView;
 	[self addSubview:_glView];
 	
 	return self;

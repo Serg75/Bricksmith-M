@@ -68,7 +68,8 @@ struct Mesh;
 struct Mesh *		create_mesh(
 							int					tri_count, 
 							int					quad_count, 
-							int					line_count);
+							int					line_count,
+							int					cond_line_count);
 
 // Add one face.  Pass NULL for p4 for tris, pass NULL for p3 and p4 for lines.
 // Normals are not needed - the mesh alg calculates them for you.
@@ -123,6 +124,8 @@ void				write_indexed_mesh(
 							int						index_base,
 							int						out_line_starts[],
 							int						out_line_counts[],
+							int						out_cond_line_starts[],
+							int						out_cond_line_counts[],
 							int						out_tri_starts[],
 							int						out_tri_counts[],
 							int						out_quad_starts[],

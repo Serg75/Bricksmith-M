@@ -12,7 +12,6 @@
 #ifndef _MatrixMath_
 #define _MatrixMath_
 
-#include OPEN_GL_HEADER
 #include <stdbool.h>
 
 #pragma mark Data Types
@@ -81,6 +80,14 @@ typedef struct Matrix3Struct
 	float element[3][3]; // [row][column]
 	
 } Matrix3;
+
+
+// 3x3 Matrix CPU aligned
+typedef struct Matrix3AlignedStruct
+{
+	float element[3][4]; // [row][column], with padding for alignment
+
+} Matrix3Aligned;
 
 
 typedef struct Ray3Struct
@@ -260,7 +267,7 @@ extern Vector2 	V2MulScalar(Vector2 a, float scalar);
 extern float	Matrix2x2Determinant( float, float, float, float);
 
 // 3-D
-extern GLfloat	component(Point3 point, int index);
+extern float	component(Point3 point, int index);
 extern Vector3	V3Make(float x, float y, float z);
 extern Vector3*	V3Duplicate(Vector3 *a);
 extern Vector3	V3FromV4(Vector4 originalVector);
@@ -306,19 +313,20 @@ extern Point3	V3Unproject(Point3 viewportPoint, Matrix4 modelview, Matrix4 proje
 
 extern float	Matrix3x3Determinant( float, float, float, float, float, float, float, float, float );
 extern Matrix3	Matrix3MakeNormalTransformFromProjMatrix(Matrix4 transformationMatrix);
+extern Matrix3Aligned	Matrix3AlignedCreate(Matrix3 matrix);
 
 // 4-D
 extern Vector4	V4Make(float x, float y, float z, float w);
 extern Point4	V4FromPoint3(Vector3 originalPoint);
 extern Vector4	V4MulPointByMatrix(Vector4 pin, Matrix4 m);
-extern Matrix4	Matrix4CreateFromGLMatrix4(const GLfloat *glMatrix);
+extern Matrix4	Matrix4CreateFromGLMatrix4(const float *glMatrix);
 extern Matrix4	Matrix4CreateTransformation(TransformComponents *);
 extern int		Matrix4DecomposeTransformation( Matrix4 originalMatrix, TransformComponents *decomposed);
 extern Tuple3	Matrix4DecomposeXZYRotation(Matrix4 matrix);
 extern Tuple3	Matrix4DecomposeZYXRotation(Matrix4 matrix);
 extern Matrix4	Matrix4Multiply(Matrix4 a, Matrix4 b);
-extern void		Matrix4MultiplyGLMatrices(GLfloat *a, GLfloat *b, GLfloat *result);
-extern void		Matrix4GetGLMatrix4(Matrix4 matrix, GLfloat *glTransformation);
+extern void		Matrix4MultiplyGLMatrices(float *a, float *b, float *result);
+extern void		Matrix4GetGLMatrix4(Matrix4 matrix, float *glTransformation);
 extern Matrix4	Matrix4Rotate(Matrix4 original, Tuple3 degreesToRotate);
 extern Matrix4	Matrix4RotateModelview(Matrix4 original, Tuple3 degreesToRotate);
 extern Matrix4	Matrix4Scale(Matrix4 original, Tuple3 scaleFactors);

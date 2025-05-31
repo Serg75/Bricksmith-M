@@ -412,12 +412,12 @@
                           object:self];
 }
 
-//========== draw:viewScale:parentColor: =======================================
+//========== drawSelf: =========================================================
 //
 // Purpose:		Draw the synthesized part.
 //
 //==============================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
     NSArray         *constraints         = [self subdirectives];
     LDrawDirective  *currentDirective    = nil;
@@ -1283,7 +1283,7 @@
 {
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
     LSynthSelectionModeT selectionMode = [userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
-    GLfloat rgba[4]; // a temporary RGBA color we create and manipulate
+    float rgba[4]; // a temporary RGBA color we create and manipulate
     LDrawColor *theColor = [[LDrawColor alloc] init]; // an LDrawColor to set the part's color with
 
     // Is the part selected?

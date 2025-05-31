@@ -38,6 +38,9 @@
 + (LDrawFile *) fileFromContentsAtPath:(NSString *)path;
 + (LDrawFile *) parseFromFileContents:(NSString *) fileContents;
 
+// Directives
+- (void) collectColorsFromConfig;
+
 // Accessors
 - (LDrawMPDModel *) activeModel;
 - (LDrawMPDModel *) firstModel;							// For using another file, we always refer to the FIRST model even if the doc is open and another model is actively edited!

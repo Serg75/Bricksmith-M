@@ -11,13 +11,14 @@
 //==============================================================================
 #import "InspectionPart.h"
 
+#import "GPU.h"
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
 #import "LDrawFile.h"
 #import "LDrawPart.h"
 #import "MacLDraw.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 
 // Data Types
 
@@ -136,7 +137,7 @@ typedef enum
 {
 	LDrawPart			*representedObject	= [self object];
 	TransformComponents	 components			= [representedObject transformComponents];
-	NSString			*description		= [[PartLibrary sharedPartLibrary] descriptionForPart:representedObject];
+	NSString			*description		= [[PartLibraryGPU sharedPartLibrary] descriptionForPart:representedObject];
 	Point3				 position			= ZeroPoint3;
 	Vector3				 scaling			= ZeroPoint3;
 	Tuple3				 shear				= ZeroPoint3;

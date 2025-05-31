@@ -13,7 +13,7 @@
 #import "LDrawKeywords.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 #import "StringCategory.h"
 
 
@@ -291,130 +291,6 @@
 #pragma mark -
 #pragma mark DIRECTIVES
 #pragma mark -
-
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Bind the texture and draw all the subparts in it.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-{
-	assert(!"Not used.");
-
-}//end draw:viewScale:parentColor:
-
-
-//========== drawSelf: ===========================================================
-//
-// Purpose:		Draw this directive and its subdirectives by calling APIs on 
-//				the passed in renderer, then calling drawSelf on children.
-//
-// Notes:		The texture is a container, so it passes drawSelf to give child 
-//				parts time to draw.  It first pushes its own texture state onto
-//				the stack.  This means that an untextured part inside a texture
-//				will pick up the projected texture, which is what the LDraw spec
-//				calls for.
-//
-//================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
-{
-	NSArray 		*commands			= [self subdirectives];
-	LDrawDirective	*currentDirective	= nil;
-
-	Vector3 		normal				= ZeroPoint3;
-	float			length				= 0;
-
-	if(textureTag == 0)
-		textureTag = [[PartLibrary sharedPartLibrary] textureTagForTexture:self];
-
-	struct LDrawTextureSpec spec;
-	
-	normal = V3Sub(self->planePoint2, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-	
-	spec.plane_s[0] = normal.x / length;
-	spec.plane_s[1] = normal.y / length;
-	spec.plane_s[2] = normal.z / length;
-	spec.plane_s[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-	
-	normal = V3Sub(self->planePoint3, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-	
-	spec.plane_t[0] = normal.x / length;
-	spec.plane_t[1] = normal.y / length;
-	spec.plane_t[2] = normal.z / length;
-	spec.plane_t[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-	
-	spec.projection = tex_proj_planar;
-	spec.tex_obj = self->textureTag;
-
-	[renderer pushTexture:&spec];
-	for(currentDirective in commands)
-	{
-		[currentDirective drawSelf:renderer];
-	}
-	[renderer popTexture];
-}//end drawSelf:
-
-
-//========== collectSelf: ========================================================
-//
-// Purpose:		Collect self is called on each directive by its parents to
-//				accumulate _mesh_ data into a display list for later drawing.
-//				The collector protocol passed in is some object capable of 
-//				remembering the collectable data.
-//
-// Notes:		LDrawTexture is a collection of sub-directives that all receive
-//				projective texturing.  So we first push our texture state to the
-//				collector and then recurse.
-//
-//================================================================================
-- (void) collectSelf:(id<LDrawCollector>)renderer
-{
-	NSArray 		*commands			= [self subdirectives];
-	LDrawDirective	*currentDirective	= nil;
-
-	Vector3 		normal				= ZeroPoint3;
-	float			length				= 0;
-
-	if(textureTag == 0)
-		textureTag = [[PartLibrary sharedPartLibrary] textureTagForTexture:self];
-
-	struct LDrawTextureSpec spec;
-	
-	normal = V3Sub(self->planePoint2, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-	
-	spec.plane_s[0] = normal.x / length;
-	spec.plane_s[1] = normal.y / length;
-	spec.plane_s[2] = normal.z / length;
-	spec.plane_s[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-	
-	normal = V3Sub(self->planePoint3, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-	
-	spec.plane_t[0] = normal.x / length;
-	spec.plane_t[1] = normal.y / length;
-	spec.plane_t[2] = normal.z / length;
-	spec.plane_t[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-	
-	spec.projection = tex_proj_planar;
-	spec.tex_obj = self->textureTag;
-
-	[renderer pushTexture:&spec];
-	for(currentDirective in commands)
-	{
-		[currentDirective collectSelf:renderer];
-	}
-	[renderer popTexture];
-	[self revalCache:DisplayList];
-	
-}//end collectSelf:
-
 
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======
 //
@@ -728,8 +604,8 @@
 		else
 			parseGroup = parentGroup;
 #endif
-		[[PartLibrary sharedPartLibrary] loadImageForName:self->imageDisplayName inGroup:parseGroup];
-		
+		[[PartLibraryGPU sharedPartLibrary] loadImageForName:self->imageDisplayName inGroup:parseGroup];
+
 #if USE_BLOCKS
 		if(parentGroup == NULL)
 		{
@@ -1068,13 +944,14 @@
 }
 
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive (or a copy of the directive) into the 
 //				appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -1090,6 +967,7 @@
 	if(recursive == YES)
 	{
 		NSMutableArray  *texLines              = [NSMutableArray array];
+		NSMutableArray  *texConditionalLines   = [NSMutableArray array];
 		NSMutableArray  *texTriangles          = [NSMutableArray array];
 		NSMutableArray  *texQuadrilaterals     = [NSMutableArray array];
 		NSMutableArray  *texEverythingElse     = [NSMutableArray array];
@@ -1103,6 +981,7 @@
 		for(LDrawDirective *directive in [self subdirectives])
 		{
 			[directive flattenIntoLines:texLines
+					   conditionalLines:texConditionalLines
 							  triangles:texTriangles
 						 quadrilaterals:texQuadrilaterals
 								  other:texEverythingElse
@@ -1126,6 +1005,9 @@
 		for(directive in texLines)
 			[self addDirective:directive];
 		
+		for(directive in texConditionalLines)
+			[self addDirective:directive];
+		
 		for(directive in texTriangles)
 			[self addDirective:directive];
 		
@@ -1140,7 +1022,7 @@
 	// ourself to the parent, not our child geometry. 
 	[everythingElse addObject:self];
 	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 @end

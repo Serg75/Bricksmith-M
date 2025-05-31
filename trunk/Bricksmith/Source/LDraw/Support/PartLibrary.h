@@ -56,14 +56,11 @@ extern NSString	*Category_Subparts;
 	NSMutableArray          *favorites;					// parts names in the "Favorites" pseduocategory
 	NSMutableDictionary     *loadedFiles;				// list of LDrawFiles which have been read off disk.
 	NSMutableDictionary		*loadedImages;
-	NSMutableDictionary		*optimizedTextures;			// GLuint texture tags
+	NSMutableDictionary		*optimizedTextures;
 	NSMutableDictionary     *optimizedRepresentations;	// access stored vertex objects by part name, then color.
 	dispatch_queue_t        catalogAccessQueue;			// serial queue to mutex changes to the part catalog
 	NSMutableDictionary     *parsingGroups;				// arrays of dispatch_group_t's which have requested each file currently being parsed
 }
-
-// Initialization
-+ (PartLibrary *) sharedPartLibrary;
 
 // Accessors
 - (NSArray *) allPartCatalogRecords;
@@ -100,7 +97,6 @@ extern NSString	*Category_Subparts;
 - (LDrawModel *) modelForName_threadSafe:(NSString *) partName;
 
 - (LDrawDirective *) optimizedDrawableForPart:(LDrawPart *) part color:(LDrawColor *)color;
-- (GLuint) textureTagForTexture:(LDrawTexture*)texture;
 
 // Utilites
 - (NSString *)descriptionForPart:(LDrawPart *)part;

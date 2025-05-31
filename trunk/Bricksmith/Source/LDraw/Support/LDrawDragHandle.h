@@ -10,9 +10,10 @@
 //
 //==============================================================================
 #import <Foundation/Foundation.h>
-#import OPEN_GL_HEADER
 
 #import "LDrawDrawableElement.h"
+
+static const float HandleDiameter	= 7.0;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,12 +43,5 @@
 - (void) setPosition:(Point3)positionIn updateTarget:(BOOL)update;
 - (void) setTarget:(id)sender;
 
-// Draw
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-;
-
-// Utilities
-+ (void) makeSphereWithLongitudinalCount:(int)longitudeSections
-						latitudinalCount:(int)latitudeSections;
 @end
 

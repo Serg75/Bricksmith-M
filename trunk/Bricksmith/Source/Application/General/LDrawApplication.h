@@ -29,7 +29,6 @@
 	PartLibraryController	*partLibraryController;	// centralized location for part information.
     LSynthConfiguration     *lsynthConfiguration;   // centralized location for LSynth configuration
 	Inspector				*inspector;				// system for graphically inspecting classes.
-	NSOpenGLContext			*sharedGLContext;		// OpenGL variables like display list numbers are shared through this.
 	UInt16			        connexionClientID;		// The identifier of client to a 3Dconnexion controller, if there is one.
 	
 	BOOL					suppressDonationPrompt;
@@ -49,14 +48,11 @@
 
 //Accessors
 + (LDrawApplication *) shared;
-+ (NSOpenGLPixelFormat *) openGLPixelFormat;
 + (Inspector *) sharedInspector;
-+ (NSOpenGLContext *) sharedOpenGLContext;
 + (PartLibraryController *) sharedPartLibraryController;
 - (Inspector *) inspector;
 - (PartLibraryController *) partLibraryController;
 - (LSynthConfiguration *) lsynthConfiguration;
-- (NSOpenGLContext *) openGLContext;
 
 //Utilities
 - (void) findLDrawPath;

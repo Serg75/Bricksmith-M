@@ -24,6 +24,7 @@
 //==============================================================================
 #import "LDrawConditionalLine.h"
 
+#import "LDrawDragHandle.h"
 #import "LDrawUtilities.h"
 
 @implementation LDrawConditionalLine
@@ -203,34 +204,70 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:optionsMask: =================================================
+//========== drawSelf: ===========================================================
 //
-// Purpose:		We have completely disabled these conditional lines. They add 
-//				little to the modern shaded LDraw experience, and they would 
-//				absolutely kill performance. 
+// Purpose:		Draw this directive and its subdirectives by calling APIs on
+//				the passed in renderer, then calling drawSelf on children.
 //
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
+// Notes:		Cond. lines use this message to get their drag handles drawn if
+//				needed.  They do not draw their actual GL primitive because that
+//				has already been "collected" by some parent capable of
+//				accumulating a mesh.
+//
+//================================================================================
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
-	//do nothing.
-	
-}//end draw:optionsMask:
+	[self revalCache:DisplayList];
+	if(self->hidden == NO)
+	{
+		if(self->dragHandles)
+		{
+			for(LDrawDragHandle *handle in self->dragHandles)
+			{
+				[handle drawSelf:renderer];
+			}
+		}
+	}
+}//end drawSelf:
 
 
-//========== drawElement:viewScale:withColor: ==================================
+//========== collectSelf: ========================================================
 //
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
+// Purpose:		Collect self is called on each directive by its parents to
+//				accumulate _mesh_ data into a display list for later drawing.
+//				The collector protocol passed in is some object capable of
+//				remembering the collectable data.
 //
-// Note:		DISABLED. See -draw:parentColor:
+//				Real GL primitives participate by passing their color and
+//				geometry data to the collector.
 //
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
+//================================================================================
+- (void) collectSelf:(id<LDrawCollector>)renderer
 {
-	[super drawElement:optionsMask viewScale:scaleFactor withColor:drawingColor];
-	
-}//end drawElement:withColor:
+	[self revalCache:DisplayList];
+	if(self->hidden == NO)
+	{
+		#if !NO_LINE_DRWAING
+		float v[12] = {
+			vertex1.x, vertex1.y, vertex1.z,
+			vertex2.x, vertex2.y, vertex2.z,
+			conditionalVertex1.x, conditionalVertex1.y, conditionalVertex1.z,
+			conditionalVertex2.x, conditionalVertex2.y, conditionalVertex2.z };
+		float n[3] = { 0, -1, 0 };
+
+		if([self->color colorCode] == LDrawCurrentColor)
+			[renderer drawConditionalLine:v normal:n color:LDrawRenderCurrentColor];
+		else if([self->color colorCode] == LDrawEdgeColor)
+			[renderer drawConditionalLine:v normal:n color:LDrawRenderComplimentColor];
+		else
+		{
+			float rgba[4];
+			[self->color getColorRGBA:rgba];
+			[renderer drawConditionalLine:v normal:n color:rgba];
+		}
+		#endif
+	}
+}//end collectSelf:
 
 
 //========== write =============================================================
@@ -263,23 +300,6 @@
 				[LDrawUtilities outputStringForFloat:conditionalVertex2.z]		
 			];
 }//end write
-
-
-//========== writeElementToVertexBuffer:withColor:wireframe: ===================
-//
-// Purpose:		Writes this object into the specified vertex buffer, which is a 
-//				pointer to the offset into which the first vertex point's data 
-//				is to be stored. Store subsequent vertexs after the first.
-//
-//==============================================================================
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer
-									 withColor:(LDrawColor *)drawingColor
-									 wireframe:(BOOL)wireframe
-{
-	// This should never be called, but just in case...
-	return NULL;
-
-}//end writeElementToVertexBuffer:withColor:
 
 
 #pragma mark -
@@ -403,12 +423,13 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -417,12 +438,26 @@
 		  normalTransform:(Matrix3)normalTransform
 				recursive:(BOOL)recursive
 {
-	// Do nothing. Prevent LDrawLine (the superclass) from adding this object to 
-	// the list! 
-	
-	// Conditional lines are not really my friend, so I'm dumping them all.
-	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+	// Do not call super to prevent adding this object as plain line
+
+//	[super flattenIntoLines:lines
+//		   conditionalLines:conditionalLines
+//				  triangles:triangles
+//			 quadrilaterals:quadrilaterals
+//					  other:everythingElse
+//			   currentColor:parentColor
+//		   currentTransform:transform
+//			normalTransform:normalTransform
+//				  recursive:recursive];
+
+	self->vertex1 = V3MulPointByProjMatrix(self->vertex1, transform);
+	self->vertex2 = V3MulPointByProjMatrix(self->vertex2, transform);
+	self->conditionalVertex1 = V3MulPointByProjMatrix(self->conditionalVertex1, transform);
+	self->conditionalVertex2 = V3MulPointByProjMatrix(self->conditionalVertex2, transform);
+
+	[conditionalLines addObject:self];
+
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== registerUndoActions ===============================================

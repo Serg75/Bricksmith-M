@@ -30,11 +30,6 @@
 //#define USE_BLOCKS				NS_BLOCKS_AVAILABLE
 #define USE_BLOCKS				0
 
-#ifndef OPEN_GL_HEADER
-	#define OPEN_GL_HEADER		<OpenGL/gl.h>
-	#define OPEN_GL_EXT_HEADER	<OpenGL/glext.h>
-#endif
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -45,9 +40,11 @@
 
 // This stores quads as pairs of triangles in the VBO - 50% more vertex count but fewer draw calls.
 // Mixed results in perf tests.
+// (OpenGL only option)
 #define TESSELATE_QUADS								0
 
 // This draws wire frames by setting the polygon fill mode instead of generating separate meshes.
+// (OpenGL only option)
 #define USE_AUTOMATIC_WIREFRAMES					1
 
 // This enables the "related parts" UI - define to 0 to hide it for now.

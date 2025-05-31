@@ -338,11 +338,11 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 											{255,	255,	255} 
 										};
 
-	int         blendCode1              = 0;
-	int         blendCode2              = 0;
-	GLfloat     blendedComponents[4]    = {0.0};
-	LDrawColor  *blendedColor           = [[LDrawColor alloc] init];
-	
+	int			blendCode1              = 0;
+	int			blendCode2              = 0;
+	float		blendedComponents[4]    = {0.0};
+	LDrawColor	*blendedColor           = [[LDrawColor alloc] init];
+
 	// Find the two base indexes of the blended color's dither.
 	blendCode1 = (colorCode - 256) / 16; // div (integer division)
 	blendCode2 = (colorCode - 256) % 16;
@@ -369,20 +369,19 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== draw:viewScale:parentColor: =======================================
+//========== collectSelf: ======================================================
 //
-// Purpose:		"Draws" the color.
+// Purpose:		Collects the color.
 //
 //==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
+- (void) collectSelf:(id<LDrawCollector>)renderer
 {
 	// Need to add this color to the model's color library.
 	ColorLibrary *colorLibrary = [[(LDrawStep*)[self enclosingDirective] enclosingModel] colorLibrary];
 	
 	[colorLibrary addColor:self];
 		
-}//end draw:viewScale:parentColor:
+}//end collectSelf:
 
 
 //========== write =============================================================
@@ -504,7 +503,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 
 //========== alpha =============================================================
 //==============================================================================
-- (GLfloat) alpha
+- (float) alpha
 {
 	return colorRGBA[3];
 }
@@ -532,7 +531,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	{
 		self->fakeComplimentColor = [[LDrawColor alloc] init];
 		
-		GLfloat fakeComplimentComponents[4] = {};
+		float fakeComplimentComponents[4] = {};
 		complimentColor(self->colorRGBA, fakeComplimentComponents);
 		
 		[fakeComplimentColor setColorCode:LDrawEdgeColor];
@@ -566,9 +565,9 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //				color. 
 //
 //==============================================================================
-- (void) getColorRGBA:(GLfloat *)inComponents
+- (void) getColorRGBA:(float *)inComponents
 {
-	memcpy(inComponents, self->colorRGBA, sizeof(GLfloat) * 4);
+	memcpy(inComponents, self->colorRGBA, sizeof(float) * 4);
 	
 }//end getColorRGBA:
 
@@ -584,9 +583,9 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //				instead. Otherwise, use the values returned by this method. 
 //
 //==============================================================================
-- (void) getEdgeColorRGBA:(GLfloat *)inComponents
+- (void) getEdgeColorRGBA:(float *)inComponents
 {
-	memcpy(inComponents, self->edgeColorRGBA, sizeof(GLfloat) * 4);
+	memcpy(inComponents, self->edgeColorRGBA, sizeof(float) * 4);
 	
 }//end getEdgeColorRGBA:
 
@@ -689,9 +688,9 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 // Purpose:		Sets the actual RGBA component values for this color. 
 //
 //==============================================================================
-- (void) setColorRGBA:(GLfloat *)newComponents
+- (void) setColorRGBA:(float *)newComponents
 {
-	memcpy(self->colorRGBA, newComponents, sizeof(GLfloat[4]));
+	memcpy(self->colorRGBA, newComponents, sizeof(float[4]));
 	
 }//end setColorRGBA:
 
@@ -725,9 +724,9 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //				LDrawColorBogus. 
 //
 //==============================================================================
-- (void) setEdgeColorRGBA:(GLfloat *)newComponents
+- (void) setEdgeColorRGBA:(float *)newComponents
 {
-	memcpy(self->edgeColorRGBA, newComponents, sizeof(GLfloat[4]));
+	memcpy(self->edgeColorRGBA, newComponents, sizeof(float[4]));
 	
 	// Disable the edge color code, since we have real color values for it now.
 	[self setEdgeColorCode:LDrawColorBogus];
@@ -919,7 +918,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //				extension. 
 //
 //==============================================================================
-- (NSString *) hexStringForRGB:(GLfloat *)components
+- (NSString *) hexStringForRGB:(float *)components
 {
 	NSString	*hexString	= [NSString stringWithFormat:@"#%02X%02X%02X",
 													(int) (components[0] * 255),
@@ -943,7 +942,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 // Example:		#77CC00 becomes (R = 0.4666; G = 0.8; B = 0.0)
 //
 //==============================================================================
-- (BOOL) scanHexString:(NSScanner *)hexScanner intoRGB:(GLfloat *)components
+- (BOOL) scanHexString:(NSScanner *)hexScanner intoRGB:(float *)components
 {
 	unsigned	hexBytes	= 0;
 	BOOL		success		= NO;
@@ -962,9 +961,9 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 		[hexScanner scanHexInt:&hexBytes];
 		
 		// Colors will be stored in the integer as follows: xxRRGGBB
-		components[0] = (GLfloat) ((hexBytes >> 2 * 8) & 0xFF) / 255; // Red
-		components[1] = (GLfloat) ((hexBytes >> 1 * 8) & 0xFF) / 255; // Green
-		components[2] = (GLfloat) ((hexBytes >> 0 * 8) & 0xFF) / 255; // Blue
+		components[0] = (float) ((hexBytes >> 2 * 8) & 0xFF) / 255; // Red
+		components[1] = (float) ((hexBytes >> 1 * 8) & 0xFF) / 255; // Green
+		components[2] = (float) ((hexBytes >> 0 * 8) & 0xFF) / 255; // Blue
 		components[3] = 1.0; // we shall assume alpha
 	}
 	

@@ -177,25 +177,6 @@
 #pragma mark DIRECTIVES
 #pragma mark -
 
-//========== drawElement:viewScale:withColor: ==================================
-//
-// Purpose:		Draws the graphic of the element represented. This call is a 
-//				subroutine of -draw: in LDrawDrawableElement.
-//
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	if(self->dragHandles)
-	{
-		for(LDrawDragHandle *handle in self->dragHandles)
-		{
-			[handle draw:optionsMask viewScale:scaleFactor parentColor:drawingColor];
-		}
-	}
-	
-}//end drawElement:drawingColor:
-
-
 //========== drawSelf: ===========================================================
 //
 // Purpose:		Draw this directive and its subdirectives by calling APIs on 
@@ -207,7 +188,7 @@
 //				accumulating a mesh.
 //
 //================================================================================
-- (void) drawSelf:(id<LDrawRenderer>)renderer
+- (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
 	[self revalCache:DisplayList];
 	if(self->hidden == NO)
@@ -240,10 +221,10 @@
 	if(self->hidden == NO)
 	{
 		#if !NO_LINE_DRWAING
-		GLfloat	v[6] = { 
+		float v[6] = {
 			vertex1.x, vertex1.y, vertex1.z,
 			vertex2.x, vertex2.y, vertex2.z };
-		GLfloat n[3] = { 0, -1, 0 };
+		float n[3] = { 0, -1, 0 };
 
 		if([self->color colorCode] == LDrawCurrentColor)	
 			[renderer drawLine:v normal:n color:LDrawRenderCurrentColor];
@@ -251,7 +232,7 @@
 			[renderer drawLine:v normal:n color:LDrawRenderComplimentColor];		
 		else
 		{
-			GLfloat	rgba[4];
+			float rgba[4];
 			[self->color getColorRGBA:rgba];
 			[renderer drawLine:v normal:n color:rgba];
 		}
@@ -401,37 +382,6 @@
 				[LDrawUtilities outputStringForFloat:vertex2.z]				
 			];
 }//end write
-
-
-//========== writeElementToVertexBuffer:withColor:wireframe: ===================
-//
-// Purpose:		Writes this object into the specified vertex buffer, which is a 
-//				pointer to the offset into which the first vertex point's data 
-//				is to be stored. Store subsequent vertexs after the first.
-//
-//==============================================================================
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer
-									 withColor:(LDrawColor *)drawingColor
-									 wireframe:(BOOL)wireframe
-{
-	#pragma unused(wireframe)
-	
-	Vector3 normal          = V3Make(0.0, -1.0, 0.0); //lines need normals! Who knew?
-	GLfloat components[4]   = {};
-	
-	[drawingColor getColorRGBA:components];
-	
-	memcpy(&vertexBuffer[0].position, &vertex1,     sizeof(Point3));
-	memcpy(&vertexBuffer[0].normal,   &normal,      sizeof(Point3));
-	memcpy(&vertexBuffer[0].color,    components,   sizeof(GLfloat)*4);
-	
-	memcpy(&vertexBuffer[1].position, &vertex2,     sizeof(Point3));
-	memcpy(&vertexBuffer[1].normal,   &normal,      sizeof(Point3));
-	memcpy(&vertexBuffer[1].color,    components,   sizeof(GLfloat)*4);
-	
-	return vertexBuffer + 2;
-	
-}//end writeElementToVertexBuffer:withColor:
 
 
 #pragma mark -
@@ -647,12 +597,13 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -662,6 +613,7 @@
 				recursive:(BOOL)recursive
 {
 	[super flattenIntoLines:lines
+		   conditionalLines:conditionalLines
 				  triangles:triangles
 			 quadrilaterals:quadrilaterals
 					  other:everythingElse
@@ -675,7 +627,7 @@
 	
 	[lines addObject:self];
 	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 //========== registerUndoActions ===============================================

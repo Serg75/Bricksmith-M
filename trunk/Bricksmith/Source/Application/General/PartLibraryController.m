@@ -31,7 +31,7 @@
 	self = [super init];
 	
 	// Create the part library
-	PartLibrary *library = [PartLibrary sharedPartLibrary];
+	PartLibrary *library = [PartLibraryGPU sharedPartLibrary];
 	[library setDelegate:self];
 	
 	return self;
@@ -51,7 +51,7 @@
 //==============================================================================
 - (void) loadPartCatalog:(void (^)(BOOL success))completionHandler
 {
-	PartLibrary *library    = [PartLibrary sharedPartLibrary];
+	PartLibrary *library    = [PartLibraryGPU sharedPartLibrary];
 	NSArray     *favorites  = [[NSUserDefaults standardUserDefaults] objectForKey:FAVORITE_PARTS_KEY];
 	BOOL        success     = NO;
 	
@@ -85,7 +85,7 @@
 	[progressPanel setMessage:@"Loading Parts"];
 	[progressPanel showProgressPanel];
 	
-	[[PartLibrary sharedPartLibrary] reloadPartsWithMaxLoadCountHandler:
+	[[PartLibraryGPU sharedPartLibrary] reloadPartsWithMaxLoadCountHandler:
 	 ^(NSUInteger maxPartCount)
 	{
 		dispatch_async(dispatch_get_main_queue(), ^{

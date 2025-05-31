@@ -12,7 +12,7 @@
 //  Created by Allen Smith on 2/14/05.
 //  Copyright 2005. All rights reserved.
 //==============================================================================
-#import "LDrawApplication.h"
+#import "LDrawApplicationGPU.h"
 
 #import <3DConnexionClient/ConnexionClientAPI.h>
 #import <mach/mach_time.h>
@@ -95,26 +95,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 #pragma mark ACCESSORS
 #pragma mark -
 
-//---------- openGLPixelFormat ---------------------------------------[static]--
-//
-// Purpose:		Returns the pixel format used in Bricksmith OpenGL views.
-//
-//------------------------------------------------------------------------------
-+ (NSOpenGLPixelFormat *) openGLPixelFormat
-{
-	NSOpenGLPixelFormat				*pixelFormat		= nil;
-	NSOpenGLPixelFormatAttribute	pixelAttributes[]	= {
-															NSOpenGLPFANoRecovery, // Enable automatic use of OpenGL "share" contexts for Core Animation.
-															NSOpenGLPFADoubleBuffer,
-															NSOpenGLPFADepthSize,		32,
-															NSOpenGLPFASampleBuffers,	1, // enable line antialiasing
-															NSOpenGLPFASamples,			4, // antialiasing beauty
-															0};
-
-	pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes: pixelAttributes];
-	return pixelFormat;
-}
-
 
 //========== shared ============================================================
 ///
@@ -141,19 +121,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	return [[LDrawApplication shared] inspector];
 	
 }//end sharedInspector
-
-
-//---------- sharedOpenGLContext -------------------------------------[static]--
-//
-// Purpose:		Returns the OpenGLContext which unifies our display-list tags.
-//				Every LDrawGLView should share this context.
-//
-//------------------------------------------------------------------------------
-+ (NSOpenGLContext *) sharedOpenGLContext
-{
-	return [[LDrawApplication shared] openGLContext];
-	
-}//end sharedOpenGLContext
 
 
 //---------- sharedPartLibraryController -----------------------------[static]--
@@ -213,19 +180,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	return lsynthConfiguration;
 	
 }//end lsynthConfiguration
-
-
-//========== sharedOpenGLContext ===============================================
-//
-// Purpose:		Returns the OpenGLContext which unifies our display-list tags.
-//				Every LDrawGLView should share this context.
-//
-//==============================================================================
-- (NSOpenGLContext *) openGLContext
-{
-	return self->sharedGLContext;
-	
-}//end openGLContext
 
 
 #pragma mark -
@@ -420,7 +374,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 //==============================================================================
 - (void) applicationWillFinishLaunching:(NSNotification *)aNotification
 {
-	NSOpenGLPixelFormat *pixelFormat    = [LDrawApplication openGLPixelFormat];
 	NSUserDefaults      *userDefaults   = [NSUserDefaults standardUserDefaults];
 	
 	//Make sure the standard preferences exist so they will be available 
@@ -434,9 +387,8 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	self->inspector					= [Inspector new];
 	self->partLibraryController		= [[PartLibraryController alloc] init];
     self->lsynthConfiguration       = [LSynthConfiguration sharedInstance];
-	self->sharedGLContext			= [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
-	
-	[sharedGLContext makeCurrentContext];
+
+	[self makeSharedContext];
 	
 	//Try to define an LDraw path before the application even finishes starting.
 	[self findLDrawPath];

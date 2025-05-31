@@ -17,6 +17,7 @@
 //  Copyright (c) 2005. All rights reserved.
 //==============================================================================
 #import "LDrawDocument.h"
+#import "LDrawDocumentGPU.h"
 
 #import <AMSProgressBar/AMSProgressBar.h>
 
@@ -25,7 +26,7 @@
 #import "ExtendedSplitView.h"
 #import "IconTextCell.h"
 #import "Inspector.h"
-#import "LDrawApplication.h"
+#import "LDrawApplicationGPU.h"
 #import "LDrawColor.h"
 #import "LDrawColorPanelController.h"
 #import "LDrawComment.h"
@@ -38,12 +39,11 @@
 #import "LDrawDrawableElement.h"
 #import "LDrawFile.h"
 #import "LDrawFileOutlineView.h"
-#import "LDrawGLView.h"
+#import "LDrawViewGPU.h"
 #import "LDrawHighResPrimitives.h"
 #import "LDrawLine.h"
 #import "LDrawLSynth.h"
 #import "LDrawLSynthDirective.h"
-#import "LDrawModel.h"
 #import "LDrawMPDModel.h"
 #import "LDrawObjectWithValue.h"
 #import "LDrawPart.h"
@@ -257,10 +257,10 @@ void AppendChoicesToNewItem(
 	
 	// Set opening zoom percentages
 	[[self foremostWindow] layoutIfNeeded]; // zoomToFit needs view sizes
-	LDrawGLView	*mainViewport = [self main3DViewport];
+	LDrawView	*mainViewport = [self main3DViewport];
 	{
-		NSArray<LDrawGLView*>	*allViewports		= [self all3DViewports];
-		LDrawGLView 			*currentViewport	= nil;
+		NSArray<LDrawView*>	*allViewports		= [self all3DViewports];
+		LDrawView 			*currentViewport	= nil;
 
 		for(counter = 0; counter < [allViewports count]; counter++)
 		{
@@ -442,17 +442,17 @@ void AppendChoicesToNewItem(
 				error:(NSError **)outError
 {
 	NSString    *fileContents   = [LDrawUtilities stringFromFileData:data];
-	LDrawFile   *newFile        = nil;
-	BOOL        success         = NO;
+	__block	LDrawFile   *newFile        = nil;
+	__block	BOOL        success         = NO;
 	
 	//Parse the model.
-	// - optimizing models can result in OpenGL calls, so to be ultra-safe we 
-	//   set a context and lock on it. We can't use any of the documents GL 
+	// - optimizing models can result in GPU calls, so to be ultra-safe we
+	//   set a context and lock on it. We can't use any of the documents GPU
 	//   views because the Nib may not have been loaded yet.
-	CGLLockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	[self lockContextAndExecute:^
 	{
-		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-		
+		[LDrawApplication makeCurrentSharedContext];
+
 		@try
 		{
 			CFAbsoluteTime  startTime   = CFAbsoluteTimeGetCurrent();
@@ -477,8 +477,7 @@ void AppendChoicesToNewItem(
 											code:NSFileReadCorruptFileError
 										userInfo:nil];
 		}
-	}
-	CGLUnlockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	}];
 	
     return success;
 	
@@ -608,7 +607,7 @@ void AppendChoicesToNewItem(
 
 //========== viewingAngle ======================================================
 //
-// Purpose:		Returns the modelview rotation for the focused LDrawGLView.
+// Purpose:		Returns the modelview rotation for the focused LDrawView.
 //
 //==============================================================================
 - (Tuple3) viewingAngle
@@ -721,8 +720,8 @@ void AppendChoicesToNewItem(
 	
 	documentContents = newContents;
 	
-	[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-		
+    [LDrawApplication makeCurrentSharedContext];
+
 }//end setDocumentContents:
 
 
@@ -734,7 +733,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode
 {
-	NSArray<LDrawGLView*>*	graphicViews	= [self all3DViewports];
+	NSArray<LDrawView*>*	graphicViews	= [self all3DViewports];
 	NSUInteger				counter 		= 0;
 
 	self->gridMode = newMode;
@@ -788,7 +787,7 @@ void AppendChoicesToNewItem(
 //				for binding which observe the most recent view. 
 //
 //==============================================================================
-- (void) setMostRecentLDrawView:(LDrawGLView *)viewIn
+- (void) setMostRecentLDrawView:(LDrawView *)viewIn
 {
 	self->mostRecentLDrawView = viewIn;
 	
@@ -1320,12 +1319,12 @@ void AppendChoicesToNewItem(
 
 //========== nudge: ============================================================
 //
-// Purpose:		Called by LDrawGLView when it wants to nudge the selection.
+// Purpose:		Called by LDrawView when it wants to nudge the selection.
 //
 //==============================================================================
 - (void) nudge:(id)sender
 {
-	LDrawGLView *glView     = sender;
+	LDrawView *glView     = sender;
 	LDrawPart * part;
 	Matrix4 xform = IdentityMatrix4;
 	
@@ -2645,9 +2644,9 @@ void AppendChoicesToNewItem(
 //				sender is the menu item, whose tag is the viewing angle. We'll 
 //				just pass this off to the appropriate view.
 //
-// Note:		This method will get skipped entirely if an LDrawGLView is the 
+// Note:		This method will get skipped entirely if an LDrawView is the
 //				first responder; the message will instead go directly there 
-//				because this method has the same name as the one in LDrawGLView.
+//				because this method has the same name as the one in LDrawView.
 //
 //==============================================================================
 - (IBAction) viewOrientationSelected:(id)sender
@@ -3395,7 +3394,15 @@ void AppendChoicesToNewItem(
 	LDrawConditionalLine    *newConditional = [[LDrawConditionalLine alloc] init];
 	NSUndoManager           *undoManager    = [self undoManager];
 	LDrawColor              *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	
+	Point3          position        = ZeroPoint3;
+
+	if(self->lastSelectedPart)
+	{
+		position = [lastSelectedPart position];
+	}
+	[newConditional setVertex1:position];
+	[newConditional setVertex2:V3Make(position.x + 80, position.y - 80, position.z)];
+
 	[newConditional setLDrawColor:selectedColor];
 	
 	[self addStepComponent:newConditional parent:nil index:NSNotFound];
@@ -3953,11 +3960,10 @@ void AppendChoicesToNewItem(
 	
 		[parent insertDirective:newDirective atIndex:index];
 	}
-	CGLLockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+	[self lockContextAndExecute:^
 	{
-		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-	}
-	CGLUnlockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);
+		[LDrawApplication makeCurrentSharedContext];
+	}];
 	
 }//end addDirective:toParent:atIndex:
 
@@ -4595,107 +4601,17 @@ void AppendChoicesToNewItem(
 }//end outlineView:willDisplayCell:forTableColumn:item:
 
 
-//**** NSOutlineView ****
-//========== outlineViewSelectionDidChange: ====================================
-//
-// Purpose:		We have selected a different something in the file contents.
-//				We need to show it as selected in the OpenGL viewing area.
-//				This means we may have to change the active model or step in 
-//				order to display the selection.
-//
-//==============================================================================
-- (void)outlineViewSelectionDidChange:(NSNotification *)notification
-{
-	NSOutlineView   *outlineView        = [notification object];
-	NSArray         *selectedObjects    = [self selectedObjects];
-	id              lastSelectedItem    = [outlineView itemAtRow:[outlineView selectedRow]];
-	LDrawMPDModel   *selectedModel      = [self selectedModel];
-	LDrawStep       *selectedStep       = [self selectedStep];
-	NSInteger		selectedStepIndex	= 0;
-	NSInteger       counter             = 0;
-	
-	selectedObjects = [LDrawDocumentTree mostInnerDirectives:selectedObjects];
-	
-	// This method can be called from LDrawOpenGLView (in which case we already 
-	// have a context we want to use) or it might be called on its own. Since 
-	// selecting parts can trigger OpenGL commands, we should make sure we have 
-	// a context active, but we should also restore the current context when 
-	// we're done. 
-	NSOpenGLContext *originalContext = [NSOpenGLContext currentContext];
-	[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
-	
-	//Deselect all the previously-selected directives
-	// (clears the internal directive flag used for drawing)
-	for(counter = 0; counter < [self->selectedDirectives count]; counter++)
-		[[selectedDirectives objectAtIndex:counter] setSelected:NO];
-	
-	//Tell the newly-selected directives that they just got selected.
-	selectedDirectives = selectedObjects;
-	for(counter = 0; counter < [self->selectedDirectives count]; counter++)
-		[[selectedDirectives objectAtIndex:counter] setSelected:YES];
-	
-	// Update things which need to take into account the entire selection.
-    // The order matters: the search panel unregisters itself as the active colorwell
-    // before the inspector or color panel do their thing.
-	if([SearchPanelController isVisible])
-	{
-		[[SearchPanelController searchPanel] updateInterfaceForSelection:selectedObjects];
-	}
-	[[LDrawApplication sharedInspector] inspectObjects:selectedObjects];
-	[[LDrawColorPanelController sharedColorPanel] updateSelectionWithObjects:selectedObjects];
-    
-	if(selectedModel != nil)
-	{
-		// Put the selection on screen (if we need to)
-		[self setActiveModel:selectedModel];
-		
-		// Advance to the current step (if we need to)
-		if(selectedStep != nil)
-		{
-			selectedStepIndex = [selectedModel indexOfDirective:selectedStep];
-			
-            if (selectedObjects.count == 1 && [selectedObjects[0] isMemberOfClass:[LDrawStep class]])
-            {
-                // when we select just one step in File Contents navigator
-                if(selectedStepIndex != [selectedModel maxStepIndexToOutput])
-                {
-                    [self setCurrentStep:selectedStepIndex]; // update document UI
-                }
-            }
-            else
-            {
-                // other cases (including selecting parts by mouse)
-                if(selectedStepIndex > [selectedModel maxStepIndexToOutput])
-                {
-                    [self setCurrentStep:selectedStepIndex]; // update document UI
-                }
-            }
-		}
-	}
-	[[self documentContents] noteNeedsDisplay];
-	
-	//See if we just selected a new part; if so, we must remember it.
-	if ([lastSelectedItem isKindOfClass:[LDrawPart class]] ||
-        [lastSelectedItem isKindOfClass:[LDrawLSynth class]])
-		[self setLastSelectedPart:lastSelectedItem];
-
-	[self buildRelatedPartsMenus];
-	[originalContext makeCurrentContext];
-	
-}//end outlineViewSelectionDidChange:
-
-
 #pragma mark -
 #pragma mark MOUSE COORDINATES
 #pragma mark -
 
-//========== LDrawGLView:mouseIsOverPoint:confidence: ==========================
+//========== LDrawView:mouseIsOverPoint:confidence: ============================
 //
 // Purpose:		Display the 3D world coordinates of the mouse as it hovers over 
 //				the model. 
 //
 //==============================================================================
-- (void) LDrawGLView:(LDrawGLView *)glView mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence
+- (void) LDrawView:(LDrawView *)glView mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence
 {
 	[self->coordinateFieldX setFloatValue:modelPoint.x];
 	[self->coordinateFieldY setFloatValue:modelPoint.y];
@@ -4720,14 +4636,14 @@ void AppendChoicesToNewItem(
 }
 
 
-//========== LDrawGLViewMouseExited: ===========================================
+//========== LDrawViewMouseExited: =============================================
 //
 // Purpose:		The mouse location is no longer relevant to coordinate display. 
 //				This could be because the mouse exited the view, or because it 
 //				is controlling a tool which is not coordinate sensitive. 
 //
 //==============================================================================
-- (void) LDrawGLViewMouseNotPositioning:(LDrawGLView *)glView
+- (void) LDrawViewMouseNotPositioning:(LDrawView *)glView
 {
 	[self->coordinateFieldX setHidden:YES];
 	[self->coordinateFieldY setHidden:YES];
@@ -4742,20 +4658,20 @@ void AppendChoicesToNewItem(
 #pragma mark LDRAW GL VIEW
 #pragma mark -
 
-//**** LDrawGLView ****
-//========== LDrawGLView:acceptDrop: ===========================================
+//**** LDrawView ****
+//========== LDrawView:acceptDrop: =============================================
 //
 // Purpose:		The user has deposited some drag-anddrop parts into an 
-//			    LDrawGLView. Now they need to be imported into the model. 
+//			    LDrawView. Now they need to be imported into the model.
 //
 // Notes:		Just like in -duplicate: and 
 //				-outlineView:acceptDrop:item:childIndex:, we appropriate the 
 //				pasting architecture to simplify importing the parts.
 //
 //==============================================================================
-- (void) LDrawGLView:(LDrawGLView *)glView
-		  acceptDrop:(id < NSDraggingInfo >)info
-		  directives:(NSArray *)directives
+- (void) LDrawView:(LDrawView *)glView
+		acceptDrop:(id < NSDraggingInfo >)info
+		directives:(NSArray *)directives
 {
 	NSPasteboard    *pasteboard         = [NSPasteboard pasteboardWithName:@"BricksmithDragAndDropPboard"];
 	NSUndoManager   *undoManager        = [self undoManager];
@@ -4808,30 +4724,30 @@ void AppendChoicesToNewItem(
 		[undoManager setActionName:NSLocalizedString(@"UndoDrop", nil)];
 	}
 	
-}//end LDrawGLView:acceptDrop:
+}//end LDrawView:acceptDrop:
 
 
-//**** LDrawGLView ****
-//========== LDrawGLViewBecameFirstResponder: ==================================
+//**** LDrawView ****
+//========== LDrawViewBecameFirstResponder: ====================================
 //
 // Purpose:		One of our model views just became active, so we need to update 
 //				our display to represent that view's characteristics.
 //
 //==============================================================================
-- (void) LDrawGLViewBecameFirstResponder:(LDrawGLView *)glView
+- (void) LDrawViewBecameFirstResponder:(LDrawView *)glView
 {
 	// We used bindings to sync up the ever-in-limbo zoom control.
 	[self setMostRecentLDrawView:glView];
 
-}//end LDrawGLViewBecameFirstResponder:
+}//end LDrawViewBecameFirstResponder:
 
 
-//========== LDrawGLView:dragHandleDidMove: ====================================
+//========== LDrawView:dragHandleDidMove: ======================================
 //
 // Purpose:		A primitive's geometry is being directly manipulated.
 //
 //==============================================================================
-- (void) LDrawGLView:(LDrawGLView *)glView dragHandleDidMove:(LDrawDragHandle *)dragHandle
+- (void) LDrawView:(LDrawView *)glView dragHandleDidMove:(LDrawDragHandle *)dragHandle
 {
 	// Ben says: this call is unnecessary for now because the GL renderer tickles the document
 	// too.  Some day ideally directives would signal their change to their parents and observers;
@@ -4840,19 +4756,19 @@ void AppendChoicesToNewItem(
 }
 
 
-//========== LDrawGLViewPartDragEnded: =========================================
+//========== LDrawViewPartDragEnded: ===========================================
 //
 // Purpose:		Part drag has ended, successfully or unsuccessfully. This is our 
 //				opportunity to clean up.
 //
 //==============================================================================
-- (void) LDrawGLViewPartDragEnded:(LDrawGLView*)glView
+- (void) LDrawViewPartDragEnded:(LDrawView*)glView
 {
 	self->selectedDirectivesBeforeCopyDrag = nil;
 }
 
 
-//========== LDrawGLViewPartsWereDraggedIntoOblivion: ==========================
+//========== LDrawViewPartsWereDraggedIntoOblivion: ============================
 //
 // Purpose:		The parts which originated the most recent drag operation have 
 //				apparently been dragged clear out of the document. Maybe they 
@@ -4868,7 +4784,7 @@ void AppendChoicesToNewItem(
 //				hidden ghosts. 
 //
 //==============================================================================
-- (void) LDrawGLViewPartsWereDraggedIntoOblivion:(LDrawGLView *)glView
+- (void) LDrawViewPartsWereDraggedIntoOblivion:(LDrawView *)glView
 {
 	NSArray *directivesToDelete = [self->selectedDirectives mutableCopy];
 	id		currentDirective	= nil;
@@ -4886,17 +4802,17 @@ void AppendChoicesToNewItem(
 		}
 	}
 	
-}//end LDrawGLViewPartsWereDraggedIntoOblivion:
+}//end LDrawViewPartsWereDraggedIntoOblivion:
 
 
-//========== LDrawGLViewPreferredPartTransform: ================================
+//========== LDrawViewPreferredPartTransform: ==================================
 //
 // Purpose:		Returns the part transform which would be nice applied to new 
 //			    parts. This is used during Drag-and-Drop to unpack directives 
 //			    and show them in the right place. 
 //
 //==============================================================================
-- (TransformComponents) LDrawGLViewPreferredPartTransform:(LDrawGLView *)glView
+- (TransformComponents) LDrawViewPreferredPartTransform:(LDrawView *)glView
 {
 	TransformComponents	components	 = IdentityComponents;
 	
@@ -4906,10 +4822,10 @@ void AppendChoicesToNewItem(
 		
 	return components;
 	
-}//end LDrawGLViewPreferredPartTransform:
+}//end LDrawViewPreferredPartTransform:
 
 
-//**** LDrawGLView ****
+//**** LDrawView ****
 
 //============ markPreviousSelection ============================================
 //
@@ -4945,7 +4861,7 @@ void AppendChoicesToNewItem(
 }//end unmarkPreviousSelection
 
 
-//========== LDrawGLView:wantsToSelectDirectives:selectionMode: ========
+//========== LDrawView:wantsToSelectDirectives:selectionMode: ========
 //
 // Purpose:		The given LDrawView has decided some directives should be 
 //				selected, probably because the user marquee selected.
@@ -4953,8 +4869,9 @@ void AppendChoicesToNewItem(
 //				"extension" is used.
 //
 //==============================================================================
-- (void)	LDrawGLView:(LDrawGLView *)glView
- wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode
+- (void)	   LDrawView:(LDrawView *)glView
+ wantsToSelectDirectives:(NSArray *)directivesToSelect
+		   selectionMode:(SelectionModeT) selectionMode
  {
 	if(markedSelection)
 	{
@@ -4988,32 +4905,32 @@ void AppendChoicesToNewItem(
 		
 	}
 	
-}//end LDrawGLView:wantsToSelectDirectives:selectionMode:
+}//end LDrawView:wantsToSelectDirectives:selectionMode:
 
 
-//========== LDrawGLView:wantsToSelectDirective:byExtendingSelection: ==========
+//========== LDrawView:wantsToSelectDirective:byExtendingSelection: ============
 //
 // Purpose:		The given LDrawView has decided some directive should be 
 //				selected, probably because the user clicked on it.
 //				Pass nil to mean deselect.
 //
 //==============================================================================
-- (void)	LDrawGLView:(LDrawGLView *)glView
+- (void)	  LDrawView:(LDrawView *)glView
  wantsToSelectDirective:(LDrawDirective *)directiveToSelect
    byExtendingSelection:(BOOL) shouldExtend
 {
 	[self selectDirective:directiveToSelect byExtendingSelection:shouldExtend];
 	
-}//end LDrawGLView:wantsToSelectDirective:byExtendingSelection:
+}//end LDrawView:wantsToSelectDirective:byExtendingSelection:
 
 
-//========== LDrawGLView:willBeginDraggingHandle: ==============================
+//========== LDrawView:willBeginDraggingHandle: ================================
 //
 // Purpose:		The view is about to begin direct primitive geometry 
 //				manipulation. We need to record the object state for undo. 
 //
 //==============================================================================
-- (void) LDrawGLView:(LDrawGLView *)glView willBeginDraggingHandle:(LDrawDragHandle *)dragHandle
+- (void) LDrawView:(LDrawView *)glView willBeginDraggingHandle:(LDrawDragHandle *)dragHandle
 {
 	LDrawDirective *primitive = [dragHandle target];
 	
@@ -5021,7 +4938,7 @@ void AppendChoicesToNewItem(
 }
 
 
-//========== LDrawGLView:writeDirectivesToPasteboard:asCopy: ===================
+//========== LDrawView:writeDirectivesToPasteboard:asCopy: =====================
 //
 // Purpose:		Begin a drag-and-drop part insertion initiated in the directive 
 //				view. 
@@ -5034,7 +4951,7 @@ void AppendChoicesToNewItem(
 //				to remember what step each dragged element belonged to. 
 //
 //==============================================================================
-- (BOOL)         LDrawGLView:(LDrawGLView *)glView
+- (BOOL)		   LDrawView:(LDrawView *)glView
  writeDirectivesToPasteboard:(NSPasteboard *)pasteboard
 					  asCopy:(BOOL)copyFlag
 {
@@ -5083,7 +5000,7 @@ void AppendChoicesToNewItem(
 
 	return success;
 	
-}//end LDrawGLView:writeDirectivesToPasteboard:asCopy:
+}//end LDrawView:writeDirectivesToPasteboard:asCopy:
 
 
 #pragma mark -
@@ -5353,7 +5270,7 @@ void AppendChoicesToNewItem(
 		// from our document or some other document.
 		if([[changedDirective ancestors] containsObject:docContents])		
 		{
-			// Post a notification that our doc changed; LDrawGLView needs this 
+			// Post a notification that our doc changed; LDrawView needs this
 			// to refresh drawing, and we ned it to redo our menus.
 			NSNotification * doc_notification = 
 				[NSNotification notificationWithName:LDrawDirectiveDidChangeNotification 
@@ -6143,19 +6060,19 @@ void AppendChoicesToNewItem(
 
 //========== all3DViewports ====================================================
 //
-// Purpose:		Returns an array of all the LDrawGLViews managed by the 
+// Purpose:		Returns an array of all the LDrawViews managed by the
 //				document and displaying the document contents. 
 //
 //==============================================================================
-- (NSArray<LDrawGLView*> *) all3DViewports
+- (NSArray<LDrawView*> *) all3DViewports
 {
 	NSArray<LDrawViewerContainer*>* viewerContainers	= [self->viewportArranger allViewports];
-	NSMutableArray<LDrawGLView*>*	viewports			= [NSMutableArray array];
+	NSMutableArray<LDrawView*>*	viewports			= [NSMutableArray array];
 
 	// Count up all the GL views in each column
 	for(LDrawViewerContainer* currentViewer in viewerContainers)
 	{
-		LDrawGLView* currentGLView = currentViewer.glView;
+		LDrawView* currentGLView = currentViewer.glView;
 		
 		[viewports addObject:currentGLView];
 	}
@@ -6165,15 +6082,15 @@ void AppendChoicesToNewItem(
 }//end all3DViewports
 
 
-//========== connectLDrawGLView: ===============================================
+//========== connectLDrawView: =================================================
 //
-// Purpose:		Associates the given LDrawGLView with this document.
+// Purpose:		Associates the given LDrawView with this document.
 //
 //==============================================================================
-- (void) connectLDrawGLView:(LDrawGLView *)glView
+- (void) connectLDrawView:(LDrawView *)glView
 {
-	[glView setDelegate:self];
-	
+	[glView setLDrawDelegate:self];
+
 	[glView setTarget:self];
 	[glView setForwardAction:@selector(advanceOneStep:)];
 	[glView setBackAction:@selector(backOneStep:)];
@@ -6181,7 +6098,7 @@ void AppendChoicesToNewItem(
 	
 	[glView setGridSpacingMode:[self gridSpacingMode]];
 	
-}//end connectLDrawGLView:
+}//end connectLDrawView:
 
 
 //========== main3DViewport ====================================================
@@ -6190,17 +6107,17 @@ void AppendChoicesToNewItem(
 //				like the current step orientation. 
 //
 //==============================================================================
-- (LDrawGLView *) main3DViewport
+- (LDrawView *) main3DViewport
 {
-	NSArray<LDrawGLView*>*	allViewports	= [self all3DViewports];
+	NSArray<LDrawView*>*	allViewports	= [self all3DViewports];
 	CGFloat 				largestArea 	= 0.0;
 	CGFloat 				currentArea 	= 0.0;
 	NSSize					currentSize 	= NSZeroSize;
-	LDrawGLView*			largestViewport = nil;
+	LDrawView*				largestViewport = nil;
 
 	// Find the largest viewport. We'll assume that's the one the user wants to 
 	// be the main one. 
-	for(LDrawGLView *currentViewport in allViewports)
+	for(LDrawView *currentViewport in allViewports)
 	{
 		currentSize = currentViewport.frame.size;
 		currentArea = currentSize.width * currentSize.height;
@@ -6227,8 +6144,8 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) updateViewportAutosaveNamesAndRestore:(BOOL)shouldRestore
 {
-	NSArray<LDrawGLView*>*	viewports		= [self all3DViewports];
-	LDrawGLView*			glView			= nil;
+	NSArray<LDrawView*>*	viewports		= [self all3DViewports];
+	LDrawView*				glView			= nil;
 	NSUInteger				viewportCount	= [viewports count];
 	NSUInteger				counter 		= 0;
 
@@ -6262,10 +6179,10 @@ void AppendChoicesToNewItem(
 		   didAddViewport:(LDrawViewerContainer *)newViewport
 		   sourceViewport:(LDrawViewerContainer *)sourceView
 {
-	LDrawGLView *glView         = newViewport.glView;
-	LDrawGLView *sourceGLView   = nil;
+	LDrawView *glView         = newViewport.glView;
+	LDrawView *sourceGLView   = nil;
 	
-	[self connectLDrawGLView:glView];
+	[self connectLDrawView:glView];
 	
 	[self loadDataIntoDocumentUI];
 	
@@ -6735,7 +6652,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) loadDataIntoDocumentUI
 {
-	NSArray<LDrawGLView*>*	graphicViews	= [self all3DViewports];
+	NSArray<LDrawView*>*	graphicViews	= [self all3DViewports];
 	NSUInteger				counter 		= 0;
 
 	for(counter = 0; counter < [graphicViews count]; counter++)
@@ -6950,7 +6867,7 @@ void AppendChoicesToNewItem(
 	NSInteger           requestedStep       = [activeModel maximumStepIndexForStepDisplay];
 	Tuple3              viewingAngle        = [activeModel rotationAngleForStepAtIndex:requestedStep];
 	ViewOrientationT    viewOrientation     = [LDrawUtilities viewOrientationForAngle:viewingAngle];
-	LDrawGLView         *affectedViewport   = [self main3DViewport];
+	LDrawView           *affectedViewport   = [self main3DViewport];
 	
 	// Set the Viewing angle
 	if(viewOrientation != ViewOrientation3D)
@@ -7192,7 +7109,7 @@ void AppendChoicesToNewItem(
 {
 	LDrawFile *docContents = [self documentContents];
 
-	// Post a notification that our doc changed; LDrawGLView needs this 
+	// Post a notification that our doc changed; LDrawView needs this
 	// to refresh drawing, and we ned it to redo our menus.
 	NSNotification * doc_notification = 
 		[NSNotification notificationWithName:LDrawDirectiveDidChangeNotification 

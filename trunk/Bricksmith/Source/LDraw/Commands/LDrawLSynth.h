@@ -63,7 +63,7 @@ typedef enum
     NSString        *synthType;
     int              lsynthClass;
     LDrawColor      *color;
-    GLfloat			 glTransformation[16];
+    float			 glTransformation[16];
     BOOL             hidden;
     BOOL             subdirectiveSelected;
     Box3			 cachedBounds;		// cached bounds of the enclosed directives

@@ -7,9 +7,9 @@
 
 #import "LDrawHighResPrimitives.h"
 
-#import "GLMatrixMath.h"
 #import "LDrawQuadrilateral.h"
 #import "LDrawTriangle.h"
+#import "MatrixMathEx.h"
 
 
 @interface LDrawHighResPrimitives ()
@@ -100,7 +100,7 @@
 		return NO;
 	}
 	
-	GLfloat v11, v12, v21, v22;
+	float v11, v12, v21, v22;
 	switch (axis) {
 		case AxisX:
 			v11 = component(vertex1, AxisY);
@@ -123,9 +123,9 @@
 		default:
 			return NO;
 	}
-	GLfloat R1 = sqrtf(v11 * v11 + v12 * v12);
-	GLfloat R2 = sqrtf(v21 * v21 + v22 * v22);
-	GLfloat Ra = (R1 + R2) / 2.0f;
+	float R1 = sqrtf(v11 * v11 + v12 * v12);
+	float R2 = sqrtf(v21 * v21 + v22 * v22);
+	float Ra = (R1 + R2) / 2.0f;
 	return Ra > 0.0f ? ABS(R1 - Ra) / Ra < 0.0001f : NO;
 }
 
@@ -139,9 +139,9 @@
 		return result;
 	}
 	
-	GLfloat x[3] = { 1, 0, 0 };
-	GLfloat y[3] = { 0, 1, 0 };
-	GLfloat z[3] = { 0, 0, 1 };
+	float x[3] = { 1, 0, 0 };
+	float y[3] = { 0, 1, 0 };
+	float z[3] = { 0, 0, 1 };
 	
 	Point3 *verticesPair[2];
 	
@@ -153,7 +153,7 @@
 	// adjust initial value temporary for specific cases
 	for (int step = 16; step <= 48; step += 8) {
 		for (int i = 0; i < 3; i++) {
-			GLfloat m[16];
+			float m[16];
 			buildRotationMatrix(m, 360.0f / step, x[i], y[i], z[i]);
 			rotationMatrix = Matrix4CreateFromGLMatrix4(m);
 			Point3 rotatedPoint = V3MulPointByProjMatrix(*verticesPair[0], rotationMatrix);

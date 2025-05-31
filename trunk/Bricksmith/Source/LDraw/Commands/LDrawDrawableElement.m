@@ -111,118 +111,6 @@
 
 
 #pragma mark -
-#pragma mark DIRECTIVES
-#pragma mark -
-
-//========== draw:viewScale:parentColor: =======================================
-//
-// Purpose:		Draws the part. This is a wrapper method that just sets up the 
-//				drawing context (the color), then calls a subroutine which 
-//				actually draws the element.
-//
-//==============================================================================
-- (void) draw:(NSUInteger)optionsMask viewScale:(float)scaleFactor parentColor:(LDrawColor *)parentColor
-
-{
-	//[super draw]; //does nothing anyway; don't call it.
-	
-	if(self->hidden == NO)
-	{
-		// Resolve color and draw
-		
-		switch([self->color colorCode])
-		{
-			case LDrawCurrentColor:
-				// Just draw; don't fool with colors. A significant portion of our 
-				// drawing code probably falls into this category.
-				[self drawElement:optionsMask viewScale:scaleFactor withColor:parentColor];
-				break;
-				
-			case LDrawEdgeColor:
-				[self drawElement:optionsMask viewScale:scaleFactor withColor:[self->color complimentColor]];
-				break;
-			
-			case LDrawColorCustomRGB:
-			default:
-				[self drawElement:optionsMask viewScale:scaleFactor withColor:self->color];
-				break;
-		}
-	}
-	
-}//end draw:optionsMask:
-
-
-//========== writeToVertexBuffer:parentColor: ==================================
-//
-// Purpose:		Resolve the correct color
-//
-//==============================================================================
-- (VBOVertexData *) writeToVertexBuffer:(VBOVertexData *)vertexBuffer
-							parentColor:(LDrawColor *)parentColor
-							  wireframe:(BOOL)wireframe
-{
-	VBOVertexData *endPointer = NULL;
-	
-	if(parentColor == nil || self->color == nil)
-	{
-		NSLog(@"nil color");
-	}
-	
-	switch([self->color colorCode])
-	{
-		case LDrawCurrentColor:
-			//Just draw; don't fool with colors. A significant portion of our 
-			// drawing code probably falls into this category.
-			endPointer = [self writeElementToVertexBuffer:vertexBuffer withColor:parentColor wireframe:wireframe];
-			break;
-			
-		case LDrawEdgeColor:
-			// We'll need to turn this on to support file-local colors.
-			//				ColorLibrary	*colorLibrary	= [[[self enclosingDirective] enclosingModel] colorLibrary];
-			//				LDrawColor		*colorObject	= [colorLibrary colorForCode:self->color];
-			endPointer = [self writeElementToVertexBuffer:vertexBuffer withColor:[parentColor complimentColor] wireframe:wireframe];
-			break;
-			
-		case LDrawColorCustomRGB:
-		default:
-			endPointer = [self writeElementToVertexBuffer:vertexBuffer withColor:self->color wireframe:wireframe];
-			break;
-	}
-	
-	return endPointer;
-	
-}//end writeToVertexBuffer:parentColor:
-
-
-//========== drawElement:viewScale:withColor: ==================================
-//
-// Purpose:		Draws the actual drawable stuff (polygons, etc.) of the element. 
-//				This is a subroutine of the -draw: method, which wraps some 
-//				shared functionality such as setting colors.
-//
-//==============================================================================
-- (void) drawElement:(NSUInteger)optionsMask viewScale:(float)scaleFactor withColor:(LDrawColor *)drawingColor
-{
-	//implemented by subclasses.
-	
-}//end drawElement:withColor:
-
-
-//========== writeElementToVertexBuffer:withColor:wireframe: ===================
-//
-// Purpose:		Copies the actual vertex data into the buffer, now that setup 
-//				has been done in -writeToVertexBuffer: 
-//
-//==============================================================================
-- (VBOVertexData *) writeElementToVertexBuffer:(VBOVertexData *)vertexBuffer
-									 withColor:(LDrawColor *)drawingColor
-									 wireframe:(BOOL)wireframe
-{
-	//implemented by subclasses.
-	return NULL;
-}
-
-#pragma mark -
 #pragma mark ACCESSORS
 #pragma mark -
 
@@ -444,7 +332,7 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== flattenIntoLines:triangles:quadrilaterals:other:currentColor: =====
+//==== flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:... ====
 //
 // Purpose:		Appends the directive into the appropriate container. 
 //
@@ -459,6 +347,7 @@
 //
 //==============================================================================
 - (void) flattenIntoLines:(NSMutableArray *)lines
+		 conditionalLines:(NSMutableArray *)conditionalLines
 				triangles:(NSMutableArray *)triangles
 		   quadrilaterals:(NSMutableArray *)quadrilaterals
 					other:(NSMutableArray *)everythingElse
@@ -505,7 +394,7 @@
 		// This directive is already explicitly colored. Just add.
 	}
 	
-}//end flattenIntoLines:triangles:quadrilaterals:other:currentColor:
+}//end flattenIntoLines:conditionalLines:triangles:quadrilaterals:other:...
 
 
 @end

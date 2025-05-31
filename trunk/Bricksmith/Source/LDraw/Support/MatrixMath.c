@@ -11,12 +11,12 @@
 //==============================================================================
 #include "MatrixMath.h"
 
-#include "GLMatrixMath.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "MatrixMathEx.h"
 
 const Size2 ZeroSize2   = {0.0, 0.0};
 const Box2  ZeroBox2    = {	{0.0, 0.0},
@@ -588,7 +588,7 @@ float Matrix2x2Determinant( float a, float b, float c, float d)
 // Purpose:		Returns point's component by index
 //
 //==============================================================================
-GLfloat component(Point3 point, int index)
+float component(Point3 point, int index)
 {
 	switch (index) {
 		case 0:
@@ -1727,6 +1727,35 @@ Matrix3 Matrix3MakeNormalTransformFromProjMatrix(Matrix4 transformationMatrix)
 }//end Matrix3MakeNormalTransformFromProjMatrix
 
 
+//========== Matrix3AlignedCreate() ============================================
+//
+// Purpose:		Returns a GPU-aligned matrix similar to given CPU-aligned matrix.
+//
+//				+-     -+			+-       -+
+//				| a d g |			| a d g 0 |
+//				| b e h |	 -->	| b e h 0 |
+//				| c f i |			| c f i 0 |
+//				+-     -+			+-       -+
+//		   CPU-aligned matrix    GPU-aligned matrix
+//
+//==============================================================================
+Matrix3Aligned Matrix3AlignedCreate(Matrix3 matrix)
+{
+	int				row, col;
+	Matrix3Aligned	newMatrix;
+
+	for (row = 0; row < 3; row++) {
+		for (col = 0; col < 3; col++) {
+			newMatrix.element[row][col] = matrix.element[row][col];
+		}
+		newMatrix.element[row][3] = 0.0f; // Add padding
+	}
+
+	return newMatrix;
+
+}//end Matrix3AlignedCreate
+
+
 #pragma mark -
 #pragma mark 4-D LIBRARY
 #pragma mark -
@@ -1828,7 +1857,7 @@ Vector4 V4MulPointByMatrix(Vector4 pin, Matrix4 m)
 //				(flat column-major of transpose)   (shown multiplied by a point)  
 //
 //==============================================================================
-Matrix4 Matrix4CreateFromGLMatrix4(const GLfloat *glMatrix)
+Matrix4 Matrix4CreateFromGLMatrix4(const float *glMatrix)
 {
 	int		row, column;
 	Matrix4	newMatrix;
@@ -2213,7 +2242,7 @@ Tuple3 Matrix4DecomposeZYXRotation(Matrix4 matrix)
 //  (also Matrix4 format)
 //
 //==============================================================================
-void Matrix4GetGLMatrix4(Matrix4 matrix, GLfloat *glTransformation)
+void Matrix4GetGLMatrix4(Matrix4 matrix, float *glTransformation)
 {
 	unsigned int row, column;
 	
@@ -2264,14 +2293,14 @@ Matrix4 Matrix4Multiply(Matrix4 a, Matrix4 b)
 // Notes:		c must not point to either of the input matrices
 //
 //==============================================================================
-void Matrix4MultiplyGLMatrices(GLfloat *a, GLfloat *b, GLfloat *result)
+void Matrix4MultiplyGLMatrices(float *a, float *b, float *result)
 {
 	int row;
 	int column;
 	int k;
 	
 	// Zero the result
-	memset(result, 0, sizeof(GLfloat[16]));
+	memset(result, 0, sizeof(float[16]));
 	
 	// Multiply
 	for (row = 0; row < 4; row++)
@@ -2646,10 +2675,10 @@ bool	VolumeCanIntersectBox(
 	   bounds.min.y > bounds.max.y ||
 	   bounds.min.z > bounds.max.z)		return false;
 	   
-	GLfloat aabb_mv[6] = {	bounds.min.x, bounds.min.y, bounds.min.z,
-							bounds.max.x, bounds.max.y, bounds.max.z };
-	GLfloat aabb_ndc[6];
-	GLfloat m[16];
+	float aabb_mv[6] = { bounds.min.x, bounds.min.y, bounds.min.z,
+						 bounds.max.x, bounds.max.y, bounds.max.z };
+	float aabb_ndc[6];
+	float m[16];
 	
 	Matrix4GetGLMatrix4(transform, m);
 	
@@ -2697,10 +2726,10 @@ bool		VolumeCanIntersectPoint(
 	// bounding box.  If we don't, geometry behind the camera will mirror around the
 	// XZ and YZ planes and cause chaos.
 	   
-	GLfloat aabb_mv[6] = {	bounds.min.x, bounds.min.y, bounds.min.z,
-							bounds.max.x, bounds.max.y, bounds.max.z };
-	GLfloat aabb_ndc[6];
-	GLfloat m[16];
+	float aabb_mv[6] = { bounds.min.x, bounds.min.y, bounds.min.z,
+						 bounds.max.x, bounds.max.y, bounds.max.z };
+	float aabb_ndc[6];
+	float m[16];
 	
 	Matrix4GetGLMatrix4(transform, m);
 	

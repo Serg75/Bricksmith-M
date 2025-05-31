@@ -23,14 +23,15 @@
 //==============================================================================
 #import "PartBrowserDataSource.h"
 
+#import "GPU.h"
 #import "IconTextCell.h"
-#import "LDrawApplication.h"
+#import "LDrawApplicationGPU.h"
 #import "LDrawColorPanelController.h"
 #import "LDrawModel.h"
 #import "LDrawPart.h"
 #import "LDrawViewerContainer.h"
 #import "MacLDraw.h"
-#import "PartLibrary.h"
+#import PartLibraryGPU_h
 #import "StringCategory.h"
 #import "TableViewCategory.h"
 
@@ -85,8 +86,8 @@
 		// - Part preview
 		
 		[self->partPreview setAcceptsFirstResponder:NO];
-		[self->partPreview setDelegate:self];
-		
+		[self->partPreview setLDrawDelegate:self];
+
 		[self->zoomInButton setTarget:self->partPreview];
 		[self->zoomInButton setAction:@selector(zoomIn:)];
 		[self->zoomInButton setToolTip:NSLocalizedString(@"ZoomInTooltip", nil)];
@@ -144,7 +145,7 @@
 		
 		//---------- Set Data --------------------------------------------------
 		
-		[self setPartLibrary:[PartLibrary sharedPartLibrary]];
+		[self setPartLibrary:[PartLibraryGPU sharedPartLibrary]];
 		[self loadCategory:startingCategory];
 		
 		[partsTable scrollRowToVisible:startingRow];
@@ -601,13 +602,13 @@
 
 #pragma mark LDrawGLView
 
-//========== LDrawGLView:writeDirectivesToPasteboard:asCopy: ===================
+//========== LDrawView:writeDirectivesToPasteboard:asCopy: =====================
 //
 // Purpose:		Begin a drag-and-drop part insertion initiated in the directive 
 //				view. 
 //
 //==============================================================================
-- (BOOL)         LDrawGLView:(LDrawGLView *)glView
+- (BOOL)           LDrawView:(LDrawView *)glView
  writeDirectivesToPasteboard:(NSPasteboard *)pasteboard
 					  asCopy:(BOOL)copyFlag
 {
@@ -615,7 +616,7 @@
 	
 	return success;
 	
-}//end LDrawGLView:writeDirectivesToPasteboard:asCopy:
+}//end LDrawView:writeDirectivesToPasteboard:asCopy:
 
 
 #pragma mark -
@@ -1092,7 +1093,7 @@
 		//Set up the part attributes
 		[newPart setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 		[newPart setDisplayName:selectedPartName];
-		[[LDrawApplication sharedOpenGLContext] makeCurrentContext];
+		[LDrawApplication makeCurrentSharedContext];
 	}
 	[partPreview setLDrawDirective:newPart];
 	

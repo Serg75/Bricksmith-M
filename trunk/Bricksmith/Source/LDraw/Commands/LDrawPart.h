@@ -9,7 +9,6 @@
 //  Copyright (c) 2005. All rights reserved.
 //==============================================================================
 #import <Foundation/Foundation.h>
-#import OPEN_GL_HEADER
 
 #import "ColorLibrary.h"
 #import "LDrawDirective.h"
@@ -41,7 +40,7 @@ typedef enum PartType {
 	NSString		*displayName;
 	NSString		*referenceName; 		//lower-case version of display name
 	
-	GLfloat			glTransformation[16];
+	float			glTransformation[16];
 
 	LDrawDirective	*cacheDrawable;			// The drawable is the model we link to OR a VBO that represents it from the part library -- a drawable proxy.
 	LDrawModel		*cacheModel;			// The model is the real model we link to.

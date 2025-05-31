@@ -3,7 +3,7 @@
 // File:		ToolPalette.h
 //
 // Purpose:		Manages the current tool mode in effect when the mouse is used 
-//				in an LDrawGLView.
+//				in an LDrawView.
 //
 //  Created by Allen Smith on 1/20/06.
 //  Copyright 2006. All rights reserved.

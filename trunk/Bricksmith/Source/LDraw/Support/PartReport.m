@@ -27,7 +27,8 @@
 #import "LDrawContainer.h"
 #import "LDrawKeywords.h"
 #import "LDrawPart.h"
-#import "PartLibrary.h"
+
+#import PartLibraryGPU_h
 
 NSString    *PART_REPORT_NUMBER_KEY     = @"Part Number";
 NSString    *PART_REPORT_NAME_KEY       = @"Part Name";
@@ -117,7 +118,7 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 //==============================================================================
 - (void) getMissingPiecesReport
 {
-	PartLibrary		*partLibrary		= [PartLibrary sharedPartLibrary];
+	PartLibrary		*partLibrary		= [PartLibraryGPU sharedPartLibrary];
 	NSArray			*elements			= [self->reportedObject allEnclosedElements];
 	id				 currentElement		= nil;
 //	LDrawModel		*partModel			= nil;
@@ -240,7 +241,7 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 	NSDictionary    *quantitiesForPart      = nil;
 	NSArray         *allColors              = nil;
 	
-	PartLibrary     *partLibrary            = [PartLibrary sharedPartLibrary];
+	PartLibrary     *partLibrary            = [PartLibraryGPU sharedPartLibrary];
 	
 	NSDictionary    *currentPartRecord      = nil;
 	NSString        *currentPartNumber      = nil;

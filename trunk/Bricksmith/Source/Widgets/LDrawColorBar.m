@@ -28,7 +28,10 @@
 	if (self) {
 		// fix macOS 14 issue with default value = NO
 		// it looks like the entire window is filled with some color
-		self.clipsToBounds = YES;
+		self.wantsLayer = YES;
+		self.layer.masksToBounds = YES;
+		// These 2 lines are self.clipsToBounds = YES; equivalent compatible
+		// with older Xcode/macOS SDKs
 	}
 	return self;
 }
@@ -88,7 +91,7 @@
 - (void) setLDrawColor:(LDrawColor *) newColor
 {
 	NSString    *description    = nil;
-	GLfloat     components[4];
+	float       components[4];
 	
 	// assign ivar
 	self->color = newColor;
