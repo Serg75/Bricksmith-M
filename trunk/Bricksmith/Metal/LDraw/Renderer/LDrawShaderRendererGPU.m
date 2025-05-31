@@ -242,22 +242,8 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 
 		[self pushMatrix:m];
 
-		inst_data[0] = transform_now[0];		// Note: copy on transpose to get matrix into right form!
-		inst_data[1] = transform_now[4];
-		inst_data[2] = transform_now[8];
-		inst_data[3] = transform_now[12];
-		inst_data[4] = transform_now[1];
-		inst_data[5] = transform_now[5];
-		inst_data[6] = transform_now[9];
-		inst_data[7] = transform_now[13];
-		inst_data[8] = transform_now[2];
-		inst_data[9] = transform_now[6];
-		inst_data[10] = transform_now[10];
-		inst_data[11] = transform_now[14];
-		inst_data[12] = transform_now[3];
-		inst_data[13] = transform_now[7];
-		inst_data[14] = transform_now[11];
-		inst_data[15] = transform_now[15];
+		// Copy on transpose to get matrix into right form!
+		copy_matrix_transposed(inst_data, transform_now);
 
 		[self popMatrix];
 

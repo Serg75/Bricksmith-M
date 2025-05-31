@@ -596,22 +596,8 @@ static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 		if (inst->is_wireframe != is_wireframe) {
 			continue;
 		}
-		inst_data[0] = inst->transform[0];		// Note: copy on transpose to get matrix into right form!
-		inst_data[1] = inst->transform[4];
-		inst_data[2] = inst->transform[8];
-		inst_data[3] = inst->transform[12];
-		inst_data[4] = inst->transform[1];
-		inst_data[5] = inst->transform[5];
-		inst_data[6] = inst->transform[9];
-		inst_data[7] = inst->transform[13];
-		inst_data[8] = inst->transform[2];
-		inst_data[9] = inst->transform[6];
-		inst_data[10] = inst->transform[10];
-		inst_data[11] = inst->transform[14];
-		inst_data[12] = inst->transform[3];
-		inst_data[13] = inst->transform[7];
-		inst_data[14] = inst->transform[11];
-		inst_data[15] = inst->transform[15];
+		// Copy on transpose to get matrix into right form!
+		copy_matrix_transposed(inst_data, inst->transform);
 		copy_vec4(inst_data + 16, inst->color);
 		copy_vec4(inst_data + 20, inst->comp);
 		inst_data += InstanceInputLength;

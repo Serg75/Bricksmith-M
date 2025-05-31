@@ -91,3 +91,34 @@ void simd_matrix_to_array(matrix_float4x4 matrix, float *result) {
 	result[15] = matrix.columns[3].w;
 
 }//end simd_matrix_to_array
+
+
+//========== copy_matrix_transposed ============================================
+//
+// Purpose:   Copy a float[16] matrix (column-major) directly to a float buffer
+//            in transposed (row-major) form.
+//
+//==============================================================================
+void copy_matrix_transposed(float *dest, const float *source) {
+	// Row 0:
+	dest[0]  = source[0];
+	dest[1]  = source[4];
+	dest[2]  = source[8];
+	dest[3]  = source[12];
+	// Row 1:
+	dest[4]  = source[1];
+	dest[5]  = source[5];
+	dest[6]  = source[9];
+	dest[7]  = source[13];
+	// Row 2:
+	dest[8]  = source[2];
+	dest[9]  = source[6];
+	dest[10] = source[10];
+	dest[11] = source[14];
+	// Row 3:
+	dest[12] = source[3];
+	dest[13] = source[7];
+	dest[14] = source[11];
+	dest[15] = source[15];
+
+}//end copy_matrix_transposed
