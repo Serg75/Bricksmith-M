@@ -48,7 +48,7 @@
 	<key>CFBundleSignature</key>
 	<string>Brik</string>
 	<key>CFBundleVersion</key>
-	<string>3.1.0</string>
+	<string>4.0.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.11.0</string>
 	<key>NSMainNibFile</key>
@@ -56,7 +56,7 @@
 	<key>NSPrincipalClass</key>
 	<string>BricksmithApplication</string>
 	<key>SUFeedURL</key>
-	<string>https://bricksmith.sourceforge.io/files/bricksmith_appcast_3.1.xml</string>
+	<string>https://bricksmith.sourceforge.io/files/bricksmith_appcast_4.0.xml</string>
 	<key>SUPublicDSAKeyFile</key>
 	<string>Bricksmith_Sparkle_signature_public.pem</string>
 	<key>SUPublicEDKey</key>
