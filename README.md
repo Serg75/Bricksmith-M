@@ -52,8 +52,7 @@ I am deeply grateful to [Allen Smith](https://github.com/allenmonroesmith) and [
 ## Installation
 
 1. Download the latest release from the releases page or build from these sources
-2. If downloaded: Mount the disk image and drag Bricksmith-M to your Applications folder
-3. Launch the application and follow the setup wizard to download the LDraw parts library
+2. Launch the application and follow the setup wizard to download the LDraw parts library
 
 ## Getting Started
 
