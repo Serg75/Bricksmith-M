@@ -302,11 +302,13 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 	id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 	commandBuffer.label = @"Drawable Command Buffer";
 	if (!commandBuffer) {
+		dispatch_semaphore_signal(_inFlightSemaphore);
 		return;
 	}
 
 	id<CAMetalDrawable> currentDrawable = view.currentDrawable;
 	if (!currentDrawable) {
+		dispatch_semaphore_signal(_inFlightSemaphore);
 		return;
 	}
 
@@ -315,6 +317,7 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 
 	MTLRenderPassDescriptor *renderPassDescriptor = MTLRenderPassDescriptor.renderPassDescriptor;
 	if (renderPassDescriptor == nil) {
+		dispatch_semaphore_signal(_inFlightSemaphore);
 		return;
 	}
 
@@ -387,15 +390,16 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 	// present the drawable and buffer
 	[commandBuffer presentDrawable:currentDrawable];
 
-	// send the commands to the GPU
-	[commandBuffer commit];
-
 	// Add a completion handler that signals the semaphore when the GPU is done with this frame.
 	// This indicates that we can change the buffer contents without corrupting any rendering.
+	// IMPORTANT: This must be added BEFORE commit, not after!
 	__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
 	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
 		dispatch_semaphore_signal(block_sema);
 	}];
+
+	// send the commands to the GPU
+	[commandBuffer commit];
 
 	// If we just did a full draw, let's see if rotating needs to be
 	// done simply.
