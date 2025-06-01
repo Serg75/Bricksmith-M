@@ -8,7 +8,7 @@ A modernized and enhanced [LDraw](https://www.ldraw.org/) editor for creating an
 
 Bricksmith-M is a powerful CAD application designed specifically for LEGO enthusiasts and builders. This enhanced version provides an intuitive interface for creating detailed LEGO models using the LDraw standard format, with support for complex multi-step building instructions and advanced rendering features. Key improvements include Metal-powered graphics rendering, ARC memory management, enhanced workflow tools, and better integration with modern LEGO building communities.
 
-I am deeply grateful to [bsupnik](https://github.com/bsupnik) and [Allen Smith](https://github.com/allenmonroesmith) for their well-crafted work in creating an excellent application for LDraw editing. They have made digital LEGO building easy to use and enjoyable. In 2021, they updated Bricksmith to work with newer Xcode versions and modern macOS systems. You can find the current official Bricksmith version at: [bsupnik/bricksmith](https://github.com/bsupnik/bricksmith).
+I am deeply grateful to [Allen Smith](https://github.com/allenmonroesmith) and [Ben Supnik](https://github.com/bsupnik) for their well-crafted work in creating an excellent application for LDraw editing. They have made digital LEGO building easy to use and enjoyable. In 2021, they updated Bricksmith to work with newer Xcode versions and modern macOS systems. You can find the current official Bricksmith version at: [bsupnik/bricksmith](https://github.com/bsupnik/bricksmith).
 
 ## System Requirements
 
