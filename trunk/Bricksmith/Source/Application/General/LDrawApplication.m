@@ -438,6 +438,7 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	BOOL				 showPartBrowser	= [userDefaults boolForKey:PART_BROWSER_PANEL_SHOW_AT_LAUNCH];
 	
 	[self populateLSynthModelMenus];
+	[self buildMainMenu];
 	
 	if(		showPartBrowser == YES
 	   &&	[userDefaults integerForKey:PART_BROWSER_STYLE_KEY] == PartBrowserShowAsPanel)
@@ -824,6 +825,46 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	[insideOutsideMenu addItem:addCrossItem];
 	
 }//end populateLSynthModelMenus
+
+
+//========== buildMainMenu =====================================================
+//
+// Purpose:		Configure the main application menu based on build configuration.
+//				For Metal builds, updates menu items to show "Bricksmith-M".
+//
+//==============================================================================
+- (void) buildMainMenu
+{
+#ifdef METAL
+	// Update menu items to show "Bricksmith-M" for Metal build
+	NSMenu *mainMenu = [NSApp mainMenu];
+	NSMenuItem *appMenuItem = [mainMenu itemWithTitle:@"Bricksmith"];
+	
+	if (appMenuItem) {
+		[appMenuItem setTitle:@"Bricksmith-M"];
+		NSMenu *appSubmenu = [appMenuItem submenu];
+		
+		if (appSubmenu) {
+			[appSubmenu setTitle:@"Bricksmith-M"];
+			
+			NSMenuItem *aboutMenuItem = [appSubmenu itemWithTitle:@"About Bricksmith"];
+			if (aboutMenuItem) {
+				[aboutMenuItem setTitle:@"About Bricksmith-M"];
+			}
+			
+			NSMenuItem *hideMenuItem = [appSubmenu itemWithTitle:@"Hide Bricksmith"];
+			if (hideMenuItem) {
+				[hideMenuItem setTitle:@"Hide Bricksmith-M"];
+			}
+			
+			NSMenuItem *quitMenuItem = [appSubmenu itemWithTitle:@"Quit Bricksmith"];
+			if (quitMenuItem) {
+				[quitMenuItem setTitle:@"Quit Bricksmith-M"];
+			}
+		}
+	}
+#endif
+}//end buildMainMenu
 
 
 //========== userName ==========================================================
