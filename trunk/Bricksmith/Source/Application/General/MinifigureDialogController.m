@@ -28,6 +28,7 @@
 	MLCadIni		*iniFile;
 	NSString		*minifigureName;
 	LDrawMPDModel	*minifigure;
+	NSArray			*topLevelObjects;	// holds NIB objects
 	
 	BOOL		hasHat;
 	BOOL		hasNeckAccessory;
@@ -140,7 +141,9 @@
 	//we'll call -generateMinifigure: when the dialog is ready and loaded with 
 	// all its values.
 	
-	[NSBundle loadNibNamed:@"MinifigureGenerator" owner:self];
+	NSArray *nibObjects = nil;
+	[[NSBundle mainBundle] loadNibNamed:@"MinifigureGenerator" owner:self topLevelObjects:&nibObjects];
+	topLevelObjects = nibObjects;
 	
 	return self;
 	
@@ -913,7 +916,7 @@
 //==============================================================================
 - (void) dealloc
 {
-    CFRelease((__bridge CFTypeRef)_minifigureGeneratorPanel);
+    topLevelObjects = nil;
 	
 }//end dealloc
 

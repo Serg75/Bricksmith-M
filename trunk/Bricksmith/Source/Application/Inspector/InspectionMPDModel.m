@@ -26,8 +26,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorMPDModel" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorMPDModel.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorMPDModel" owner:self topLevelObjects:&nibObjects]) {
+		topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorMPDModel.nib");
     }
 	
     return self;
@@ -253,5 +256,21 @@
 		[[self object] setModelDescription:newName];
 	}
 }
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Clean up memory.
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+	
+}//end dealloc
 
 @end

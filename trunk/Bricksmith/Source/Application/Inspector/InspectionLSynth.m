@@ -32,8 +32,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorLSynth" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorLSynth.xib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorLSynth" owner:self topLevelObjects:&nibObjects]) {
+		topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorLSynth.xib");
     }
 
     return self;
@@ -368,6 +371,22 @@
         [SynthTypeLabel setStringValue:@"Band Type:"];
     }
 }
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ============================================================
+//
+// Purpose:		Cleanup
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+
+}//end dealloc
 
 
 @end

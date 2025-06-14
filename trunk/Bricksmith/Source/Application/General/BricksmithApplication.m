@@ -41,9 +41,9 @@
 {
 	// We want to track keyboard events in our own little place, completely 
 	// separate from the responder chain.
-	if(		[theEvent type] == NSKeyDown
-		||	[theEvent type] == NSKeyUp
-		||	[theEvent type] == NSFlagsChanged )
+	if(		[theEvent type] == NSEventTypeKeyDown
+		||	[theEvent type] == NSEventTypeKeyUp
+		||	[theEvent type] == NSEventTypeFlagsChanged )
 	{
 		[[NSNotificationCenter defaultCenter]
 							postNotificationName:LDrawKeyboardDidChangeNotification
@@ -53,7 +53,7 @@
 	// chain. Make this global like it should be. Cocoa kindly sends us 
 	// tablet-prox messages when the application activates, so we'll 
 	// actually be correct as we track this now. 
-	else if( [theEvent type] == NSTabletProximity )
+	else if( [theEvent type] == NSEventTypeTabletProximity )
 	{
 		[[NSNotificationCenter defaultCenter]
 							postNotificationName:LDrawPointingDeviceDidChangeNotification
@@ -91,9 +91,9 @@
 //==============================================================================
 - (BOOL) shouldPropogateEvent:(NSEvent *)theEvent
 {
-	if(		[theEvent type] == NSKeyDown
+	if(		[theEvent type] == NSEventTypeKeyDown
 	   &&	[[theEvent characters] isEqualToString:@" "] == YES
-	   &&	([theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask) == NSCommandKeyMask
+	   &&	([theEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask) == NSEventModifierFlagCommand
 	   )
 		return NO;
 	else

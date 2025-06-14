@@ -42,7 +42,7 @@
 	// The overlay content itself is offloaded to a child window (which is 
 	// hardware-composited by the OS for sizzling performance). 
 	self->helperWindow = [[OverlayHelperWindow alloc] initWithContentRect:NSMakeRect(-10000,-10000,1,1)
-																styleMask:NSBorderlessWindowMask
+																styleMask:NSWindowStyleMaskBorderless
 																  backing:NSBackingStoreBuffered
 																	defer:YES
 																  ordered:NSWindowAbove];

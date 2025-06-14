@@ -27,6 +27,8 @@
 @property (nonatomic, weak) IBOutlet	NSTextField*	endPointYField;
 @property (nonatomic, weak) IBOutlet	NSTextField*	endPointZField;
 
+@property (nonatomic, strong)			NSArray*		topLevelObjects;	// holds NIB objects
+
 @end
 
 
@@ -41,8 +43,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorLine" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorLine.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorLine" owner:self topLevelObjects:&nibObjects]) {
+		self.topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorLine.nib");
     }
     return self;
 	
@@ -162,6 +167,22 @@
 	}
 		
 }//end endPointEndedEditing:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Clean up memory.
+//
+//==============================================================================
+- (void) dealloc
+{
+	self.topLevelObjects = nil;
+	
+}//end dealloc
 
 
 @end

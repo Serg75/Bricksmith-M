@@ -40,7 +40,7 @@
 	[[NSColor colorWithDeviceWhite:0.6 alpha:0.75] set];
 	[[NSBezierPath bezierPathWithRect:NSMakeRect(0, 0, dragImageSize.width,dragImageSize.height) radiusPercentage:50.0] fill];
 	
-	[brickImage drawAtPoint:NSMakePoint(border, border) fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
+	[brickImage drawAtPoint:NSMakePoint(border, border) fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1.0];
 	
 	[dragImage unlockFocus];
 	

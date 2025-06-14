@@ -23,6 +23,8 @@
 	__weak IBOutlet NSPopUpButton  *constraintDefaultPopup;
 	__weak IBOutlet NSPopUpButton  *defaultConstraints;
 	__weak IBOutlet LDrawColorWell *colorWell;
+
+	NSArray						   *topLevelObjects;	// holds NIB objects
 }
 
 //@property(nonatomic, retain) NSPopUpButton *typePopup;

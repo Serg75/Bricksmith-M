@@ -21,6 +21,8 @@
 	// NOT to File's Owner. File's Owner will be deallocated as 
 	// soon as the Nib is loaded; only dialogPanel will survive.
 	IBOutlet NSObjectController	*objectController;
+	
+	NSArray						*topLevelObjects;		// holds NIB objects
 }
 
 //Accessors

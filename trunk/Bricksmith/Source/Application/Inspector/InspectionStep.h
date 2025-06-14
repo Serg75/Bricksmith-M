@@ -39,6 +39,8 @@ typedef enum
 	__weak IBOutlet NSTextField		*rotationYField;
 	__weak IBOutlet NSTextField		*rotationZField;
 	__weak IBOutlet NSButton		*useCurrentAngleButton;
+	
+	NSArray							*topLevelObjects;		// holds NIB objects
 }
 
 // Constraints

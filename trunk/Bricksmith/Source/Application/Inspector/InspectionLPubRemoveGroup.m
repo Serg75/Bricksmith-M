@@ -15,6 +15,8 @@
 @property (nonatomic, weak) IBOutlet NSComboBox		*groupNamesComboBox;
 @property (nonatomic, weak) IBOutlet NSTextField	*fullCommandTextField;
 
+@property (nonatomic, strong) NSArray				*topLevelObjects;	// holds NIB objects
+
 @property (nonatomic, strong) NSSet<NSString *>		*groupNames;
 
 @end
@@ -33,7 +35,10 @@
 {
 	self = [super init];
 	if (self) {
-		if ([NSBundle loadNibNamed:@"InspectorRemoveGroup" owner:self] == NO) {
+		NSArray *nibObjects = nil;
+		if ([[NSBundle mainBundle] loadNibNamed:@"InspectorRemoveGroup" owner:self topLevelObjects:&nibObjects]) {
+			self.topLevelObjects = nibObjects;
+		} else {
 			NSLog(@"Couldn't load InspectorRemoveGroup.nib");
 		}
 	}
@@ -139,6 +144,20 @@
 		[self finishedEditing:sender];
 		
 }//end groupNamesComboBoxChanged:
+
+
+// MARK: - DESTRUCTOR -
+
+//========== dealloc ============================================================
+///
+/// @abstract	Cleanup
+///
+//==============================================================================
+- (void) dealloc
+{
+	self.topLevelObjects = nil;
+
+}//end dealloc
 
 
 @end

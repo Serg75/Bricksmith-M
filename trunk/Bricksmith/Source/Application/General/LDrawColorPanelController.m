@@ -365,8 +365,14 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	
 	// Get the object from preferences.
 	savedDescriptorData = [userDefaults objectForKey:COLOR_SORT_DESCRIPTORS_KEY];
-	if(savedDescriptorData != nil)
-		savedDescriptors = [NSKeyedUnarchiver unarchiveObjectWithData:savedDescriptorData];
+	if(savedDescriptorData != nil) {
+		NSError *unarchiveError = nil;
+		NSSet *allowedClasses = [NSSet setWithObjects:[NSArray class], [NSSortDescriptor class], nil];
+		savedDescriptors = [NSKeyedUnarchiver unarchivedObjectOfClasses:allowedClasses fromData:savedDescriptorData error:&unarchiveError];
+		if (unarchiveError != nil) {
+			NSLog(@"Failed to unarchive color sort descriptors: %@", unarchiveError);
+		}
+	}
 	
 	// Regenerate them if needed
 	if(savedDescriptors == nil)
@@ -575,7 +581,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	else if([keyPath isEqualToString:@"sortDescriptors"])
 	{
 		NSArray			*newDescriptors			= [self->colorListController sortDescriptors];;
-		NSData			*savedDescriptorData	= [NSKeyedArchiver archivedDataWithRootObject:newDescriptors];
+		NSData			*savedDescriptorData	= [NSKeyedArchiver archivedDataWithRootObject:newDescriptors requiringSecureCoding:NO error:nil];
 		NSUserDefaults	*userDefaults			= [NSUserDefaults standardUserDefaults];
 		
 		// Set the object in preferences.

@@ -292,7 +292,7 @@ SearchPanelController *sharedSearchPanel = nil;
     }
 
     // Filter hidden parts out if appropriate
-    if ([searchHiddenParts state] == NSOnState) {
+	if ([searchHiddenParts state] == NSControlStateValueOn) {
         [matchables enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
             if ([obj respondsToSelector:@selector(setHidden:)] && [obj isHidden] &&
                 [nonMatchingParts indexOfObject:obj] == NSNotFound) {
@@ -381,7 +381,7 @@ SearchPanelController *sharedSearchPanel = nil;
         }
         // Recurse on subcontainers
         else if (([directive isKindOfClass:[LDrawContainer class]] && ![directive isKindOfClass:[LDrawLSynth class]])
-                 || ([directive isKindOfClass:[LDrawLSynth class]] && [searchInsideLSynthContainers state] == NSOnState)) {
+				 || ([directive isKindOfClass:[LDrawLSynth class]] && [searchInsideLSynthContainers state] == NSControlStateValueOn)) {
             [parts addObjectsFromArray:[self partsInContainer:directive]];
         }
         
@@ -509,14 +509,15 @@ SearchPanelController *sharedSearchPanel = nil;
 //==============================================================================
 - (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender
 {
-    NSArray        *archivedDirectives = nil;
-    NSMutableArray *directiveNames     = [[NSMutableArray alloc] init];
-    NSUInteger      directiveCount     = 0;
-	NSUInteger      counter            = 0;
-	id              currentObject      = nil;
-	NSData         *data               = nil;
-    NSString       *partNames          = nil;
-    
+    NSArray				*archivedDirectives = nil;
+    NSMutableArray		*directiveNames     = [[NSMutableArray alloc] init];
+    NSUInteger			 directiveCount     = 0;
+	NSUInteger			 counter            = 0;
+	id					 currentObject      = nil;
+	NSData				*data               = nil;
+    NSString			*partNames          = nil;
+	NSKeyedUnarchiver	*unarchiver			= nil;
+
     // Parts can be dragged from the outline view or the part browser.  GLView drags
     // remove the pieces once they leave the window, so we ignore those.
     
@@ -540,7 +541,10 @@ SearchPanelController *sharedSearchPanel = nil;
         for(counter = 0; counter < directiveCount; counter++)
         {
             data = [archivedDirectives objectAtIndex:counter];
-            currentObject = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+            unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
+            [unarchiver setRequiresSecureCoding:NO];
+            currentObject = [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+            [unarchiver finishDecoding];
             
             // We're only interested in LDrawParts we've not already found
             if ([currentObject isKindOfClass:[LDrawPart class]] &&

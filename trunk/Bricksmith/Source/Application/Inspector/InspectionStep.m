@@ -44,9 +44,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorStep" owner:self] == NO)
-	{
-        NSLog(@"Couldn't load InspectorStep.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorStep" owner:self topLevelObjects:&nibObjects]) {
+		topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorStep.nib");
     }
 	
     return self;
@@ -359,6 +361,22 @@
 	[self->rotationZField setDoubleValue:newAngle.z];
 	
 }//end setAngleUIAccordingToPopUp
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Clean up memory.
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+
+}//end dealloc
 
 
 @end

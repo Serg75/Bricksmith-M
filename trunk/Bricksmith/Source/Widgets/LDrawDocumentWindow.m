@@ -52,9 +52,7 @@
 //==============================================================================
 - (void)disableUpdatesUntilFlush
 {
-	if(needsEnableUpdate == NO)
-		NSDisableScreenUpdates(); //or DisableScreenUpdates() in Carbon.
-		
+	// NSDisableScreenUpdates() is deprecated as of macOS 10.11 and is no longer necessary for visual atomicity.
 	needsEnableUpdate = YES;
 	
 }//end disableUpdatesUntilFlush

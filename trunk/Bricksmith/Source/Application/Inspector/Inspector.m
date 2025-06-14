@@ -39,7 +39,10 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"Inspector" owner:self] == NO) {
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"Inspector" owner:self topLevelObjects:&nibObjects]) {
+        topLevelObjects = nibObjects;
+    } else {
         NSLog(@"Can't load Inspector nib file");
     }
 	
@@ -150,26 +153,30 @@
 {
 	BOOL foundInspector = NO; //not yet, anyway.
 	
-	//Inspectable objects will tell us what class to use to inspect with.
+	// Inspectable objects will tell us what class to use to inspect with.
 	if([objectToInspect respondsToSelector:@selector(inspectorClassName)]){
 		
-		//Find the class to use, and instantiate one.
+		// Find the class to use, and instantiate one.
 		NSString	*className			= [objectToInspect performSelector:@selector(inspectorClassName)];
 		Class		 InspectionClass	= NSClassFromString(className);
 		
 		if([InspectionClass isSubclassOfClass:[ObjectInspectionController class]]){
-			//We have an inspector for the object that we understand!
-			foundInspector = YES;
+			// We have an inspector for the object that we understand!
 			id objectInspector = [[InspectionClass alloc] init];
 			[objectInspector setObject:objectToInspect];
 			
-			//Show the inspector palette.
-			[inspectorPanel setContentView:[[objectInspector window] contentView]];
-			[inspectorPanel setTitle:[[objectInspector window] title]];
-			
-			//Save the inspector, so we know what we are inspecting, and so 
-			// we can clean up the memory for it.
-			currentInspector = objectInspector;
+			// Only proceed if the inspector was properly initialized (NIB loaded)
+			if ([objectInspector window] != nil) {
+				foundInspector = YES;
+
+				// Show the inspector palette.
+				[inspectorPanel setContentView:[[objectInspector window] contentView]];
+				[inspectorPanel setTitle:[[objectInspector window] title]];
+				
+				// Save the inspector, so we know what we are inspecting, and so
+				// we can clean up the memory for it.
+				currentInspector = objectInspector;
+			}
 		}
 		
 	}//end inspectable check.
@@ -241,6 +248,22 @@
 	return [currentDocument undoManager];
 
 }//end windowWillReturnUndoManager:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ============================================================
+//
+// Purpose:		The Class Vanishes.
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+
+}//end dealloc
 
 
 @end

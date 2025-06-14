@@ -36,12 +36,13 @@
 	__weak IBOutlet NSButton		*insertButton;
 	__weak IBOutlet NSMenu			*contextualMenu;
 
+	NSArray				*topLevelObjects;	// holds NIB objects
+
 	__weak PartLibrary	*partLibrary; //weak reference to the shared part catalog.
 	__weak NSString		*selectedCategory;
 	__weak NSArray 		*categoryList;
 	NSMutableArray  	*tableDataSource;
 	SearchModeT			searchMode;
-
 }
 
 //Accessors

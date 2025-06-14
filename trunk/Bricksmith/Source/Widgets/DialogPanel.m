@@ -39,7 +39,13 @@
 //==============================================================================
 - (id) init
 {
-	[NSBundle loadNibNamed:[self panelNibName] owner:self];
+	NSArray *nibObjects = nil;
+	if ([[NSBundle mainBundle] loadNibNamed:[self panelNibName] owner:self topLevelObjects:&nibObjects]) {
+		topLevelObjects = nibObjects;
+	} else {
+		NSLog(@"Couldn't load %@.nib", [self panelNibName]);
+		return nil;
+	}
 	
 	//this don't look good, but it works.
 	//this takes the place of calling [super init]
@@ -94,5 +100,20 @@
 	
 }//end okButtonClicked:
 
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ============================================================
+//
+// Purpose:		Our goose is cooked.
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+	
+}//end dealloc
 
 @end

@@ -136,7 +136,7 @@
 	if(folderIsValid == NO)
 	{
 		NSAlert *error = [[NSAlert alloc] init];
-		[error setAlertStyle:NSCriticalAlertStyle];
+		[error setAlertStyle:NSAlertStyleCritical];
 		[error addButtonWithTitle:NSLocalizedString(@"OKButtonName", nil)];
 		
 		

@@ -34,7 +34,7 @@
 	
 	// Draw
 	[cellColor set];
-	NSRectFillUsingOperation(cellFrame, NSCompositeSourceOver);
+	NSRectFillUsingOperation(cellFrame, NSCompositingOperationSourceOver);
 	
 }//end drawInteriorWithFrame:inView:
 

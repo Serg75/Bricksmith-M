@@ -60,6 +60,8 @@
 @property (nonatomic, weak) IBOutlet	NSTextField*	vertex3YField;
 @property (nonatomic, weak) IBOutlet	NSTextField*	vertex3ZField;
 
+@property (nonatomic, strong)			NSArray*		topLevelObjects;	// holds NIB objects
+
 @end
 
 
@@ -74,8 +76,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorTriangle" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorTriangle.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorTriangle" owner:self topLevelObjects:&nibObjects]) {
+		self.topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorTriangle.nib");
     }
 	
     return self;
@@ -222,6 +227,22 @@
 	}
 		
 }//end vertex3EndedEditing:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Clean up memory.
+//
+//==============================================================================
+- (void) dealloc
+{
+	self.topLevelObjects = nil;
+	
+}//end dealloc
 
 
 @end

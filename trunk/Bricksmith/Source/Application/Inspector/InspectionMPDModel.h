@@ -19,6 +19,8 @@
 	
 	__weak IBOutlet	NSTextField		*numberStepsField;
 	__weak IBOutlet	NSTextField		*numberElementsField;
+	
+	NSArray							*topLevelObjects;	// holds NIB objects
 }
 
 //Actions

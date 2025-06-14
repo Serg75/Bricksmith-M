@@ -72,7 +72,13 @@
 - (id) init
 {
 	self = [super init];
-	[NSBundle loadNibNamed:@"Progress Bar" owner:self];
+	
+	NSArray *nibObjects = nil;
+	if ([[NSBundle bundleForClass:[self class]] loadNibNamed:@"Progress Bar" owner:self topLevelObjects:&nibObjects]) {
+        topLevelObjects = nibObjects;
+    } else {
+        NSLog(@"Couldn't load Progress Bar.nib");
+	}
 	
 	runningAsSheet = NO; //not yet displayed.
 	
@@ -349,6 +355,22 @@
 	[dialogWindow orderOut:self];
 	
 }//end close
+
+
+#pragma mark -
+#pragma mark Destructor
+#pragma mark -
+
+//========== dealloc ============================================================
+//
+// Purpose:		Cleanup
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+
+}//end dealloc
 
 
 @end

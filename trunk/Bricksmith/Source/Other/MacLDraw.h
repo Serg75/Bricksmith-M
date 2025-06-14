@@ -45,7 +45,7 @@
 #define PART_BROWSER_SEARCH_MODE					@"Part Browser Search Mode"
 #define PART_BROWSER_STYLE_KEY						@"Part Browser Style"
 #define PREFERENCES_LAST_TAB_DISPLAYED				@"Preferences Tab"
-#define SYNTAX_COLOR_COLORS_KEY						@"Syntak Color Colors"
+#define SYNTAX_COLOR_COLORS_KEY						@"Syntax Color Colors"
 #define SYNTAX_COLOR_COMMENTS_KEY					@"Syntax Color Comments"
 #define SYNTAX_COLOR_MODELS_KEY						@"Syntax Color Models"
 #define SYNTAX_COLOR_PARTS_KEY						@"Syntax Color Parts"

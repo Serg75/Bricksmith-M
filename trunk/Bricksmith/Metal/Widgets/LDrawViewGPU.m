@@ -84,7 +84,12 @@
 	//---------- Load UI -------------------------------------------------------
 
 	// Yes, we have a nib file. Don't laugh. This view has accessories.
-	[NSBundle loadNibNamed:@"LDrawViewAccessories" owner:self];
+	NSArray *nibObjects = nil;
+	if ([[NSBundle mainBundle] loadNibNamed:@"LDrawViewAccessories" owner:self topLevelObjects:&nibObjects]) {
+		topLevelObjects = nibObjects;
+	} else {
+		NSLog(@"Couldn't load LDrawViewAccessories.nib");
+	}
 
 	self->focusRingView = [[FocusRingView alloc] initWithFrame:[self bounds]];
 	[focusRingView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];

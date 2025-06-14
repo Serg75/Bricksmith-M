@@ -42,7 +42,9 @@ typedef enum
 {
 	ToolModeT				 baseToolMode;			//as selected in the palette
 	ToolModeT				 effectiveToolMode;		//accounting for modifiers.
-	
+
+	NSArray					*topLevelObjects;		// holds NIB objects
+
 	//Event Tracking
 	NSString				*currentKeyCharacters;	//identifies the current keys down, independent of modifiers (empty string if no keys down)
 	NSUInteger				 currentKeyModifiers;	//identifiers the current modifiers down (including device-dependent)

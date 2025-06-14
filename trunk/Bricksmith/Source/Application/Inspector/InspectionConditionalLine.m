@@ -34,6 +34,8 @@
 @property (nonatomic, weak) IBOutlet	NSTextField*	conditionalVertex2YField;
 @property (nonatomic, weak) IBOutlet	NSTextField*	conditionalVertex2ZField;
 
+@property (nonatomic, strong)			NSArray*		topLevelObjects;	// holds NIB objects
+
 @end
 
 
@@ -48,8 +50,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorConditionalLine" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorConditionalLine.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorConditionalLine" owner:self topLevelObjects:&nibObjects]) {
+		self.topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorConditionalLine.nib");
     }
 	
     return self;
@@ -228,6 +233,22 @@
 	}
 		
 }//end conditionalVertex2EndedEditing:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Clean up memory.
+//
+//==============================================================================
+- (void) dealloc
+{
+	self.topLevelObjects = nil;
+	
+}//end dealloc
 
 
 @end

@@ -529,6 +529,7 @@
 		956D9CC92A31060800FA956B /* PartLibraryMTL.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9CC72A31060800FA956B /* PartLibraryMTL.m */; };
 		957B9726294D308D007EF76C /* LDrawObjectWithValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 957B9724294D308D007EF76C /* LDrawObjectWithValue.h */; };
 		957B9727294D308D007EF76C /* LDrawObjectWithValue.m in Sources */ = {isa = PBXBuildFile; fileRef = 957B9725294D308D007EF76C /* LDrawObjectWithValue.m */; };
+		959637FE2E06CB98008734E5 /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
 		959776BE2DD9271600EE7DD5 /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 959776BD2DD9271600EE7DD5 /* LDrawDirectiveGPU.h */; };
 		959776C02DD9292E00EE7DD5 /* LDrawDirectiveGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 959776BF2DD9292E00EE7DD5 /* LDrawDirectiveGPU.h */; };
 		95AA25A52DC1E57900EB929E /* MetalUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 95AA25A42DC1E57900EB929E /* MetalUtilities.m */; };
@@ -2332,6 +2333,7 @@
 				956D9C0E2A30768000FA956B /* LDrawDocument.xib in Resources */,
 				956D9C102A30768000FA956B /* MainMenu.xib in Resources */,
 				956D9C112A30768000FA956B /* MinifigureGenerator.xib in Resources */,
+				959637FE2E06CB98008734E5 /* InspectorRemoveGroup.xib in Resources */,
 				956D9C122A30768000FA956B /* MovePanel.xib in Resources */,
 				956D9C132A30768000FA956B /* PartBrowser.xib in Resources */,
 				956D9C142A30768000FA956B /* PartBrowserAccessories.xib in Resources */,

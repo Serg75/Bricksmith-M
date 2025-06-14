@@ -100,7 +100,9 @@ ToolPalette *sharedToolPalette = nil;
 	currentKeyCharacters	= @"";
 	currentKeyModifiers		= 0;
 	
-	[NSBundle loadNibNamed:@"ToolPalette" owner:self];
+	NSArray *nibObjects = nil;
+	[[NSBundle mainBundle] loadNibNamed:@"ToolPalette" owner:self topLevelObjects:&nibObjects];
+	topLevelObjects = nibObjects;
 	
 	//---------- Create the tool window ----------------------------------------
 	
@@ -113,7 +115,7 @@ ToolPalette *sharedToolPalette = nil;
 	toolRect.origin.y += NSHeight([primaryScreen visibleFrame]) - NSHeight(toolRect);
 	
 	self->palettePanel = [[NSPanel alloc] initWithContentRect:toolRect
-													styleMask:NSBorderlessWindowMask
+													styleMask:NSWindowStyleMaskBorderless
 													  backing:NSBackingStoreBuffered
 														defer:YES];
 	[self->palettePanel setReleasedWhenClosed:NO];
@@ -287,16 +289,16 @@ ToolPalette *sharedToolPalette = nil;
 	
 	switch([theEvent type])
 	{
-		case NSKeyDown:
+		case NSEventTypeKeyDown:
 			self->currentKeyCharacters = [theEvent charactersIgnoringModifiers];
 			break;
 		
-		case NSKeyUp:
+		case NSEventTypeKeyUp:
 			self->currentKeyCharacters = @"";
 			break;
 			
-		case NSFlagsChanged:
-			self->currentKeyModifiers = ([theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask);
+		case NSEventTypeFlagsChanged:
+			self->currentKeyModifiers = ([theEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask);
 			break;
 		
 		default:
@@ -320,7 +322,7 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (void) mouseButton3DidChange:(NSEvent *)theEvent
 {
-	if([theEvent type] == NSOtherMouseDown)
+	if([theEvent type] == NSEventTypeOtherMouseDown)
 		self->mouseButton3IsDown = YES;
 	else
 		self->mouseButton3IsDown = NO;
@@ -363,7 +365,7 @@ ToolPalette *sharedToolPalette = nil;
 	else
 	{
 		// Leaving proximity, so no device.
-		self->tabletPointingDevice = NSUnknownPointingDevice;
+		self->tabletPointingDevice = NSPointingDeviceTypeUnknown;
 	}
 	
 	[self resolveCurrentToolMode];
@@ -480,7 +482,7 @@ ToolPalette *sharedToolPalette = nil;
 		newToolMode = SpinTool;
 	}
 	// Eraser tool
-	else if( self->tabletPointingDevice == NSEraserPointingDevice)
+	else if( self->tabletPointingDevice == NSPointingDeviceTypeEraser)
 	{
 		newToolMode = EraserTool;
 	}	
@@ -533,26 +535,26 @@ ToolPalette *sharedToolPalette = nil;
 		case SmoothZoomTool:
 			//command-option
 			characters = @"";
-//			*modifiersOut = (NSCommandKeyMask | NSShiftKeyMask);
-			*modifiersOut = (NSCommandKeyMask | NSAlternateKeyMask);
+//			*modifiersOut = (NSEventModifierFlagCommand | NSEventModifierFlagShift);
+			*modifiersOut = (NSEventModifierFlagCommand | NSEventModifierFlagOption);
 			break;
 			
 		case ZoomInTool:
 			//command-space
 			characters = @" ";
-			*modifiersOut = NSCommandKeyMask;
+			*modifiersOut = NSEventModifierFlagCommand;
 			break;
 			
 		case ZoomOutTool:
 			//option-space
 			characters = @" ";
-			*modifiersOut = NSAlternateKeyMask;
+			*modifiersOut = NSEventModifierFlagOption;
 			break;
 			
 		case SpinTool:
 			// command
 			characters = @"";
-			*modifiersOut = (NSCommandKeyMask);
+			*modifiersOut = (NSEventModifierFlagCommand);
 			break;
 	}
 	
@@ -602,6 +604,7 @@ ToolPalette *sharedToolPalette = nil;
 - (void) dealloc
 {
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
+	topLevelObjects = nil;
 	sharedToolPalette = nil;
 	
 }//end dealloc

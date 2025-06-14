@@ -157,7 +157,7 @@
 		}
 		[inverter concat];
 		{
-			[image drawAtPoint:imageFrame.origin fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
+			[image drawAtPoint:imageFrame.origin fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1.0];
 		}
 		[inverter invert];
  		[inverter concat];

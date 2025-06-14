@@ -32,7 +32,7 @@
 //		LDrawView
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller>
+@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller, NSDraggingSource>
 {
 	// The renderer is responsible for viewport math and OpenGL calls. Because
 	// of the latter, there is NO PUBLIC ACCESS, since each OpenGL call must be 
@@ -61,6 +61,8 @@
 	SelectionModeT			marqueeSelectionMode;
 	NSEventType				startingGestureType;
 	Vector3					nudgeVector;			// direction of nudge action (valid only in nudgeAction callback)
+	
+	NSArray					*topLevelObjects;		// holds NIB objects
 }
 
 // Accessors

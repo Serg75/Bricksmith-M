@@ -4391,7 +4391,8 @@ void AppendChoicesToNewItem(
 	NSPasteboard		*pasteboard		= [info draggingPasteboard];
 	NSOutlineView		*sourceView		= [info draggingSource];
 	NSDragOperation		 dragOperation	= NSDragOperationNone;
-	
+	NSKeyedUnarchiver 	*unarchiver		= nil;
+
 	//Fix our logic for handling drags to the root of the outline.
 	if(newParent == nil)
 		newParent = [self documentContents];
@@ -4417,7 +4418,10 @@ void AppendChoicesToNewItem(
 		
 		//Unarchive.
 		data			= [objects objectAtIndex:0];
-		currentObject	= [NSKeyedUnarchiver unarchiveObjectWithData:data];
+		unarchiver		= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
+		[unarchiver setRequiresSecureCoding:NO];
+		currentObject	= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+		[unarchiver finishDecoding];
 		
 		//Now pop the data into our file.
 		if(		sourceView == outlineView
@@ -4969,7 +4973,7 @@ void AppendChoicesToNewItem(
 		
 		if([currentDirective isKindOfClass:[LDrawDrawableElement class]])
 		{
-			partData	= [NSKeyedArchiver archivedDataWithRootObject:currentDirective];
+			partData	= [NSKeyedArchiver archivedDataWithRootObject:currentDirective requiringSecureCoding:NO error:nil];
 			[archivedParts addObject:partData];
 			
 			if(copyFlag == NO)
@@ -5901,7 +5905,7 @@ void AppendChoicesToNewItem(
 		//
 		if([[self documentContents] activeModel] == currentModel)
 		{
-			[modelItem setState:NSOnState];
+			[modelItem setState:NSControlStateValueOn];
 			[self->submodelPopUpMenu selectItemAtIndex:counter];
 		}
 	}
@@ -6618,6 +6622,28 @@ void AppendChoicesToNewItem(
 	//We have the syntax coloring we want.
 	syntaxColor = [userDefaults colorForKey:colorKey];
 	
+	// Fallback to default color if unarchiving failed
+	// Can be removed in the future
+	if (syntaxColor == nil) {
+		if ([colorKey isEqualToString:SYNTAX_COLOR_COMMENTS_KEY]) {
+			syntaxColor = [NSColor systemGreenColor];
+		} else if ([colorKey isEqualToString:SYNTAX_COLOR_PARTS_KEY]) {
+			syntaxColor = [NSColor systemBlueColor];
+		} else if ([colorKey isEqualToString:SYNTAX_COLOR_PRIMITIVES_KEY]) {
+			syntaxColor = [NSColor systemOrangeColor];
+		} else if ([colorKey isEqualToString:SYNTAX_COLOR_MODELS_KEY]) {
+			syntaxColor = [NSColor systemPurpleColor];
+		} else if ([colorKey isEqualToString:SYNTAX_COLOR_STEPS_KEY]) {
+			syntaxColor = [NSColor systemYellowColor];
+		} else if ([colorKey isEqualToString:SYNTAX_COLOR_COLORS_KEY]) {
+			syntaxColor = [NSColor systemPinkColor];
+		} else if ([colorKey isEqualToString:SYNTAX_COLOR_REMOVE_GROUP_KEY]) {
+			syntaxColor = [NSColor systemRedColor];
+		} else {
+			syntaxColor = [NSColor labelColor]; // Default for unknown
+		}
+	}
+	
 	if([item respondsToSelector:@selector(isHidden)])
 		if([(id)item isHidden])
 			obliqueness = [NSNumber numberWithDouble:0.5];
@@ -6902,7 +6928,7 @@ void AppendChoicesToNewItem(
 	//Pasteboard types.
 	NSArray			*pboardTypes		= [NSArray arrayWithObjects:
 												LDrawDirectivePboardType, //Bricksmith's preferred type.
-												NSStringPboardType, //representation for other applications.
+												NSPasteboardTypeString, //representation for other applications.
 												nil ];
 	LDrawDirective	*currentObject		= nil;
 	NSMutableArray	*objectsToCopy		= [NSMutableArray array];
@@ -6945,7 +6971,7 @@ void AppendChoicesToNewItem(
 		currentObject = [objectsToCopy objectAtIndex:counter];
 		
 		//Convert the object into the two representations we know how to write.
-		data	= [NSKeyedArchiver archivedDataWithRootObject:currentObject];
+		data	= [NSKeyedArchiver archivedDataWithRootObject:currentObject requiringSecureCoding:NO error:nil];
 		string	= [currentObject write];
 		
 		//Save the representations into the arrays we'll write to the pasteboard.
@@ -6966,7 +6992,7 @@ void AppendChoicesToNewItem(
 	//For other applications, however, we provide the LDraw file contents for 
 	// the objects. Note that these strings cannot be pasted back into the 
 	// program.
-	[pasteboard setString:stringedObjects forType:NSStringPboardType];
+	[pasteboard setString:stringedObjects forType:NSPasteboardTypeString];
 	
 }//end writeDirectives:toPasteboard:
 
@@ -6997,18 +7023,19 @@ void AppendChoicesToNewItem(
 							index:(NSInteger)insertAtIndex
 					nextToSimilar:(BOOL)nextToSimilar
 {
-	NSArray         *objects        = nil;
-	id              currentObject   = nil; //some kind of unarchived LDrawDirective
-	NSData          *data           = nil;
-	NSMutableArray  *addedObjects   = [NSMutableArray array];
-	NSInteger       counter         = 0;
-	NSMutableArray	*models			= [NSMutableArray array];
-	NSMutableArray	*steps			= [NSMutableArray array];
-	NSMutableArray	*directives		= [NSMutableArray array];
-	LDrawContainer	*parentStep		= nil;
-	LDrawDirective	*similarDirective = nil;
-	NSInteger		real_index		= NSNotFound;
-	NSArray			*selectedObjects = self.selectedObjects; // initial selection
+	NSArray				*objects			= nil;
+	id					 currentObject		= nil; //some kind of unarchived LDrawDirective
+	NSData				*data				= nil;
+	NSMutableArray		*addedObjects		= [NSMutableArray array];
+	NSInteger			 counter			= 0;
+	NSMutableArray		*models				= [NSMutableArray array];
+	NSMutableArray		*steps				= [NSMutableArray array];
+	NSMutableArray		*directives			= [NSMutableArray array];
+	LDrawContainer		*parentStep			= nil;
+	LDrawDirective		*similarDirective	= nil;
+	NSInteger			 real_index			= NSNotFound;
+	NSArray				*selectedObjects	= self.selectedObjects; // initial selection
+	NSKeyedUnarchiver	*unarchiver			= nil;
 
 	//We must make sure we have the proper pasteboard type available.
  	if([[pasteboard types] containsObject:LDrawDirectivePboardType])
@@ -7018,7 +7045,10 @@ void AppendChoicesToNewItem(
 		for(counter = 0; counter < [objects count]; counter++)
 		{
 			data			= [objects objectAtIndex:counter];
-			currentObject	= [NSKeyedUnarchiver unarchiveObjectWithData:data];
+			unarchiver		= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
+			[unarchiver setRequiresSecureCoding:NO];
+			currentObject	= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+			[unarchiver finishDecoding];
 
             // Reset the object icon if we can.  New parents get a chance later (in e.g. outlineView:acceptDrop:)
             // to change them if they want

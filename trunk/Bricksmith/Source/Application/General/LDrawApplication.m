@@ -310,7 +310,7 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	// equivalent, we are probably dealing with one of these rabid anti-mouse 
 	// people. We automatically make the color search field key, so they can 
 	// enter color codes to their heart's content. 
-	if([[NSApp currentEvent] type] == NSKeyDown)
+	if([[NSApp currentEvent] type] == NSEventTypeKeyDown)
 		[colorPanel focusSearchField:sender];
 	
 }//end showColors:
@@ -1018,8 +1018,8 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 						// to edges and nearby points unless the control key is down). Some other
 						// mechanism could be substituted here.
 						NSEvent *event = [NSApp currentEvent];
-						int modifierFlags = [event modifierFlags];
-						bool controlDown = (0 != (modifierFlags & NSControlKeyMask) );
+						NSEventModifierFlags modifierFlags = [event modifierFlags];
+						bool controlDown = (0 != (modifierFlags & NSEventModifierFlagControl));
 						
 						// Build translation and rotation vectors from the event state.
 						Vector3 originalNudgeVector = V3Make(state->axis[0],state->axis[2],-state->axis[1]);

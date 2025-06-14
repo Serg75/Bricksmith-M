@@ -24,8 +24,11 @@
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorComment" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorComment.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorComment" owner:self topLevelObjects:&nibObjects]) {
+		topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorComment.nib");
     }
 	
     return self;
@@ -91,6 +94,22 @@
 		[self finishedEditing:sender];
 		
 }//end commandFieldChanged:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Clean up memory.
+//
+//==============================================================================
+- (void) dealloc
+{
+	topLevelObjects = nil;
+	
+}//end dealloc
 
 
 @end

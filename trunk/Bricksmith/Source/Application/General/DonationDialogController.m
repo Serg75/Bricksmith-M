@@ -91,7 +91,7 @@
 	UInt32          bundleVersion   = CFBundleGetVersionNumber(mainBundle);
 	
 	// Set dialog values
-	[self->suppressionCheckbox setState:NSOffState];
+	[self->suppressionCheckbox setState:NSControlStateValueOff];
 	
 
 	// Show window

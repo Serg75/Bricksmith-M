@@ -18,7 +18,9 @@
 	__weak 			NSView		*emptyInspectorView;	//content view used for invalid inspections
 	__weak IBOutlet	NSTextField	*errorTextField;		//inside emptyInspectorView; use to explain the problem.
 	
-	ObjectInspectionController	*currentInspector;	//controller for the loaded inspector.
+	ObjectInspectionController	*currentInspector;		//controller for the loaded inspector.
+	
+	NSArray						*topLevelObjects;		//holds NIB objects
 	
 }
 

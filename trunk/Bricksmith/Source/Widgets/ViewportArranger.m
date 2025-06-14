@@ -157,7 +157,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 	
 	NSRect					sourceViewFrame 	= NSZeroRect;
 	NSRect					newViewFrame		= NSZeroRect;
-	BOOL					makeNewColumn		= (([[NSApp currentEvent] modifierFlags] & NSAlternateKeyMask) != 0);
+	BOOL					makeNewColumn		= (([[NSApp currentEvent] modifierFlags] & NSEventModifierFlagOption) != 0);
 
 	if(makeNewColumn == YES)
 	{
@@ -377,8 +377,8 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 {
 	NSButton    *closeButton    = [[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 12, 12)];
 	
-	[closeButton setBezelStyle:NSShadowlessSquareBezelStyle];
-	[closeButton setButtonType:NSMomentaryPushInButton];
+	[closeButton setBezelStyle:NSBezelStyleRegularSquare];
+	[closeButton setButtonType:NSButtonTypeMomentaryLight];
 	[closeButton setBordered:NO];
 	[closeButton setImagePosition:NSImageOnly];
 	[closeButton setImage:[NSImage imageNamed:@"PlacardButtonClose"]];
@@ -401,8 +401,8 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 {
 	NSButton    *splitButton    = [[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 12, 12)];
 	
-	[splitButton setBezelStyle:NSShadowlessSquareBezelStyle];
-	[splitButton setButtonType:NSMomentaryPushInButton];
+	[splitButton setBezelStyle:NSBezelStyleRegularSquare];
+	[splitButton setButtonType:NSButtonTypeMomentaryLight];
 	[splitButton setBordered:NO];
 	[splitButton setImagePosition:NSImageOnly];
 	[splitButton setImage:[NSImage imageNamed:@"PlacardButtonSplit"]];
@@ -732,3 +732,4 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 
 
 @end
+

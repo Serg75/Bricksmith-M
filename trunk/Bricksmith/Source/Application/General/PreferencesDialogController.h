@@ -32,7 +32,7 @@ typedef enum {
 @interface PreferencesDialogController : NSObject <NSToolbarDelegate, NSTextFieldDelegate>
 {
 		   IBOutlet NSWindow		*preferencesWindow;
-	
+
 	__weak          NSView			*blankContent; //the initial, empty content of the window in the Nib.
 	__weak IBOutlet NSView			*generalTabContentView;
 	__weak IBOutlet NSView			*stylesContentView;
@@ -76,6 +76,8 @@ typedef enum {
     
     // Miscellaneous
 	__weak IBOutlet NSView			*folderChooserAccessoryView;
+
+	NSArray                			*topLevelObjects;	// holds NIB objects
 }
 
 //Initialization

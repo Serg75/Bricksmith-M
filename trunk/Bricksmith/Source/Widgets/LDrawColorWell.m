@@ -83,8 +83,8 @@ static LDrawColorWell *sharedActiveColorWell = nil;
 + (void) setActiveColorWell:(LDrawColorWell *)newWell
 {
 	//change the appearence
-	[sharedActiveColorWell	setState:NSOffState];
-	[newWell				setState:NSOnState];
+	[sharedActiveColorWell	setState:NSControlStateValueOff];
+	[newWell				setState:NSControlStateValueOn];
 
 	//trade out variable
 	
@@ -229,7 +229,7 @@ static LDrawColorWell *sharedActiveColorWell = nil;
 	{
 		//---------- Track Active Color Well -----------------------------------
 		
-		if([self state] == NSOnState)
+		if([self state] == NSControlStateValueOn)
 		{
 			//did we just become active?
 			if([LDrawColorWell activeColorWell] != self)
@@ -243,7 +243,7 @@ static LDrawColorWell *sharedActiveColorWell = nil;
 				handledAction = [super sendAction:theAction to:theTarget];
 		}
 		//we deactivate?
-		else if([self state] == NSOffState && [LDrawColorWell activeColorWell] == self)
+		else if([self state] == NSControlStateValueOff && [LDrawColorWell activeColorWell] == self)
 		{
 			[LDrawColorWell setActiveColorWell:nil];
 			handledAction = YES;

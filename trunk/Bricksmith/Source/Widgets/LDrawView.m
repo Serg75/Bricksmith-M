@@ -925,7 +925,6 @@ static Box2 NSRectToBox2(NSRect rect)
 	{
 		//Make this cursor active over the entire document.
 		[self addCursorRect:visibleRect cursor:cursor];
-		[cursor setOnMouseEntered:YES];
 		
 		//okay, something very weird is going on here. When the cursor is inside 
 		// a view and THE PARTS BROWSER DRAWER IS OPEN, merely establishing a 
@@ -1127,9 +1126,9 @@ static Box2 NSRectToBox2(NSRect rect)
 			// movement along the z-axis. Note that move "in" to the screen (up
 			// arrow, left arrow?) is a movement along the screen's negative
 			// z-axis.
-			isZMovement	= ([theEvent modifierFlags] & NSAlternateKeyMask) != 0;
-			isFastNudge = ([theEvent modifierFlags] & NSShiftKeyMask) != 0;
-			isSlowNudge = ([theEvent modifierFlags] & NSCommandKeyMask) != 0;
+			isZMovement	= ([theEvent modifierFlags] & NSEventModifierFlagOption) != 0;
+			isFastNudge = ([theEvent modifierFlags] & NSEventModifierFlagShift) != 0;
+			isSlowNudge = ([theEvent modifierFlags] & NSEventModifierFlagCommand) != 0;
 			isNudge		= NO;
 
 
@@ -1247,7 +1246,6 @@ static Box2 NSRectToBox2(NSRect rect)
 		[self->ldrawDelegate LDrawViewMouseNotPositioning:self];
 	}
 }
-
 //========== mouseDown: ========================================================
 //
 // Purpose:		We received a mouseDown before a mouseDragged. Handy thought.
@@ -1532,14 +1530,14 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (NSMenu *) menuForEvent:(NSEvent *)theEvent
 {
-	NSUInteger modifiers = [theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+	NSEventModifierFlags modifiers = [theEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
 	
 	// Only display contextual menus for pure control- or right-clicks. By 
 	// default, the system permits control+<any other modifiers> to trigger 
 	// contextual menus. We want to use control/modifier combos to activate 
 	// other mouse tools, so we filter out those events. 
-	if(		modifiers == NSControlKeyMask // and nothing else!
-	   ||	[theEvent type] == NSRightMouseDown )
+	if ((modifiers == NSEventModifierFlagControl) // and nothing else!
+	    || ([theEvent type] == NSEventTypeRightMouseDown))
 		return [self menu];
 	else
 		return nil;
@@ -1617,9 +1615,9 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void)scrollWheel:(NSEvent *)theEvent
 {
-	NSUInteger modifiers = [theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+	NSEventModifierFlags modifiers = [theEvent modifierFlags];
 
-	if(modifiers == NSAlternateKeyMask || USE_ZOOM_WHEEL)
+	if((modifiers & NSEventModifierFlagOption) != 0 || USE_ZOOM_WHEEL)
 	{
 		// Zoom in
 		[self makeCurrentContext];
@@ -1727,12 +1725,13 @@ static Box2 NSRectToBox2(NSRect rect)
 	Point3					 firstPosition		= ZeroPoint3;
 	Vector3					 displacement		= ZeroPoint3;
 	NSImage					*dragImage			= nil;
+	NSKeyedUnarchiver 		*unarchiver			= nil;
 
 	if(		self->ldrawDelegate != nil
 	   &&	[self->ldrawDelegate respondsToSelector:@selector(LDrawView:writeDirectivesToPasteboard:asCopy:)] )
 	{
-		pasteboard		= [NSPasteboard pasteboardWithName:NSDragPboard];
-		beginCopy		= ([theEvent modifierFlags] & NSAlternateKeyMask) != 0;
+		pasteboard		= [NSPasteboard pasteboardWithName:NSPasteboardNameDrag];
+		beginCopy		= ([theEvent modifierFlags] & NSEventModifierFlagOption) != 0;
 
 		okayToDrag		= [self->ldrawDelegate LDrawView:self writeDirectivesToPasteboard:pasteboard asCopy:beginCopy];
 
@@ -1757,7 +1756,10 @@ static Box2 NSRectToBox2(NSRect rect)
 			//
 			archivedDirectives	= [pasteboard propertyListForType:LDrawDraggingPboardType];
 			data				= [archivedDirectives objectAtIndex:0];
-			firstDirective		= [NSKeyedUnarchiver unarchiveObjectWithData:data];
+			unarchiver 			= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
+			[unarchiver setRequiresSecureCoding:NO];
+			firstDirective		= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+			[unarchiver finishDecoding];
 			firstPosition		= [firstDirective position];
 			modelPoint			= [self->renderer modelPointForPoint:V2Make(viewPoint.x, viewPoint.y) depthReferencePoint:firstPosition];
 			displacement		= V3Sub(modelPoint, firstPosition);
@@ -1798,13 +1800,30 @@ static Box2 NSRectToBox2(NSRect rect)
 			imageLocation.y += -offset.y; // Invert y because this view is flipped.
 
 			// Initiate Drag.
-			[self dragImage:dragImage
-						 at:imageLocation
-					 offset:NSZeroSize
-					  event:theEvent
-				 pasteboard:pasteboard
-					 source:self
-				  slideBack:NO ];
+
+			// Modern drag-and-drop API (macOS 10.7+)
+			NSPasteboardItem *pbItem = [[NSPasteboardItem alloc] init];
+			// Copy all types/data from the old pasteboard to the new item
+			for (NSString *type in [pasteboard types]) {
+				NSData *data = [pasteboard dataForType:type];
+				if (data) {
+					[pbItem setData:data forType:type];
+				} else {
+					NSString *string = [pasteboard stringForType:type];
+					if (string) {
+						[pbItem setString:string forType:type];
+					}
+				}
+			}
+			NSDraggingItem *dragItem = [[NSDraggingItem alloc] initWithPasteboardWriter:pbItem];
+			// Set the drag image and its frame (centered at imageLocation with offset)
+			NSRect dragFrame = NSMakeRect(imageLocation.x - dragImage.size.width / 2,
+										 imageLocation.y - dragImage.size.height / 2,
+										 dragImage.size.width,
+										 dragImage.size.height);
+			[dragItem setDraggingFrame:dragFrame contents:dragImage];
+			// Begin the drag session
+			[self beginDraggingSessionWithItems:@[dragItem] event:theEvent source:self];
 
 			// **** -dragImage: BLOCKS until drag is complete. ****
 		}
@@ -1824,7 +1843,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	NSPoint viewPoint			= [self convertPoint:dragPointInWindow fromView:nil];
 	BOOL	constrainDragAxis	= NO;
 
-	constrainDragAxis   = ([theEvent modifierFlags] & NSShiftKeyMask) != 0;
+	constrainDragAxis   = ([theEvent modifierFlags] & NSEventModifierFlagShift) != 0;
 
 	[self makeCurrentContext];
 
@@ -1858,7 +1877,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
-	if([theEvent type] == NSLeftMouseDragged)
+	if([theEvent type] == NSEventTypeLeftMouseDragged)
 	{
 
 		[self->renderer mouseSelectionDragToPoint:V2Make(viewPoint.x, viewPoint.y)
@@ -1875,16 +1894,16 @@ static Box2 NSRectToBox2(NSRect rect)
 	// -- We desperately need simple modifiers for rotating the view. Otherwise,
 	// I doubt people would discover it.
 
-	if (([theEvent modifierFlags] & NSShiftKeyMask) != 0)
+	if (([theEvent modifierFlags] & NSEventModifierFlagShift) != 0)
 	{
-		if(([theEvent modifierFlags] & NSAlternateKeyMask) != 0)
+		if(([theEvent modifierFlags] & NSEventModifierFlagOption) != 0)
 			selectionMode = SelectionIntersection;
 		else
 			selectionMode = SelectionExtend;
 	}
 	else
 	{
-		if(([theEvent modifierFlags] & NSAlternateKeyMask) != 0)
+		if(([theEvent modifierFlags] & NSEventModifierFlagOption) != 0)
 			selectionMode = SelectionSubtract;
 		else
 			selectionMode = SelectionReplace;
@@ -1991,7 +2010,7 @@ static Box2 NSRectToBox2(NSRect rect)
 {
 	NSView * view = self;
 	NSEvent * event = [NSApp currentEvent];
-	if ([event type] == NSLeftMouseDragged )
+	if ([event type] == NSEventTypeLeftMouseDragged )
 	{
 		[view autoscroll:event];
 	}
@@ -2164,6 +2183,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	NSUInteger				counter 			= 0;
 	NSPoint 				dragPointInWindow	= [info draggingLocation];
 	NSPoint 				viewPoint			= [self convertPoint:dragPointInWindow fromView:nil];
+	NSKeyedUnarchiver 		*unarchiver			= nil;
 
 	// local drag?
 	if(sourceView == self)
@@ -2181,7 +2201,10 @@ static Box2 NSRectToBox2(NSRect rect)
 	for(counter = 0; counter < directiveCount; counter++)
 	{
 		data			= [archivedDirectives objectAtIndex:counter];
-		currentObject	= [NSKeyedUnarchiver unarchiveObjectWithData:data];
+		unarchiver		= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
+		[unarchiver setRequiresSecureCoding:NO];
+		currentObject	= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+		[unarchiver finishDecoding];
 
 		// while a part is dragged, it is drawn selected
 		[currentObject setSelected:YES];
@@ -2242,7 +2265,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// If the shift key is down, only allow dragging along one axis as is 
 	// conventional in graphics programs. Cocoa gives us no way to get at 
 	// the event that initiated this call, so we have to hack. 
-	constrainDragAxis = ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) != 0;
+	constrainDragAxis = ([[NSApp currentEvent] modifierFlags] & NSEventModifierFlagShift) != 0;
 	
 	[self->renderer updateDragWithPosition:V2Make(viewPoint.x, viewPoint.y)
 							 constrainAxis:constrainDragAxis];
@@ -2405,9 +2428,9 @@ static Box2 NSRectToBox2(NSRect rect)
 	if([menuItem action] == @selector(viewOrientationSelected:))
 	{
 		if([menuItem tag] == [self->renderer viewOrientation])
-			[menuItem setState:NSOnState];
+			[menuItem setState:NSControlStateValueOff];
 		else
-			[menuItem setState:NSOffState];
+			[menuItem setState:NSControlStateValueOff];
 	}
 	
 	return YES;
@@ -2776,6 +2799,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
 	
 	[focusRingView	setFocusSource:nil];
+	
+	topLevelObjects = nil;
 	
 }//end dealloc
 

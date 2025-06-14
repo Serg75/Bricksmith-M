@@ -60,6 +60,8 @@ typedef enum
 @property (nonatomic, weak) IBOutlet	NSTextField*		shearXZField;
 @property (nonatomic, weak) IBOutlet	NSTextField*		shearYZField;
 
+@property (nonatomic, strong)			NSArray*			topLevelObjects;	// holds NIB objects
+
 @end
 
 @implementation InspectionPart
@@ -73,8 +75,11 @@ typedef enum
 {
     self = [super init];
 	
-    if ([NSBundle loadNibNamed:@"InspectorPart" owner:self] == NO) {
-        NSLog(@"Couldn't load InspectorPart.nib");
+    NSArray *nibObjects = nil;
+    if ([[NSBundle mainBundle] loadNibNamed:@"InspectorPart" owner:self topLevelObjects:&nibObjects]) {
+		self.topLevelObjects = nibObjects;
+    } else {
+		NSLog(@"Couldn't load InspectorPart.nib");
     }
 	
     return self;
@@ -376,6 +381,22 @@ typedef enum
 	}
 		
 }//end shearEndedEditing:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ===========================================================
+//
+// Purpose:		Abandon all hope ye who enter here.
+//
+//==============================================================================
+- (void) dealloc
+{
+	self.topLevelObjects = nil;
+	
+}//end dealloc
 
 
 @end

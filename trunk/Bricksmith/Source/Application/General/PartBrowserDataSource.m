@@ -181,7 +181,9 @@
 	self = [super init];
 	
 	// Load the accessories from our private nib file.
-	[NSBundle loadNibNamed:@"PartBrowserAccessories" owner:self];
+	NSArray *nibObjects = nil;
+	[[NSBundle mainBundle] loadNibNamed:@"PartBrowserAccessories" owner:self topLevelObjects:&nibObjects];
+	topLevelObjects = nibObjects;
 	
 	// Not displaying anything yet.
 	categoryList	= [NSArray array];
@@ -1123,7 +1125,7 @@
 		[newPart setLDrawColor:selectedColor];
 		[newPart setDisplayName:partName];
 		
-		partData	= [NSKeyedArchiver archivedDataWithRootObject:newPart];
+		partData	= [NSKeyedArchiver archivedDataWithRootObject:newPart requiringSecureCoding:NO error:nil];
 		
 		[archivedParts addObject:partData];
 		
@@ -1157,6 +1159,7 @@
 {
 	//Remove notifications
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
+	topLevelObjects = nil;
 	
 }//end dealloc
 

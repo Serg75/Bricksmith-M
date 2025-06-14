@@ -59,6 +59,10 @@
 #import "WindowCategory.h"
 #import "RegexKitLite.h"
 
+static inline NSData *archivedData(id object) {
+    return [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:nil];
+}
+
 @interface PreferencesDialogController ()
 
 // General Tab
@@ -136,7 +140,9 @@ PreferencesDialogController *preferencesDialog = nil;
 {
 	self = [super init];
 	
-	[NSBundle loadNibNamed:@"Preferences" owner:self];
+	NSArray *nibObjects = nil;
+	[[NSBundle mainBundle] loadNibNamed:@"Preferences" owner:self topLevelObjects:&nibObjects];
+	topLevelObjects = nibObjects;
 	
 	return self;
 	
@@ -222,14 +228,15 @@ PreferencesDialogController *preferencesDialog = nil;
 {
 	NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
 	
-	NSColor			*backgroundColor	= [userDefaults colorForKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY];
-	NSColor			*modelsColor		= [userDefaults colorForKey:SYNTAX_COLOR_MODELS_KEY];
-	NSColor			*stepsColor			= [userDefaults colorForKey:SYNTAX_COLOR_STEPS_KEY];
-	NSColor			*partsColor			= [userDefaults colorForKey:SYNTAX_COLOR_PARTS_KEY];
-	NSColor			*primitivesColor	= [userDefaults colorForKey:SYNTAX_COLOR_PRIMITIVES_KEY];
-	NSColor			*colorsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COLORS_KEY];
-	NSColor			*commentsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COMMENTS_KEY];
-	NSColor			*unknownColor		= [userDefaults colorForKey:SYNTAX_COLOR_UNKNOWN_KEY];
+	// Get colors from preferences, with fallback defaults if unarchiving fails
+	NSColor			*backgroundColor	= [userDefaults colorForKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY] ?: [NSColor controlBackgroundColor];
+	NSColor			*modelsColor		= [userDefaults colorForKey:SYNTAX_COLOR_MODELS_KEY] ?: [NSColor textColor];
+	NSColor			*stepsColor			= [userDefaults colorForKey:SYNTAX_COLOR_STEPS_KEY] ?: [NSColor textColor];
+	NSColor			*partsColor			= [userDefaults colorForKey:SYNTAX_COLOR_PARTS_KEY] ?: [NSColor textColor];
+	NSColor			*primitivesColor	= [userDefaults colorForKey:SYNTAX_COLOR_PRIMITIVES_KEY] ?: [NSColor systemBlueColor];
+	NSColor			*colorsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COLORS_KEY] ?: [NSColor colorWithDeviceRed:0./255 green:128./255 blue:128./255 alpha:1.0];
+	NSColor			*commentsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COMMENTS_KEY] ?: [NSColor systemGreenColor];
+	NSColor			*unknownColor		= [userDefaults colorForKey:SYNTAX_COLOR_UNKNOWN_KEY] ?: [NSColor systemGrayColor];
 	
 	[backgroundColorWell	setColor:backgroundColor];
 
@@ -278,7 +285,7 @@ PreferencesDialogController *preferencesDialog = nil;
     NSString       *executablePath        = [userDefaults stringForKey:LSYNTH_EXECUTABLE_PATH_KEY];
     NSString       *configurationPath     = [userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY];
     int             selectionTransparency = [userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]; // Stored as an int but interpreted as a percentage
-    NSColor        *selectionColor        = [userDefaults colorForKey:LSYNTH_SELECTION_COLOR_KEY];
+    NSColor        *selectionColor        = [userDefaults colorForKey:LSYNTH_SELECTION_COLOR_KEY] ?: [NSColor systemRedColor];
     BOOL            saveSynthesizedParts  = [userDefaults boolForKey:LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY];
     BOOL            showBasicPartsList    = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
     LSynthSelectionModeT selectionMode    = [userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
@@ -988,16 +995,16 @@ PreferencesDialogController *preferencesDialog = nil;
 	//
 	// Syntax Colors
 	//
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:backgroundColor]	forKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY];
+	[initialDefaults setObject:archivedData(backgroundColor)	forKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY];
 	
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:modelsColor]		forKey:SYNTAX_COLOR_MODELS_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:stepsColor]		forKey:SYNTAX_COLOR_STEPS_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:partsColor]		forKey:SYNTAX_COLOR_PARTS_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:primitivesColor]	forKey:SYNTAX_COLOR_PRIMITIVES_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:commentsColor]	forKey:SYNTAX_COLOR_COMMENTS_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:removeGroupColor]	forKey:SYNTAX_COLOR_REMOVE_GROUP_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:colorsColor]		forKey:SYNTAX_COLOR_COLORS_KEY];
-	[initialDefaults setObject:[NSArchiver archivedDataWithRootObject:unknownColor]		forKey:SYNTAX_COLOR_UNKNOWN_KEY];
+	[initialDefaults setObject:archivedData(modelsColor)		forKey:SYNTAX_COLOR_MODELS_KEY];
+	[initialDefaults setObject:archivedData(stepsColor)			forKey:SYNTAX_COLOR_STEPS_KEY];
+	[initialDefaults setObject:archivedData(partsColor)			forKey:SYNTAX_COLOR_PARTS_KEY];
+	[initialDefaults setObject:archivedData(primitivesColor)	forKey:SYNTAX_COLOR_PRIMITIVES_KEY];
+	[initialDefaults setObject:archivedData(commentsColor)		forKey:SYNTAX_COLOR_COMMENTS_KEY];
+	[initialDefaults setObject:archivedData(removeGroupColor)	forKey:SYNTAX_COLOR_REMOVE_GROUP_KEY];
+	[initialDefaults setObject:archivedData(colorsColor)		forKey:SYNTAX_COLOR_COLORS_KEY];
+	[initialDefaults setObject:archivedData(unknownColor)		forKey:SYNTAX_COLOR_UNKNOWN_KEY];
 	
 	//
 	// Grid Spacing
@@ -1044,7 +1051,7 @@ PreferencesDialogController *preferencesDialog = nil;
     [initialDefaults setObject:@"" forKey:LSYNTH_CONFIGURATION_PATH_KEY];
     [initialDefaults setObject:[NSNumber numberWithInt:20] forKey:LSYNTH_SELECTION_TRANSPARENCY_KEY];
     [initialDefaults setObject:[NSNumber numberWithInt:0] forKey:LSYNTH_SELECTION_MODE_KEY];
-    [initialDefaults setObject:[NSArchiver archivedDataWithRootObject:lsynthSelectionColor] forKey:LSYNTH_SELECTION_COLOR_KEY];
+    [initialDefaults setObject:archivedData(lsynthSelectionColor) forKey:LSYNTH_SELECTION_COLOR_KEY];
     [initialDefaults setObject:[NSNumber numberWithBool:YES] forKey:LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY];
     [initialDefaults setObject:[NSNumber numberWithBool:YES] forKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
 
@@ -1291,6 +1298,7 @@ PreferencesDialogController *preferencesDialog = nil;
 - (void) dealloc
 {
 	CFRelease((__bridge CFTypeRef)(preferencesDialog));
+	topLevelObjects = nil;
 	
 	//clear out our global preferences controller. 
 	// It will be reinitialized when needed.

@@ -14,7 +14,8 @@
 @interface InspectionComment : ObjectInspectionController {
 
 	__weak IBOutlet	NSTextField		*commandField;
-	
+
+	NSArray							*topLevelObjects;	// holds NIB objects
 }
 
 //Actions

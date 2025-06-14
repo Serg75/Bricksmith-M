@@ -14,6 +14,8 @@
 @property (nonatomic, weak) IBOutlet NSTextField	*commandTextField;
 @property (nonatomic, weak) IBOutlet NSTextField	*fullCommandTextField;
 
+@property (nonatomic, strong)		 NSArray		*topLevelObjects;	// holds NIB objects
+
 @end
 
 
@@ -30,7 +32,10 @@
 {
 	self = [super init];
 	if (self) {
-		if ([NSBundle loadNibNamed:@"InspectorLPubCommand" owner:self] == NO) {
+		NSArray *nibObjects = nil;
+		if ([[NSBundle mainBundle] loadNibNamed:@"InspectorLPubCommand" owner:self topLevelObjects:&nibObjects]) {
+			self.topLevelObjects = nibObjects;
+		} else {
 			NSLog(@"Couldn't load InspectorLPubCommand.nib");
 		}
 	}
@@ -96,6 +101,22 @@
 		[self finishedEditing:sender];
 		
 }//end commandFieldChanged:
+
+
+#pragma mark -
+#pragma mark DESTRUCTOR
+#pragma mark -
+
+//========== dealloc ============================================================
+///
+/// @abstract	Cleanup
+///
+//==============================================================================
+- (void) dealloc
+{
+	self.topLevelObjects = nil;
+
+}//end dealloc
 
 
 @end

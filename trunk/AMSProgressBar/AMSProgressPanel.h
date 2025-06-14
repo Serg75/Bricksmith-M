@@ -16,7 +16,9 @@
 	__weak IBOutlet NSTextField			*explanatoryText;
 	__weak IBOutlet NSProgressIndicator	*progressBar;
 	__weak IBOutlet NSTextField			*timeRemaining;
-	
+
+    NSArray         *topLevelObjects;   //holds NIB objects
+
 	double			 progressAmount; //the value of the progress bar.
 	BOOL			 endsIndeterminate;
 	BOOL			 runningAsSheet; //if yes, the progress panel is currently onscreen as a sheet.
