@@ -48,7 +48,6 @@ typedef enum {
 
 	// Parts Tab
 	__weak IBOutlet NSTextField		*LDrawPathTextField;
-	__weak IBOutlet NSMatrix		*partBrowserStyleRadioButtons;
 	
 	// Style Tab
 	__weak IBOutlet NSColorWell		*backgroundColorWell;

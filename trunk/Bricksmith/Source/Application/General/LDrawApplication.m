@@ -241,27 +241,12 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 - (IBAction) doPartBrowser:(id)sender 
 {
 	NSUserDefaults				*userDefaults		= [NSUserDefaults standardUserDefaults];
-	PartBrowserStyleT			newStyle			= [userDefaults integerForKey:PART_BROWSER_STYLE_KEY];
 	NSDocumentController		*documentController = [NSDocumentController sharedDocumentController];
 	PartBrowserPanelController	*partBrowser		= nil;
 
-	switch(newStyle)
-	{
-		case PartBrowserShowAsDrawer:
-			
-			//toggle the part browser on the foremost document
-			[[[documentController currentDocument] partBrowserDrawer] toggle:sender];
-			
-			break;
-			
-		case PartBrowserShowAsPanel:
-			
-			//open the shared part browser.
-			partBrowser = [PartBrowserPanelController sharedPartBrowserPanel];
-			[[partBrowser window] makeKeyAndOrderFront:sender];
-			
-			break;
-	} 
+	//open the shared part browser.
+	partBrowser = [PartBrowserPanelController sharedPartBrowserPanel];
+	[[partBrowser window] makeKeyAndOrderFront:sender];
 	
 }//end doPartBrowser:
 
@@ -417,12 +402,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
     }
     [self->lsynthConfiguration parseLsynthConfig:lsynthConfigPath];
 
-	// Register for Notifications
-	[[NSNotificationCenter defaultCenter] addObserver:self
-											 selector:@selector(partBrowserStyleDidChange:)
-												 name:LDrawPartBrowserStyleDidChangeNotification
-											   object:nil ];
-	
 }//end applicationWillFinishLaunching:
 
 
@@ -440,8 +419,7 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	[self populateLSynthModelMenus];
 	[self buildMainMenu];
 	
-	if(		showPartBrowser == YES
-	   &&	[userDefaults integerForKey:PART_BROWSER_STYLE_KEY] == PartBrowserShowAsPanel)
+	if(showPartBrowser == YES)
 	{
 		[[[PartBrowserPanelController sharedPartBrowserPanel] window] makeKeyAndOrderFront:self];
 	}
@@ -559,57 +537,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 	// Asking for money in the middle of an update process is a bit distracting.
 	suppressDonationPrompt = YES;
 }
-
-
-#pragma mark -
-#pragma mark NOTIFICATIONS
-#pragma mark -
-
-//========== partBrowserStyleDidChange: ========================================
-//
-// Purpose:		Reconfigure the part browser display based on new user 
-//				preferences.
-//
-//==============================================================================
-- (void) partBrowserStyleDidChange:(NSNotification *)notification
-{
-	NSUserDefaults          *userDefaults       = [NSUserDefaults standardUserDefaults];
-	PartBrowserStyleT       newStyle            = [userDefaults integerForKey:PART_BROWSER_STYLE_KEY];
-	NSDocumentController    *documentController = [NSDocumentController sharedDocumentController];
-	NSArray                 *documents          = [documentController documents];
-	NSInteger               documentCount       = [documents count];
-	NSInteger               counter             = 0;
-	
-	switch(newStyle)
-	{
-		case PartBrowserShowAsDrawer:
-			
-			//close the shared part browser
-			[[PartBrowserPanelController sharedPartBrowserPanel] close];
-			
-			// open the browser drawer on each document
-			for(counter = 0; counter < documentCount; counter++)
-			{
-				[[[documents objectAtIndex:counter] partBrowserDrawer] open];
-			}
-			
-			break;
-			
-		case PartBrowserShowAsPanel:
-			
-			//close the browser drawer on each document
-			for(counter = 0; counter < documentCount; counter++)
-			{
-				[[[documents objectAtIndex:counter] partBrowserDrawer] close];
-			}
-			
-			//open the shared part browser.
-			[[[PartBrowserPanelController sharedPartBrowserPanel] window] makeKeyAndOrderFront:self];
-			
-			break;
-	} 
-	
-}//end partBrowserStyleDidChange:
 
 
 #pragma mark -

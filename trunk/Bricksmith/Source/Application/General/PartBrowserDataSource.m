@@ -2,7 +2,7 @@
 //
 // File:		PartBrowserDataSource.m
 //
-// Purpose:		Provides a standarized data source for part browser interface.
+// Purpose:		Provides a standardized data source for part browser interface.
 //
 //				A part browser consists of a table which displays part numbers 
 //				and descriptions, and a combo box to choose part categories. If 

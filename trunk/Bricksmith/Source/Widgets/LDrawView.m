@@ -925,21 +925,6 @@ static Box2 NSRectToBox2(NSRect rect)
 	{
 		//Make this cursor active over the entire document.
 		[self addCursorRect:visibleRect cursor:cursor];
-		
-		//okay, something very weird is going on here. When the cursor is inside 
-		// a view and THE PARTS BROWSER DRAWER IS OPEN, merely establishing a 
-		// cursor rect isn't enough. It's somehow instantly erased when the 
-		// LDrawView inside the drawer redoes its own cursor rects. Even
-		// calling -set on the cursor often has little more effect than a brief 
-		// flicker. I don't know why this is happening, but this hack seems to 
-		// fix it.
-		if([self mouse:[self convertPoint:[[self window] mouseLocationOutsideOfEventStream] fromView:nil]
-				inRect:[self visibleRect] ] ) //mouse is inside view.
-		{
-			//[cursor set]; //not enough.
-			[cursor performSelector:@selector(set) withObject:nil afterDelay:0];
-		}
-		
 	}
 		
 }//end resetCursorRects

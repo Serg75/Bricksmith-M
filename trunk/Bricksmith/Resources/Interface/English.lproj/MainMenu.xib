@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="21507" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23727" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment version="1070" identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21507"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23727"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
@@ -446,7 +446,7 @@ CA
                             </menuItem>
                             <menuItem title="File Contents" tag="302" keyEquivalent="l" id="221">
                                 <connections>
-                                    <action selector="toggleFileContentsDrawer:" target="-1" id="222"/>
+                                    <action selector="toggleFileContents:" target="-1" id="222"/>
                                 </connections>
                             </menuItem>
                             <menuItem title="Show Mouse Tools" tag="303" id="349">

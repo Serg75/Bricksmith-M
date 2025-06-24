@@ -260,9 +260,6 @@ PreferencesDialogController *preferencesDialog = nil;
 {
 	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
 	NSString			*ldrawPath			= [userDefaults stringForKey:LDRAW_PATH_KEY];
-	PartBrowserStyleT	 partBrowserStyle	= [userDefaults integerForKey:PART_BROWSER_STYLE_KEY];
-	
-	[self->partBrowserStyleRadioButtons selectCellWithTag:partBrowserStyle];
 	
 	if(ldrawPath != nil){
 		[LDrawPathTextField setStringValue:ldrawPath];
@@ -403,28 +400,6 @@ PreferencesDialogController *preferencesDialog = nil;
 
 #pragma mark -
 #pragma mark Parts Tab
-
-//========== partBrowserStyleChanged: ==========================================
-//
-// Purpose:		We have multiple ways of showing the part browser.
-//
-//==============================================================================
-- (IBAction) partBrowserStyleChanged:(id)sender
-{
-	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
-	PartBrowserStyleT	 newStyle		= [self->partBrowserStyleRadioButtons selectedTag];
-	
-	[userDefaults setInteger:newStyle forKey:PART_BROWSER_STYLE_KEY];
-	
-	//inform interested parties.
-	[[NSNotificationCenter defaultCenter] 
-			postNotificationName:LDrawPartBrowserStyleDidChangeNotification
-						  object:[NSNumber numberWithInteger:newStyle] ];
-	
-}//end partBrowserStyleChanged:
-
-
-#pragma mark -
 
 //========== chooseLDrawFolder =================================================
 //
@@ -978,7 +953,6 @@ PreferencesDialogController *preferencesDialog = nil;
 	//
 	// General
 	//
-	[initialDefaults setObject:[NSNumber numberWithInteger:PartBrowserShowAsPanel]			forKey:PART_BROWSER_STYLE_KEY];
 	[initialDefaults setObject:[NSNumber numberWithInteger:MouseDraggingBeginImmediately]	forKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
 
 	[initialDefaults setObject:[NSNumber numberWithInteger:RightButtonContextual]			forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
@@ -986,7 +960,6 @@ PreferencesDialogController *preferencesDialog = nil;
 	[initialDefaults setObject:[NSNumber numberWithInteger:MouseWheelScrolls]				forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 
 
-	[initialDefaults setObject:[NSNumber numberWithInteger:NSDrawerClosedState]	forKey:PART_BROWSER_DRAWER_STATE];
 	[initialDefaults setObject:(id)kCFBooleanTrue								forKey:PART_BROWSER_PANEL_SHOW_AT_LAUNCH];
 	
 	[initialDefaults setObject:(id)kCFBooleanTrue								forKey:VIEWPORTS_EXPAND_TO_AVAILABLE_SIZE];

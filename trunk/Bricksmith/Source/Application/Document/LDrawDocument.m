@@ -190,7 +190,6 @@ void AppendChoicesToNewItem(
 	NSWindow				*window 				= [aController window];
 	NSToolbar				*toolbar				= nil;
 	NSString				*savedSizeString		= nil;
-	NSInteger				drawerState 			= 0;
 	NSUInteger				counter 				= 0;
 	NSNumberFormatter		*coordinateFormatter	= [[NSNumberFormatter alloc] init];
 
@@ -212,16 +211,6 @@ void AppendChoicesToNewItem(
 	{
 		NSSize	size	= NSSizeFromString(savedSizeString);
 		[window resizeToSize:size animate:NO];
-	}
-	
-	
-	//Set up the window state based on what is found in preferences.
-	drawerState = [userDefaults integerForKey:PART_BROWSER_DRAWER_STATE];
-	if(		drawerState == NSDrawerOpenState
-	   &&	[userDefaults boolForKey:PART_BROWSER_STYLE_KEY] == PartBrowserShowAsDrawer)
-	{
-		[partBrowserDrawer open];
-		[self->partsBrowser scrollSelectedCategoryToCenter];
 	}
 	
 	
@@ -588,21 +577,6 @@ void AppendChoicesToNewItem(
 	return gridOrientation;
 	
 }//end gridOrientationMode
-
-
-//========== partBrowserDrawer =================================================
-//
-// Purpose:		Returns the drawer for a part browser attached to the document 
-//			    window. Note that the user can set a preference to show the Part 
-//			    Browser as a single floating panel rather than a drower on each 
-//			    window. 
-//
-//==============================================================================
-- (NSDrawer *) partBrowserDrawer
-{
-	return self->partBrowserDrawer;
-
-}//end partBrowserDrawer
 
 
 //========== viewingAngle ======================================================
@@ -2464,7 +2438,7 @@ void AppendChoicesToNewItem(
 }//end showInspector:
 
 
-//========== toggleFileContentsDrawer: =========================================
+//========== toggleFileContents: ===============================================
 //
 // Purpose:		Either open or close the file contents outline.
 //
@@ -2472,7 +2446,7 @@ void AppendChoicesToNewItem(
 //				gotten quite a bit more complicated. 
 //
 //==============================================================================
-- (IBAction) toggleFileContentsDrawer:(id)sender
+- (IBAction) toggleFileContents:(id)sender
 {
 	NSView	*firstSubview	= [[self->fileContentsSplitView subviews] objectAtIndex:0];
 	CGFloat	maxPosition		= 0.0;
@@ -2493,7 +2467,7 @@ void AppendChoicesToNewItem(
 		[self->fileContentsSplitView setPosition:0.0 ofDividerAtIndex:0];
 	}
 	
-}//end toggleFileContentsDrawer:
+}//end toggleFileContents:
 
 
 //========== gridGranularityMenuChanged: =======================================
@@ -3220,34 +3194,15 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addPartClicked:(id)sender
 {	
-	NSUserDefaults				*userDefaults			= [NSUserDefaults standardUserDefaults];
-	PartBrowserStyleT			partBrowserStyle		= [userDefaults integerForKey:PART_BROWSER_STYLE_KEY];
 	PartBrowserPanelController	*partBrowserController	= nil;
 	
-	switch(partBrowserStyle)
-	{
-		case PartBrowserShowAsDrawer:
-			
-			//is it open?
-			if([self->partBrowserDrawer state] == NSDrawerOpenState)
-				[self->partsBrowser addPartClicked:sender];
-			else
-				[self->partBrowserDrawer open];
-			
-			break;
-			
-		case PartBrowserShowAsPanel:
-			
-			partBrowserController = [PartBrowserPanelController sharedPartBrowserPanel];
-			
-			//is it open and foremost?
-			if([[partBrowserController window] isKeyWindow] == YES)
-				[[partBrowserController partBrowser] addPartClicked:sender];
-			else
-				[[partBrowserController window] makeKeyAndOrderFront:sender];
-			
-			break;
-	} 
+	partBrowserController = [PartBrowserPanelController sharedPartBrowserPanel];
+	
+	//is it open and foremost?
+	if([[partBrowserController window] isKeyWindow] == YES)
+		[[partBrowserController partBrowser] addPartClicked:sender];
+	else
+		[[partBrowserController window] makeKeyAndOrderFront:sender];
 	
 }//end addPartClicked:
 
@@ -5191,58 +5146,6 @@ void AppendChoicesToNewItem(
 }//end activeModelDidChange:
 
 
-//**** NSDrawer ****
-//========== drawerWillOpen: ===================================================
-//
-// Purpose:		The Parts Browser drawer is opening.
-//
-//==============================================================================
-- (void)drawerWillOpen:(NSNotification *)notification
-{
-	if([notification object] == self->partBrowserDrawer)
-	{
-		// We have a problem. When the main window is resized while the drawer is 
-		// closed, the OpenGLView moves, but the OpenGL drawing region doesn't! To 
-		// fix this problem, we need to adjust the drawer's size while it is open; 
-		// that causes the OpenGL to synchronize itself properly. 
-		//
-		// This doesn't feel like the right solution to this problem, but it works.
-		// Also listed are some other things I tried that didn't work.
-		
-		//Works, but animation is very chunky. (better than adjusting the window, though)
-		NSSize contentSize = [partBrowserDrawer contentSize];
-		
-		contentSize.height += 1;
-		[partBrowserDrawer setContentSize:contentSize];
-		contentSize.height -= 1;
-		[partBrowserDrawer setContentSize:contentSize];
-
-		//Fails.
-		//	[partsBrowser->partPreview reshape];
-		
-		//Uh-uh.
-		//	NSView *contentView = [partBrowserDrawer contentView];
-		//	[contentView resizeWithOldSuperviewSize:[partBrowserDrawer contentSize]];
-		
-		//Nope.
-		//	[contentView resizeSubviewsWithOldSize:[partBrowserDrawer contentSize]];
-		
-		//Ferget it.
-		//	[contentView setNeedsDisplay:YES];
-		
-		//Works, but ruins nice animation.
-		//	if(drawerState == NSDrawerClosedState){
-		//		NSWindow *parentWindow = [partBrowserDrawer parentWindow];
-		//		NSRect parentFrame = [parentWindow frame];
-		//		parentFrame.size.width += 1;
-		//		[parentWindow setFrame:parentFrame display:NO];
-		//		parentFrame.size.width -= 1;
-		//		[parentWindow setFrame:parentFrame display:NO];
-		//	}
-	}
-}//end drawerWillOpen:
-
-
 //========== partChanged: ======================================================
 //
 // Purpose:		Somewhere, somehow, a part (or some other LDrawDirective) was 
@@ -5417,8 +5320,6 @@ void AppendChoicesToNewItem(
 {
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
 	NSWindow		*window			= [notification object];
-	
-	[userDefaults setInteger:[partBrowserDrawer state]	forKey:PART_BROWSER_DRAWER_STATE];
 	
 	//Un-inspect everything
 	[[LDrawApplication sharedInspector] inspectObjects:nil];

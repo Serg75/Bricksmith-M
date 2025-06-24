@@ -2,7 +2,7 @@
 //
 // File:		PartBrowserPanelController.m
 //
-// Purpose:		Presents a PartBrower in a dialog. It has a larger preview, so 
+// Purpose:		Presents a PartBrowser in a dialog. It has a larger preview, so
 //				it isn't as cramped as the Parts drawer.
 //
 //  Created by Allen Smith on 4/3/05.

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="15705" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23727" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment version="101200" identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15705"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23727"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -32,7 +32,6 @@
                 <outlet property="modelsColorWell" destination="126" id="130"/>
                 <outlet property="mouseDraggingRadioButtons" destination="203" id="237"/>
                 <outlet property="mouseWheelRadioButtons" destination="345" id="350"/>
-                <outlet property="partBrowserStyleRadioButtons" destination="167" id="169"/>
                 <outlet property="partsColorWell" destination="69" id="111"/>
                 <outlet property="preferencesWindow" destination="10" id="54"/>
                 <outlet property="primitivesColorWell" destination="70" id="112"/>
@@ -49,7 +48,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" topStrut="YES"/>
             <rect key="contentRect" x="542" y="457" width="486" height="203"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1417"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1415"/>
             <value key="minSize" type="size" width="94" height="7"/>
             <view key="contentView" id="7">
                 <rect key="frame" x="0.0" y="0.0" width="486" height="203"/>
@@ -217,59 +216,11 @@
             <point key="canvasLocation" x="92" y="1755"/>
         </customView>
         <customView id="76" userLabel="LDraw">
-            <rect key="frame" x="0.0" y="0.0" width="486" height="224"/>
+            <rect key="frame" x="0.0" y="0.0" width="486" height="168"/>
             <autoresizingMask key="autoresizingMask"/>
             <subviews>
-                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="164">
-                    <rect key="frame" x="66" y="158" width="144" height="17"/>
-                    <autoresizingMask key="autoresizingMask"/>
-                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Show Part Browser As:" id="299">
-                        <font key="font" metaFont="system"/>
-                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                    </textFieldCell>
-                </textField>
-                <matrix verticalHuggingPriority="750" allowsEmptySelection="NO" autosizesCells="NO" id="167">
-                    <rect key="frame" x="213" y="137" width="255" height="38"/>
-                    <autoresizingMask key="autoresizingMask"/>
-                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                    <size key="cellSize" width="255" height="18"/>
-                    <size key="intercellSpacing" width="4" height="2"/>
-                    <buttonCell key="prototype" type="radio" title="Radio" imagePosition="left" alignment="left" inset="2" id="318">
-                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                        <font key="font" metaFont="system"/>
-                    </buttonCell>
-                    <cells>
-                        <column>
-                            <buttonCell type="radio" title="Drawer on each document" imagePosition="left" alignment="left" state="on" inset="2" id="165">
-                                <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                                <font key="font" metaFont="system"/>
-                            </buttonCell>
-                            <buttonCell type="radio" title="Separate panel" imagePosition="left" alignment="left" tag="1" inset="2" id="166">
-                                <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                                <font key="font" metaFont="system"/>
-                            </buttonCell>
-                        </column>
-                    </cells>
-                    <connections>
-                        <action selector="partBrowserStyleChanged:" target="-2" id="170"/>
-                    </connections>
-                </matrix>
-                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="172">
-                    <rect key="frame" x="17" y="187" width="114" height="17"/>
-                    <autoresizingMask key="autoresizingMask"/>
-                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Part Browser" id="300">
-                        <font key="font" metaFont="systemBold"/>
-                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                    </textFieldCell>
-                </textField>
-                <box verticalHuggingPriority="750" boxType="separator" id="171">
-                    <rect key="frame" x="105" y="188" width="361" height="5"/>
-                    <autoresizingMask key="autoresizingMask"/>
-                </box>
                 <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="94">
-                    <rect key="frame" x="37" y="71" width="315" height="22"/>
+                    <rect key="frame" x="37" y="100" width="315" height="22"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="298">
                         <font key="font" metaFont="system"/>
@@ -281,7 +232,7 @@
                     </connections>
                 </textField>
                 <button verticalHuggingPriority="750" id="84">
-                    <rect key="frame" x="354" y="63" width="118" height="32"/>
+                    <rect key="frame" x="354" y="92" width="118" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="push" title="Choose…" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="297">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -292,7 +243,7 @@
                     </connections>
                 </button>
                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="83">
-                    <rect key="frame" x="17" y="101" width="114" height="17"/>
+                    <rect key="frame" x="17" y="130" width="114" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="LDraw Folder" id="296">
                         <font key="font" metaFont="systemBold"/>
@@ -301,7 +252,7 @@
                     </textFieldCell>
                 </textField>
                 <button verticalHuggingPriority="750" id="79">
-                    <rect key="frame" x="354" y="31" width="118" height="32"/>
+                    <rect key="frame" x="354" y="60" width="118" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="push" title="Reload Parts" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="294">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -312,11 +263,11 @@
                     </connections>
                 </button>
                 <box verticalHuggingPriority="750" boxType="separator" id="78">
-                    <rect key="frame" x="108" y="102" width="358" height="5"/>
+                    <rect key="frame" x="108" y="131" width="358" height="5"/>
                     <autoresizingMask key="autoresizingMask"/>
                 </box>
                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="82">
-                    <rect key="frame" x="34" y="20" width="321" height="43"/>
+                    <rect key="frame" x="34" y="49" width="321" height="43"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="295">
                         <font key="font" metaFont="smallSystem"/>
@@ -326,7 +277,7 @@
                     </textFieldCell>
                 </textField>
             </subviews>
-            <point key="canvasLocation" x="92" y="1402"/>
+            <point key="canvasLocation" x="92" y="1374"/>
         </customView>
         <customView id="59" userLabel="LDraw Parts Folder Chooser Accessory view">
             <rect key="frame" x="0.0" y="0.0" width="489" height="76"/>

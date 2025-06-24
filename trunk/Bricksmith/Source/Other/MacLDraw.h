@@ -26,7 +26,6 @@
 #define DONATION_SCREEN_LAST_VERSION_DISPLAYED		@"DonationRequestLastVersion"
 #define DONATION_SCREEN_SUPPRESS_THIS_VERSION		@"DonationRequestSuppressThisVersion"
 #define FAVORITE_PARTS_KEY							@"FavoriteParts"
-#define FILE_CONTENTS_DRAWER_STATE					@"File Contents Drawer State" //obsolete
 #define GRID_SPACING_COARSE							@"Grid Spacing: Coarse"
 #define GRID_SPACING_FINE							@"Grid Spacing: Fine"
 #define GRID_SPACING_MEDIUM							@"Grid Spacing: Medium"
@@ -38,12 +37,10 @@
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
 #define ROTATE_MODE_KEY								@"Rotate Mode"
 #define MOUSE_WHEEL_BEHAVIOR_KEY					@"Mouse Wheel Behavior"
-#define PART_BROWSER_DRAWER_STATE					@"Part Browser Drawer State"
 #define PART_BROWSER_PANEL_SHOW_AT_LAUNCH			@"Part Browser Panel Show at Launch"
 #define PART_BROWSER_PREVIOUS_CATEGORY				@"Part Browser Previous Category"
 #define PART_BROWSER_PREVIOUS_SELECTED_ROW			@"Part Browser Previous Selected Row"
 #define PART_BROWSER_SEARCH_MODE					@"Part Browser Search Mode"
-#define PART_BROWSER_STYLE_KEY						@"Part Browser Style"
 #define PREFERENCES_LAST_TAB_DISPLAYED				@"Preferences Tab"
 #define SYNTAX_COLOR_COLORS_KEY						@"Syntax Color Colors"
 #define SYNTAX_COLOR_COMMENTS_KEY					@"Syntax Color Comments"
@@ -168,10 +165,6 @@
 //tablet pointing device changed.
 // Object is an NSEvent: NSTabletProximity.
 #define LDrawPointingDeviceDidChangeNotification		@"LDrawPointingDeviceDidChangeNotification"
-
-//Part Browser should be shown a different way.
-// Object is NSNumber of new style. No userInfo.
-#define LDrawPartBrowserStyleDidChangeNotification		@"LDrawPartBrowserStyleDidChangeNotification"
 
 //Syntax coloring changed in preferences.
 // Object is the application. No userInfo.
@@ -331,13 +324,6 @@ typedef enum MouseWheelBeahvior {
 	MouseWheelZooms										= 1
 
 } MouseWheelBeahviorT;
-
-typedef enum PartBrowserStyle
-{
-	PartBrowserShowAsDrawer	= 0,
-	PartBrowserShowAsPanel	= 1
-
-} PartBrowserStyleT;
 
 
 typedef enum SearchMode

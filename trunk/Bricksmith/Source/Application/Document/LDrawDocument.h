@@ -50,7 +50,6 @@
 	__weak IBOutlet NSObjectController			*bindingsController;
 	
 	// Window satellites
-	__weak IBOutlet NSDrawer					*partBrowserDrawer;
 	__weak IBOutlet PartBrowserDataSource		*partsBrowser;
 	
 	// Scope bar
@@ -91,7 +90,6 @@
 - (NSWindow *)foremostWindow;
 - (gridSpacingModeT) gridSpacingMode;
 - (gridOrientationModeT) gridOrientationMode;
-- (NSDrawer *) partBrowserDrawer;
 - (Tuple3) viewingAngle;
 
 - (void) setActiveModel:(LDrawMPDModel *)newActiveModel;
@@ -152,7 +150,7 @@
 
 // - Tools menu
 - (IBAction) showInspector:(id)sender;
-- (IBAction) toggleFileContentsDrawer:(id)sender;
+- (IBAction) toggleFileContents:(id)sender;
 - (IBAction) gridGranularityMenuChanged:(id)sender;
 - (IBAction) gridOrientationModeChanged:(id)sender;
 - (IBAction) showDimensions:(id)sender;

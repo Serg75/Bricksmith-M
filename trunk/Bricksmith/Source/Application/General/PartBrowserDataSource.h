@@ -2,7 +2,7 @@
 //
 // File:		PartBrowserDataSource.h
 //
-// Purpose:		Provides a standarized data source for part browser interface.
+// Purpose:		Provides a standardized data source for part browser interface.
 //
 //  Created by Allen Smith on 2/17/05.
 //  Copyright 2005. All rights reserved.
