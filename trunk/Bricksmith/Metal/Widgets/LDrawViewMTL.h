@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawViewGPU.h
+//	LDrawViewMTL.h
 //	Bricksmith
 //
 //	Purpose:	This is the intermediary between the operating system (events

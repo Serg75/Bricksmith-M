@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawDocumentGPU.h
+//	LDrawDocumentMTL.h
 //	Bricksmith
 //
 //	Purpose:	Document controller for an LDraw document.

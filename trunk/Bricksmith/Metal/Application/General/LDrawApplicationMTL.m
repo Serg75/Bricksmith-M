@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawApplicationGPU.m
+//	LDrawApplicationMTL.m
 //	Bricksmith
 //
 //	Purpose:	This is the "application controller." Here we find application-
@@ -16,7 +16,7 @@
 //
 //==============================================================================
 
-#import "LDrawApplicationGPU.h"
+#import "LDrawApplicationMTL.h"
 
 @implementation LDrawApplication (Metal)
 

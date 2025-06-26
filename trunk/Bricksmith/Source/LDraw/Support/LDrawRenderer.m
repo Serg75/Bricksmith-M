@@ -30,9 +30,9 @@
 #import "LDrawModel.h"
 #import "LDrawMPDModel.h"
 #import "LDrawPart.h"
+#import  LDrawShaderRendererGPU_h
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
-#import "LDrawShaderRendererGPU.h"
 #include "MacLDraw.h"
 
 #define TIME_BOXTEST				0	// output timing data for how long box tests and marquee drags take.

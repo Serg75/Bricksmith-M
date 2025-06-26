@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawViewGPU.m
+//	LDrawViewGL.m
 //	Bricksmith
 //
 //	Purpose:	This is the intermediary between the operating system (events
@@ -22,11 +22,11 @@
 //
 //==============================================================================
 
-#import "LDrawViewGPU.h"
+#import "LDrawViewGL.h"
 
 #import "FocusRingView.h"
-#import "LDrawApplicationGPU.h"
-#import "LDrawRendererGPU.h"
+#import "LDrawApplicationGL.h"
+#import "LDrawRendererGL.h"
 #import "OverlayViewCategory.h"
 
 #include OPEN_GL_HEADER

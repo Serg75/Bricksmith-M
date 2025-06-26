@@ -1,12 +1,12 @@
 //
-//  LDrawDisplayList.m
+//  LDrawDisplayListGL.m
 //  Bricksmith
 //
 //  Created by bsupnik on 11/12/12.
 //  Copyright 2012 __MyCompanyName__. All rights reserved.
 //
 
-#import "LDrawDisplayList.h"
+#import "LDrawDisplayListGL.h"
 #import "LDrawCoreRenderer.h"
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderRenderer.h"

@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawShaderRendererGPU.m
+//	LDrawShaderRendererMTL.m
 //	Bricksmith
 //
 //	Purpose:	an implementation of the LDrawCoreRenderer API using Metal
@@ -17,13 +17,13 @@
 //
 //==============================================================================
 
-#import "LDrawShaderRendererGPU.h"
+#import "LDrawShaderRendererMTL.h"
 
 @import MetalKit;
 @import simd;
 
 #import "LDrawBDPAllocator.h"
-#import "LDrawDisplayList.h"
+#import "LDrawDisplayListMTL.h"
 #import "ColorLibrary.h"
 #import "MetalGPU.h"
 #import "MetalUtilities.h"

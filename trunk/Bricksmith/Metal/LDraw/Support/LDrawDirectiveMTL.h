@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:		LDrawDirectiveGPU.h
+//  File:		LDrawDirectiveMTL.h
 //
 //  Purpose:	This is an abstract base class for all elements of an LDraw
 //				document.
@@ -13,7 +13,7 @@
 #import "LDrawDirective.h"
 
 
-@interface LDrawDirective (OpenGL)
+@interface LDrawDirective (Metal)
 
 // Directives
 - (void) debugDrawBoundingBox;

@@ -1,13 +1,26 @@
+//==============================================================================
 //
-//  LDrawApplicationMTL.h
-//  Bricksmith
+//	LDrawApplicationMTL.h
+//	Bricksmith
 //
-//  Created by Sergey Slobodenyuk on 2023-06-20.
+//	Purpose:	This is the "application controller." Here we find application-
+//				wide instance variables and actions, as well as application
+//				delegate code for startup and shutdown.
 //
+//	Info:		This category contains Metal-related code.
+//
+//	Created by Sergey Slobodenyuk on 2023-06-07.
+//
+//==============================================================================
 
-#ifndef LDrawApplicationMTL_h
-#define LDrawApplicationMTL_h
+#import "LDrawApplication.h"
 
-#import "LDrawApplicationGPU.h"
 
-#endif /* LDrawApplicationMTL_h */
+@interface LDrawApplication (Metal)
+
+//Accessors
++ (void) makeCurrentSharedContext;
+
+- (void) makeSharedContext;
+
+@end

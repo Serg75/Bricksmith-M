@@ -31,7 +31,7 @@
 #import <dispatch/dispatch.h>
 #endif
 
-#import "LDrawDirectiveGPU.h"
+#import  LDrawDirectiveGPU_h
 #import "LDrawKeywords.h"
 #import "LDrawModel.h"
 #import "LDrawMPDModel.h"

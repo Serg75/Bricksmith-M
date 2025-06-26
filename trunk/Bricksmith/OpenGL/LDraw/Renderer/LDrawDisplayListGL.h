@@ -1,5 +1,5 @@
 //
-//  LDrawDisplayList.h
+//  LDrawDisplayListGL.h
 //  Bricksmith
 //
 //  Created by bsupnik on 11/12/12.
@@ -7,7 +7,6 @@
 //
 
 #import <Cocoa/Cocoa.h>
-#import "GPU.h"
 
 /*
 
@@ -53,25 +52,27 @@ struct	LDrawDLBuilder;
 struct	LDrawDLSession;
 
 // Display list creation API.
-struct LDrawDLBuilder *	LDrawDLBuilderCreate(void);
-struct LDrawDL *		LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx);
-void					LDrawDLDestroy(struct LDrawDL * dl);
+struct LDrawDLBuilder *		LDrawDLBuilderCreate(void);
+struct LDrawDL *			LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx);
+void						LDrawDLDestroy(struct LDrawDL * dl);
 
 // Display list mesh accumulation APIs.
-void					LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec * spec);
-void					LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const float v[9], float n[3], float c[4]);
-void					LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4]);
-void					LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const float v[6], float n[3], float c[4]);
-void					LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4]);
+void						LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec * spec);
+void						LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const GLfloat v[9], GLfloat n[3], GLfloat c[4]);
+void						LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLfloat n[3], GLfloat c[4]);
+void						LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4]);
+void						LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4]);
 
 // Session/drawing APIs
-struct LDrawDLSession *	LDrawDLSessionCreate(const float model_view[16]);
-void					LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session);
-void					LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
-									struct LDrawDLSession *		session,
-									struct LDrawDL *			dl,
-									struct LDrawTextureSpec *	spec,
-									const float 				cur_color[4],
-									const float 				cmp_color[4],
-									const float					transform[16],
-									BOOL						is_wire_frame);
+struct LDrawDLSession *		LDrawDLSessionCreate(const GLfloat model_view[16]);
+void						LDrawDLSessionDrawAndDestroy(struct LDrawDLSession * session);
+void						LDrawDLDraw(
+									id								renderEncoder,
+									struct LDrawDLSession *			session,
+									struct LDrawDL *				dl, 
+									struct LDrawTextureSpec *		spec,
+									const GLfloat 					cur_color[4],
+									const GLfloat 					cmp_color[4],
+									const GLfloat					transform[16],
+									int								draw_now);
+									

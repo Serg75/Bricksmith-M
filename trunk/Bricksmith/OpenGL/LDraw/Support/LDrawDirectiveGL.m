@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawDirective.m
+//	LDrawDirectiveGL.m
 //	Bricksmith
 //
 //	Purpose:	Base class for all LDraw objects provides a few basic utilities.
@@ -11,7 +11,7 @@
 //
 //==============================================================================
 
-#import "LDrawDirective.h"
+#import "LDrawDirectiveGL.h"
 
 #include OPEN_GL_HEADER
 

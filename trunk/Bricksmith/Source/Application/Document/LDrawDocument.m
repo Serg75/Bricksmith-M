@@ -17,7 +17,6 @@
 //  Copyright (c) 2005. All rights reserved.
 //==============================================================================
 #import "LDrawDocument.h"
-#import "LDrawDocumentGPU.h"
 
 #import <AMSProgressBar/AMSProgressBar.h>
 
@@ -26,20 +25,20 @@
 #import "ExtendedSplitView.h"
 #import "IconTextCell.h"
 #import "Inspector.h"
-#import "LDrawApplicationGPU.h"
+#import  LDrawApplicationGPU_h
 #import "LDrawColor.h"
 #import "LDrawColorPanelController.h"
 #import "LDrawComment.h"
 #import "LDrawConditionalLine.h"
 #import "LDrawContainer.h"
 #import "LDrawDirective.h"
+#import  LDrawDocumentGPU_h
 #import "LDrawDocumentTree.h"
 #import "LDrawDocumentWindow.h"
 #import "LDrawDragHandle.h"
 #import "LDrawDrawableElement.h"
 #import "LDrawFile.h"
 #import "LDrawFileOutlineView.h"
-#import "LDrawViewGPU.h"
 #import "LDrawHighResPrimitives.h"
 #import "LDrawLine.h"
 #import "LDrawLSynth.h"
@@ -52,6 +51,7 @@
 #import "LDrawTriangle.h"
 #import "LDrawUtilities.h"
 #import "LDrawViewerContainer.h"
+#import  LDrawViewGPU_h
 #import "LPubCommand.h"
 #import "LPubRemoveGroup.h"
 #import "LSynthConfiguration.h"

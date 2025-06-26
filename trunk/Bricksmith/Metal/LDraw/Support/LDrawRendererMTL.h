@@ -1,13 +1,30 @@
+//==============================================================================
 //
-//  LDrawRendererMTL.h
-//  Bricksmith
+//	LDrawRendererMTL.h
+//	Bricksmith
 //
-//  Created by Sergey Slobodenyuk on 2023-06-20.
+//	Purpose:	Draws an LDrawFile with Metal.
 //
+//	Info:		This category contains Metal-related code.
+//
+//	Created by Sergey Slobodenyuk on 2023-06-07.
+//
+//==============================================================================
 
-#ifndef LDrawRendererMTL_h
-#define LDrawRendererMTL_h
+#import "LDrawRenderer.h"
 
-#import "LDrawRendererGPU.h"
+@import MetalKit;
 
-#endif /* LDrawRendererMTL_h */
+
+@interface LDrawRenderer (Metal) <MTKViewDelegate>
+
+// Initialization
+- (void) prepareMetal;
+
+// Drawing
+- (void) drawInMTKView:(nonnull MTKView *)view;
+
+// Accessors
+- (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
+
+@end

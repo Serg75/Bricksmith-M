@@ -1,13 +1,25 @@
+//==============================================================================
 //
-//  LDrawShaderRendererMTL.h
-//  Bricksmith
+//	LDrawShaderRendererMTL.h
+//	Bricksmith
 //
-//  Created by Sergey Slobodenyuk on 2023-06-20.
+//	Purpose:	an implementation of the LDrawCoreRenderer API using shaders.
 //
+//	Info:		This category contains Metal-related code.
+//
+//	Created by Sergey Slobodenyuk on 2023-06-07.
+//
+//==============================================================================
 
-#ifndef LDrawShaderRendererMTL_h
-#define LDrawShaderRendererMTL_h
+#import "LDrawShaderRenderer.h"
 
-#import "LDrawShaderRendererGPU.h"
 
-#endif /* LDrawShaderRendererMTL_h */
+@interface LDrawShaderRenderer (Metal)
+
+- (id) initWithEncoder:(id<MTLRenderCommandEncoder>)encoder scale:(float)scale modelView:(float *)mv_matrix projection:(float *)proj_matrix;
+
+- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+
+- (void) finishDraw;
+
+@end

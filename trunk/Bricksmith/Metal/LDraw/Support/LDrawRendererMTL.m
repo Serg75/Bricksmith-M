@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawRendererGPU.m
+//	LDrawRendererMTL.m
 //	Bricksmith
 //
 //	Purpose:	Draws an LDrawFile with Metal.
@@ -23,7 +23,7 @@
 //
 //==============================================================================
 
-#import "LDrawRendererGPU.h"
+#import "LDrawRendererMTL.h"
 
 #include "MetalCommonDefinitions.h"
 

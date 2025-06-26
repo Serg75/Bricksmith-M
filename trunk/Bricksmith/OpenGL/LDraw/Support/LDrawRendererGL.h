@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//	LDrawRendererGPU.h
+//	LDrawRendererGL.h
 //	Bricksmith
 //
 //	Purpose:	Draws an LDrawFile with OpenGL.

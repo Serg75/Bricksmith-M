@@ -19,7 +19,6 @@
 //  Copyright 2005. All rights reserved.
 //==============================================================================
 #import "LDrawView.h"
-#import "LDrawViewGPU.h"
 
 #import "FocusRingView.h"
 #import "LDrawApplication.h"
@@ -28,12 +27,13 @@
 #import "LDrawDocument.h"
 #import "LDrawDragHandle.h"
 #import "LDrawFile.h"
-#import "LDrawRendererGPU.h"
+#import  LDrawRendererGPU_h
 #import "LDrawModel.h"
 #import "LDrawPart.h"
 #import "LDrawStep.h"
 #import "LDrawUtilities.h"
 #import "LDrawViewerContainer.h"
+#import  LDrawViewGPU_h
 #import "MacLDraw.h"
 #import "OverlayViewCategory.h"
 #import "UserDefaultsCategory.h"

@@ -12,14 +12,16 @@
 //  Created by Allen Smith on 2/14/05.
 //  Copyright 2005. All rights reserved.
 //==============================================================================
-#import "LDrawApplicationGPU.h"
+#import "LDrawApplication.h"
 
 #import <3DConnexionClient/ConnexionClientAPI.h>
 #import <mach/mach_time.h>
 #import <Sparkle/Sparkle.h>
 
+#import "GPU.h"
 #import "DonationDialogController.h"
 #import "Inspector.h"
+#import  LDrawApplicationGPU_h
 #import "LDrawColorPanelController.h"
 #import "LDrawDocument.h"
 #import "LDrawPaths.h"

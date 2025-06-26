@@ -25,13 +25,13 @@
 
 #import "GPU.h"
 #import "IconTextCell.h"
-#import "LDrawApplicationGPU.h"
+#import  LDrawApplicationGPU_h
 #import "LDrawColorPanelController.h"
 #import "LDrawModel.h"
 #import "LDrawPart.h"
 #import "LDrawViewerContainer.h"
 #import "MacLDraw.h"
-#import PartLibraryGPU_h
+#import  PartLibraryGPU_h
 #import "StringCategory.h"
 #import "TableViewCategory.h"
 

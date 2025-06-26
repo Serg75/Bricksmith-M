@@ -1,5 +1,5 @@
 //
-//  LDrawDisplayList.m
+//  LDrawDisplayListMTL.m
 //  Bricksmith
 //
 //  Created by bsupnik on 11/12/12.
@@ -11,7 +11,7 @@
 
 #include "MetalCommonDefinitions.h"
 
-#import "LDrawDisplayList.h"
+#import "LDrawDisplayListMTL.h"
 #import "LDrawCoreRenderer.h"
 #import "LDrawBDPAllocator.h"
 #import "LDrawShaderRenderer.h"
