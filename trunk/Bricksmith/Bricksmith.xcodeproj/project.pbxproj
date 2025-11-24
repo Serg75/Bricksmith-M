@@ -3,12 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		0B040CBE164F526D000CA89A /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
-		0B040CCE164F529F000CA89A /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
+		0B040CCE164F529F000CA89A /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		0B040CD7164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem in Resources */ = {isa = PBXBuildFile; fileRef = 0B040CD6164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem */; };
 		0B04E97B1093BB4200E201EE /* ColorPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9471093BB4200E201EE /* ColorPanel.xib */; };
 		0B04E97C1093BB4200E201EE /* Dimensions.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9491093BB4200E201EE /* Dimensions.xib */; };
@@ -169,7 +169,7 @@
 		0BC699CD08B93A0500DAF996 /* DimensionsPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BC699CB08B93A0500DAF996 /* DimensionsPanel.h */; };
 		0BC699CE08B93A0500DAF996 /* DimensionsPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BC699CC08B93A0500DAF996 /* DimensionsPanel.m */; };
 		0BC6AAEB0987296700505A88 /* Help in Resources */ = {isa = PBXBuildFile; fileRef = 0BC6AACC0987296700505A88 /* Help */; };
-		0BC71D910E6CC8340007F10D /* AMSProgressBar.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
+		0BC71D910E6CC8340007F10D /* AMSProgressBar.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		0BC75339136FC878002568B8 /* PartLibrary.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BC75337136FC878002568B8 /* PartLibrary.h */; };
 		0BC7533A136FC878002568B8 /* PartLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BC75338136FC878002568B8 /* PartLibrary.m */; };
 		0BCD0C6507FD0BA10066A536 /* LDrawContainer.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BCD0C6307FD0BA10066A536 /* LDrawContainer.h */; };
@@ -230,7 +230,6 @@
 		18B32A712B9A113900A97084 /* ScannerCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */; };
 		18B32A722B9A61DF00A97084 /* LDrawApplicationMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E1082F2A41E0AB0091D579 /* LDrawApplicationMTL.h */; };
 		18B32A732B9A622D00A97084 /* LDrawShaderRendererMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108302A41E22F0091D579 /* LDrawShaderRendererMTL.h */; };
-		18B935CE2B60072900291171 /* Info-M.plist in Resources */ = {isa = PBXBuildFile; fileRef = 18B935CD2B60072900291171 /* Info-M.plist */; };
 		2BB59F4309FEFE960077A885 /* AMSProgressBar.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
 		2BF2E2CD0AB0FBB50026D5DB /* MLCad.ini in Resources */ = {isa = PBXBuildFile; fileRef = 2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */; };
 		2BF2E3030AB0FC5E0026D5DB /* MovePanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */; };
@@ -508,10 +507,10 @@
 		956D9C8E2A30768000FA956B /* 3DconnexionClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B27D22B132B3383005C7E1A /* 3DconnexionClient.framework */; };
 		956D9C8F2A30768000FA956B /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
 		956D9C902A30768000FA956B /* libicucore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 73772F01F06AC293E3F650C4 /* libicucore.dylib */; };
-		956D9C922A30768000FA956B /* AMSProgressBar.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
-		956D9C932A30768000FA956B /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
+		956D9C922A30768000FA956B /* AMSProgressBar.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		956D9C932A30768000FA956B /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		956D9C952A30768000FA956B /* lsynth.mpd in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893AD1655334500AA055B /* lsynth.mpd */; };
-		956D9C962A30768000FA956B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; };
+		956D9C962A30768000FA956B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		956D9C9C2A30769B00FA956B /* MTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9B7F2A2FDC5C00FA956B /* MTL.h */; };
 		956D9CA02A30A72300FA956B /* LDrawApplicationGPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9C9E2A30A72300FA956B /* LDrawApplicationGPU.h */; };
 		956D9CA12A30A72300FA956B /* LDrawApplicationGPU.m in Sources */ = {isa = PBXBuildFile; fileRef = 956D9C9F2A30A72300FA956B /* LDrawApplicationGPU.m */; };
@@ -554,7 +553,7 @@
 		95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
 		95D115AC299E5D74008051BF /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
 		95D8939316550B6400AA055B /* Legonian Ruler.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 95D8939216550B6400AA055B /* Legonian Ruler.pdf */; };
-		95D893AC165532B100AA055B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; };
+		95D893AC165532B100AA055B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		95D893B816555F3E00AA055B /* LSynthConfiguration.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893B616555F3E00AA055B /* LSynthConfiguration.h */; };
 		95D893B916555F3E00AA055B /* LSynthConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D893B716555F3E00AA055B /* LSynthConfiguration.m */; };
 		95D893CA16569CFD00AA055B /* LDrawLSynth.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D893C816569CFD00AA055B /* LDrawLSynth.h */; };
@@ -2191,6 +2190,8 @@
 		2A37F4A9FDCFA73011CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					95D021EC29B1F482001F2B4D = {
 						CreatedOnToolsVersion = 14.1;
@@ -2322,7 +2323,6 @@
 				956D9C052A30768000FA956B /* InspectorComment.xib in Resources */,
 				956D9C062A30768000FA956B /* InspectorConditionalLine.xib in Resources */,
 				956D9C072A30768000FA956B /* InspectorLine.xib in Resources */,
-				18B935CE2B60072900291171 /* Info-M.plist in Resources */,
 				956D9C082A30768000FA956B /* InspectorMPDModel.xib in Resources */,
 				956D9C092A30768000FA956B /* InspectorPart.xib in Resources */,
 				956D9C0A2A30768000FA956B /* InspectorQuadrilateral.xib in Resources */,
@@ -2916,13 +2916,13 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../ThirdParty\"",
 					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -2933,13 +2933,12 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
 					3DconnexionClient,
 				);
-				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith;
 				PRODUCT_NAME = Bricksmith;
 				SDKROOT = macosx;
@@ -2955,11 +2954,11 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../ThirdParty\"",
 					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
 				);
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -2969,13 +2968,12 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
 					3DconnexionClient,
 				);
-				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith;
 				PRODUCT_NAME = Bricksmith;
 				SDKROOT = macosx;
@@ -2988,8 +2986,37 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
@@ -3004,9 +3031,37 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_LDFLAGS = (
 					"-weak_framework",
@@ -3024,13 +3079,13 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../ThirdParty\"",
 					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -3046,7 +3101,7 @@
 				INFOPLIST_FILE = "Info-M.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_HEADER_SEARCH_PATHS = Metal/Global;
 				MTL_PREPROCESSOR_DEFINITIONS = "";
@@ -3055,7 +3110,6 @@
 					"-weak_framework",
 					3DconnexionClient,
 				);
-				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith;
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				PRODUCT_NAME = "Bricksmith-M";
@@ -3073,12 +3127,12 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../ThirdParty\"",
 					"\"$(SRCROOT)/../ThirdParty/Sparkle\"",
 				);
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -3093,7 +3147,7 @@
 				INFOPLIST_FILE = "Info-M.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_HEADER_SEARCH_PATHS = Metal/Global;
 				MTL_PREPROCESSOR_DEFINITIONS = "";
@@ -3102,7 +3156,6 @@
 					"-weak_framework",
 					3DconnexionClient,
 				);
-				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith;
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				PRODUCT_NAME = "Bricksmith-M";
@@ -3147,6 +3200,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -3213,6 +3267,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
