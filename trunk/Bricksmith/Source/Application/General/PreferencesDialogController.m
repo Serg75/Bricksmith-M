@@ -202,16 +202,16 @@ PreferencesDialogController *preferencesDialog = nil;
 	[_gridSpacingCoarseField setFloatValue:gridCoarse];
 	
 	// Mouse Dragging
-	MouseDragBehaviorT	mouseBehavior	= [userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	MouseDragBehaviorT	mouseBehavior	= (MouseDragBehaviorT)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
 	[self->mouseDraggingRadioButtons selectCellWithTag:mouseBehavior];
 	
-	RightButtonBehaviorT	rbBehavior = [userDefaults integerForKey:RIGHT_BUTTON_BEHAVIOR_KEY];
+	RightButtonBehaviorT	rbBehavior = (RightButtonBehaviorT)[userDefaults integerForKey:RIGHT_BUTTON_BEHAVIOR_KEY];
 	[self->rightButtonRadioButtons selectCellWithTag:rbBehavior];
 	
-	RotateModeT			rBehavior = [userDefaults integerForKey:ROTATE_MODE_KEY];
-	[self->rotateModeRadioButtons selectCellWithTag:rBehavior];	
+	RotateModeT			rBehavior = (RotateModeT)[userDefaults integerForKey:ROTATE_MODE_KEY];
+	[self->rotateModeRadioButtons selectCellWithTag:rBehavior];
 	
-	MouseWheelBeahviorT	wBehavior = [userDefaults integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY];
+	MouseWheelBeahviorT	wBehavior = (MouseWheelBeahviorT)[userDefaults integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 	[self->mouseWheelRadioButtons selectCellWithTag:wBehavior];
 	
 	
@@ -281,11 +281,11 @@ PreferencesDialogController *preferencesDialog = nil;
     NSUserDefaults *userDefaults          = [NSUserDefaults standardUserDefaults];
     NSString       *executablePath        = [userDefaults stringForKey:LSYNTH_EXECUTABLE_PATH_KEY];
     NSString       *configurationPath     = [userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY];
-    int             selectionTransparency = [userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]; // Stored as an int but interpreted as a percentage
+	NSInteger       selectionTransparency = [userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]; // Stored as an int but interpreted as a percentage
     NSColor        *selectionColor        = [userDefaults colorForKey:LSYNTH_SELECTION_COLOR_KEY] ?: [NSColor systemRedColor];
     BOOL            saveSynthesizedParts  = [userDefaults boolForKey:LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY];
     BOOL            showBasicPartsList    = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
-    LSynthSelectionModeT selectionMode    = [userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
+    LSynthSelectionModeT selectionMode    = (LSynthSelectionModeT)[userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
 
     // Set control values
     [lsynthExecutablePath       setStringValue:executablePath];
@@ -293,7 +293,7 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthSelectionModeMatrix  selectCellWithTag:selectionMode];
     [lsynthSelectionColorWell   setColor:selectionColor];
     [lsynthTransparencySlider   setIntegerValue:selectionTransparency];
-    [lsynthTransparencyText     setStringValue:[NSString stringWithFormat:@"%i", selectionTransparency]];
+	[lsynthTransparencyText     setStringValue:[NSString stringWithFormat:@"%li", (long)selectionTransparency]];
     [lsynthSaveSynthesizedParts setState:saveSynthesizedParts];
     [lsynthShowBasicPartsList   setState:showBasicPartsList];
     
@@ -367,7 +367,7 @@ PreferencesDialogController *preferencesDialog = nil;
 - (IBAction) mouseDraggingChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
-	MouseDragBehaviorT	mouseBehavior	= [self->mouseDraggingRadioButtons selectedTag];
+	MouseDragBehaviorT	mouseBehavior	= (MouseDragBehaviorT)[self->mouseDraggingRadioButtons selectedTag];
 	
 	[userDefaults setInteger:mouseBehavior
 					  forKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
@@ -377,7 +377,7 @@ PreferencesDialogController *preferencesDialog = nil;
 - (IBAction) rightButtonChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
-	RightButtonBehaviorT rbBehavior = [self->rightButtonRadioButtons selectedTag];
+	RightButtonBehaviorT rbBehavior 	= (RightButtonBehaviorT)[self->rightButtonRadioButtons selectedTag];
 	[userDefaults setInteger:rbBehavior
 						forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
 }
@@ -385,7 +385,7 @@ PreferencesDialogController *preferencesDialog = nil;
 - (IBAction) rotateModeChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
-	RotateModeT			rBehavior = [self->rotateModeRadioButtons selectedTag];
+	RotateModeT			rBehavior 		= (RotateModeT)[self->rotateModeRadioButtons selectedTag];
 	[userDefaults setInteger:rBehavior
 						forKey:ROTATE_MODE_KEY];
 }
@@ -393,7 +393,7 @@ PreferencesDialogController *preferencesDialog = nil;
 - (IBAction) mouseWheelChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
-	MouseWheelBeahviorT		wBehavior = [self->mouseWheelRadioButtons selectedTag];
+	MouseWheelBeahviorT		wBehavior 	= (MouseWheelBeahviorT)[self->mouseWheelRadioButtons selectedTag];
 	[userDefaults setInteger:wBehavior
 						forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 }

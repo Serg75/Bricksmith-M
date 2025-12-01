@@ -115,7 +115,7 @@
 {
 	LDrawStep *representedObject = [self object];
 	
-	LDrawStepRotationT	stepRotationType	= [[self->rotationTypeRadioButtons selectedCell] tag];
+	LDrawStepRotationT	stepRotationType	= (LDrawStepRotationT)[[self->rotationTypeRadioButtons selectedCell] tag];
 	Tuple3				rotationAngle		= ZeroPoint3;
 	
 	rotationAngle.x = [self->rotationXField doubleValue];

@@ -1058,7 +1058,7 @@
 - (void)doAutoHullOnBand
 {
     // clean out INSIDE/OUTSIDE directives
-    int i;
+    NSUInteger i;
     for (i = [[self subdirectives] count] - 1; i >= 0; i--) {
         if ([[[self subdirectives] objectAtIndex:i] isKindOfClass:[LDrawLSynthDirective class]]) {
             [[self subdirectives] removeObjectAtIndex:i];
@@ -1168,7 +1168,7 @@
                 arrayWithObjects:part,
                                  [NSNumber numberWithFloat:t.translate.x],
                                  [NSNumber numberWithFloat:t.translate.y],
-                                 [NSNumber numberWithInt:[[[config constraintDefinitionForPart:part] valueForKey:@"radius"] integerValue]],
+                                 [NSNumber numberWithInteger:[[[config constraintDefinitionForPart:part] valueForKey:@"radius"] integerValue]],
                                  [NSMutableArray array],
                                  nil]
                          forKeys:[NSArray arrayWithObjects:@"directive", @"x", @"y", @"r", @"hullPoints", nil]];
@@ -1228,8 +1228,8 @@
 
             [preparedData addObject:[NSMutableDictionary
                 dictionaryWithObjects:[NSArray arrayWithObjects:[point objectForKey:@"directive"],
-                    [NSNumber numberWithInt:[[coords objectForKey:@"x"] integerValue]],
-                    [NSNumber numberWithInt:[[coords objectForKey:@"y"] integerValue]],
+                    [NSNumber numberWithInteger:[[coords objectForKey:@"x"] integerValue]],
+                    [NSNumber numberWithInteger:[[coords objectForKey:@"y"] integerValue]],
                     [NSNumber numberWithBool:false],
                     nil]
                 forKeys:[NSArray arrayWithObjects:@"directive", @"x", @"y", @"inHull", nil]]];
@@ -1282,7 +1282,7 @@
 - (void)colorSelectedSynthesizedParts:(BOOL)yesNo
 {
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    LSynthSelectionModeT selectionMode = [userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
+    LSynthSelectionModeT selectionMode = (LSynthSelectionModeT)[userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
     float rgba[4]; // a temporary RGBA color we create and manipulate
     LDrawColor *theColor = [[LDrawColor alloc] init]; // an LDrawColor to set the part's color with
 
@@ -1396,7 +1396,7 @@
 //==============================================================================
 -(int)synthesizedPartsCount
 {
-    return [synthesizedParts count];
+    return (int)[synthesizedParts count];
 }
 
 //========== partClass =========================================================
@@ -1417,7 +1417,7 @@
         // use that part's class.
         for (NSDictionary *part in partTypes) {
             if ([[self lsynthType] isEqualToString:[part valueForKey:@"LSYNTH_TYPE"]]) {
-                class = [[part valueForKey:@"LSYNTH_CLASS"] integerValue];
+                class = (LSynthClassT)[[part valueForKey:@"LSYNTH_CLASS"] integerValue];
 				break;
             }
         }

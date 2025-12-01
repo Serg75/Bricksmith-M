@@ -41,15 +41,15 @@
 
 @interface Circle : NSObject
 {
-    int x;
-    int y;
-    int r;
+    NSInteger x;
+    NSInteger y;
+    NSInteger r;
     LDrawDirective *directive;
 }
--(void)setX:(int)x;
--(void)setY:(int)y;
--(void)setR:(int)r;
--(Circle *)initWithX:(int)x Y:(int)y R:(int)r;
+-(void)setX:(NSInteger)x;
+-(void)setY:(NSInteger)y;
+-(void)setR:(NSInteger)r;
+-(Circle *)initWithX:(NSInteger)x Y:(NSInteger)y R:(NSInteger)r;
 @end
 
 @implementation Circle
@@ -58,7 +58,7 @@
 #pragma mark INITIALISATION
 #pragma mark -
 
--(id)initWithX:(int)X Y:(int)Y R:(int)R
+-(id)initWithX:(NSInteger)X Y:(NSInteger)Y R:(NSInteger)R
 {
 	self = [super init];
     if (self)
@@ -74,25 +74,25 @@
 #pragma mark ACCESSORS
 #pragma mark -
 
--(int) x
+-(NSInteger) x
 {
     return self->x;
 }
--(void)setX:(int)X
+-(void)setX:(NSInteger)X
 {
     self->x = X;
 }
--(int) y {
+-(NSInteger) y {
     return self->y;
 }
--(void)setY:(int)Y
+-(void)setY:(NSInteger)Y
 {
     self->y = Y;
 }
--(int) r {
+-(NSInteger) r {
     return self->r;
 }
--(void)setR:(int)R
+-(void)setR:(NSInteger)R
 {
     self->r = R;
 }
@@ -302,15 +302,15 @@
 {
     //NSLog(@"PQR: %i, %i, %i", pIndex, qIndex, rIndex);
 
-    int px = [[[points objectAtIndex:pIndex] objectForKey:@"x"] integerValue];
-    int qx = [[[points objectAtIndex:qIndex] objectForKey:@"x"] integerValue];
-    int rx = [[[points objectAtIndex:rIndex] objectForKey:@"x"] integerValue];
-    int py = [[[points objectAtIndex:pIndex] objectForKey:@"y"] integerValue];
-    int qy = [[[points objectAtIndex:qIndex] objectForKey:@"y"] integerValue];
-    int ry = [[[points objectAtIndex:rIndex] objectForKey:@"y"] integerValue];
+    NSInteger px = [[[points objectAtIndex:pIndex] objectForKey:@"x"] integerValue];
+	NSInteger qx = [[[points objectAtIndex:qIndex] objectForKey:@"x"] integerValue];
+	NSInteger rx = [[[points objectAtIndex:rIndex] objectForKey:@"x"] integerValue];
+	NSInteger py = [[[points objectAtIndex:pIndex] objectForKey:@"y"] integerValue];
+	NSInteger qy = [[[points objectAtIndex:qIndex] objectForKey:@"y"] integerValue];
+	NSInteger ry = [[[points objectAtIndex:rIndex] objectForKey:@"y"] integerValue];
 
     // ((q[0] - p[0]) * (r[1] - p[1])   -   (r[0] - p[0]) * (q[1] - p[1])
-    int turn = ((qx - px) * (ry - py)) - ((rx - px) * (qy - py));
+	NSInteger turn = ((qx - px) * (ry - py)) - ((rx - px) * (qy - py));
 
      //NSLog(@"turnWithPoints: %i", turn);
 
@@ -330,12 +330,12 @@
 //==============================================================================
 +(int)distanceBetweenPoints:(NSArray *)points P:(int)pIndex Q:(int)qIndex
 {
-    int dx = [[[points objectAtIndex:qIndex] objectForKey:@"x"] integerValue] - [[[points objectAtIndex:pIndex] objectForKey:@"x"] integerValue];
-    int dy = [[[points objectAtIndex:qIndex] objectForKey:@"y"] integerValue] - [[[points objectAtIndex:pIndex] objectForKey:@"y"] integerValue];
+    NSInteger dx = [[[points objectAtIndex:qIndex] objectForKey:@"x"] integerValue] - [[[points objectAtIndex:pIndex] objectForKey:@"x"] integerValue];
+	NSInteger dy = [[[points objectAtIndex:qIndex] objectForKey:@"y"] integerValue] - [[[points objectAtIndex:pIndex] objectForKey:@"y"] integerValue];
 
     //NSLog(@"distance: %i", dx * dx + dy * dy);
 
-    return dx * dx + dy * dy;
+    return (int)(dx * dx + dy * dy);
 }
 
 //========== leftmost: =========================================================

@@ -198,7 +198,7 @@ typedef enum
 {
 	LDrawPart			*representedObject	= [self object];
 	TransformComponents	 components			= [representedObject transformComponents];
-	RotationT			 rotationType		= [[_rotationTypePopUp selectedItem] tag];
+	RotationT			 rotationType		= (RotationT)[[_rotationTypePopUp selectedItem] tag];
 	
 	if(rotationType == rotationRelative)
 	{
@@ -234,7 +234,7 @@ typedef enum
 {
 	LDrawPart       *representedObject  = [self object];
 	LDrawDocument   *currentDocument    = [[NSDocumentController sharedDocumentController] currentDocument];
-	RotationT       rotationType        = [[_rotationTypePopUp selectedItem] tag];
+	RotationT       rotationType        = (RotationT)[[_rotationTypePopUp selectedItem] tag];
 	
 	//Save out the current state.
 	[currentDocument preserveDirectiveState:representedObject];

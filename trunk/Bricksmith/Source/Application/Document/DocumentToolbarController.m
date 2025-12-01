@@ -594,7 +594,7 @@
 - (void) gridSpacingSegmentedControlClicked:(id)sender
 {
 	NSInteger           selectedSegment = [sender selectedSegment];
-	gridSpacingModeT    newGridMode     = [[sender cell] tagForSegment:selectedSegment];
+	gridSpacingModeT    newGridMode     = (gridSpacingModeT)[[sender cell] tagForSegment:selectedSegment];
 //	gridSpacingModeT	newGridMode		= [sender selectedTag]; // WHY does this not work!? Sheesh!
 	
 	[self->document setGridSpacingMode:newGridMode];
@@ -610,8 +610,8 @@
 //==============================================================================
 - (IBAction) gridOrientationSegmentedControlClicked:(id)sender
 {
-	NSInteger           selectedSegment = [sender selectedSegment];
-	gridOrientationModeT    newGridMode     = [[sender cell] tagForSegment:selectedSegment];
+	NSInteger               selectedSegment = [sender selectedSegment];
+	gridOrientationModeT    newGridMode     = (gridOrientationModeT)[[sender cell] tagForSegment:selectedSegment];
 	
 	[self->document setGridOrientationMode:newGridMode];	
 	

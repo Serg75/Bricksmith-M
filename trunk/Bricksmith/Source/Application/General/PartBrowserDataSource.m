@@ -188,7 +188,7 @@
 	// Not displaying anything yet.
 	categoryList	= [NSArray array];
 	tableDataSource	= [NSMutableArray array];
-	searchMode		= [[NSUserDefaults standardUserDefaults] integerForKey:PART_BROWSER_SEARCH_MODE];
+	searchMode		= (SearchModeT)[[NSUserDefaults standardUserDefaults] integerForKey:PART_BROWSER_SEARCH_MODE];
 	
 	return self;
 	

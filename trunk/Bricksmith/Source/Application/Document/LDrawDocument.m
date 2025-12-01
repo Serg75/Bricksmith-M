@@ -2128,7 +2128,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateClicked:(id)sender
 {
-	menuTagsT	tag			= [sender tag];
+	menuTagsT	tag			= (menuTagsT)[sender tag];
 	Vector3		rotation	= ZeroPoint3;
 	
 	switch(tag)
@@ -2156,7 +2156,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateFineClicked:(id)sender
 {
-	menuTagsT	tag			= [sender tag];
+	menuTagsT	tag			= (menuTagsT)[sender tag];
 	Vector3		rotation	= ZeroPoint3;
 	
 	switch(tag)
@@ -2184,7 +2184,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateAroundOriginClicked:(id)sender
 {
-	menuTagsT	tag			= [sender tag];
+	menuTagsT	tag			= (menuTagsT)[sender tag];
 	Vector3		rotation	= ZeroPoint3;
 	
 	switch(tag)
@@ -2212,7 +2212,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateFineAroundOriginClicked:(id)sender
 {
-	menuTagsT	tag			= [sender tag];
+	menuTagsT	tag			= (menuTagsT)[sender tag];
 	Vector3		rotation	= ZeroPoint3;
 	
 	switch(tag)
@@ -3637,7 +3637,7 @@ void AppendChoicesToNewItem(
 				 &&	[[fileContentsOutline parentForItem:self->lastSelectedPart] isMemberOfClass:[LDrawLSynth class]])
 		{
 			parent = [fileContentsOutline parentForItem:self->lastSelectedPart];
-			int row = [parent indexOfDirective:self->lastSelectedPart];
+			NSInteger row = [parent indexOfDirective:self->lastSelectedPart];
 			index = row + 1;
 			synthesizablePart = (LDrawLSynth *)parent;
 
@@ -3714,7 +3714,7 @@ void AppendChoicesToNewItem(
 				 &&	[[fileContentsOutline parentForItem:self->lastSelectedPart] isMemberOfClass:[LDrawLSynth class]])
 		{
             parent = [fileContentsOutline parentForItem:self->lastSelectedPart];
-            int row = [parent indexOfDirective:self->lastSelectedPart];
+			NSInteger row = [parent indexOfDirective:self->lastSelectedPart];
             index = row + 1;
         }
 
@@ -3817,7 +3817,7 @@ void AppendChoicesToNewItem(
 							}
 						}
 						
-						for (int i = newLines.count - 1; i > 0; i--)
+						for (NSInteger i = newLines.count - 1; i > 0; i--)
 						{
 							LDrawLine *newLine = newLines[i];
 							NSArray *newDirectives = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).primitives;
@@ -3856,7 +3856,7 @@ void AppendChoicesToNewItem(
 			LDrawContainer * parent = [originalDidective enclosingDirective];
 			if(parent)
 			{
-				int index = [parent indexOfDirective:originalDidective];
+				NSInteger index = [parent indexOfDirective:originalDidective];
 				[self deleteDirective:originalDidective];
 				for (LDrawDirective *directive in newDirectives) {
 					[self addDirective:directive toParent:parent atIndex:index++];

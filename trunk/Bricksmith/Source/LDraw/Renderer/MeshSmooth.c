@@ -479,7 +479,7 @@ static void range_for_vertex(struct Vertex * base, struct Vertex * stop, struct 
 struct RTree_node * index_vertices_recursive(struct Vertex ** begin, struct Vertex ** end, int depth)
 {
 	int i;
-	int count = end - begin;
+	int count = (int)(end - begin);
 	if(count <= LEAF_DIM)
 	{
 		// Leaf node case: we have so few nodes, we can fit them into a single leaf.
@@ -512,7 +512,7 @@ struct RTree_node * index_vertices_recursive(struct Vertex ** begin, struct Vert
 		// Optimization: avoid one full sort of all vertices since we know our source 
 		// input is passed in in X-sorted order!
 		if(depth > 0)
-			quickSort_n(begin,0,end-begin-1,depth%3);
+			quickSort_n(begin, 0, count - 1, depth % 3);
 		int split = count / 2;
 		
 		// Now recurse on each half of the vertices to get our two child nodes.
@@ -1767,7 +1767,7 @@ void				write_indexed_mesh(
 	for(ti = 0; ti <= mesh->highest_tid; ++ti)
 	for(d = 2; d <= 4; ++d)
 	{
-		starts[d][ti] = index_ptr - io_index_table;
+		starts[d][ti] = (int)(index_ptr - io_index_table);
 		
 		for(vi = 0; vi < mesh->vertex_count; ++vi)
 		{
@@ -1819,7 +1819,7 @@ void				write_indexed_mesh(
 			
 		} // end of linear vertex walk
 
-		counts[d][ti] = (index_ptr - io_index_table) - starts[d][ti];
+		counts[d][ti] = (int)(index_ptr - io_index_table) - starts[d][ti];
 	
 
 	} // end of primitve sort

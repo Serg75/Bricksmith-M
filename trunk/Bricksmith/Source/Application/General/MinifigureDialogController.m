@@ -714,21 +714,21 @@
 	[self setAngleOfRightLeg:			[userDefaults floatForKey:MINIFIGURE_ANGLE_LEG_RIGHT]];
 	[self setAngleOfRightLegAccessory:	[userDefaults floatForKey:MINIFIGURE_ANGLE_LEG_RIGHT_ACCESSORY]];
 	
-	[_hatsColorWell					setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HAT]]];
-	[_headsColorWell				setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HEAD]]];
-	[_necksColorWell				setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_NECK]]];
-	[_torsosColorWell				setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_TORSO]]];
-	[_rightArmsColorWell			setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_ARM_RIGHT]]];
-	[_rightHandsColorWell			setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT]]];
-	[_rightHandAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT_ACCESSORY]]];
-	[_leftArmsColorWell				setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_ARM_LEFT]]];
-	[_leftHandsColorWell			setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT]]];
-	[_leftHandAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT_ACCESSORY]]];
-	[_hipsColorWell					setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_HIPS]]];
-	[_rightLegsColorWell			setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT]]];
-	[_rightLegAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT_ACCESSORY]]];
-	[_leftLegsColorWell				setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT]]];
-	[_leftLegAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY]]];
+	[_hatsColorWell					setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HAT]]];
+	[_headsColorWell				setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HEAD]]];
+	[_necksColorWell				setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_NECK]]];
+	[_torsosColorWell				setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_TORSO]]];
+	[_rightArmsColorWell			setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_ARM_RIGHT]]];
+	[_rightHandsColorWell			setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT]]];
+	[_rightHandAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT_ACCESSORY]]];
+	[_leftArmsColorWell				setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_ARM_LEFT]]];
+	[_leftHandsColorWell			setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT]]];
+	[_leftHandAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT_ACCESSORY]]];
+	[_hipsColorWell					setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_HIPS]]];
+	[_rightLegsColorWell			setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT]]];
+	[_rightLegAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT_ACCESSORY]]];
+	[_leftLegsColorWell				setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT]]];
+	[_leftLegAccessoriesColorWell	setLDrawColor:[colorLibrary colorForCode:(LDrawColorT)[userDefaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY]]];
 	
 	[self selectPartWithName:[userDefaults stringForKey:MINIFIGURE_PARTNAME_HAT]
 				inController:_hatsController];

@@ -58,10 +58,10 @@
     LDrawLSynth	*representedObject	= [self object];
 
     // Update the object
-	LSynthClassT	classType	= [[lsynthClassChooserMatrix selectedCell] tag];
+	LSynthClassT	classType	= (LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag];
 	NSArray 		*types		= [self typesForLSynthClass:classType];
 
-    [representedObject setLsynthClass:[[lsynthClassChooserMatrix selectedCell] tag]];
+    [representedObject setLsynthClass:(LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag]];
     [representedObject setLsynthType:[[types objectAtIndex:[typePopup indexOfSelectedItem]] valueForKey:@"LSYNTH_TYPE"]];
 
     // Change all constraints to the default one
@@ -195,7 +195,7 @@
     // out when we read in the LSynth config.
     else if (classTag == LSYNTH_PART) {
         NSArray *types = [self typesForLSynthClass:classTag];
-        LSynthClassT partClass = [[[types objectAtIndex:[typePopup indexOfSelectedItem]] valueForKey:@"LSYNTH_CLASS"] integerValue];
+        LSynthClassT partClass = (LSynthClassT)[[[types objectAtIndex:[typePopup indexOfSelectedItem]] valueForKey:@"LSYNTH_CLASS"] integerValue];
         if (partClass == LSYNTH_BAND) {
             constraints = [[LSynthConfiguration sharedInstance] getBandConstraints];
             defaultConstraint = [LSynthConfiguration defaultBandConstraint];
@@ -256,10 +256,10 @@
     // Check that we're actually selecting a different class of synthesized part
     if ([[sender selectedCell] tag] != [representedObject lsynthClass]) {
         
-        [self updateSynthTypeLabel:[[sender selectedCell] tag]];
+        [self updateSynthTypeLabel:(LSynthClassT)[[sender selectedCell] tag]];
 
         // Populate the types dropdown correctly
-        [self populateTypes:[[sender selectedCell] tag]];
+        [self populateTypes:(int)[[sender selectedCell] tag]];
 
         // Select the default type for the class
         NSDictionary *type = nil;
@@ -278,7 +278,7 @@
         }
 
         // Populate the constraints dropdown and select the default
-        [self populateDefaultConstraint:[[sender selectedCell] tag]];
+        [self populateDefaultConstraint:(int)[[sender selectedCell] tag]];
 
         // Finish and invoke redisplay
         [self finishedEditing:sender];

@@ -524,7 +524,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (void) updateColorFilter
 {
 	NSString			*searchString				= [searchField stringValue];
-	MaterialPopUpTagT	materialType				= [[materialPopUpButton selectedItem] tag];
+	MaterialPopUpTagT	materialType				= (MaterialPopUpTagT)[[materialPopUpButton selectedItem] tag];
 	NSPredicate 		*searchPredicate			= nil;
 	LDrawColor			*currentColor				= [self LDrawColor];
 	NSInteger			indexOfPreviousSelection	= 0;

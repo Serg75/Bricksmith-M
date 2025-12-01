@@ -696,7 +696,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (IBAction) viewOrientationSelected:(id)sender
 {
-	ViewOrientationT newAngle = [sender tag];
+	ViewOrientationT newAngle = (ViewOrientationT)[sender tag];
 
 	[self makeCurrentContext];
 
@@ -1239,7 +1239,7 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void) mouseDown:(NSEvent *)theEvent
 {
 	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
-	MouseDragBehaviorT	 draggingBehavior	= [userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	MouseDragBehaviorT	 draggingBehavior	= (MouseDragBehaviorT)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
 	ToolModeT			 toolMode			= [ToolPalette toolMode];
 
 	if([theEvent buttonNumber] == 1)
@@ -1318,7 +1318,7 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void) mouseDragged:(NSEvent *)theEvent
 {
 	NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
-	MouseDragBehaviorT  draggingBehavior    = [userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	MouseDragBehaviorT  draggingBehavior    = (MouseDragBehaviorT)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
 	ToolModeT           toolMode            = [ToolPalette toolMode];
 	Vector2             dragDelta           = V2Make([theEvent deltaX], [theEvent deltaY]);
 
@@ -2622,8 +2622,8 @@ static Box2 NSRectToBox2(NSRect rect)
 		NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
 		NSString            *viewingAngleKey    = [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_ANGLE, self->autosaveName];
 		NSString            *projectionModeKey  = [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_PROJECTION, self->autosaveName];
-		ViewOrientationT    orientation         = [userDefaults integerForKey:viewingAngleKey];
-		ProjectionModeT     projection			= [userDefaults integerForKey:projectionModeKey];
+		ViewOrientationT    orientation         = (ViewOrientationT)[userDefaults integerForKey:viewingAngleKey];
+		ProjectionModeT     projection			= (ProjectionModeT)[userDefaults integerForKey:projectionModeKey];
 		
 		// It's imperative to read the modes from defaults prior to calling this 
 		// methods, since -setViewOrientation automatically saves current values 
