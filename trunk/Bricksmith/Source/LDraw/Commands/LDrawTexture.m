@@ -724,8 +724,6 @@
 //==============================================================================
 - (void) removeDirectiveAtIndex:(NSInteger)index
 {
-	LDrawDirective *directive = [[self subdirectives] objectAtIndex:index];
-	
 	[super removeDirectiveAtIndex:index];
 	
 	[self invalCache:CacheFlagBounds|DisplayList];

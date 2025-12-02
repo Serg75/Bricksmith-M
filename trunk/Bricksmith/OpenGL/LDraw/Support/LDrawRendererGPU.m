@@ -291,7 +291,9 @@
 	assert(glIsEnabled(GL_COLOR_ARRAY));
 	
 	
-	[self->delegate LDrawRendererNeedsFlush:self];
+	if ([self->delegate respondsToSelector:@selector(LDrawRendererNeedsFlush:)]) {
+		[self->delegate LDrawRendererNeedsFlush:self];
+	}
 	
 	// If we just did a full draw, let's see if rotating needs to be
 	// done simply.

@@ -303,6 +303,32 @@ static void set_color4fv(float * c, float storage[4])
 }//end popTexture:
 
 
+//========== pushWireFrame: ======================================================
+//
+// Purpose: push a change to wire frame mode. This is nested - when the last
+//			"wire frame" is popped, we are no longer wire frame.
+//
+//================================================================================
+- (void) pushWireFrame
+{
+	wire_frame_count++;
+
+}//end pushWireFrame:
+
+
+//========== popWireFrame: =======================================================
+//
+// Purpose: undo a previous wire frame command - the push and pops must be
+//			balanced.
+//
+//================================================================================
+- (void) popWireFrame
+{
+	wire_frame_count--;
+
+}//end popWireFrame:
+
+
 //========== drawQuad:normal:color: ==============================================
 //
 // Purpose: Adds one quad to the current display list.

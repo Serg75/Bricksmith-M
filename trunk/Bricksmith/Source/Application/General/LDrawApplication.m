@@ -240,8 +240,6 @@ extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
 //==============================================================================
 - (IBAction) doPartBrowser:(id)sender 
 {
-	NSUserDefaults				*userDefaults		= [NSUserDefaults standardUserDefaults];
-	NSDocumentController		*documentController = [NSDocumentController sharedDocumentController];
 	PartBrowserPanelController	*partBrowser		= nil;
 
 	//open the shared part browser.

@@ -113,7 +113,6 @@ typedef enum {
 - (IBAction) chooseLDrawFolder:(id)sender;
 - (IBAction) pathTextFieldChanged:(id)sender;
 - (IBAction) reloadParts:(id)sender;
-- (IBAction) partBrowserStyleChanged:(id)sender;
 
 // - LSynth Tab
 - (IBAction) lsynthChooseExecutable:(id)sender;

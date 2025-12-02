@@ -171,10 +171,11 @@ typedef enum
 @protocol LDrawRendererDelegate <NSObject>
 
 @required
-- (void) LDrawRendererNeedsFlush:(LDrawRenderer*)renderer;
 - (void) LDrawRendererNeedsRedisplay:(LDrawRenderer*)renderer;
 
 @optional
+// Only needed for renderers that require an explicit flush (e.g. OpenGL).
+- (void) LDrawRendererNeedsFlush:(LDrawRenderer*)renderer;
 - (void) LDrawRenderer:(LDrawRenderer*)renderer mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence;
 - (void) LDrawRendererMouseNotPositioning:(LDrawRenderer*)renderer;
 

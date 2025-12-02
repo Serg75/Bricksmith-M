@@ -430,9 +430,10 @@ void AppendChoicesToNewItem(
 			   ofType:(NSString *)typeName
 				error:(NSError **)outError
 {
-	NSString    *fileContents   = [LDrawUtilities stringFromFileData:data];
-	__block	LDrawFile   *newFile        = nil;
+	NSString    	   *fileContents    = [LDrawUtilities stringFromFileData:data];
+	__block	LDrawFile  *newFile         = nil;
 	__block	BOOL        success         = NO;
+	__block NSError    *blockError      = nil;
 	
 	//Parse the model.
 	// - optimizing models can result in GPU calls, so to be ultra-safe we
@@ -462,11 +463,15 @@ void AppendChoicesToNewItem(
 		}
 		@catch(NSException * e)
 		{
-			*outError = [NSError errorWithDomain:NSCocoaErrorDomain
-											code:NSFileReadCorruptFileError
-										userInfo:nil];
+			blockError = [NSError errorWithDomain:NSCocoaErrorDomain
+											 code:NSFileReadCorruptFileError
+										 userInfo:nil];
 		}
 	}];
+
+	if (outError != NULL) {
+		*outError = blockError;
+	}
 	
     return success;
 	
@@ -5318,7 +5323,6 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) windowWillClose:(NSNotification *)notification
 {
-	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
 	NSWindow		*window			= [notification object];
 	
 	//Un-inspect everything

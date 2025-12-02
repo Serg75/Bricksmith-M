@@ -475,7 +475,7 @@ PreferencesDialogController *preferencesDialog = nil;
 //				Update the value in the preferences.
 //
 //==============================================================================
-- (IBAction) backgroundColorWellChanged:(id)sender
+- (IBAction) backgroundColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -494,7 +494,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) modelsColorWellChanged:(id)sender
+- (IBAction) modelsColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -513,7 +513,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) stepsColorWellChanged:(id)sender
+- (IBAction) stepsColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -532,7 +532,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) partsColorWellChanged:(id)sender
+- (IBAction) partsColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -551,7 +551,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) primitivesColorWellChanged:(id)sender
+- (IBAction) primitivesColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -570,7 +570,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) colorsColorWellChanged:(id)sender
+- (IBAction) colorsColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -589,7 +589,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) commentsColorWellChanged:(id)sender
+- (IBAction) commentsColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -608,7 +608,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		This syntax-color well changed. Update the value in preferences.
 //
 //==============================================================================
-- (IBAction) unknownColorWellChanged:(id)sender
+- (IBAction) unknownColorWellChanged:(NSColorWell *)sender
 {
 	NSColor			*newColor		= [sender color];
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -732,7 +732,7 @@ PreferencesDialogController *preferencesDialog = nil;
 // Purpose:		The user has changed the LSynth selection color
 //
 //==============================================================================
-- (IBAction)lsynthSelectionColorWellClicked:(id)sender
+- (IBAction)lsynthSelectionColorWellClicked:(NSColorWell *)sender
 {
     NSColor			*newColor		= [sender color];
     NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];

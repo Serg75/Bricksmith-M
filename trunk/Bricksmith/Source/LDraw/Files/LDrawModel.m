@@ -289,12 +289,13 @@
 	// tiny bit of CPU time per part to cull draw calls is a win!
 	
 	Box3	my_bounds = [self boundingBox3];
-	float	minxyz[3] = { my_bounds.min.x, my_bounds.min.y, my_bounds.min.z };
-	float	maxxyz[3] = { my_bounds.max.x, my_bounds.max.y, my_bounds.max.z };
-
-	int cull_result = [renderer checkCull:minxyz to:maxxyz];
 	
 	#if !NO_CULL_SMALL_BRICKS
+	
+	float	minxyz[3] = { my_bounds.min.x, my_bounds.min.y, my_bounds.min.z };
+	float	maxxyz[3] = { my_bounds.max.x, my_bounds.max.y, my_bounds.max.z };
+	
+	int cull_result = [renderer checkCull:minxyz to:maxxyz];
 
 	if(cull_result == cull_skip)
 		return;

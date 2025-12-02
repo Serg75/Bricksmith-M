@@ -817,7 +817,6 @@
 	NSString        *partNumber             = nil;
 	NSString        *partDescription        = nil;
 	NSString        *partSansWhitespace     = nil;
-	NSString		*category				= nil;
 	NSMutableArray  *matchingParts          = nil;
 	NSString        *searchSansWhitespace   = [searchString ams_stringByRemovingWhitespace];
 	
@@ -842,7 +841,6 @@
 			partNumber			= [record objectForKey:PART_NUMBER_KEY];
 			partDescription		= [record objectForKey:PART_NAME_KEY];
 			partSansWhitespace	= [partDescription ams_stringByRemovingWhitespace];
-			category			= [record objectForKey:PART_CATEGORY_KEY];
 			
 			if([excludedParts containsObject:partNumber] == NO)
 			{
