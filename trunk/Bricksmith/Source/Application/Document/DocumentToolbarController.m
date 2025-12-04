@@ -70,10 +70,8 @@
 										TOOLBAR_ZOOM_SPECIFY,
 
 										//Cocoa doodads
-										NSToolbarSeparatorItemIdentifier,
 										NSToolbarSpaceItemIdentifier,
 										NSToolbarFlexibleSpaceItemIdentifier,
-										NSToolbarCustomizeToolbarItemIdentifier,
 										nil ];
 }//end toolbarAllowedItemIdentifiers:
 
@@ -90,10 +88,10 @@
 //										TOOLBAR_ZOOM_IN,
 										TOOLBAR_ZOOM_SPECIFY,
 //										TOOLBAR_ZOOM_OUT,
-										NSToolbarSeparatorItemIdentifier,
+										NSToolbarSpaceItemIdentifier,
 										TOOLBAR_SNAP_TO_GRID,
 										TOOLBAR_GRID_SPACING_IDENTIFIER,
-										NSToolbarSeparatorItemIdentifier,
+										NSToolbarSpaceItemIdentifier,
 										TOOLBAR_ROTATE_POSITIVE_X,
 										TOOLBAR_ROTATE_NEGATIVE_X,
 										TOOLBAR_ROTATE_POSITIVE_Y,
@@ -123,7 +121,6 @@
 		[newItem setLabel:NSLocalizedString(@"NudgeX", nil)];
 		[newItem setPaletteLabel:NSLocalizedString(@"NudgeX", nil)];
 		[newItem setView:nudgeXToolView];
-		[newItem setMinSize:[nudgeXToolView frame].size];
 	}
 	
 	else if([itemIdentifier isEqualToString:TOOLBAR_NUDGE_Y_IDENTIFIER])
@@ -131,7 +128,6 @@
 		[newItem setLabel:NSLocalizedString(@"NudgeY", nil)];
 		[newItem setPaletteLabel:NSLocalizedString(@"NudgeY", nil)];
 		[newItem setView:nudgeYToolView];
-		[newItem setMinSize:[nudgeYToolView frame].size];
 	}
 	
 	else if([itemIdentifier isEqualToString:TOOLBAR_NUDGE_Z_IDENTIFIER])
@@ -139,7 +135,6 @@
 		[newItem setLabel:NSLocalizedString(@"NudgeZ", nil)];
 		[newItem setPaletteLabel:NSLocalizedString(@"NudgeZ", nil)];
 		[newItem setView:nudgeZToolView];
-		[newItem setMinSize:[nudgeZToolView frame].size];
 	}
 	else if([itemIdentifier isEqualToString:TOOLBAR_GRID_SPACING_IDENTIFIER]) {
 		newItem = [self makeGridSpacingItem];
@@ -248,7 +243,6 @@
 	[self->gridSegmentedControl selectSegmentWithTag:gridMode];
 	
 	[newItem setView:self->gridSegmentedControl];
-	[newItem setMinSize:[[self->gridSegmentedControl cell] cellSize]];
 	[newItem setLabel:NSLocalizedString(@"GridSpacing",nil)];
 	[newItem setPaletteLabel:NSLocalizedString(@"GridSpacing",nil)];
 	
@@ -271,7 +265,6 @@
 	[self->orientationSegmentedControl selectSegmentWithTag:gridMode];
 	
 	[newItem setView:self->orientationSegmentedControl];
-	[newItem setMinSize:[[self->orientationSegmentedControl cell] cellSize]];
 	[newItem setLabel:NSLocalizedString(@"GridOrientation",nil)];
 	[newItem setPaletteLabel:NSLocalizedString(@"GridOrientation",nil)];
 	
@@ -574,7 +567,6 @@
 	[newItem setLabel:NSLocalizedString(@"Zoom", nil)];
 	[newItem setPaletteLabel:NSLocalizedString(@"Zoom", nil)];
 	[newItem setView:zoomToolView];
-	[newItem setMinSize:[zoomToolView frame].size];
 	
 	return newItem;
 	

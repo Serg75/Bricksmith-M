@@ -32,7 +32,7 @@
 //		LDrawView
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller, NSDraggingSource>
+@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller, NSDraggingSource, NSMenuItemValidation>
 {
 	// The renderer is responsible for viewport math and OpenGL calls. Because
 	// of the latter, there is NO PUBLIC ACCESS, since each OpenGL call must be 

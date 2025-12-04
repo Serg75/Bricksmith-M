@@ -465,7 +465,7 @@ NSString	*Category_Subparts			= @"Subparts";
 //
 //==============================================================================
 - (void) reloadPartsWithMaxLoadCountHandler:(void (^)(NSUInteger maxPartCount))maxLoadCountHandler
-				   progressIncrementHandler:(void (^)())progressIncrementHandler
+				   progressIncrementHandler:(void (^)(void))progressIncrementHandler
 						  completionHandler:(void (^)(BOOL success))completionHandler
 {
 	PartCatalogBuilder* catalogBuilder = [[PartCatalogBuilder alloc] init];

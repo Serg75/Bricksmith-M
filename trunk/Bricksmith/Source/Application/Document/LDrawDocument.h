@@ -44,7 +44,7 @@
 // class LDrawDocument
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawDocument : NSDocument <ViewportArrangerDelegate>
+@interface LDrawDocument : NSDocument <ViewportArrangerDelegate, NSToolbarItemValidation>
 {
 	__weak IBOutlet DocumentToolbarController	*toolbarController;
 	__weak IBOutlet NSObjectController			*bindingsController;

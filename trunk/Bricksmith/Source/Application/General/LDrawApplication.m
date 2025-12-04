@@ -40,7 +40,9 @@
 //    -weak_framework 3DconnexionClient.framework
 // The idea here is that the software automatically detects if a 3D mouse is present, but
 // runs just fine if it is not.
-extern OSErr InstallConnexionHandlers() __attribute__((weak_import));
+extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandler,
+                                        ConnexionAddedHandlerProc addedHandler,
+                                        ConnexionRemovedHandlerProc removedHandler) __attribute__((weak_import));
 
 
 @implementation LDrawApplication

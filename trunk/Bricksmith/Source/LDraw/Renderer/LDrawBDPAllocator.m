@@ -58,7 +58,7 @@ struct	LDrawBDP {
 // Purpose:		Prepare a single standard-size empty page for use in the pool.
 //
 //================================================================================
-static struct	BDPPage *	get_new_page()
+static struct	BDPPage *	get_new_page(void)
 {	
 	struct	BDPPage * ptr = (struct	BDPPage *) calloc(1, sizeof(struct	BDPPage));
 	ptr->header.cur = ptr->data;
@@ -74,7 +74,7 @@ static struct	BDPPage *	get_new_page()
 // Notes:		The pool is created with one empty page ready for use.
 //
 //================================================================================
-struct LDrawBDP *		LDrawBDPCreate()
+struct LDrawBDP *		LDrawBDPCreate(void)
 {
 	struct LDrawBDP * ret = (struct LDrawBDP *) calloc(1, sizeof(struct LDrawBDP));
 	ret->first = ret->cur = get_new_page();

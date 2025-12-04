@@ -63,7 +63,7 @@
 ///
 //==============================================================================
 - (void) makePartCatalogWithMaxLoadCountHandler:(void (^)(NSUInteger maxPartCount))maxLoadCountHandler
-					   progressIncrementHandler:(void (^)())progressIncrementHandler
+					   progressIncrementHandler:(void (^)(void))progressIncrementHandler
 							  completionHandler:(void (^)(NSDictionary<NSString*, id> *newCatalog))completionHandler
 {
 	NSFileManager	*fileManager			= [[NSFileManager alloc] init];
@@ -235,7 +235,7 @@
 				toCatalog:(NSMutableDictionary *)catalog
 			underCategory:(NSString *)categoryOverride
 			   namePrefix:(NSString *)namePrefix
- progressIncrementHandler:(void (^)())progressIncrementHandler
+ progressIncrementHandler:(void (^)(void))progressIncrementHandler
 {
 	NSFileManager		*fileManager			= [[NSFileManager alloc] init];
 // Not working for some reason. Why?

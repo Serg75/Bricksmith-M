@@ -624,7 +624,7 @@ static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 // Purpose:	Create a new builder capable of accumulating DL data.
 //
 //================================================================================
-struct LDrawDLBuilder * LDrawDLBuilderCreate()
+struct LDrawDLBuilder * LDrawDLBuilderCreate(void)
 {
 	// All allocs for the builder come from one pool.
 	struct LDrawBDP * alloc = LDrawBDPCreate();

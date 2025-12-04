@@ -156,7 +156,7 @@
 {
 	NSString *path = [[NSBundle mainBundle] pathForResource:@"Legonian Ruler" ofType:@"pdf"];
 	
-	[[NSWorkspace sharedWorkspace] openFile:path];
+	[[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:path]];
 }
 
 

@@ -37,7 +37,7 @@
 // class DocumentToolbarController
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface DocumentToolbarController : NSObject <NSToolbarDelegate>
+@interface DocumentToolbarController : NSObject <NSToolbarDelegate, NSToolbarItemValidation>
 {
 	__weak IBOutlet LDrawDocument			*document; //link to the documnt to which this is attached.
 

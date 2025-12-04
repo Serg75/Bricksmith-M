@@ -10,10 +10,6 @@
 #import <Cocoa/Cocoa.h>
 
 
-@interface LDrawDocumentWindow : NSWindow {
-
-	BOOL needsEnableUpdate;
-}
-- (void)disableUpdatesUntilFlush;
+@interface LDrawDocumentWindow : NSWindow
 
 @end

@@ -79,7 +79,7 @@ extern NSString	*Category_Subparts;
 // Actions
 - (BOOL) load;
 - (void) reloadPartsWithMaxLoadCountHandler:(void (^)(NSUInteger maxPartCount))maxLoadCountHandler
-				   progressIncrementHandler:(void (^)())progressIncrementHandler
+				   progressIncrementHandler:(void (^)(void))progressIncrementHandler
 						  completionHandler:(void (^)(BOOL success))completionHandler;
 
 // Favorites

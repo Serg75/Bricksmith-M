@@ -24,7 +24,7 @@
 // class LDrawApplication
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawApplication : NSObject
+@interface LDrawApplication : NSObject<NSMenuItemValidation>
 {
 	PartLibraryController	*partLibraryController;	// centralized location for part information.
     LSynthConfiguration     *lsynthConfiguration;   // centralized location for LSynth configuration

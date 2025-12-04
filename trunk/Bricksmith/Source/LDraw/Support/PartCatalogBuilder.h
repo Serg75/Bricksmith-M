@@ -18,7 +18,7 @@
 @interface PartCatalogBuilder : NSObject
 
 - (void) makePartCatalogWithMaxLoadCountHandler:(void (^)(NSUInteger maxPartCount))maxLoadCountHandler
-					   progressIncrementHandler:(void (^)())progressIncrementHandler
+					   progressIncrementHandler:(void (^)(void))progressIncrementHandler
 							  completionHandler:(void (^)(NSDictionary<NSString*, id> *newCatalog))completionHandler;
 
 @end
