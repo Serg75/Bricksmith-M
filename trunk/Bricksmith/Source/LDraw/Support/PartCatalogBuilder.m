@@ -201,7 +201,18 @@
 		  progressIncrementHandler:progressIncrementHandler];
 		}
 		
-		NSString *version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"];
+		NSDictionary *infoDict = [[NSBundle mainBundle] infoDictionary];
+		NSString *version = [infoDict objectForKey:@"CFBundleVersion"];
+		// Fall back to CFBundleShortVersionString if CFBundleVersion is not available
+		if(version == nil)
+		{
+			version = [infoDict objectForKey:@"CFBundleShortVersionString"];
+		}
+		// Use a default version if neither is available
+		if(version == nil)
+		{
+			version = @"1.0";
+		}
 		[newPartCatalog setObject:version forKey:VERSION_KEY];
 		[newPartCatalog setObject:@"1.0"  forKey:COMPATIBILITY_VERSION_KEY];
 		
@@ -270,6 +281,14 @@
 			// Make sure the part file was valid!
 			if(categoryRecord != nil && [categoryRecord count] > 0)
 			{
+				// Ensure PART_NUMBER_KEY exists before proceeding
+				NSString *partNumber = [categoryRecord objectForKey:PART_NUMBER_KEY];
+				if(partNumber == nil)
+				{
+					// Skip this record if it doesn't have a part number
+					continue;
+				}
+				
 				//---------- Alter catalog info --------------------------------
 				
 				if(categoryOverride)
@@ -280,8 +299,6 @@
 				// LDraw/parts/s folder.
 				if(namePrefix != nil)
 				{
-					NSString *partNumber = nil;
-					partNumber	= [categoryRecord objectForKey:PART_NUMBER_KEY];
 					partNumber	= [namePrefix stringByAppendingString:partNumber];
 					[categoryRecord setObject:partNumber forKey:PART_NUMBER_KEY];
 				}
@@ -295,8 +312,8 @@
 					// library has a part that has had its category edited, we'll end up with the
 					// part in BOTH categories.  This can hose us when the library changes which
 					// part is canonical vs alias.
-					NSString * partNumber = [categoryRecord objectForKey:PART_NUMBER_KEY];
-					if([catalog_partNumbers objectForKey:partNumber] == nil)
+					// Ensure we have valid partNumber and categoryRecord before proceeding
+					if(partNumber != nil && categoryRecord != nil && [catalog_partNumbers objectForKey:partNumber] == nil)
 					{
 						catalog_category = [catalog_categories objectForKey:category];
 						if(catalog_category == nil)
@@ -310,14 +327,14 @@
 						// dictionary with part info. This was a database design
 						// mistake; it should have been an array of part reference
 						// numbers, if not just built up at runtime.
-						NSDictionary *categoryEntry = [NSDictionary dictionaryWithObject:[categoryRecord objectForKey:PART_NUMBER_KEY]
+						NSDictionary *categoryEntry = [NSDictionary dictionaryWithObject:partNumber
 																			  forKey:PART_NUMBER_KEY];
 																			  
 						[catalog_category addObject:categoryEntry];
 						
 						// Also file the part in a master list by reference name.
 						[catalog_partNumbers setObject:categoryRecord
-												forKey:[categoryRecord objectForKey:PART_NUMBER_KEY] ];
+												forKey:partNumber];
 					}
 					else
 					{
