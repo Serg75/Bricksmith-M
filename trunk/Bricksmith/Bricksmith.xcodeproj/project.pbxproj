@@ -2920,12 +2920,16 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
+				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_NSMainNibFile = MainMenu;
+				INFOPLIST_KEY_NSPrincipalClass = BricksmithApplication;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
+				MARKETING_VERSION = 4.0.1;
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
@@ -2955,12 +2959,16 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
+				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_NSMainNibFile = MainMenu;
+				INFOPLIST_KEY_NSPrincipalClass = BricksmithApplication;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
+				MARKETING_VERSION = 4.0.1;
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
@@ -3092,10 +3100,12 @@
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
 				INFOPLIST_FILE = "Info-M.plist";
+				INFOPLIST_KEY_NSMainNibFile = MainMenu;
+				INFOPLIST_KEY_NSPrincipalClass = BricksmithApplication;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 4.0.0;
+				MARKETING_VERSION = 4.0.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_HEADER_SEARCH_PATHS = Metal/Global;
 				MTL_PREPROCESSOR_DEFINITIONS = "";
@@ -3140,10 +3150,12 @@
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
 				INFOPLIST_FILE = "Info-M.plist";
+				INFOPLIST_KEY_NSMainNibFile = MainMenu;
+				INFOPLIST_KEY_NSPrincipalClass = BricksmithApplication;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 4.0.0;
+				MARKETING_VERSION = 4.0.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_HEADER_SEARCH_PATHS = Metal/Global;
 				MTL_PREPROCESSOR_DEFINITIONS = "";
