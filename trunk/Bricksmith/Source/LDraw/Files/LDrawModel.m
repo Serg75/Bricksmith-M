@@ -288,9 +288,9 @@
 	// on the GPU not eating data fast enough, _not_ on CPU.  So burning a
 	// tiny bit of CPU time per part to cull draw calls is a win!
 	
-	Box3	my_bounds = [self boundingBox3];
-	
 	#if !NO_CULL_SMALL_BRICKS
+	
+	Box3	my_bounds = [self boundingBox3];
 	
 	float	minxyz[3] = { my_bounds.min.x, my_bounds.min.y, my_bounds.min.z };
 	float	maxxyz[3] = { my_bounds.max.x, my_bounds.max.y, my_bounds.max.z };

@@ -619,7 +619,6 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 //==============================================================================
 - (void) populateLSynthModelMenus
 {
-    LDrawApplication	*appDelegate    = [NSApp delegate];
     NSMenu				*mainMenu       = [NSApp mainMenu];
     NSMenu				*modelMenu      = [[mainMenu itemWithTag:modelsMenuTag] submenu];
 	NSMenu				*lsynthMenu     = [[modelMenu itemWithTag:lsynthMenuTag] submenu];
@@ -682,7 +681,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 
         NSArray *lsynthMLCADDefaults = [[MLCadIni iniFile] lsynthVisibleTypes];
 
-        for (NSDictionary *entry in [[appDelegate lsynthConfiguration] performSelector:NSSelectorFromString([menuSpec objectForKey:@"getter"])])
+        for (NSDictionary *entry in [[self lsynthConfiguration] performSelector:NSSelectorFromString([menuSpec objectForKey:@"getter"])])
 		{
 			// The MLCad.ini file contains a list of semi-official LSynth types.  The lsynth.mpd file also contains legacy entries
 			// for backward compatibility.  We want to filter out non-semi-official synth parts unless the user has turned this off

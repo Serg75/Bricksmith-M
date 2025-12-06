@@ -149,7 +149,7 @@
 //==============================================================================
 - (IBAction) donateButtonClicked:(id)sender
 {
-	LDrawApplication	*appDelegate = [NSApp delegate];
+	LDrawApplication	*appDelegate = [LDrawApplication shared];
 	
 	[appDelegate doDonate:sender];
 	

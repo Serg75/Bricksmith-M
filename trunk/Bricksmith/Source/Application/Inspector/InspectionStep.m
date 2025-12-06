@@ -283,7 +283,7 @@
 //==============================================================================
 - (void) doHelp:(id)sender
 {
-	LDrawApplication *application = [[NSApplication sharedApplication] delegate];
+	LDrawApplication *application = [LDrawApplication shared];
 	
 	[application openHelpAnchor:@"Steps"];
 
