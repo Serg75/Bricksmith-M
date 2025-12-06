@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0B040CBE164F526D000CA89A /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
-		0B040CCE164F529F000CA89A /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		0B040CD7164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem in Resources */ = {isa = PBXBuildFile; fileRef = 0B040CD6164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem */; };
 		0B04E97B1093BB4200E201EE /* ColorPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9471093BB4200E201EE /* ColorPanel.xib */; };
 		0B04E97C1093BB4200E201EE /* Dimensions.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9491093BB4200E201EE /* Dimensions.xib */; };
@@ -505,10 +503,8 @@
 		956D9C8C2A30768000FA956B /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B34B52D090B07AE00F3A001 /* Carbon.framework */; };
 		956D9C8D2A30768000FA956B /* AMSProgressBar.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
 		956D9C8E2A30768000FA956B /* 3DconnexionClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B27D22B132B3383005C7E1A /* 3DconnexionClient.framework */; };
-		956D9C8F2A30768000FA956B /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; };
 		956D9C902A30768000FA956B /* libicucore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 73772F01F06AC293E3F650C4 /* libicucore.dylib */; };
 		956D9C922A30768000FA956B /* AMSProgressBar.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		956D9C932A30768000FA956B /* Sparkle.framework in Copy Frameworks (1) */ = {isa = PBXBuildFile; fileRef = 0B040CBD164F526D000CA89A /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		956D9C952A30768000FA956B /* lsynth.mpd in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893AD1655334500AA055B /* lsynth.mpd */; };
 		956D9C962A30768000FA956B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		956D9C9C2A30769B00FA956B /* MTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D9B7F2A2FDC5C00FA956B /* MTL.h */; };
@@ -657,7 +653,6 @@
 			dstSubfolderSpec = 10;
 			files = (
 				0BC71D910E6CC8340007F10D /* AMSProgressBar.framework in Copy Frameworks (1) */,
-				0B040CCE164F529F000CA89A /* Sparkle.framework in Copy Frameworks (1) */,
 			);
 			name = "Copy Frameworks (1)";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -669,7 +664,6 @@
 			dstSubfolderSpec = 10;
 			files = (
 				956D9C922A30768000FA956B /* AMSProgressBar.framework in Copy Frameworks (1) */,
-				956D9C932A30768000FA956B /* Sparkle.framework in Copy Frameworks (1) */,
 			);
 			name = "Copy Frameworks (1)";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1052,7 +1046,6 @@
 				0B34B52E090B07AE00F3A001 /* Carbon.framework in Frameworks */,
 				2BB59F4309FEFE960077A885 /* AMSProgressBar.framework in Frameworks */,
 				0B27D22C132B3383005C7E1A /* 3DconnexionClient.framework in Frameworks */,
-				0B040CBE164F526D000CA89A /* Sparkle.framework in Frameworks */,
 				7377276DD2BFF116BEE36F0A /* libicucore.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1066,7 +1059,6 @@
 				956D9C8C2A30768000FA956B /* Carbon.framework in Frameworks */,
 				956D9C8D2A30768000FA956B /* AMSProgressBar.framework in Frameworks */,
 				956D9C8E2A30768000FA956B /* 3DconnexionClient.framework in Frameworks */,
-				956D9C8F2A30768000FA956B /* Sparkle.framework in Frameworks */,
 				956D9C902A30768000FA956B /* libicucore.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
