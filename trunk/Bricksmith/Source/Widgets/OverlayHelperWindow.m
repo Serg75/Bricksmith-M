@@ -32,6 +32,7 @@
 #import "OverlayHelperWindow.h"
 
 #import "OverlayViewCategory.h"
+#import <math.h>
 
 
 @implementation OverlayHelperWindow
@@ -275,17 +276,36 @@
 {
 	NSRect  viewRect    = NSZeroRect;
 	NSRect  windowRect  = NSZeroRect;
+	NSWindow *parentWindow = nil;
+	
+	// Validate that we have a valid parent view and window before proceeding
+	if(self->parentView == nil)
+		return;
+	
+	parentWindow = [self->parentView window];
+	if(parentWindow == nil)
+		return;
 	
 	// Get the "superview's" rect in window coordinates.
 	viewRect = [self->parentView convertRect:[self->parentView visibleRect] toView:nil];
 	
-	// Position ourself overtop the parentViews visible rect.
-	windowRect = [[self->parentView window] frame];
-	
-	viewRect.origin.x += windowRect.origin.x;
-	viewRect.origin.y += windowRect.origin.y;
-	
-	[self setFrame:viewRect display:YES];
+	// Validate the rect is reasonable (not infinite or invalid)
+	// Check for finite values and reasonable bounds (screen coordinates shouldn't exceed 1e7)
+	if(!NSIsEmptyRect(viewRect) && 
+	   isfinite(viewRect.origin.x) && isfinite(viewRect.origin.y) &&
+	   isfinite(viewRect.size.width) && isfinite(viewRect.size.height) &&
+	   viewRect.size.width >= 0 && viewRect.size.height >= 0 &&
+	   fabs(viewRect.origin.x) < 1e7 && fabs(viewRect.origin.y) < 1e7 &&
+	   viewRect.size.width < 1e7 && viewRect.size.height < 1e7)
+	{
+		// Position ourself overtop the parentViews visible rect.
+		windowRect = [parentWindow frame];
+		
+		viewRect.origin.x += windowRect.origin.x;
+		viewRect.origin.y += windowRect.origin.y;
+		
+		[self setFrame:viewRect display:YES];
+	}
 	
 }//end updateFrameToMatchParentView
 
