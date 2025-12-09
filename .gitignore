@@ -67,3 +67,9 @@ gradlew.bat
 
 # Ignored stuff
 ignore
+
+# Cursor files
+.cursor*
+
+# AI chat history with SpecStory
+.specstory
