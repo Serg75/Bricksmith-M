@@ -33,7 +33,7 @@ vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
 								 device const InstanceInput	*inst	[[buffer(BufferIndexPerInstanceData)]],
 								 constant VertexUniform&	uni		[[buffer(BufferIndexVertexUniforms)]],
 								 constant TexturePlaneData&	texGen	[[buffer(BufferIndexTexturePlane)]],
-								 ushort						iid		[[instance_id]])
+								 uint						iid		[[instance_id]])
 {
 	VertexOutput out;
 
@@ -131,7 +131,7 @@ vertex DragHandleVertexOutput vertexDragHandle(const device float3 *vertices [[b
 											   constant InstanceInput *inst [[buffer(BufferIndexPerInstanceData)]],
 											   constant VertexUniform& uni [[buffer(BufferIndexVertexUniforms)]],
 											   unsigned int vid [[vertex_id]],
-											   ushort iid [[instance_id]])
+											   uint iid [[instance_id]])
 {
 	DragHandleVertexOutput out;
 
