@@ -72,7 +72,7 @@ const int MSAASampleCount = 4;
 #define WANT_STATS 0
 
 #define INST_CUTOFF 0					// Minimum instances to use hardware case, which has higher overhead to set up.
-#define INST_MAX_COUNT (1024 * 128)		// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
+#define INST_MAX_COUNT (1024 * 512)		// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
 
 // Previously, using several buffers (one per view) helped avoid rendering artefacts when rapidly selecting
 // or deselecting parts on slow computers — this was before the shader address space was fixed.

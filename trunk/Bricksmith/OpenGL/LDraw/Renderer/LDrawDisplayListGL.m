@@ -73,7 +73,7 @@ static const GLuint * idx_null = NULL;
 
 #define VERT_STRIDE 10								// Stride of our vertices - we always write X Y Z	NX NY NZ		R G B A
 #define INST_CUTOFF 0								// Minimum instances to use hw case, which has higher overhead to set up.
-#define INST_MAX_COUNT (1024 * 128)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
+#define INST_MAX_COUNT (1024 * 512)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
 #define INST_RING_BUFFER_COUNT 1					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
 #define MODE_FOR_INST_STREAM GL_DYNAMIC_STATIC		// VBO mode for instancing.
 
