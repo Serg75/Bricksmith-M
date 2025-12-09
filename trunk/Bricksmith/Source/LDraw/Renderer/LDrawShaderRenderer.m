@@ -305,30 +305,25 @@ static void set_color4fv(float * c, float storage[4])
 }//end popTexture:
 
 
-//========== pushWireFrame: ======================================================
+//========== pushWireFrame: (protocol stub) ====================================
 //
-// Purpose: push a change to wire frame mode. This is nested - when the last
-//			"wire frame" is popped, we are no longer wire frame.
+// Purpose: Protocol conformance stub.
+//			Real implementation is in OpenGL/Metal category.
 //
-//================================================================================
-- (void) pushWireFrame
+//===============================================================================
+- (void)pushWireFrame
 {
-	wire_frame_count++;
+}
 
-}//end pushWireFrame:
-
-
-//========== popWireFrame: =======================================================
+//========== popWireFrame: (protocol stub) =====================================
 //
-// Purpose: undo a previous wire frame command - the push and pops must be
-//			balanced.
+// Purpose: Protocol conformance stub.
+//			Real implementation is in OpenGL/Metal category.
 //
-//================================================================================
-- (void) popWireFrame
+//===============================================================================
+- (void)popWireFrame
 {
-	wire_frame_count--;
-
-}//end popWireFrame:
+}
 
 
 //========== drawQuad:normal:color: ==============================================

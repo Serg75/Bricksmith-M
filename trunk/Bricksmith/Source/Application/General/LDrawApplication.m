@@ -70,7 +70,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 //==============================================================================
 - (void) awakeFromNib
 {
-	OSErr	error;
+	int16_t	error;
 	
 	// Check to see if the 3DConnexion driver is installed
 	if(InstallConnexionHandlers != NULL)
@@ -682,8 +682,30 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		// Retrieve the appropriate data for each menu entry, based on the getter given above
 
         NSArray *lsynthMLCADDefaults = [[MLCadIni iniFile] lsynthVisibleTypes];
-
-        for (NSDictionary *entry in [[self lsynthConfiguration] performSelector:NSSelectorFromString([menuSpec objectForKey:@"getter"])])
+        
+        NSArray *entries = nil;
+        NSString *getter = [menuSpec objectForKey:@"getter"];
+        LSynthConfiguration *config = self->lsynthConfiguration;
+        if ([getter isEqualToString:@"getParts"]) {
+            entries = [config getParts];
+        }
+        else if ([getter isEqualToString:@"getHoseTypes"]) {
+            entries = [config getHoseTypes];
+        }
+        else if ([getter isEqualToString:@"getHoseConstraints"]) {
+            entries = [config getHoseConstraints];
+        }
+        else if ([getter isEqualToString:@"getBandTypes"]) {
+            entries = [config getBandTypes];
+        }
+        else if ([getter isEqualToString:@"getBandConstraints"]) {
+            entries = [config getBandConstraints];
+        }
+        else {
+            entries = @[]; // Fallback, should not happen
+        }
+        
+        for (NSDictionary *entry in entries)
 		{
 			// The MLCad.ini file contains a list of semi-official LSynth types.  The lsynth.mpd file also contains legacy entries
 			// for backward compatibility.  We want to filter out non-semi-official synth parts unless the user has turned this off

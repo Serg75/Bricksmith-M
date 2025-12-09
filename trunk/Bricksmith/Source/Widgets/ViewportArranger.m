@@ -347,22 +347,6 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 }//end splitView:canCollapseSubview:
 
 
-//**** NSSplitView ****
-//========== splitView:shouldCollapseSubview:forDoubleClickOnDividerAtIndex: ===
-//
-// Purpose:		Allow split views to collapse when their divider is 
-//				double-clicked. 
-//
-//==============================================================================
-- (BOOL)              splitView:(NSSplitView *)splitView
-		  shouldCollapseSubview:(NSView *)subview
- forDoubleClickOnDividerAtIndex:(NSInteger)dividerIndex
-{
-	return YES;
-	
-}//end splitView:shouldCollapseSubview:forDoubleClickOnDividerAtIndex:
-
-
 #pragma mark -
 #pragma mark UTILITIES
 #pragma mark -

@@ -2335,7 +2335,23 @@ static Box2 NSRectToBox2(NSRect rect)
 }//end concludeDragOperation:
 
 
-//========== draggedImage:endedAt:operation: ===================================
+//========== draggingSession:sourceOperationMaskForDraggingContext: ============
+//
+// Purpose:     Required by NSDraggingSource protocol in modern macOS. Returns
+//              the allowed drag operations for the given context.
+//
+//===============================================================================
+- (NSDragOperation)		  draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
+{
+	if (context == NSDraggingContextWithinApplication)
+		return NSDragOperationEvery;	// Allow all operations for local drags
+	else
+		return NSDragOperationCopy;		// Only allow copy for external drags
+
+}//end draggingSession:sourceOperationMaskForDraggingContext:
+
+
+//========== draggingSession:endedAtPoint:operation: ===========================
 //
 // Purpose:		The drag ended somewhere. Maybe it was here, maybe it wasn't.
 //
@@ -2345,16 +2361,16 @@ static Box2 NSRectToBox2(NSRect rect)
 //				modified when the drag ends. 
 //
 //==============================================================================
-- (void)draggedImage:(NSImage *)anImage
-			 endedAt:(NSPoint)aPoint
-		   operation:(NSDragOperation)operation
+- (void)draggingSession:(NSDraggingSession *)session
+		   endedAtPoint:(NSPoint)screenPoint
+			  operation:(NSDragOperation)operation
 {
 	if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewPartDragEnded:)])
 	{
 		[self->ldrawDelegate LDrawViewPartDragEnded:self];
 	}
 	
-	// If the drag didn't wind up in one of the GL views belonging to this 
+	// If the drag didn't wind up in one of the GPU views belonging to this 
 	// document, then we need to delete the part's ghost from our model.
 	if(self->dragEndedInOurDocument == NO)
 	{
@@ -2366,13 +2382,13 @@ static Box2 NSRectToBox2(NSRect rect)
 	// deleted and is gone forever. We bring the solemnity of this sad and 
 	// otherwise obscure passing to the user's attention by running that cute 
 	// little poof animation. 
-	if(		operation == NSDragOperationNone
-	   &&	[self->ldrawDelegate respondsToSelector:@selector(LDrawViewPartsWereDraggedIntoOblivion:)] )
+	if (	operation == NSDragOperationNone
+		&&	[self->ldrawDelegate respondsToSelector:@selector(LDrawViewPartsWereDraggedIntoOblivion:)] )
 	{
-		NSShowAnimationEffect (NSAnimationEffectDisappearingItemDefault,
-							   aPoint, NSZeroSize, nil, NULL, NULL);
+		NSShowAnimationEffect(NSAnimationEffectDisappearingItemDefault,
+							  screenPoint, NSZeroSize, nil, NULL, NULL);
 	}
-}//end draggedImage:endedAt:operation:
+}//end draggingSession:endedAtPoint:operation:
 
 
 //========== wantsPeriodicDraggingUpdates ======================================

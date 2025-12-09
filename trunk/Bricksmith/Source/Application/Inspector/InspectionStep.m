@@ -350,7 +350,7 @@
 			}
 			default:
 				// This is one of the head-on views
-				newAngle = [LDrawUtilities angleForViewOrientation:(LDrawStepRotationT)shortcut];
+				newAngle = [LDrawUtilities angleForViewOrientation:(ViewOrientationT)shortcut];
 				break;
 		}
 	}

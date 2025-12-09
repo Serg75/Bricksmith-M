@@ -27,10 +27,6 @@
 // This times smoothing of parts.
 #define TIME_SMOOTHING 0
 
-#if WANT_SMOOTH
-static const uint32_t * idx_null = NULL;
-#endif
-
 // Number of samples for multisample anti-aliasing (MSAA)
 const int MSAASampleCount = 4;
 
@@ -506,7 +502,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 									  indexCount:tptr->line_count
 									   indexType:MTLIndexTypeUInt32
 									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:(NSUInteger)(idx_null+tptr->line_off)
+							   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
 								   instanceCount:1];
 
 		if(tptr->cond_line_count)
@@ -514,7 +510,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 									  indexCount:tptr->cond_line_count
 									   indexType:MTLIndexTypeUInt32
 									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:(NSUInteger)(idx_null+tptr->cond_line_off)
+							   indexBufferOffset:tptr->cond_line_off * sizeof(uint32_t)
 								   instanceCount:1];
 		#else
 		if(tptr->line_count)
@@ -543,7 +539,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 										  indexCount:tptr->line_count
 										   indexType:MTLIndexTypeUInt32
 										 indexBuffer:dl->indexBuffer
-								   indexBufferOffset:(NSUInteger)(idx_null+tptr->line_off)
+								   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
 									   instanceCount:1];
 
 			if(tptr->tri_count)
@@ -551,7 +547,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 										  indexCount:tptr->tri_count
 										   indexType:MTLIndexTypeUInt32
 										 indexBuffer:dl->indexBuffer
-								   indexBufferOffset:(NSUInteger)(idx_null+tptr->tri_off)];
+								   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)];
 			#else
 			if(tptr->line_count)
 				[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
@@ -1343,14 +1339,14 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 												  indexCount:tptr->line_count
 												   indexType:MTLIndexTypeUInt32
 												 indexBuffer:dl->indexBuffer
-										   indexBufferOffset:(NSUInteger)(idx_null+tptr->line_off)];
+										   indexBufferOffset:tptr->line_off * sizeof(uint32_t)];
 
 					if(tptr->tri_count)
 						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 												  indexCount:tptr->tri_count
 												   indexType:MTLIndexTypeUInt32
 												 indexBuffer:dl->indexBuffer
-										   indexBufferOffset:(NSUInteger)(idx_null+tptr->tri_off)
+										   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
 										   instanceCount:1];
 					#else
 					if(tptr->line_count)
@@ -1405,7 +1401,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 											  indexCount:s->dl->line_count
 											   indexType:MTLIndexTypeUInt32
 											 indexBuffer:s->indexBuffer
-									   indexBufferOffset:(NSUInteger)(idx_null+s->dl->line_off)
+									   indexBufferOffset:s->dl->line_off * sizeof(uint32_t)
 										   instanceCount:s->inst_count];
 
 				if(s->dl->cond_line_count && s->is_wireframe)
@@ -1413,7 +1409,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 											  indexCount:s->dl->cond_line_count
 											   indexType:MTLIndexTypeUInt32
 											 indexBuffer:s->indexBuffer
-									   indexBufferOffset:(NSUInteger)(idx_null+s->dl->cond_line_off)
+									   indexBufferOffset:s->dl->cond_line_off * sizeof(uint32_t)
 										   instanceCount:s->inst_count];
 
 				if(s->dl->tri_count && !s->is_wireframe)
@@ -1421,7 +1417,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 											  indexCount:s->dl->tri_count
 											   indexType:MTLIndexTypeUInt32
 											 indexBuffer:s->indexBuffer
-									   indexBufferOffset:(NSUInteger)(idx_null+s->dl->tri_off)
+									   indexBufferOffset:s->dl->tri_off * sizeof(uint32_t)
 										   instanceCount:s->inst_count];
 				#else
 				if(s->dl->line_count)
@@ -1509,7 +1505,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 											  indexCount:tptr->line_count
 											   indexType:MTLIndexTypeUInt32
 											 indexBuffer:dl->indexBuffer
-									   indexBufferOffset:(NSUInteger)(idx_null+tptr->line_off)
+									   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
 										   instanceCount:1];
 
 				if(tptr->tri_count)
@@ -1517,7 +1513,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 											  indexCount:tptr->tri_count
 											   indexType:MTLIndexTypeUInt32
 											 indexBuffer:dl->indexBuffer
-									   indexBufferOffset:(NSUInteger)(idx_null+tptr->tri_off)
+									   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
 										   instanceCount:1];
 				#else
 				if(tptr->line_count)

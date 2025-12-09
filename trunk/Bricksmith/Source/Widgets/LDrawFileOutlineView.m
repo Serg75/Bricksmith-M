@@ -12,6 +12,20 @@
 
 @implementation LDrawFileOutlineView
 
+//========== awakeFromNib ======================================================
+//
+// Purpose:		Called when the view is loaded from a nib file.
+//
+//==============================================================================
+- (void)awakeFromNib
+{
+	[super awakeFromNib];
+	[self setDraggingSourceOperationMask:NSDragOperationCopy forLocal:NO];
+	[self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:YES];
+
+}//end awakeFromNib
+
+
 //========== selectObjects: ====================================================
 //
 // Purpose:		Conveniently selects all the the objects in the array which are 
