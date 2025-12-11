@@ -1136,36 +1136,38 @@ void AppendChoicesToNewItem(
 		[fileContentsOutline deselectAll:nil];
 	else
 	{
-		for(d = 0; d < total; ++d)
+		// Optimization: Track which ancestors we've already expanded to avoid redundant
+		// expansions. With 100,000+ parts, many directives share the same ancestors
+		// (e.g., all parts in the same step share that step), so we can expand each
+		// ancestor only once. This dramatically reduces the number of expand operations.
+		NSMutableSet *expandedAncestors = [NSMutableSet setWithCapacity:total];
+		
+		for (d = 0; d < total; ++d)
 		{
-			LDrawDirective * directive = [directivesToSelect objectAtIndex:d];			
-			NSArray     *ancestors      = [directive ancestors];
+			LDrawDirective 	*directive = [directivesToSelect objectAtIndex:d];
+			NSArray 		*ancestors = [directive ancestors];
 
 			//Expand the hierarchy all the way down to the directive we are about to 
-			// select.
-			for(counter = 0; counter < [ancestors count]; counter++)
-				[fileContentsOutline expandItem:[ancestors objectAtIndex:counter]];
+			// select. Only expand each ancestor once.
+			for (counter = 0; counter < [ancestors count]; counter++)
+			{
+				LDrawDirective *ancestor = [ancestors objectAtIndex:counter];
+				if (![expandedAncestors containsObject:ancestor])
+				{
+					[fileContentsOutline expandItem:ancestor];
+					[expandedAncestors addObject:ancestor];
+				}
+			}
 		}
 
 		NSMutableIndexSet * indices = [NSMutableIndexSet indexSet];
 		
-		for(d = 0; d < total; ++d)
+		for (d = 0; d < total; ++d)
 		{
 			LDrawDirective * directive = [directivesToSelect objectAtIndex:d];			
 		
 			indexToSelect = [fileContentsOutline rowForItem:directive];
-		
-			if([indices containsIndex:indexToSelect])
-			{
-				// Allen says don't do "toggle" behavior with shift-marquee select.  
-				// If we did want a toggle, we'd enable this.
-				//[indices removeIndex:indexToSelect];			
-			}
-			else
-			{
-				[indices addIndex:indexToSelect];
-			}
-		
+			[indices addIndex:indexToSelect];
 		}
 		[fileContentsOutline selectRowIndexes:indices byExtendingSelection:NO];
 	}
