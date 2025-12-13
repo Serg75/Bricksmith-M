@@ -871,9 +871,13 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 	// PERFORMANCE OPTIMIZATION: Copy data from staging buffers to GPU buffers using blit encoder
 	// This ensures data is in GPU-optimal memory (private storage) for fast access.
-
-	id<MTLCommandQueue> commandQueue		= [device newCommandQueue];
-	id<MTLCommandBuffer> copyCommandBuffer	= [commandQueue commandBuffer];
+	// Reuse existing blit command queue instead of creating a new one each time.
+	if (_blitCommandQueue == nil) {
+		_blitCommandQueue = [device newCommandQueue];
+		_blitCommandQueue.label = @"Blit Command Queue";
+	}
+	
+	id<MTLCommandBuffer> copyCommandBuffer = [_blitCommandQueue commandBuffer];
 	copyCommandBuffer.label = @"DL Buffer Copy";
 	
 	id<MTLBlitCommandEncoder> blitEncoder	= [copyCommandBuffer blitCommandEncoder];
@@ -1046,9 +1050,13 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 	// PERFORMANCE OPTIMIZATION: Copy data from staging buffer to GPU buffer using blit encoder
 	// This ensures data is in GPU-optimal memory (private storage) for fast access.
-
-	id<MTLCommandQueue> commandQueue		= [device newCommandQueue];
-	id<MTLCommandBuffer> copyCommandBuffer	= [commandQueue commandBuffer];
+	// Reuse existing blit command queue instead of creating a new one each time.
+	if (_blitCommandQueue == nil) {
+		_blitCommandQueue = [device newCommandQueue];
+		_blitCommandQueue.label = @"Blit Command Queue";
+	}
+	
+	id<MTLCommandBuffer> copyCommandBuffer = [_blitCommandQueue commandBuffer];
 	copyCommandBuffer.label = @"DL Buffer Copy";
 	
 	id<MTLBlitCommandEncoder> blitEncoder	= [copyCommandBuffer blitCommandEncoder];
