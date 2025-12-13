@@ -780,17 +780,41 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 	id<MTLDevice> device = MetalGPU.device;
 
-	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
+	// PERFORMANCE OPTIMIZATION: Use private storage for GPU buffers with staging buffers for CPU writes
+	// This eliminates CPU-GPU synchronization overhead and improves cache performance.
+
+	// Create staging buffers (shared) for CPU writes
+
+	NSUInteger vertexBufferSize	= total_vertices * sizeof(float) * VERT_STRIDE;
+	NSUInteger indexBufferSize	= total_indices * sizeof(uint32_t);
+
+	id<MTLBuffer> stagingVertexBuffer = [device newBufferWithLength:vertexBufferSize
+															options:MTLResourceStorageModeShared];
+	stagingVertexBuffer.label = @"Staging vertex buffer";
+	
+	id<MTLBuffer> stagingIndexBuffer = [device newBufferWithLength:indexBufferSize
+														   options:MTLResourceStorageModeShared];
+	stagingIndexBuffer.label = @"Staging index buffer";
+
+
+	// Create GPU buffers (private) for optimal GPU access
+
+	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:vertexBufferSize
+													 options:MTLResourceStorageModePrivate];
 	vertexBuffer.label = @"Vertex buffer";
-
-	id<MTLBuffer> indexBuffer = [device newBufferWithLength:total_indices * sizeof(uint32_t) options:MTLResourceStorageModeShared];
+	
+	id<MTLBuffer> indexBuffer = [device newBufferWithLength:indexBufferSize
+													options:MTLResourceStorageModePrivate];
 	indexBuffer.label = @"Index buffer";
-
+	
 	dl->vertexBuffer = vertexBuffer;
 	dl->indexBuffer = indexBuffer;
 
-	volatile float * vertex_ptr = (volatile float *)[dl->vertexBuffer contents];
-	volatile uint32_t * index_ptr = (volatile uint32_t *)[dl->indexBuffer contents];
+
+	// Write data to staging buffers
+
+	volatile float		*vertex_ptr	= (volatile float *)[stagingVertexBuffer contents];
+	volatile uint32_t	*index_ptr	= (volatile uint32_t *)[stagingIndexBuffer contents];
 
 
 	// Grab variable size arrays for the start/offsets of each sub-part of our big pile-o-mesh...
@@ -832,6 +856,36 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		}
 		*cond_line_count /= 2;
 	}
+
+	// PERFORMANCE OPTIMIZATION: Copy data from staging buffers to GPU buffers using blit encoder
+	// This ensures data is in GPU-optimal memory (private storage) for fast access.
+
+	id<MTLCommandQueue> commandQueue		= [device newCommandQueue];
+	id<MTLCommandBuffer> copyCommandBuffer	= [commandQueue commandBuffer];
+	copyCommandBuffer.label = @"DL Buffer Copy";
+	
+	id<MTLBlitCommandEncoder> blitEncoder	= [copyCommandBuffer blitCommandEncoder];
+	blitEncoder.label = @"DL Buffer Blit";
+	
+	// Copy vertex data from staging to GPU buffer
+	[blitEncoder copyFromBuffer:stagingVertexBuffer
+				   sourceOffset:0
+					   toBuffer:vertexBuffer
+			  destinationOffset:0
+						   size:vertexBufferSize];
+
+	// Copy index data from staging to GPU buffer
+	[blitEncoder copyFromBuffer:stagingIndexBuffer
+				   sourceOffset:0
+					   toBuffer:indexBuffer
+			  destinationOffset:0
+						   size:indexBufferSize];
+
+	[blitEncoder endEncoding];
+	[copyCommandBuffer commit];
+	[copyCommandBuffer waitUntilCompleted];
+	
+	// Staging buffers will be released when they go out of scope
 
 	ti = 0;
 
@@ -917,13 +971,26 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	#endif
 
 	// Generate and map a buffer for our mesh data.
+	// PERFORMANCE OPTIMIZATION: Use private storage for GPU buffers with staging buffers for CPU writes
 
-	id<MTLBuffer> vertexBuffer = [MetalGPU.device newBufferWithLength:total_vertices * sizeof(float) * VERT_STRIDE options:MTLResourceStorageModeShared];
+	id<MTLDevice> device		= MetalGPU.device;
+	NSUInteger vertexBufferSize	= total_vertices * sizeof(float) * VERT_STRIDE;
+
+	// Create staging buffer (shared) for CPU writes
+	id<MTLBuffer> stagingVertexBuffer = [device newBufferWithLength:vertexBufferSize
+															options:MTLResourceStorageModeShared];
+	stagingVertexBuffer.label = @"Staging vertex buffer";
+	
+	// Create GPU buffer (private) for optimal GPU access
+	id<MTLBuffer> vertexBuffer = [device newBufferWithLength:vertexBufferSize
+													 options:MTLResourceStorageModePrivate];
 	vertexBuffer.label = @"Vertex buffer";
-
+	
 	dl->vertexBuffer = vertexBuffer;
 
-	volatile float * buf_ptr = (volatile float *)[dl->vertexBuffer contents];
+	// Write data to staging buffer
+
+	volatile float * buf_ptr = (volatile float *)[stagingVertexBuffer contents];
 
 	int cur_v = 0;
 	struct LDrawDLPerTex * cur_tex = dl->texes;
@@ -964,6 +1031,29 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 
 		++cur_tex;
 	}
+
+	// PERFORMANCE OPTIMIZATION: Copy data from staging buffer to GPU buffer using blit encoder
+	// This ensures data is in GPU-optimal memory (private storage) for fast access.
+
+	id<MTLCommandQueue> commandQueue		= [device newCommandQueue];
+	id<MTLCommandBuffer> copyCommandBuffer	= [commandQueue commandBuffer];
+	copyCommandBuffer.label = @"DL Buffer Copy";
+	
+	id<MTLBlitCommandEncoder> blitEncoder	= [copyCommandBuffer blitCommandEncoder];
+	blitEncoder.label = @"DL Buffer Blit";
+	
+	// Copy vertex data from staging to GPU buffer
+	[blitEncoder copyFromBuffer:stagingVertexBuffer
+				   sourceOffset:0
+					   toBuffer:vertexBuffer
+			  destinationOffset:0
+						   size:vertexBufferSize];
+	
+	[blitEncoder endEncoding];
+	[copyCommandBuffer commit];
+	[copyCommandBuffer waitUntilCompleted];
+	
+	// Staging buffer will be released when it goes out of scope
 
 	// Release the BDP that contains all of the build-related junk.
 	LDrawBDPDestroy(ctx->alloc);

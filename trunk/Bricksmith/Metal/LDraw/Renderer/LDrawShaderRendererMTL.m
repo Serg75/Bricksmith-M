@@ -147,11 +147,38 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 			}
 		}
 
-		// Create a single Metal buffer for all vertices
-		_dragHandleVertexBuffer = [MetalGPU.device newBufferWithBytes:vertexData.bytes
-															   length:vertexData.length
-															  options:MTLResourceStorageModeShared];
+		// PERFORMANCE OPTIMIZATION: Use private storage for GPU buffers
+		// Create staging buffer (shared) for initial data
+		id<MTLDevice> device = MetalGPU.device;
+		id<MTLBuffer> stagingBuffer = [device newBufferWithBytes:vertexData.bytes
+														   length:vertexData.length
+														  options:MTLResourceStorageModeShared];
+		stagingBuffer.label = @"Staging drag handle vertex buffer";
+		
+		// Create GPU buffer (private) for optimal GPU access
+		_dragHandleVertexBuffer = [device newBufferWithLength:vertexData.length
+													   options:MTLResourceStorageModePrivate];
 		_dragHandleVertexBuffer.label = @"Drag handle vertex buffer";
+		
+		// Copy from staging to GPU buffer using blit encoder
+		id<MTLCommandQueue> commandQueue = [device newCommandQueue];
+		id<MTLCommandBuffer> copyCommandBuffer = [commandQueue commandBuffer];
+		copyCommandBuffer.label = @"Drag Handle Buffer Copy";
+		
+		id<MTLBlitCommandEncoder> blitEncoder = [copyCommandBuffer blitCommandEncoder];
+		blitEncoder.label = @"Drag Handle Buffer Blit";
+		
+		[blitEncoder copyFromBuffer:stagingBuffer
+						sourceOffset:0
+							toBuffer:_dragHandleVertexBuffer
+				   destinationOffset:0
+								size:vertexData.length];
+		
+		[blitEncoder endEncoding];
+		[copyCommandBuffer commit];
+		[copyCommandBuffer waitUntilCompleted];
+		
+		// Staging buffer will be released when it goes out of scope
 	}
 
 	return self;
