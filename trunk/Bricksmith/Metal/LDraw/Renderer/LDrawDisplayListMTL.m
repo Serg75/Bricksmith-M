@@ -77,7 +77,7 @@ const int MSAASampleCount = 4;
 // Previously, using several buffers (one per view) helped avoid rendering artefacts when rapidly selecting
 // or deselecting parts on slow computers — this was before the shader address space was fixed.
 // With the shader fix in place, this buffer rotation is likely no longer necessary.
-#define INST_RING_BUFFER_COUNT 4		// Number of buffers to rotate for hardware instancing
+#define INST_RING_BUFFER_COUNT 3		// Number of buffers to rotate (aligned with MaxBuffersInFlight)
 
 #define INST_BUFFER_SIZE (1024 * 1024)	// 1MB initial size for instance buffers
 
