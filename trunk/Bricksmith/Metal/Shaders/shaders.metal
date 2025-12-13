@@ -68,8 +68,7 @@ vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
 	float2 tex_coord;
 	tex_coord.x = dot(texGen.plane_s, in.position);
 	tex_coord.y = dot(texGen.plane_t, in.position);
-
-	out.tex_coord = tex_coord;
+	out.tex_coord = float2(tex_coord.x, 1.0 - tex_coord.y);
 
 	return out;
 }
@@ -105,9 +104,11 @@ fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 
 	constexpr sampler linear_sampler(mip_filter::linear,
 									 mag_filter::linear,
-									 min_filter::linear);
+									 min_filter::linear,
+									 s_address::clamp_to_edge,
+									 t_address::clamp_to_edge);
 
-	float4 tex_color = tex.sample(linear_sampler, float2(in.tex_coord.x, (1.0 - in.tex_coord.y)));
+	float4 tex_color = tex.sample(linear_sampler, in.tex_coord);
 
 	float4 frag_color;
 	frag_color.rgb = ((float3)mix(final_color.rgb, (float3)tex_color.rgb, (float)tex_color.a));
