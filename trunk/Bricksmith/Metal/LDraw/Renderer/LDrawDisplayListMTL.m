@@ -96,9 +96,11 @@ id<MTLTexture>	_clearTexture;
 static void copy_vec3(float d[3], const float s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
 static void copy_vec4(float d[4], const float s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
 
-static id<MTLBuffer>	inst_vbo_ring[INST_RING_BUFFER_COUNT]	= { nil };
-static NSUInteger		inst_vbo_sizes[INST_RING_BUFFER_COUNT]	= { 0 };
-static int				inst_ring_last							= 0;
+static id<MTLBuffer>	inst_vbo_ring[INST_RING_BUFFER_COUNT]		= { nil };		// GPU buffers (private)
+static id<MTLBuffer>	inst_vbo_ring_st[INST_RING_BUFFER_COUNT]	= { nil };		// Staging buffers (shared)
+static NSUInteger		inst_vbo_sizes[INST_RING_BUFFER_COUNT]		= { 0 };
+static int				inst_ring_last								= 0;
+static id<MTLCommandQueue>	_blitCommandQueue						= nil;			// Command queue for blit operations
 
 //========== DISPLAY LIST DATA STRUCTURES ========================================
 
@@ -273,6 +275,9 @@ struct	LDrawDLBuilder {
 //			This helps reduce reallocations and improves performance by reusing
 //			buffers when possible.
 //
+//			PERFORMANCE OPTIMIZATION: Uses private storage for GPU buffers with
+//			staging buffers for CPU writes to eliminate CPU-GPU synchronization overhead.
+//
 //================================================================================
 static id<MTLBuffer> getInstanceBuffer(NSUInteger requiredSize, int ringIndex)
 {
@@ -280,17 +285,24 @@ static id<MTLBuffer> getInstanceBuffer(NSUInteger requiredSize, int ringIndex)
 	if (inst_vbo_ring[ringIndex] == nil || inst_vbo_sizes[ringIndex] < requiredSize)
 	{
 		NSUInteger newSize = MAX(INST_BUFFER_SIZE, requiredSize * 2);
+		id<MTLDevice> device = MetalGPU.device;
 
-		// Create new buffer
-		id<MTLBuffer> newBuffer = [MetalGPU.device newBufferWithLength:newSize
-															   options:MTLResourceStorageModeManaged];
-		newBuffer.label = [NSString stringWithFormat:@"Instance buffer %d", ringIndex];
+		// Create staging buffer (shared) for CPU writes
+		id<MTLBuffer> stagingBuffer = [device newBufferWithLength:newSize
+														  options:MTLResourceStorageModeShared];
+		stagingBuffer.label = [NSString stringWithFormat:@"Staging instance buffer %d", ringIndex];
 
-		// Store the new buffer and its size
-		inst_vbo_ring[ringIndex] = newBuffer;
+		// Create GPU buffer (private) for optimal GPU access
+		id<MTLBuffer> gpuBuffer = [device newBufferWithLength:newSize
+													  options:MTLResourceStorageModePrivate];
+		gpuBuffer.label = [NSString stringWithFormat:@"Instance buffer %d", ringIndex];
+
+		// Store both buffers and size
+		inst_vbo_ring_st[ringIndex] = stagingBuffer;
+		inst_vbo_ring[ringIndex] = gpuBuffer;
 		inst_vbo_sizes[ringIndex] = newSize;
 	}
-	return inst_vbo_ring[ringIndex];
+	return inst_vbo_ring_st[ringIndex];  // Return staging buffer for writing
 
 }//end getInstanceBuffer
 
@@ -1355,10 +1367,11 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 		// Get or create an instance buffer of appropriate size
 		NSUInteger requiredSize = session->total_instance_count * InstanceInputStructSize;
-		id<MTLBuffer> instanceBuffer = getInstanceBuffer(requiredSize, session->inst_ring);
+		id<MTLBuffer> stagingInstanceBuffer = getInstanceBuffer(requiredSize, session->inst_ring);
+		id<MTLBuffer> gpuInstanceBuffer = inst_vbo_ring[session->inst_ring];
             
-		// Map our instance buffer so we can write instancing data.
-        float * inst_base = (float *) [instanceBuffer contents];
+		// Map our staging instance buffer so we can write instancing data.
+        float * inst_base = (float *) [stagingInstanceBuffer contents];
 		float * inst_data = inst_base;
 		int 	inst_count = 0;
 		int		inst_remain = INST_MAX_COUNT;
@@ -1466,7 +1479,36 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			}
 		}
 
-		[instanceBuffer didModifyRange:NSMakeRange(0, inst_count * InstanceInputStructSize)];
+		// PERFORMANCE OPTIMIZATION: Copy data from staging buffer to GPU buffer using blit encoder
+		// This ensures data is in GPU-optimal memory (private storage) for fast access.
+		// Note: We use a separate command buffer because we can't create a blit encoder
+		// while a render encoder is active.
+
+		if (inst_count > 0)
+		{
+			// Create blit command queue if needed (reused across frames)
+			if (_blitCommandQueue == nil)
+			{
+				_blitCommandQueue = [MetalGPU.device newCommandQueue];
+				_blitCommandQueue.label = @"Blit Command Queue";
+			}
+			
+			id<MTLCommandBuffer> blitCommandBuffer = [_blitCommandQueue commandBuffer];
+			blitCommandBuffer.label = @"Instance Buffer Copy";
+			
+			id<MTLBlitCommandEncoder> blitEncoder = [blitCommandBuffer blitCommandEncoder];
+			blitEncoder.label = @"Instance Buffer Blit";
+			
+			[blitEncoder copyFromBuffer:stagingInstanceBuffer
+						   sourceOffset:0
+							   toBuffer:gpuInstanceBuffer
+					  destinationOffset:0
+								   size:inst_count * InstanceInputStructSize];
+
+			[blitEncoder endEncoding];
+			[blitCommandBuffer commit];
+			[blitCommandBuffer waitUntilCompleted];
+		}
 
 		// Hardware instancing
 
@@ -1477,7 +1519,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 			setup_tex_spec(NULL, session, renderEncoder);
 
-			[renderEncoder setVertexBuffer:instanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
+			[renderEncoder setVertexBuffer:gpuInstanceBuffer offset:0 atIndex:BufferIndexPerInstanceData];
 
 			struct LDrawDLSegment * s;
 			for(s = segments; s < cur_segment; ++s)
