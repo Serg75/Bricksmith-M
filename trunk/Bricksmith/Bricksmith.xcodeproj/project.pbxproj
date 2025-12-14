@@ -226,8 +226,6 @@
 		18B32A6F2B9A0F3E00A97084 /* PartSpecific.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DC1D1E292993CC00915853 /* PartSpecific.m */; };
 		18B32A702B9A113300A97084 /* ScannerCategory.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D021AE29AEA5D3001F2B4D /* ScannerCategory.h */; };
 		18B32A712B9A113900A97084 /* ScannerCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021AF29AEA5D3001F2B4D /* ScannerCategory.m */; };
-		18B32A722B9A61DF00A97084 /* LDrawApplicationMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E1082F2A41E0AB0091D579 /* LDrawApplicationMTL.h */; };
-		18B32A732B9A622D00A97084 /* LDrawShaderRendererMTL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108302A41E22F0091D579 /* LDrawShaderRendererMTL.h */; };
 		2BB59F4309FEFE960077A885 /* AMSProgressBar.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
 		2BF2E2CD0AB0FBB50026D5DB /* MLCad.ini in Resources */ = {isa = PBXBuildFile; fileRef = 2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */; };
 		2BF2E3030AB0FC5E0026D5DB /* MovePanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */; };
@@ -2915,7 +2913,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 4.0.1;
+				MARKETING_VERSION = 4.0.2;
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
@@ -2954,7 +2952,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 4.0.1;
+				MARKETING_VERSION = 4.0.2;
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_LDFLAGS = (
 					"-weak_framework",
@@ -3091,7 +3089,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 4.0.1;
+				MARKETING_VERSION = 4.0.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_HEADER_SEARCH_PATHS = Metal/Global;
 				MTL_PREPROCESSOR_DEFINITIONS = "";
@@ -3141,7 +3139,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 4.0.1;
+				MARKETING_VERSION = 4.0.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_HEADER_SEARCH_PATHS = Metal/Global;
 				MTL_PREPROCESSOR_DEFINITIONS = "";
