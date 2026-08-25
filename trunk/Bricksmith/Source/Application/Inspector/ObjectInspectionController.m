@@ -12,9 +12,9 @@
 //==============================================================================
 #import "ObjectInspectionController.h"
 
-#import "LDrawDirective.h"
+#import <LDrawCore/LDrawDirective.h>
 #import "LDrawDocument.h"
-#import "MacLDraw.h"
+#import <LDrawCore/MacLDraw.h>
 
 
 @implementation ObjectInspectionController

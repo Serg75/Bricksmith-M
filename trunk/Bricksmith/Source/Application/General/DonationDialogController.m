@@ -13,10 +13,11 @@
 #import "GPU.h"
 #import "BackgroundColorView.h"
 #import "LDrawApplication.h"
-#import "LDrawFile.h"
+#import <LDrawCore/LDrawFile.h>
 #import "LDrawViewerContainer.h"
 #import  LDrawViewGPU_h
-#import "MacLDraw.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawFeatures/LDrawPreferences.h>
 
 @interface DonationDialogController ()
 
@@ -87,7 +88,6 @@
 //==============================================================================
 - (void) runModal
 {
-	NSUserDefaults  *userDefaults   = [NSUserDefaults standardUserDefaults];
 	CFBundleRef     mainBundle      = CFBundleGetMainBundle();
 	UInt32          bundleVersion   = CFBundleGetVersionNumber(mainBundle);
 	
@@ -101,8 +101,7 @@
 	[NSApp runModalForWindow:[self window]];
 	
 	// Record for next time
-	[userDefaults setInteger:bundleVersion forKey:DONATION_SCREEN_LAST_VERSION_DISPLAYED];
-	[userDefaults synchronize];
+	[[LDrawPreferences sharedPreferences] recordDonationDialogShownForBundleVersion:bundleVersion];
 	
 }//end runModal
 
@@ -114,27 +113,10 @@
 //==============================================================================
 - (BOOL) shouldShowDialog
 {
-	NSUserDefaults  *userDefaults               = [NSUserDefaults standardUserDefaults];
 	CFBundleRef     mainBundle                  = CFBundleGetMainBundle();
 	UInt32          bundleVersion               = CFBundleGetVersionNumber(mainBundle);
-	BOOL            userRequestedSuppression    = [userDefaults boolForKey:DONATION_SCREEN_SUPPRESS_THIS_VERSION];
-	NSInteger       lastNagVersion              = [userDefaults integerForKey:DONATION_SCREEN_LAST_VERSION_DISPLAYED];
-	BOOL            showDonationRequest         = YES;
-	
-	if(userRequestedSuppression == YES)
-	{
-		showDonationRequest = NO;
-	}
 
-	if(lastNagVersion != bundleVersion)
-	{
-		showDonationRequest = YES;
-		
-		// New version. Make them click the box again.
-		[userDefaults setBool:NO forKey:DONATION_SCREEN_SUPPRESS_THIS_VERSION];
-	}
-	
-	return showDonationRequest;	
+	return [[LDrawPreferences sharedPreferences] shouldShowDonationDialogForBundleVersion:bundleVersion];
 	
 }//end shouldShowDialog
 
@@ -177,10 +159,9 @@
 //==============================================================================
 - (IBAction) suppressionCheckboxClicked:(id)sender
 {
-	NSUserDefaults  *userDefaults               = [NSUserDefaults standardUserDefaults];
-	BOOL            userRequestedSuppression    = [self->suppressionCheckbox state];
-	
-	[userDefaults setBool:userRequestedSuppression forKey:DONATION_SCREEN_SUPPRESS_THIS_VERSION];
+	BOOL userRequestedSuppression = [self->suppressionCheckbox state];
+
+	[[LDrawPreferences sharedPreferences] setDonationSuppressedThisVersion:userRequestedSuppression];
 	
 }//end suppressionCheckboxClicked:
 

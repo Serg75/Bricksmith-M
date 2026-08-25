@@ -12,7 +12,8 @@
 //==============================================================================
 #import "LDrawColorBar.h"
 
-#import "LDrawColor.h"
+#import <LDrawCore/LDrawColor.h>
+#import <LDrawCore/ColorLibrary.h>
 
 @implementation LDrawColorBar
 
@@ -106,7 +107,7 @@
 	
 	//Create a tool tip to identify the LDraw color code.
 	description	= [newColor localizedName];
-	[self setToolTip:[NSString stringWithFormat:@"LDraw %d\n%@", [newColor colorCode], description]];
+	[self setToolTip:[ColorLibrary tooltipForColorCode:[newColor colorCode] localizedName:description]];
 	
 	[self setNeedsDisplay:YES];
 	

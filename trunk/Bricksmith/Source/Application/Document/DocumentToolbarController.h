@@ -53,12 +53,6 @@
 //Button factories
 - (NSToolbarItem *) makeGridSpacingItem;
 - (NSToolbarItem *) makeGridOrientationItem;
-- (NSToolbarItem *) makeRotationPlusXItem;
-- (NSToolbarItem *) makeRotationMinusXItem;
-- (NSToolbarItem *) makeRotationPlusYItem;
-- (NSToolbarItem *) makeRotationMinusYItem;
-- (NSToolbarItem *) makeRotationPlusZItem;
-- (NSToolbarItem *) makeRotationMinusZItem;
 - (NSToolbarItem *) makeShowColorsItem;
 - (NSToolbarItem *) makeShowInspectorItem;
 - (NSToolbarItem *) makePartBrowserItem;

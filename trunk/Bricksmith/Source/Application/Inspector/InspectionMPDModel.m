@@ -11,9 +11,10 @@
 //==============================================================================
 #import "InspectionMPDModel.h"
 
-#import "LDrawFile.h"
-#import "LDrawMPDModel.h"
-#import "LDrawUtilities.h"
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawEditing/LDrawDocumentTree.h>
 
 @implementation InspectionMPDModel
 
@@ -141,16 +142,17 @@
 	
 	// Duplicate model names are not allowed, because they cause nasty things to 
 	// happen when automatically renaming references to them. 
-	if(		[newValue caseInsensitiveCompare:oldValue] != NSOrderedSame				// actually changed the name!
-		&&	[[[self object] enclosingFile] modelWithName:newValue] != nil) // is a duplicate!
+	if([LDrawDocumentTree shouldRejectDuplicateModelRenameFrom:oldValue
+															to:newValue
+										   whenModelNameExists:[[[self object] enclosingFile] modelWithName:newValue] != nil])
 	{
 		NSAlert		*alert		= [[NSAlert alloc] init];
 		NSString	*message	= nil;
 		
-		message = [NSString stringWithFormat:NSLocalizedString(@"DuplicateModelnameMessage", nil), newValue];
+		message = [NSString stringWithFormat:NSLocalizedString([LDrawDocumentTree duplicateModelNameMessageFormatKey], nil), newValue];
 		
 		[alert setMessageText:message];
-		[alert setInformativeText:NSLocalizedString(@"DuplicateModelnameInformative", nil)];
+		[alert setInformativeText:NSLocalizedString([LDrawDocumentTree duplicateModelNameInformativeKey], nil)];
 		
 		[alert runModal];
 		

@@ -21,6 +21,7 @@
 #import "Inspector.h"
 
 #import "ObjectInspectionController.h"
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 
 @implementation Inspector
@@ -70,14 +71,7 @@
 //==============================================================================
 - (void) inspectObject:(id)object
 {
-	NSArray *objectList;
-	
-	if(object != nil)
-		objectList = [NSArray arrayWithObject:object];
-	else
-		objectList = [NSArray array];
-	
-	[self inspectObjects: objectList];
+	[self inspectObjects:[LDrawSelectionOps inspectorObjectListFromObject:object]];
 	
 }//end inspectObject:
 
@@ -97,21 +91,22 @@
 	BOOL		 foundInspector		= NO;
 	NSString	*errorString		= nil;
 	id			 objectToInspect	= nil;
+	LDrawInspectorSelectionKind kind = [LDrawSelectionOps inspectorSelectionKindForObjects:objects];
 	
 	//No object to inspect? Just show the empty message.
-	if(objects == nil || [objects count] == 0)
+	if(kind == LDrawInspectorSelectionEmpty)
 	{
-		errorString = NSLocalizedString(@"EmptySelection", nil);
+		errorString = NSLocalizedString([LDrawSelectionOps inspectorErrorKeyForSelectionKind:kind], nil);
 		[self unloadInspector];
 	}
-	else if([objects count] > 1)
+	else if(kind == LDrawInspectorSelectionMultiple)
 	{
-		errorString = NSLocalizedString(@"MultipleSelection", nil);
+		errorString = NSLocalizedString([LDrawSelectionOps inspectorErrorKeyForSelectionKind:kind], nil);
 		[self unloadInspector];
 	}
 	else{
 		//We have an object; let's see if we can get an inspector for it.
-		objectToInspect = [objects objectAtIndex:0];
+		objectToInspect = [LDrawSelectionOps singleInspectableObjectInSelection:objects];
 		
 		if([currentInspector object] != objectToInspect)
 		{
@@ -122,7 +117,7 @@
 			//We have an object, but it doesn't have an inspector we understand.
 			// Display a message indicating there is nothing here to inspect.
 			if(foundInspector == NO)
-				errorString = NSLocalizedString(@"NoInspector", nil);
+				errorString = NSLocalizedString([LDrawSelectionOps inspectorErrorKeyWhenNoInspector], nil);
 		}
 		else
 		{
@@ -154,10 +149,10 @@
 	BOOL foundInspector = NO; //not yet, anyway.
 	
 	// Inspectable objects will tell us what class to use to inspect with.
-	if([objectToInspect respondsToSelector:@selector(inspectorClassName)]){
+	NSString *className = [LDrawSelectionOps inspectorClassNameForObject:objectToInspect];
+	if(className != nil){
 		
 		// Find the class to use, and instantiate one.
-		NSString	*className			= [objectToInspect performSelector:@selector(inspectorClassName)];
 		Class		 InspectionClass	= NSClassFromString(className);
 		
 		if([InspectionClass isSubclassOfClass:[ObjectInspectionController class]]){

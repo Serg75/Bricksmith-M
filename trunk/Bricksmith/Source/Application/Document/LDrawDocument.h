@@ -17,11 +17,11 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import "BricksmithUtilities.h"
-#import "ColorLibrary.h"
-#import "LDrawUtilities.h"
-#import "MatrixMath.h"
-#import "RotationPanelController.h"
+#import <LDrawCore/ColorLibrary.h>
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/MatrixMath.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
 #import "ViewportArranger.h"
 
 @class DocumentToolbarController;
@@ -226,7 +226,6 @@
 - (void) addStepComponent:(LDrawDirective *)newDirective parent:(LDrawContainer*)parent index:(NSInteger)insertAtIndex;
 
 - (BOOL) canDeleteDirective:(LDrawDirective *)directive displayErrors:(BOOL)errorFlag;
-- (BOOL) elementsAreSelectedOfVisibility:(BOOL)visibleFlag;
 - (NSAttributedString *) formatDirective:(LDrawDirective *)item withStringRepresentation:(NSString *)representation;
 - (void) loadDataIntoDocumentUI;
 - (LDrawContainer *) selectedContainer;

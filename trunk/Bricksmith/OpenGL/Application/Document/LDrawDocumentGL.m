@@ -25,16 +25,22 @@
 #import "Inspector.h"
 #import "LDrawApplicationGL.h"
 #import "LDrawColorPanelController.h"
-#import "LDrawFile.h"
-#import "LDrawLSynth.h"
-#import "LDrawMPDModel.h"
-#import "LDrawPart.h"
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawPart.h>
 #import "SearchPanelController.h"
 
 
 @implementation LDrawDocument (OpenGL)
 
 
+//========== lockContextAndExecute: ============================================
+//
+// Purpose:		Bracket an undoable document edit with the shared OpenGL context
+//				lock so edits cannot interleave with drawing in another thread.
+//
+//==============================================================================
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block
 {
 	CGLLockContext([[LDrawApplication sharedOpenGLContext] CGLContextObj]);

@@ -27,12 +27,14 @@
 #import "IconTextCell.h"
 #import  LDrawApplicationGPU_h
 #import "LDrawColorPanelController.h"
-#import "LDrawModel.h"
-#import "LDrawPart.h"
+#import <LDrawCore/LDrawModel.h>
+#import <LDrawCore/LDrawPart.h>
 #import "LDrawViewerContainer.h"
-#import "MacLDraw.h"
-#import  PartLibraryGPU_h
-#import "StringCategory.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawEditing/LDrawClipboard.h>
+#import <LDrawEditing/LDrawInsertOps.h>
+#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/StringCategory.h>
 #import "TableViewCategory.h"
 
 
@@ -90,14 +92,14 @@
 
 		[self->zoomInButton setTarget:self->partPreview];
 		[self->zoomInButton setAction:@selector(zoomIn:)];
-		[self->zoomInButton setToolTip:NSLocalizedString(@"ZoomInTooltip", nil)];
+		[self->zoomInButton setToolTip:NSLocalizedString([LDrawPartBrowserModel zoomInTooltipLocalizationKey], nil)];
 		
 		[self->zoomOutButton setTarget:self->partPreview];
 		[self->zoomOutButton setAction:@selector(zoomOut:)];
-		[self->zoomOutButton setToolTip:NSLocalizedString(@"ZoomOutTooltip", nil)];
+		[self->zoomOutButton setToolTip:NSLocalizedString([LDrawPartBrowserModel zoomOutTooltipLocalizationKey], nil)];
 
 		[self->addRemoveFavoriteButton setTarget:self];
-		[self->addRemoveFavoriteButton setToolTip:NSLocalizedString(@"AddRemoveFavoritesTooltip", nil)];
+		[self->addRemoveFavoriteButton setToolTip:NSLocalizedString([LDrawPartBrowserModel addRemoveFavoritesTooltipLocalizationKey], nil)];
 		
 		[self->insertButton setTarget:self];
 		[self->insertButton setAction:@selector(addPartClicked:)];
@@ -115,7 +117,7 @@
 		// Configure the search field's menu
 		searchMenuTemplate = [[NSMenu alloc] initWithTitle:@"Search template"];
 		
-		noRecentsItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"NoRecentSearches", nil)
+		noRecentsItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString([LDrawPartBrowserModel noRecentSearchesLocalizationKey], nil)
 												   action:NULL
 											keyEquivalent:@"" ];
 		[noRecentsItem setTag:NSSearchFieldNoRecentsMenuItemTag];
@@ -145,7 +147,7 @@
 		
 		//---------- Set Data --------------------------------------------------
 		
-		[self setPartLibrary:[PartLibraryGPU sharedPartLibrary]];
+		[self setPartLibrary:[PartLibrary sharedPartLibrary]];
 		[self loadCategory:startingCategory];
 		
 		[partsTable scrollRowToVisible:startingRow];
@@ -289,6 +291,14 @@
 	
 	// Assign ivar
 	self->partLibrary = partLibraryIn;
+	if(self->browserModel == nil)
+	{
+		self->browserModel = [[LDrawPartBrowserModel alloc] initWithPartLibrary:partLibraryIn];
+	}
+	else
+	{
+		self->browserModel.partLibrary = partLibraryIn;
+	}
 	
 	// Get all the categories.
 	categories = [partLibrary categoryHierarchy];
@@ -345,9 +355,9 @@
 	
 	// Attempt to restore the original selection (happens especially if clearing 
 	// the search field) 
-	newSelectedIndex = [self indexOfPartNamed:originalSelectedPartName];
-	if(newSelectedIndex == NSNotFound)
-		newSelectedIndex = 0;
+	newSelectedIndex = [LDrawPartBrowserModel indexOfPartNamed:originalSelectedPartName
+													 inRecords:self->tableDataSource];
+	newSelectedIndex = [LDrawPartBrowserModel tableSelectionIndexPreferring:newSelectedIndex];
 	
 	// Scroll to the new selection
 	[partsTable selectRowIndexes:[NSIndexSet indexSetWithIndex:newSelectedIndex] byExtendingSelection:NO];
@@ -472,18 +482,7 @@
 //==============================================================================
 - (NSInteger)outlineView:(NSOutlineView *)outlineView numberOfChildrenOfItem:(id)item
 {
-	NSArray *children = nil;
-	
-	if(item == nil)
-	{
-		children = categoryList;
-	}
-	else
-	{
-		children = [item objectForKey:CategoryChildrenKey];
-	}
-	
-	return [children count];
+	return [[LDrawPartBrowserModel categoryChildrenOfItem:item inHierarchy:categoryList] count];
 }
 
 
@@ -491,18 +490,7 @@
 //==============================================================================
 - (id) outlineView:(NSOutlineView *)outlineView child:(NSInteger)index ofItem:(id)item
 {
-	NSArray *children = nil;
-	
-	if(item == nil)
-	{
-		children = categoryList;
-	}
-	else
-	{
-		children = [item objectForKey:CategoryChildrenKey];
-	}
-	
-	return [children objectAtIndex:index];
+	return [[LDrawPartBrowserModel categoryChildrenOfItem:item inHierarchy:categoryList] objectAtIndex:index];
 }
 
 
@@ -636,9 +624,9 @@
 //==============================================================================
 - (BOOL)outlineView:(NSOutlineView *)outlineView isGroupItem:(id)item
 {
-	BOOL     hasChildren    = ([self outlineView:outlineView numberOfChildrenOfItem:item] > 0);
+	NSUInteger childCount = [self outlineView:outlineView numberOfChildrenOfItem:item];
 	
-	return (hasChildren == YES);
+	return (childCount > 0);
 }
 
 
@@ -646,7 +634,7 @@
 //==============================================================================
 - (BOOL)outlineView:(NSOutlineView *)outlineView shouldSelectItem:(id)item
 {
-	BOOL     isGroupHeading = [self outlineView:outlineView isGroupItem:item];
+	BOOL isGroupHeading = [self outlineView:outlineView isGroupItem:item];
 	
 	return (isGroupHeading == NO);
 }
@@ -787,153 +775,15 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== filterPartRecords:bySearchString: =================================
-//
-// Purpose:		Searches partRecords for all records containing searchString; 
-//				returns the matching records. The search will be conducted on 
-//				both the part numbers and descriptions.
-//
-// Returns:		An array with all matching parts, or an empty array if no parts 
-//				match.
-//
-// Notes:		The nasty problem is that LDraw names are formed so that they 
-//				line up nicely in a monospaced font. Thus we have names like 
-//				"Brick  2 x  4" (note extra spaces!). I sidestep the problem by 
-//				stripping all the spaces from the search and find strings. It's 
-//				still lame, but probably okay for most uses.
-//
-//				Tiger has fantabulous search predicates that would reduce a 
-//				hefty hunk of this code to a 1-liner AND be whitespace neutral 
-//				too. But I don't have Tiger, so instead I'm going for the 
-//				cheeseball approach.  
-//
-//==============================================================================
-- (NSMutableArray *) filterPartRecords:(NSArray *)partRecords
-						bySearchString:(NSString *)searchString
-						  excludeParts:(NSSet *)excludedParts
-{
-	NSDictionary    *record                 = nil;
-	NSUInteger      counter                 = 0;
-	NSString        *partNumber             = nil;
-	NSString        *partDescription        = nil;
-	NSString        *partSansWhitespace     = nil;
-	NSMutableArray  *matchingParts          = nil;
-	NSString        *searchSansWhitespace   = [searchString ams_stringByRemovingWhitespace];
-	
-	if([searchString length] == 0)
-	{
-		//Everybody's a winner here.
-		matchingParts = [NSMutableArray arrayWithArray:partRecords];
-	}
-	else
-	{
-		matchingParts = [NSMutableArray array];
-		
-		NSArray * searchWords = [searchString componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-		NSUInteger wordCount = [searchWords count];
-		
-		// Search through all the given records and try to find matches on the 
-		// search string. But search part names whitespace-neutral so as not to 
-		// be thrown off by goofy name spacing. 
-		for(counter = 0; counter < [partRecords count]; counter++)
-		{
-			record				= [partRecords objectAtIndex:counter];
-			partNumber			= [record objectForKey:PART_NUMBER_KEY];
-			partDescription		= [record objectForKey:PART_NAME_KEY];
-			partSansWhitespace	= [partDescription ams_stringByRemovingWhitespace];
-			
-			if([excludedParts containsObject:partNumber] == NO)
-			{
-	            // LLW - Change to treat each word in a search string as an item in a list, and
-	            // a match happens only if each word can be found in the either the part number or
-	            // the name. This is independent of order, so a search like "2x2 plate" and "plate 2x2"
-	            // will return the same results.
-	            //
-	            // Some examples of results that are returned with this change that would _not_
-	            // be returned with the original code:
-	            //  Search          Sample result
-	            //  "2x2 plate"     "Plate 2 x 2"
-	            //  "tile clip"     "Tile 1x1 with clip"
-	            //  "four studs"    "Brick 1 x 1 with Studs on Four Sides"
-	            //  "offset plate"  "Plate 1 x 4 Offset"
-	            //  "axle pin 2x2"  "Brick 2 x 2 with Pin and Axlehole"
-				
-				NSUInteger wordCounter;
-				BOOL matches = TRUE;
-				for(wordCounter = 0; matches && wordCounter < wordCount; ++wordCounter)
-				{
-					NSString * word = [searchWords objectAtIndex:wordCounter];
-					if(!(
-						[partNumber            ams_containsString:word options:NSCaseInsensitiveSearch] ||
-            	        [partSansWhitespace    ams_containsString:word options:NSCaseInsensitiveSearch])
-					)
-						matches = FALSE;
-				}
-				
-				if(matches)
-					[matchingParts addObject:record];
-				else
-				{
-					NSArray *keywords = [record objectForKey:PART_KEYWORDS_KEY];
-					
-					for(NSString* keyword in keywords)
-					{
-						if([[keyword ams_stringByRemovingWhitespace] ams_containsString:searchSansWhitespace options:NSCaseInsensitiveSearch])
-						{
-							[matchingParts addObject:record];
-							break;
-						}
-					}
-				}
-			}
-		}
-	}//end else we have to search
-	
-	
-	return matchingParts;
-	
-}//end filterPartRecords:bySearchString:
-
-
 //========== indexOfPartNamed: =================================================
 //
 // Purpose:		Returns the index of the part with the given name in the current 
 //				found set. 
 //
-//				Returns NSNotFound if the part is not a member of the 
-//				currently-displayed part list. 
-//
 //==============================================================================
 - (NSUInteger) indexOfPartNamed:(NSString *)searchName
 {
-	NSDictionary    *partRecord     = nil;
-	NSString        *partName       = nil;
-	NSUInteger      currentIndex    = 0;
-	NSUInteger      foundIndex      = NSNotFound;
-
-	// Find a part record with the given name
-	for(partRecord in self->tableDataSource)
-	{
-		partName = [partRecord objectForKey:PART_NUMBER_KEY];
-		if([partName isEqualToString:searchName])
-		{
-			foundIndex = currentIndex;
-			break;
-		}
-		currentIndex++;
-	}
-	
-	// In 10.6, we can do something much fancier!
-//	foundIndex = [self->tableDataSource indexOfObjectPassingTest:
-//						^(id partRecord, NSUInteger idx, BOOL *stop)
-//						{
-//							NSString    *partName   = [partRecord objectForKey:PART_NUMBER_KEY];
-//							BOOL        isMatch     = [partName isEqualToString:searchName];
-//							return isMatch;
-//						} ];
-	
-	return foundIndex;
-	
+	return [LDrawPartBrowserModel indexOfPartNamed:searchName inRecords:self->tableDataSource];
 }//end indexOfPartNamed:
 
 
@@ -944,26 +794,12 @@
 //==============================================================================
 - (void) performSearch
 {
-	NSString		*searchString	= [self->searchField stringValue];
-	NSArray 		*allParts		= nil;
-	NSMutableArray	*filteredParts	= nil;
-	NSSet			*excludedParts	= nil;
-	
-	if(		[searchString length] == 0 // clearing the search; revert to selected category
-	   ||	self->searchMode == SearchModeSelectedCategory )
-	{
-		allParts = [self->partLibrary partCatalogRecordsInCategory:self->selectedCategory];
-	}
-	else
-	{
-		allParts		= [self->partLibrary partCatalogRecordsInCategory:Category_All];
-		excludedParts	= [NSSet setWithArray:[[self->partLibrary partCatalogRecordsInCategory:Category_Alias] valueForKey:PART_NUMBER_KEY]];
-	}
-	
-	// Re-filter the records
-	filteredParts = [self filterPartRecords:allParts bySearchString:searchString excludeParts:excludedParts];
-	[self setTableDataSource:filteredParts];
-	
+	self->browserModel.searchString    = [self->searchField stringValue];
+	self->browserModel.currentCategory = self->selectedCategory;
+	self->browserModel.searchMode      = self->searchMode;
+	[self->browserModel reloadFilter];
+	[self setTableDataSource:[self->browserModel.filteredParts mutableCopy]];
+
 	[self syncSelectionAndPartDisplayed];
 	[self setConstraints];
 }
@@ -979,18 +815,12 @@
 {
 	NSString    *selectedPart       = [self selectedPartName];
 	NSArray     *favorites          = [self->partLibrary favoritePartNames];
-	BOOL        partIsInFavorites   = NO;
-	BOOL		showSearchScopeButtons	= NO;
-	
-	if(		selectedPart != nil
-	   &&	[favorites containsObject:selectedPart] )
-	{
-		partIsInFavorites = YES;
-	}
-	
-	showSearchScopeButtons =		[[searchField stringValue] length] > 0
-								&&	[selectedCategory isEqualToString:Category_All] == NO;
-	
+	BOOL        partIsInFavorites   = [LDrawPartBrowserModel partNamed:selectedPart isInFavorites:favorites];
+	BOOL		showSearchScopeButtons	= [LDrawPartBrowserModel shouldShowSearchScopeButtonsForSearchString:[searchField stringValue]
+																								   category:self->selectedCategory];
+	BOOL		partActionsEnabled	= (selectedPart != nil);
+	BOOL		showAddFavorite		= (partIsInFavorites == NO);
+	BOOL		showRemoveFavorite	= (partIsInFavorites == YES);
 	
 	//---------- Set constraints -----------------------------------------------
 	
@@ -1003,25 +833,25 @@
 	[self->searchSelectedCategoryButton setTitle:[partLibrary displayNameForCategory:self->selectedCategory]];
 	[self->searchSelectedCategoryButton sizeToFit];
 
-	[self->insertButton				setEnabled:(selectedPart != nil)];
+	[self->insertButton				setEnabled:partActionsEnabled];
 	
 	// Favorites Add/Remove button
-	[self->addRemoveFavoriteButton	setEnabled:(selectedPart != nil)];
+	[self->addRemoveFavoriteButton	setEnabled:partActionsEnabled];
 	
-	if(partIsInFavorites == YES)
+	if(showAddFavorite == NO)
 	{
 		[self->addRemoveFavoriteButton	setAction:@selector(removeFavoriteClicked:)];
-		[self->addRemoveFavoriteButton	setImage:[NSImage imageNamed:@"FavoriteRemove"]];
+		[self->addRemoveFavoriteButton	setImage:[NSImage imageNamed:[LDrawPartBrowserModel favoriteButtonImageNameWhenShowingAdd:NO]]];
 	}
 	else
 	{
 		[self->addRemoveFavoriteButton	setAction:@selector(addFavoriteClicked:)];
-		[self->addRemoveFavoriteButton	setImage:[NSImage imageNamed:@"FavoriteAdd"]];
+		[self->addRemoveFavoriteButton	setImage:[NSImage imageNamed:[LDrawPartBrowserModel favoriteButtonImageNameWhenShowingAdd:YES]]];
 	}
 	
 	// Hide inapplicable menu items.
-	[[self->contextualMenu itemWithTag:partBrowserAddFavoriteTag]		setHidden:(partIsInFavorites == YES)];
-	[[self->contextualMenu itemWithTag:partBrowserRemoveFavoriteTag]	setHidden:(partIsInFavorites == NO)];
+	[[self->contextualMenu itemWithTag:partBrowserAddFavoriteTag]		setHidden:(showAddFavorite == NO)];
+	[[self->contextualMenu itemWithTag:partBrowserRemoveFavoriteTag]	setHidden:(showRemoveFavorite == NO)];
 	
 }//end setConstraints
 
@@ -1048,24 +878,9 @@
 //==============================================================================
 - (void) syncSelectionAndCategoryDisplayed
 {
-	id			categoryItem	= nil;
-	NSInteger	categoryRow 	= 0;
-	
-	for(NSDictionary* group in self->categoryList)
-	{
-		NSArray *children = [group objectForKey:CategoryChildrenKey];
-		
-		for(NSDictionary *category in children)
-		{
-			if([[category objectForKey:CategoryNameKey] isEqualToString:self->selectedCategory])
-			{
-				categoryItem = category;
-				break;
-			}
-		}
-	}
-	
-	categoryRow = [categoryTable rowForItem:categoryItem];
+	id			categoryItem	= [LDrawPartBrowserModel categoryItemNamed:self->selectedCategory
+															 inHierarchy:self->categoryList];
+	NSInteger	categoryRow 	= [categoryTable rowForItem:categoryItem];
 	[categoryTable selectRowIndexes:[NSIndexSet indexSetWithIndex:categoryRow] byExtendingSelection:NO];
 }
 
@@ -1083,16 +898,14 @@
 		
 	if(selectedPartName != nil)
 	{
-		// Not this simple anymore. We have to make sure to draw the optimized 
-		// vertexes. The easiest way to do that is to create a part referencing 
-		// the model. 
+		// Not this simple anymore. We have to make sure to draw the optimized
+		// vertexes. The easiest way to do that is to create a part referencing
+		// the model.
 //		modelToView = [self->partLibrary modelForName:selectedPartName];
 
-		newPart		= [[LDrawPart alloc] init];
-		
-		//Set up the part attributes
-		[newPart setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
-		[newPart setDisplayName:selectedPartName];
+		newPart = [LDrawInsertOps partNamed:selectedPartName
+									  color:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+					   copyingTransformFrom:nil];
 		[LDrawApplication makeCurrentSharedContext];
 	}
 	[partPreview setLDrawDirective:newPart];
@@ -1107,39 +920,26 @@
 //==============================================================================
 - (BOOL) writeSelectedPartToPasteboard:(NSPasteboard *)pasteboard
 {
-	NSMutableArray	*archivedParts		= [NSMutableArray array];
-	NSString		*partName			= [self selectedPartName];
-	LDrawPart		*newPart			= nil;
-	NSData			*partData			= nil;
-	LDrawColor		*selectedColor		= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	BOOL			 success			= NO;
-	
-	//We got a part; let's add it!
-	if(partName != nil)
+	NSString   *partName      = [self selectedPartName];
+	LDrawColor *selectedColor = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
+	NSArray    *archivedParts = [LDrawClipboard archivedDraggingDataForPartNamed:partName
+																		   color:selectedColor];
+
+	if(archivedParts != nil)
 	{
-		newPart		= [[LDrawPart alloc] init];
-		
-		//Set up the part attributes
-		[newPart setLDrawColor:selectedColor];
-		[newPart setDisplayName:partName];
-		
-		partData	= [NSKeyedArchiver archivedDataWithRootObject:newPart requiringSecureCoding:NO error:nil];
-		
-		[archivedParts addObject:partData];
-		
 		// Set up pasteboard
-		[pasteboard declareTypes:[NSArray arrayWithObjects:LDrawDraggingPboardType, LDrawDraggingIsUninitializedPboardType, nil] owner:self];
-		
+		[pasteboard declareTypes:[LDrawClipboard partBrowserDeclaredDragTypes] owner:self];
+
 		[pasteboard setPropertyList:archivedParts
 							forType:LDrawDraggingPboardType];
-		
+
 		[pasteboard setPropertyList:[NSNumber numberWithBool:YES]
 							forType:LDrawDraggingIsUninitializedPboardType];
-		
-		success = YES;
+
+		return YES;
 	}
-	
-	return success;
+
+	return NO;
 	
 }//end writeSelectedPartToPasteboard:
 

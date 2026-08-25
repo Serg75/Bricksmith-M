@@ -19,8 +19,10 @@
 @interface LDrawApplication (Metal)
 
 //Accessors
+/// No-op on Metal; keeps callers shared with the OpenGL target.
 + (void) makeCurrentSharedContext;
 
+/// No-op on Metal; there is no shared GL context to create.
 - (void) makeSharedContext;
 
 @end

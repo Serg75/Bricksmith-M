@@ -9,6 +9,7 @@
 //  Copyright 2006. All rights reserved.
 //==============================================================================
 #import <Cocoa/Cocoa.h>
+#import <LDrawFeatures/LDrawToolMode.h>
 
 @class LDrawColorWell;
 
@@ -18,18 +19,15 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef enum
-{
-	RotateSelectTool			= 0,	// click to select, drag to rotate
-//	AddToSelectionTool			= 1,	//    check key directly, so we can click around in different views.
-	PanScrollTool				= 2,	// "grabber" to scroll around while dragging
-	SmoothZoomTool				= 3,	// zoom in and out based on drag direction
-	ZoomInTool					= 4,	// click to zoom in
-	ZoomOutTool					= 5,	// click to zoom out
-	SpinTool					= 6,	// spin the model in space
-	EraserTool					= 7		// delete clicked parts (for pen tablet erasers)
+typedef LDrawToolMode ToolModeT;
 
-} ToolModeT;
+#define RotateSelectTool	LDrawToolModeRotateSelect
+#define PanScrollTool		LDrawToolModePanScroll
+#define SmoothZoomTool		LDrawToolModeSmoothZoom
+#define ZoomInTool			LDrawToolModeZoomIn
+#define ZoomOutTool			LDrawToolModeZoomOut
+#define SpinTool			LDrawToolModeSpin
+#define EraserTool			LDrawToolModeEraser
 
 
 

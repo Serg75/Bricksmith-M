@@ -26,7 +26,7 @@
 //==============================================================================
 #import "LDrawColorWell.h"
 
-#import "LDrawColor.h"
+#import <LDrawCore/LDrawColor.h>
 #import "LDrawColorPanelController.h"
 
 @implementation LDrawColorWell

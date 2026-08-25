@@ -29,8 +29,14 @@
 //Accessors
 + (NSOpenGLPixelFormat *) openGLPixelFormat;
 + (NSOpenGLContext *) sharedOpenGLContext;
+
+/// Activate the application-wide shared OpenGL context.
 + (void) makeCurrentSharedContext;
 
+/// Activate the shared context; the caller restores originalContext afterward.
++ (void) makeCurrentSharedContextKeepOriginal:(NSOpenGLContext *)originalContext;
+
+/// Create the application-wide shared OpenGL context at launch.
 -(void) makeSharedContext;
 
 @end

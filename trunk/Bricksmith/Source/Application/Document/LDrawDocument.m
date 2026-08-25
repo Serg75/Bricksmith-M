@@ -18,6 +18,7 @@
 //==============================================================================
 #import "LDrawDocument.h"
 
+#import "GPU.h"
 #import <AMSProgressBar/AMSProgressBar.h>
 
 #import "DimensionsPanel.h"
@@ -26,44 +27,49 @@
 #import "IconTextCell.h"
 #import "Inspector.h"
 #import  LDrawApplicationGPU_h
-#import "LDrawColor.h"
+#import <LDrawCore/LDrawColor.h>
 #import "LDrawColorPanelController.h"
-#import "LDrawComment.h"
-#import "LDrawConditionalLine.h"
-#import "LDrawContainer.h"
-#import "LDrawDirective.h"
+#import <LDrawCore/LDrawComment.h>
+#import <LDrawCore/LDrawConditionalLine.h>
+#import <LDrawCore/LDrawContainer.h>
+#import <LDrawCore/LDrawDirective.h>
 #import  LDrawDocumentGPU_h
-#import "LDrawDocumentTree.h"
+#import <LDrawEditing/LDrawClipboard.h>
+#import <LDrawEditing/LDrawDocumentTree.h>
+#import <LDrawEditing/LDrawInsertOps.h>
+#import <LDrawEditing/LDrawSearchOps.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawViewOps.h>
 #import "LDrawDocumentWindow.h"
-#import "LDrawDragHandle.h"
-#import "LDrawDrawableElement.h"
-#import "LDrawFile.h"
+#import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawDrawableElement.h>
+#import <LDrawCore/LDrawFile.h>
 #import "LDrawFileOutlineView.h"
-#import "LDrawHighResPrimitives.h"
-#import "LDrawLine.h"
-#import "LDrawLSynth.h"
-#import "LDrawLSynthDirective.h"
-#import "LDrawMPDModel.h"
-#import "LDrawObjectWithValue.h"
-#import "LDrawPart.h"
-#import "LDrawQuadrilateral.h"
-#import "LDrawStep.h"
-#import "LDrawTriangle.h"
-#import "LDrawUtilities.h"
+#import <LDrawCore/LDrawHighResPrimitives.h>
+#import <LDrawCore/LDrawLine.h>
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawLSynthDirective.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawQuadrilateral.h>
+#import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LDrawTriangle.h>
+#import <LDrawCore/LDrawUtilities.h>
 #import "LDrawViewerContainer.h"
 #import  LDrawViewGPU_h
-#import "LPubCommand.h"
-#import "LPubRemoveGroup.h"
-#import "LSynthConfiguration.h"
-#import "MacLDraw.h"
+#import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubRemoveGroup.h>
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawCore/MacLDraw.h>
 #import "MinifigureDialogController.h"
-#import "ModelManager.h"
+#import <LDrawCore/ModelManager.h>
 #import "MovePanel.h"
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
-#import "PartLibrary.h"
-#import "PartReport.h"
-#import "PartSpecific.h"
+#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/PartReport.h>
 #import "PieceCountPanel.h"
 #import "RotationPanelController.h"
 #import "SearchPanelController.h"
@@ -72,63 +78,44 @@
 #import "ViewportArranger.h"
 #import "WindowCategory.h"
 #if WANT_RELATED_PARTS
-#import "RelatedParts.h"
+#import <LDrawFeatures/RelatedParts.h>
 #endif
 
 
 #if WANT_RELATED_PARTS
-// Modes to build a submenu for related parts:
-enum {
-	rpm_list_child = 0,			// List our choices in a sub-menu by child part name.
-	rpm_list_role = 1,			// List our chioces in a sub-menu by their role.
-	rpm_merged = 2				// List only one item wiht name and roll - used when we only have one choice to shorten menus.
-};
-
 //---------- AppendChoicesToNewItem --------------------------------------------
 //
-// Purpose:		Build a menu item with a sub-menu of roles or children for 
-//				related parts.
-//
-// Notes:		In the "merged" mode, subs should contain one item and we ignore
-//				child name.  Instead of making a menu item with sub-menu, we 
-//				make the single menu item "the" command.  When we have only one
-//				choice, this lets us limit the menu depth.
+// Purpose:		Appends related-part choices to a parent menu. The host still
+//				builds NSMenuItems.
 //
 //------------------------------------------------------------------------------
 void AppendChoicesToNewItem(
 					NSMenu *	parent_menu,	// Menu we append to
-					NSString *	child_name,		// Unmerged: name of the menu item that shows the sub-menu
-					NSArray *	subs,			// Array of RelatedPart objects to list in the sub-menu
-					int			menu_style)		// Way to list menus.
+					LDrawRelatedPartsMenuGroup * group)
 {
 	NSUInteger i, counter;
 	NSMenuItem * my_item = nil;
 	NSMenu * choices_menu = nil;
 
-	if(menu_style != rpm_merged)
+	if(group.style != LDrawRelatedPartsMenuMerged)
 	{
-		my_item = [[NSMenuItem alloc] initWithTitle:child_name action:NULL keyEquivalent:@""];
+		my_item = [[NSMenuItem alloc] initWithTitle:group.title action:NULL keyEquivalent:@""];
 		[parent_menu addItem:my_item];
 		
-		choices_menu = [[NSMenu alloc] initWithTitle:@"choices"];
+		choices_menu = [[NSMenu alloc] initWithTitle:[RelatedParts relatedPartsChoicesSubmenuTitle]];
 		[my_item setSubmenu:choices_menu];
 	}
 	else
 		choices_menu = parent_menu;
 		
-	counter = [subs count];
+	counter = [group.choices count];
 	for(i = 0; i < counter; ++i)
 	{
-		RelatedPart * ps = [subs objectAtIndex:i];
+		RelatedPart * ps = [group.choices objectAtIndex:i];
 
-		NSString * title = nil;
-		switch(menu_style) {
-		case rpm_list_child: title = [ps childName]; break;
-		case rpm_list_role: title = [ps role]; break;
-		case rpm_merged: title = [NSString stringWithFormat:@"%s: %s", [[ps role] UTF8String], [[ps childName] UTF8String]]; break;
-		}
-
-		NSMenuItem * ps_item = [[NSMenuItem alloc] initWithTitle:title action:@selector(addRelatedPartClicked:) keyEquivalent:@""];
+		NSMenuItem * ps_item = [[NSMenuItem alloc] initWithTitle:[group titleForChoice:ps]
+														  action:@selector(addRelatedPartClicked:)
+												   keyEquivalent:@""];
 		[choices_menu addItem:ps_item];		
 		[ps_item setRepresentedObject:ps];
 	}
@@ -196,7 +183,7 @@ void AppendChoicesToNewItem(
     [super windowControllerDidLoadNib:aController];
 	
 	// Create the toolbar.
-	toolbar = [[NSToolbar alloc] initWithIdentifier:@"LDrawDocumentToolbar"];
+	toolbar = [[NSToolbar alloc] initWithIdentifier:[LDrawPreferences documentToolbarIdentifier]];
 	[toolbar setAutosavesConfiguration:YES];
 	[toolbar setAllowsUserCustomization:YES];
 	[toolbar setDelegate:self->toolbarController];
@@ -217,14 +204,14 @@ void AppendChoicesToNewItem(
 	// File Contents Outline setup
 	[fileContentsOutline setDoubleAction:@selector(showInspector:)];
 	[fileContentsOutline setVerticalMotionCanBeginDrag:YES];
-	[fileContentsOutline registerForDraggedTypes:[NSArray arrayWithObject:LDrawDirectivePboardType]];
+	[fileContentsOutline registerForDraggedTypes:[LDrawClipboard outlineRegisteredDragTypes]];
 	
 	
 	// We have to do the splitview saving manually. C'mon Apple, get with it!
 	// Note: They did in Leopard. These calls will use the system function 
 	//		 there. 
-	[fileContentsSplitView	setAutosaveName:@"fileContentsSplitView"];
-	[viewportArranger		setAutosaveName:@"HorizontalLDrawSplitview2.1"];
+	[fileContentsSplitView	setAutosaveName:[LDrawPreferences fileContentsSplitAutosaveName]];
+	[viewportArranger		setAutosaveName:[LDrawPreferences documentViewportArrangerAutosaveName]];
 	[self updateViewportAutosaveNamesAndRestore:YES];
 	
 	// Mouse hover coordinates
@@ -257,14 +244,7 @@ void AppendChoicesToNewItem(
 			
 			// For brand new viewports which are not yet displaying a model, set 
 			// the default zoom factor. 
-			if(currentViewport == mainViewport)
-			{
-				[currentViewport setZoomPercentage:100];
-			}
-			else
-			{
-				[currentViewport setZoomPercentage:75];
-			}
+			[currentViewport setZoomPercentage:[LDrawViewOps openingZoomPercentageForMainViewport:(currentViewport == mainViewport)]];
 
 			// Scrolling to center doesn't seem to work at restoration time, so 
 			// do it again here. 
@@ -279,9 +259,10 @@ void AppendChoicesToNewItem(
 			fitZoom = [currentViewport zoomPercentage];
 
 			// Back out a wee bit so the user has some room to work with his model
-			if(unfitZoom != fitZoom)
+			CGFloat adjustedZoom = [LDrawViewOps fittedZoomPercentageAfterFit:fitZoom previousZoom:unfitZoom];
+			if(adjustedZoom != unfitZoom)
 			{
-				[currentViewport setZoomPercentage:(fitZoom * 0.9)];
+				[currentViewport setZoomPercentage:adjustedZoom];
 			}
  		}
 	}
@@ -339,7 +320,7 @@ void AppendChoicesToNewItem(
 	NSString            *openMessage    = nil;
 	BOOL                success         = NO;
 	
-	openMessage = [NSString stringWithFormat:	NSLocalizedString(@"OpeningFileX", nil), 
+	openMessage = [NSString stringWithFormat:	NSLocalizedString([LDrawDocumentTree openingFileFormatKey], nil), 
 		[self displayName] ];
 	
 	//This might take a while. Show that we're doing something!
@@ -661,11 +642,6 @@ void AppendChoicesToNewItem(
 		
 		if([activeModel stepDisplay] == YES)
 		{
-			// Set the viewer to the step's rotation
-			// Note: This is pretty annoying if you are trying to build your 
-			//		 model and flip between steps. So I'm going to try 
-			//		 restricting it to only happen when the step demands that 
-			//		 the viewing angle change. 
 			if([requestedStep stepRotationType] != LDrawStepRotationNone)
 			{
 				[self updateViewingAngleToMatchStep];
@@ -830,19 +806,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) moveSelectionBy:(Vector3) movementVector
 {
-	NSArray         *selectedObjects    = [self selectedObjects];
-	LDrawDirective  *currentObject      = nil;
-	NSInteger       counter             = 0;
-	
-	//find the nudgable items
-	for(counter = 0; counter < [selectedObjects count]; counter++)
+	for(id currentObject in [LDrawSelectionOps movableDirectivesInSelection:[self selectedObjects]])
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		
-//		if([currentObject isKindOfClass:[LDrawDrawableElement class]])
-        if([currentObject conformsToProtocol:@protocol(LDrawMovableDirective)])
-			[self moveDirective: (LDrawDrawableElement*)currentObject
-					inDirection: movementVector];
+		[self moveDirective: (LDrawDrawableElement*)currentObject
+				inDirection: movementVector];
 	}
 	
 }//end moveSelectionBy:
@@ -858,41 +825,16 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) nudgeSelectionBy:(Vector3)nudgeVector
 {
-	NSArray                 *selectedObjects    = [self selectedObjects];
-	LDrawDrawableElement    *firstNudgable      = nil;
-	id                      currentObject       = nil;
-	float                   nudgeMagnitude      = [BricksmithUtilities gridSpacingForMode:self->gridMode];
-	NSInteger               counter             = 0;
-	
-	// We do not normalize the nudge vector - nudge might be set to a multiple of the grid on purpose.
-	
-	nudgeVector.x *= nudgeMagnitude;
-	nudgeVector.y *= nudgeMagnitude;
-	nudgeVector.z *= nudgeMagnitude;
-	
-	//find the first selected item that can actually be moved.
-	for(counter = 0; counter < [selectedObjects count] && firstNudgable == nil; counter++)
+	Vector3 worldNudge = ZeroPoint3;
+	if([LDrawSelectionOps worldNudge:&worldNudge
+					 fromScreenNudge:nudgeVector
+						 gridSpacing:[LDrawGrid spacingForMode:self->gridMode]
+						  selection:[self selectedObjects]] == NO)
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		
-//		if([currentObject isKindOfClass:[LDrawDrawableElement class]])
-//			firstNudgable = currentObject;
-        if([currentObject conformsToProtocol:@protocol(LDrawMovableDirective)])
-            firstNudgable = currentObject;
+		return;
+	}
 
-	}
-	
-	if(firstNudgable != nil)
-	{
-		//compute the absolute movement for the relative nudge. The actual 
-		// movement for a nudge is dependent on the axis along which the 
-		// nudge is occurring (because Lego follows different vertical and
-		// horizontal scales). But we must move all selected parts by the 
-		// SAME AMOUNT, otherwise they would get oriented all over the place.
-		nudgeVector = [firstNudgable displacementForNudge:nudgeVector];
-		
-		[self moveSelectionBy:nudgeVector];
-	}
+	[self moveSelectionBy:worldNudge];
 }//end nudgeSelectionBy:
 
 
@@ -915,94 +857,21 @@ void AppendChoicesToNewItem(
 					 extraFine:(BOOL)extraFine
 				  aroundOrigin:(BOOL)aroundOrigin
 {
-	NSArray			*selectedObjects	= [self selectedObjects]; //array of LDrawDirectives.
-	RotationModeT	 rotationMode		= RotateAroundSelectionCenter;
-	Tuple3			 rotation			= {0};
-	float			 degreesToRotate	= 0;
+	NSArray			*selectedObjects	= [self selectedObjects];
+	float			 degreesToRotate	= [LDrawGrid rotationDegreesForMode:[self gridSpacingMode]
+																	  kind:LDrawGridRotationAxis
+																 extraFine:extraFine];
+	Tuple3			 rotation			= [LDrawSelectionOps rotationForAxis:rotationAxis degrees:degreesToRotate];
 
-	//Determine magnitude of nudge.
-	switch([self gridSpacingMode])
-	{
-		case gridModeFine:
-			degreesToRotate = GRID_ROTATION_SUPERFINE;	//  1 degree
-			break;
-		case gridModeMedium:
-			degreesToRotate = GRID_ROTATION_MEDIUM;		// 45 degrees
-			break;
-		case gridModeCoarse:
-			degreesToRotate = GRID_ROTATION_COARSE;		// 90 degrees
-			break;
-	}
-	if (extraFine) {
-		degreesToRotate /= 5.0;
-	}
+	rotation = [LDrawSelectionOps partRelativeRotation:rotation
+										 forSelection:selectedObjects
+										 partRelative:(self->gridOrientation == gridOrientationPart)];
 
-	//normalize just in case someone didn't get the message!
-	rotationAxis = V3Normalize(rotationAxis);
-	
-	rotation.x = rotationAxis.x * degreesToRotate;
-	rotation.y = rotationAxis.y * degreesToRotate;
-	rotation.z = rotationAxis.z * degreesToRotate;
-	
-	TransformComponents rotateComponents    = IdentityComponents;
-	Matrix4             addedRotation       = IdentityMatrix4;
+	RotationModeT rotationMode = [LDrawSelectionOps rotationModeForSelectionCount:[selectedObjects count]
+																	 aroundOrigin:aroundOrigin];
+	Point3 origin = {0};
+	Point3 *fixedCenter = (rotationMode == RotateAroundFixedPoint) ? &origin : NULL;
 
-	//Create a new matrix that causes the rotation we want.
-	//  (start with identity matrix)
-	rotateComponents.rotate.x = radians(rotation.x);
-	rotateComponents.rotate.y = radians(rotation.y);
-	rotateComponents.rotate.z = radians(rotation.z);
-	addedRotation = Matrix4CreateTransformation(&rotateComponents);
-	
-	// If we are in part orientation mode with one part, try to find it and
-	// change to ITS coordinate system.
-	if([selectedObjects count] == 1 && self->gridOrientation == gridOrientationPart)
-	{
-		id obj = [selectedObjects objectAtIndex:0];
-		if([obj isKindOfClass:[LDrawPart class]])
-		{
-			LDrawPart * part = (LDrawPart *) obj;
-			Matrix4 orig = [part transformationMatrix];
-			
-			orig.element[3][0] = 0.0;
-			orig.element[3][1] = 0.0;
-			orig.element[3][2] = 0.0;
-			
-			Matrix4 origInv = Matrix4Invert(orig);
-			
-			// To make the rotation be "part relative" we basically change TO the
-			// part (inverse of part is world->part), apply the rotation, then change
-			// back (part matrix is part->world).
-			addedRotation = Matrix4Multiply(Matrix4Multiply(origInv,addedRotation),orig);
-
-			if(Matrix4DecomposeTransformation(addedRotation, &rotateComponents))
-			{
-				rotation.x = degrees(rotateComponents.rotate.x);
-				rotation.y = degrees(rotateComponents.rotate.y);
-				rotation.z = degrees(rotateComponents.rotate.z);
-			}
-		}
-	}
-	
-	Point3 *fixedCenter = NULL;
-	
-	if(aroundOrigin){
-		rotationMode = RotateAroundFixedPoint;
-		Point3 origin = {0};
-		fixedCenter = &origin;
-	}
-	//Just one part selected; rotate around that part's origin. That is
-	// presumably what the part's author intended to be the rotation point.
-	else if([selectedObjects count] == 1){
-		rotationMode = RotateAroundPartPositions;
-	}
-	//More than one part selected. We now must make a "best guess" about 
-	// what to rotate around. So we will go with the center of the bounding 
-	// box of the selection.
-	else
-		rotationMode = RotateAroundSelectionCenter;
-	
-	
 	[self rotateSelection:rotation mode:rotationMode fixedCenter:fixedCenter];
 
 }//end rotateSelectionAround:extraFine:aroundOrigin:
@@ -1023,35 +892,20 @@ void AppendChoicesToNewItem(
 			 fixedCenter:(Point3 *)fixedCenter
 {
 	NSArray     *selectedObjects    = [self selectedObjects]; //array of LDrawDirectives.
-	id          currentObject       = nil;
-	Box3        selectionBounds     = [LDrawUtilities boundingBox3ForDirectives:selectedObjects];
-	Point3      rotationCenter      = {0};
-	NSInteger   counter             = 0;
-	
-	if(mode == RotateAroundSelectionCenter)
-	{
-		rotationCenter = V3Midpoint(selectionBounds.min, selectionBounds.max);
-	}
-	else if(mode == RotateAroundFixedPoint)
-	{
-		if(fixedCenter != NULL)
-			rotationCenter = *fixedCenter;
-	}
-	
+	Point3      rotationCenter      = [LDrawSelectionOps rotationCenterForDirectives:selectedObjects
+																				mode:mode
+																		 fixedCenter:fixedCenter];
+
 	//rotate everything that can be rotated. That would be parts and only parts.
-	for(counter = 0; counter < [selectedObjects count]; counter++)
+	for(LDrawPart *currentObject in [LDrawSelectionOps partsInSelection:selectedObjects])
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		
-		if([currentObject isKindOfClass:[LDrawPart class]])
-		{
-			if(mode == RotateAroundPartPositions)
-				rotationCenter = [(LDrawPart*)currentObject position];
-		
-			[self rotatePart:currentObject
-				   byDegrees:rotation
-				 aroundPoint:rotationCenter ];
-		}
+		Point3 center = rotationCenter;
+		if(mode == RotateAroundPartPositions)
+			center = [currentObject position];
+
+		[self rotatePart:currentObject
+			   byDegrees:rotation
+			 aroundPoint:center ];
 	}
 	
 }//end rotateSelection:mode:fixedCenter:
@@ -1212,15 +1066,9 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) setSelectionToHidden:(BOOL)hideFlag
 {
-	NSArray     *selectedObjects    = [self selectedObjects];
-	id          currentObject       = nil;
-	NSInteger   counter             = 0;
-	
-	for(counter = 0; counter < [selectedObjects count]; counter++)
+	for(id currentObject in [LDrawSelectionOps hideableDirectivesInSelection:[self selectedObjects]])
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		if([currentObject respondsToSelector:@selector(setHidden:)])
-			[self setElement:currentObject toHidden:hideFlag]; //undoable hook.
+		[self setElement:currentObject toHidden:hideFlag]; //undoable hook.
 	}
 		
 }//end setSelectionToHidden:
@@ -1255,17 +1103,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) changeLDrawColor:(id)sender
 {
-	NSArray     *selectedObjects    = [self selectedObjects];
-	id          currentObject       = nil;
-	LDrawColor  *newColor           = [sender LDrawColor];
-	NSInteger   counter             = 0;
-	
-	for(counter = 0; counter < [selectedObjects count]; counter++)
+	NSArray    *selectedObjects = [self selectedObjects];
+	LDrawColor *newColor        = [sender LDrawColor];
+
+	for(id currentObject in [LDrawSelectionOps colorableDirectivesInSelection:selectedObjects])
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-	
-		if([currentObject conformsToProtocol:@protocol(LDrawColorable)])
-			[self setObject:currentObject toColor:newColor];
+		[self setObject:currentObject toColor:newColor];
 	}
 	if([selectedObjects count] > 0)
 		[[self documentContents] noteNeedsDisplay];
@@ -1306,24 +1149,10 @@ void AppendChoicesToNewItem(
 - (void) nudge:(id)sender
 {
 	LDrawView *glView     = sender;
-	LDrawPart * part;
-	Matrix4 xform = IdentityMatrix4;
-	
-	if(self->gridOrientation == gridOrientationPart)
-	{
-		NSArray * sel = [self selectedObjects];
-		if([sel count] > 0 &&
-			[(part = [sel objectAtIndex:0]) respondsToSelector:@selector(transformationMatrix)])
-		{
-			xform = [part transformationMatrix];
-			xform.element[3][0] = 0.0f;
-			xform.element[3][1] = 0.0f;
-			xform.element[3][2] = 0.0f;
-		}
-	}
-	
+	Matrix4 xform = [LDrawSelectionOps nudgeOrientationMatrixForSelection:[self selectedObjects]
+															 partRelative:(self->gridOrientation == gridOrientationPart)];
 	Vector3     nudgeVector = [glView nudgeVectorForMatrix:xform];
-	
+
 	[self nudgeSelectionBy:nudgeVector];
 	
 }//end nudge:
@@ -1391,39 +1220,18 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) doMissingModelnameExtensionCheck:(id)sender
 {
-	NSArray         *submodels          = [[self documentContents] submodels];
-	LDrawMPDModel   *currentSubmodel    = nil;
-	NSString        *currentName        = nil;
-	NSString        *acceptableName     = nil;
-	NSInteger       counter             = 0;
-	
-	// Find submodels with bad names.
-	for(counter = 0; counter < [submodels count]; counter++)
+	NSArray *submodels = [[self documentContents] submodels];
+
+	for(LDrawCompliantNameChange *change in [LDrawDocumentTree compliantNameChangesForSubmodels:submodels])
 	{
-		currentSubmodel	= [submodels objectAtIndex:counter];
-		currentName		= [currentSubmodel modelName];
-		acceptableName	= [LDrawMPDModel ldrawCompliantNameForName:currentName];
-		
-		// If the model name does not have a valid LDraw file extension, the 
-		// LDraw spec says we must give it one. Ugh. 
-		if( [acceptableName isEqualToString:currentName] == NO )
+		if(change.renameInPlace)
 		{
-			// For files with only one model, we synthesize a name based on the 
-			// model description. We can safely do a direct rename of these 
-			// files. This also means LDrawMPDModel doesn't have to clean up 
-			// every official part we parse from the LDraw folder. 
-			if([submodels count] == 1)
-			{
-				[currentSubmodel setModelName:acceptableName];
-			}
-			else
-			{
-				// For MPD documents, we need to do a complex rename.
-				[[self documentContents] renameModel:currentSubmodel toName:acceptableName];
-			
-				// Mark document as modified.
-				[self updateChangeCount:NSChangeDone];
-			}
+			[change.model setModelName:change.compliantName];
+		}
+		else
+		{
+			[[self documentContents] renameModel:change.model toName:change.compliantName];
+			[self updateChangeCount:NSChangeDone];
 		}
 	}
 	
@@ -1454,24 +1262,24 @@ void AppendChoicesToNewItem(
 	NSLog(@"resolve time = %f", partReportTime);
 #endif
 
-	NSArray			*missingNames		= nil;
+	NSString		*missingNames		= nil;
 	NSMutableString	*informativeString	= nil;
 	
 	if([missingParts count] > 0)
 	{
 		//Build a string listing all the missing parts.
-		missingNames = [missingParts valueForKey:@"displayName"]; // I love Cocoa.
+		missingNames = [LDrawSearchOps newlineSeparatedDisplayNamesFromDirectives:missingParts];
 		
-		informativeString = [NSMutableString stringWithString:NSLocalizedString(@"MissingPiecesInformative", nil)];
+		informativeString = [NSMutableString stringWithString:NSLocalizedString([LDrawDocumentTree missingPiecesInformativeKey], nil)];
 		[informativeString appendString:@"\n\n"];
-		[informativeString appendString:[missingNames componentsJoinedByString:@"\n"]];
+		[informativeString appendString:missingNames];
 		
 		//Alert! Alert!
 		NSAlert *alert = [[NSAlert alloc] init];
 		
-		[alert     setMessageText:NSLocalizedString(@"MissingPiecesMessage", nil)];
+		[alert     setMessageText:NSLocalizedString([LDrawDocumentTree missingPiecesMessageKey], nil)];
 		[alert setInformativeText:informativeString];
-		[alert addButtonWithTitle:NSLocalizedString(@"OKButtonName", nil)];
+		[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree okButtonNameKey], nil)];
 		
 		[alert runModal];
 		
@@ -1496,27 +1304,23 @@ void AppendChoicesToNewItem(
 	PartReport	*partReport     = [PartReport partReportForContainer:[self documentContents]];
 	NSArray     *movedParts     = [partReport movedParts];
 	NSInteger   buttonReturned  = 0;
-	NSInteger   counter         = 0;
 	
 	if([movedParts count] > 0)
 	{
 		//Alert! Alert! What should we do?
 		NSAlert *alert = [[NSAlert alloc] init];
 		
-		[alert     setMessageText:NSLocalizedString(@"MovedPiecesMessage", nil)];
-		[alert setInformativeText:NSLocalizedString(@"MovedPiecesInformative", nil)];
-		[alert addButtonWithTitle:NSLocalizedString(@"OKButtonName", nil)];
-		[alert addButtonWithTitle:NSLocalizedString(@"CancelButtonName", nil)];
+		[alert     setMessageText:NSLocalizedString([LDrawDocumentTree movedPiecesMessageKey], nil)];
+		[alert setInformativeText:NSLocalizedString([LDrawDocumentTree movedPiecesInformativeKey], nil)];
+		[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree okButtonNameKey], nil)];
+		[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree cancelButtonNameKey], nil)];
 		
 		buttonReturned = [alert runModal];
 		
 		//They want us to update the ~Moved parts.
 		if(buttonReturned == NSAlertFirstButtonReturn)
 		{
-			for(counter = 0; counter < [movedParts count]; counter++)
-			{
-				[LDrawUtilities updateNameForMovedPart:[movedParts objectAtIndex:counter]];
-			}
+			[LDrawUtilities updateNamesForMovedParts:movedParts];
 			
 			//mark document as modified.
 			[self updateChangeCount:NSChangeDone];
@@ -1609,7 +1413,7 @@ void AppendChoicesToNewItem(
 {
 	NSSavePanel *exportPanel	= [NSSavePanel savePanel];
 	NSString	*activeName		= [[[self documentContents] activeModel] modelName];
-	NSString	*nameFormat		= NSLocalizedString(@"ExportedStepsFolderFormat", nil);
+	NSString	*nameFormat		= NSLocalizedString([LDrawDocumentTree exportedStepsFolderFormatKey], nil);
 	
 	[exportPanel setDirectoryURL:nil];
 	[exportPanel setNameFieldStringValue:[NSString stringWithFormat:nameFormat, activeName]];
@@ -1618,76 +1422,33 @@ void AppendChoicesToNewItem(
 						completionHandler:
 	 ^(NSInteger returnCode)
 	 {
-		 // Do the save
-		 
-		 NSFileManager	 *fileManager		 = [[NSFileManager alloc] init];
-		 NSURL			 *saveURL			 = nil;
-		 NSString		 *saveName			 = nil;
-		 NSString		 *modelName 		 = nil;
-		 NSString		 *folderName		 = nil;
-		 NSString		 *modelnameFormat	 = NSLocalizedString(@"ExportedStepsFolderFormat", nil);
-		 NSString		 *filenameFormat	 = NSLocalizedString(@"ExportedStepsFileFormat", nil);
-		 NSString		 *fileString		 = nil;
-		 NSData 		 *fileOutputData	 = nil;
-		 NSString		 *outputName		 = nil;
-		 NSString		 *outputPath		 = nil;
-		 
-		 LDrawFile		 *fileCopy			 = nil;
-		 
-		 NSInteger		 modelCounter		 = 0;
-		 NSInteger		 counter			 = 0;
-		 
-		 if(returnCode == NSModalResponseOK)
+		 if(returnCode != NSModalResponseOK) return;
+
+		 NSFileManager *fileManager = [[NSFileManager alloc] init];
+		 NSURL         *saveURL     = [exportPanel URL];
+		 NSString      *saveName    = ([saveURL isFileURL] ? [saveURL path] : nil);
+
+		 // If we got this far, we need to replace any prexisting file.
+		 if([fileManager fileExistsAtPath:saveName isDirectory:NULL])
 		 {
-			 saveURL	= [exportPanel URL];
-			 saveName	= ([saveURL isFileURL] ? [saveURL path] : nil);
-			 
-			 // If we got this far, we need to replace any prexisting file.
-			 if([fileManager fileExistsAtPath:saveName isDirectory:NULL])
-				 [fileManager removeItemAtPath:saveName error:NULL];
-			 
-			 [fileManager createDirectoryAtPath:saveName withIntermediateDirectories:YES attributes:nil error:NULL];
-			 
-			 //Output all the steps for all the submodels.
-			 for(modelCounter = 0; modelCounter < [[[self documentContents] submodels] count]; modelCounter++)
-			 {
-				 fileCopy = [[self documentContents] copy];
-				 
-				 //Move the target model to the top of the file. That way L3P will know to
-				 // render it!
-				 LDrawMPDModel *currentModel = [[fileCopy submodels] objectAtIndex:modelCounter];
-				 [fileCopy removeDirective:currentModel];
-				 [fileCopy insertDirective:currentModel atIndex:0];
-				 [fileCopy setActiveModel:currentModel];
-				 
-				 //Make a new folder for the model's steps.
-				 modelName	= [NSString stringWithFormat:modelnameFormat, [currentModel modelName]];
-				 folderName	= [saveName stringByAppendingPathComponent:modelName];
-				 
-				 [fileManager createDirectoryAtPath:folderName withIntermediateDirectories:YES attributes:nil error:NULL];
-				 
-				 //Write out each step!
-				 for(counter = [[currentModel steps] count]-1; counter >= 0; counter--)
-				 {
-					 fileString		= [fileCopy write];
-					 fileOutputData	= [fileString dataUsingEncoding:NSUTF8StringEncoding];
-					 
-					 outputName = [NSString stringWithFormat: filenameFormat,
-								   [currentModel modelName],
-								   (long)counter+1 ];
-					 outputPath = [folderName stringByAppendingPathComponent:outputName];
-					 [fileManager createFileAtPath:outputPath
-										  contents:fileOutputData
-										attributes:nil ];
-					 
-					 //Remove the step we just wrote, so that the next cycle won't
-					 // include it. We can safely do this because we are working with
-					 // a copy of the file!
-					 [currentModel removeDirectiveAtIndex:counter];
-				 }
-				 
-			 }
-			 
+			 [fileManager removeItemAtPath:saveName error:NULL];
+		 }
+
+		 [fileManager createDirectoryAtPath:saveName withIntermediateDirectories:YES attributes:nil error:NULL];
+
+		 NSArray *exports = [LDrawDocumentTree stepExportFilesFromFile:[self documentContents]
+													  folderNameFormat:NSLocalizedString([LDrawDocumentTree exportedStepsFolderFormatKey], nil)
+														fileNameFormat:NSLocalizedString([LDrawDocumentTree exportedStepsFileFormatKey], nil)];
+		 for(LDrawStepExportFile *item in exports)
+		 {
+			 NSString *folderName = [saveName stringByAppendingPathComponent:item.folderName];
+			 [fileManager createDirectoryAtPath:folderName withIntermediateDirectories:YES attributes:nil error:NULL];
+
+			 NSString *outputPath = [folderName stringByAppendingPathComponent:item.fileName];
+			 NSData   *fileOutputData = [item.ldrString dataUsingEncoding:NSUTF8StringEncoding];
+			 [fileManager createFileAtPath:outputPath
+								  contents:fileOutputData
+								attributes:nil];
 		 }
 	 }];
 
@@ -1779,21 +1540,15 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) delete:(id)sender
 {
-	NSArray         *selectedObjects    = [self selectedObjects];
-	LDrawDirective  *currentObject      = nil;
-	NSInteger       counter;
+	NSArray *selectedObjects = [self selectedObjects];
 
 	// Clear the selection FIRST.  We already have a copy of the doomed objects;
 	// if we don't clear the selection, deleting the objs OUT of the selection
 	// will cause massive thrash of the outliner.
 	[fileContentsOutline deselectAll:sender];
 	
-	//We'll just try to delete everything. Count backwards so that if a 
-	// deletion fails, it's the thing at the top rather than the bottom that 
-	// remains.
-	for(counter = [selectedObjects count]-1; counter >= 0; counter--)
+	for(LDrawDirective *currentObject in [LDrawDocumentTree directivesInReverseDeletionOrder:selectedObjects])
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
 		if([self canDeleteDirective:currentObject displayErrors:YES] == YES)
 		{	//above method will display an error if the directive can't be deleted.
 			[self deleteDirective:currentObject];
@@ -1814,22 +1569,8 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) selectAll:(id)sender
 {
-	LDrawModel  *activeModel    = [[self documentContents] activeModel];
-	NSArray     *elements       = [activeModel allEnclosedElements];
-	id          currentElement  = nil;
-	NSInteger   counter         = 0;
-	
-	NSMutableArray * visibleElements = [NSMutableArray arrayWithCapacity:[elements count]];
-	
-	for(counter = 0; counter < [elements count]; counter++)
-	{
-		currentElement = [elements objectAtIndex:counter];
-		if(		[currentElement respondsToSelector:@selector(isHidden)] == NO
-			||	[currentElement isHidden] == NO)
-		{
-			[visibleElements addObject:currentElement];
-		}
-	}
+	LDrawModel *activeModel = [[self documentContents] activeModel];
+	NSArray    *visibleElements = [LDrawSelectionOps visibleDirectivesIn:[activeModel allEnclosedElements]];
 
 	// Use bulk directive set rather than calling selectDirective over and over.
 	// selectDirective 4000 times is too slow - too much notification traffic.
@@ -1850,16 +1591,15 @@ void AppendChoicesToNewItem(
 	// pasteboard then "pastes" it right back in. This avoids destroying the 
 	// general pasteboard, but allows us some fabulous code reuse. (In case you 
 	// haven't noticed, I'm proud of this!) 
-	NSPasteboard	*pasteboard			= [NSPasteboard pasteboardWithName:@"BricksmithDuplicationPboard"];
+	NSPasteboard	*pasteboard			= [NSPasteboard pasteboardWithName:[LDrawClipboard duplicationPasteboardName]];
 	NSArray			*selectedObjects	= [self selectedObjects];
 	NSUndoManager	*undoManager		= [self undoManager];
 	NSInteger 		indexOfObject		= NSNotFound;
 
 	[[undoManager prepareWithInvocationTarget:self] selectDirectives:selectedObjects];
 
-	if ([selectedObjects.firstObject isKindOfClass:[LDrawMPDModel class]]) {
-		indexOfObject = [self nextModelIndex];
-	}
+	indexOfObject = [LDrawDocumentTree duplicatePasteIndexForSelection:selectedObjects
+											 defaultNextModelIndex:[self nextModelIndex]];
 	[self writeDirectives:selectedObjects toPasteboard:pasteboard];
 	[self pasteFromPasteboard:pasteboard
 		preventNameCollisions:YES
@@ -1867,7 +1607,7 @@ void AppendChoicesToNewItem(
 						index:indexOfObject
 				nextToSimilar:YES];
 
-	[undoManager setActionName:NSLocalizedString(@"UndoDuplicate", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree duplicateUndoActionKey], nil)];
 	
 }//end duplicate:
 
@@ -1896,61 +1636,40 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) splitStep:(id)sender
 {
-	NSUndoManager			*undoManager		= [self undoManager];
-	NSArray					*directives 		= [self selectedObjects];
-	NSMutableArray			*movedDirectives 	= [NSMutableArray arrayWithCapacity:[directives count]];
-	LDrawContainer			*containingModel 	= nil;
-	NSInteger				highestIndex 		= 0;	// The index of the highest step with selected directives
-	LDrawStep				*highestStep 		= nil;	// The highest step which contains selected directives
-	LDrawStep				*newStep 			= nil;
-	
-	[fileContentsOutline deselectAll:sender];
-
-	for(id child in directives)
-	{
-		LDrawDirective * parent = [child enclosingDirective];
-		if(parent)
-		{
-			LDrawContainer * model = [parent enclosingDirective];
-			if(model)
-			{
-				if(containingModel == nil) 
-					containingModel = model;
-				if(containingModel == model)
-				{
-					highestIndex = MAX(highestIndex, [containingModel indexOfDirective:parent]);
-					[movedDirectives addObject:child];
-					[self deleteDirective:child];
-				}
-			}
-		}		
-	}
-	
-	// The step for splitting
-	highestStep = containingModel.subdirectives[highestIndex];
+	NSUndoManager   *undoManager      = [self undoManager];
+	LDrawContainer  *containingModel  = nil;
+	LDrawStep       *highestStep      = nil;
+	NSInteger        highestIndex     = 0;
+	NSArray         *movedDirectives  = [LDrawDocumentTree splitStepDirectivesFromSelection:[self selectedObjects]
+																		   containingModel:&containingModel
+																				sourceStep:&highestStep
+																			   insertIndex:&highestIndex];
 
 	if([movedDirectives count] == 0)
 		return;
-	
-	newStep = [LDrawStep emptyStep];
-	
+
+	[fileContentsOutline deselectAll:sender];
+
+	for(id child in movedDirectives)
+	{
+		[self deleteDirective:child];
+	}
+
+	LDrawStep *newStep = [LDrawStep emptyStep];
+
 	// Do undo stuff before changing rotation
 	[self preserveDirectiveState:highestStep];
-
-	// Move the rotation from the current step to the newly created one
-	newStep.stepRotationType = highestStep.stepRotationType;
-	newStep.rotationAngle = highestStep.rotationAngle;
-	highestStep.stepRotationType = LDrawStepRotationNone;
+	[LDrawDocumentTree transferRotationFromStep:highestStep toStep:newStep];
 
 	[self addDirective:newStep toParent:containingModel atIndex:highestIndex];
-	
+
 	for(id child in movedDirectives)
 	{
 		[self addDirective:child toParent:newStep];
 	}
 
-	[undoManager setActionName:NSLocalizedString(@"UndoSplitStep", nil)];
-	
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree splitStepUndoActionKey], nil)];
+
 	[self flushDocChangesAndSelect:movedDirectives];
 
 }//end splitStep:
@@ -1958,58 +1677,29 @@ void AppendChoicesToNewItem(
 
 //========== splitModel: =======================================================
 //
-// Purpose:		Copy each part from a MPD sub-model into its location in the
-//				parent model.  This basically turns a reference to a sub-model
-//				into a big pile of bricks that can be directly edited.
-//
-// Notes:		Only parts are copied; any step information and primitives in
-//				the sub-module are ignored.
+// Purpose:		Deletes each split-able selected part and inserts the expanded
+//				bricks (undo). The host still localizes the undo name.
 //
 //==============================================================================
 - (IBAction) splitModel:(id)sender
 {
-	NSUndoManager			*undoManager		= [self undoManager];
-	NSArray					*directives			= [self selectedObjects];
-	NSMutableArray *		addedParts			= [NSMutableArray arrayWithCapacity:10];
-		
-	for(id thing in directives)
+	NSUndoManager  *undoManager = [self undoManager];
+	NSMutableArray *addedParts  = [NSMutableArray arrayWithCapacity:10];
+
+	for(LDrawSplitExpansion *expansion in [LDrawDocumentTree splitExpansionsInSelection:[self selectedObjects]])
 	{
-		// Skip non-parts.
-		if(![thing isKindOfClass:[LDrawPart class]])
-			continue;
-		
-		// Skip parts that represent library bricks or that can't be resolved.
-		LDrawPart * anchor = (LDrawPart *) thing;
-		LDrawModel * model = [anchor referencedMPDSubmodel];
-		if(model == nil)
-			model = [anchor referencedPeerFile];
-		if(model == nil)
-			continue;
-		
-		// Save the transform that the whole part was under, and kill the part.
-		Matrix4 xfrm = [anchor transformationMatrix];
-		LDrawContainer * anchorParent = [anchor enclosingDirective];
-		[self deleteDirective:anchor];
-		
-		[model applyToAllParts:^(LDrawPart * part){
-		
-			// For each part, calculate its final location and add it.
-			Matrix4 local = [part transformationMatrix];
-			Matrix4 global = Matrix4Multiply(local, xfrm);
-			
-			LDrawPart *newPart = [[LDrawPart alloc] init];
-			[newPart setLDrawColor:[part LDrawColor]];
-			[newPart setDisplayName:[part displayName]];
-			[newPart setTransformationMatrix:&global];
-			
+		LDrawContainer *anchorParent = [expansion.anchor enclosingDirective];
+		[self deleteDirective:expansion.anchor];
+
+		for(LDrawPart *newPart in expansion.expandedParts)
+		{
 			[self addStepComponent:newPart parent:anchorParent index:NSNotFound];
-			
 			[addedParts addObject:newPart];
-		}];
+		}
 	}
-	
-	[undoManager setActionName:NSLocalizedString(@"undoSplitModel", nil)];
-	
+
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree splitModelUndoActionKey], nil)];
+
 	[self flushDocChangesAndSelect:addedParts];
 }//end splitModel:
 
@@ -2027,70 +1717,48 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) moveToParentModel:(id)sender
 {
-	LDrawFile 				*docContents		= [self documentContents];
-	NSUndoManager			*undoManager		= [self undoManager];
-	NSArray					*directives			= [self selectedObjects];
-	
+	LDrawFile     *docContents = [self documentContents];
+	NSUndoManager *undoManager = [self undoManager];
+	NSArray       *directives  = [self selectedObjects];
+
 	if (directives.count == 0) {
 		return;
 	}
-	
-	[fileContentsOutline deselectAll:sender];
-	
-	// Save all selected directives here with their model name:
-	// model_name1 : [directive1, directive2...]
-	// model_name2 : [directiveK...]
-	NSMutableDictionary<NSString *, NSMutableArray<LDrawDirective *> *> *modelsWithDirectives = [NSMutableDictionary new];
 
-	for (LDrawDirective *directive in directives) {
-		NSString *modelName = directive.enclosingModel.fileName;
-		if (modelsWithDirectives[modelName] == nil) {
-			modelsWithDirectives[modelName] = [[NSMutableArray alloc] initWithObjects:directive, nil];
-		} else {
-			[modelsWithDirectives[modelName] addObject:directive];
-		}
-	}
-	
-	// iterate over all submodels whose parts are selected
-	for (NSString *subModelName in modelsWithDirectives.allKeys) {
-		// find parts as references to the submodel in whole document
+	[fileContentsOutline deselectAll:sender];
+
+	NSDictionary<NSString *, NSArray<LDrawDirective *> *> *modelsWithDirectives =
+		[LDrawDocumentTree directivesGroupedByEnclosingModelName:directives];
+
+	for (NSString *subModelName in modelsWithDirectives) {
 		NSArray<LDrawPart *> *references = [docContents partsWithName:subModelName];
-		// iterate over all selected parts in this submodel
-		for (LDrawPart *directive in modelsWithDirectives[subModelName]) {
+		for (LDrawDirective *directive in modelsWithDirectives[subModelName]) {
 			for (LDrawPart *ref in references) {
-				LDrawStep *step = ref.enclosingStep;
-				if ([directive isKindOfClass:[LDrawPart class]]) {
-					LDrawPart *newPart = [directive copy];
-					newPart.LDrawColor = directive.LDrawColor;
-					newPart.displayName = directive.displayName;
-					Matrix4 global = Matrix4Multiply(directive.transformationMatrix, ref.transformationMatrix);
-					newPart.transformationMatrix = &global;
-					[self addDirective:newPart toParent:step];
-				} else {
-					[self addDirective:[directive copy] toParent:step];
-				}
+				LDrawDirective *copy = [LDrawDocumentTree copyOfDirective:directive placedAtReference:ref];
+				[self addDirective:copy toParent:ref.enclosingStep];
 			}
-			
-			// moving model's parents
+
 			LDrawModel *parentModel = directive.enclosingModel;
-			LDrawStep *parentStep = directive.enclosingStep;
-			
-			// remove everything that gets empty
+			LDrawStep  *parentStep  = directive.enclosingStep;
 			[self deleteDirective:directive];
-			if (parentModel.numberElements == 0) {
+
+			LDrawMoveToParentCleanup cleanup =
+				[LDrawDocumentTree cleanupAfterRemovingFromModel:parentModel step:parentStep];
+			if (cleanup == LDrawMoveToParentCleanupEmptyModel) {
 				[self deleteDirective:parentModel];
 				for (LDrawPart *instance in references) {
 					[self deleteDirective:instance];
 				}
-			} else if (parentStep.subdirectives.count == 0) {
+			}
+			else if (cleanup == LDrawMoveToParentCleanupEmptyStep) {
 				[self deleteDirective:parentStep];
 			}
 		}
 	}
-	
-	[undoManager setActionName:NSLocalizedString(@"UndoMoveToParentModel", nil)];
+
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree moveToParentModelUndoActionKey], nil)];
 	[[self documentContents] noteNeedsDisplay];
-	
+
 }//end moveToParentModel:
 
 
@@ -2135,20 +1803,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateClicked:(id)sender
 {
-	menuTagsT	tag			= (menuTagsT)[sender tag];
-	Vector3		rotation	= ZeroPoint3;
+	Vector3 rotation = ZeroPoint3;
 	
-	switch(tag)
-	{
-		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
-		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
-		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
-		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
-		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
-		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
-		default:													break;
-	}
-	[self rotateSelectionAround:rotation extraFine:NO aroundOrigin:NO];
+	if([LDrawSelectionOps quickRotationAxis:&rotation forMenuTag:[sender tag]])
+		[self rotateSelectionAround:rotation extraFine:NO aroundOrigin:NO];
 
 }//end quickRotateClicked:
 
@@ -2163,20 +1821,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateFineClicked:(id)sender
 {
-	menuTagsT	tag			= (menuTagsT)[sender tag];
-	Vector3		rotation	= ZeroPoint3;
+	Vector3 rotation = ZeroPoint3;
 	
-	switch(tag)
-	{
-		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
-		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
-		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
-		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
-		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
-		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
-		default:													break;
-	}
-	[self rotateSelectionAround:rotation extraFine:YES aroundOrigin:NO];
+	if([LDrawSelectionOps quickRotationAxis:&rotation forMenuTag:[sender tag]])
+		[self rotateSelectionAround:rotation extraFine:YES aroundOrigin:NO];
 	
 }//end quickRotateFineClicked:
 
@@ -2191,20 +1839,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateAroundOriginClicked:(id)sender
 {
-	menuTagsT	tag			= (menuTagsT)[sender tag];
-	Vector3		rotation	= ZeroPoint3;
+	Vector3 rotation = ZeroPoint3;
 	
-	switch(tag)
-	{
-		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
-		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
-		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
-		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
-		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
-		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
-		default:													break;
-	}
-	[self rotateSelectionAround:rotation extraFine:NO aroundOrigin:YES];
+	if([LDrawSelectionOps quickRotationAxis:&rotation forMenuTag:[sender tag]])
+		[self rotateSelectionAround:rotation extraFine:NO aroundOrigin:YES];
 	
 }//end quickRotateAroundOriginClicked:
 
@@ -2219,20 +1857,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) quickRotateFineAroundOriginClicked:(id)sender
 {
-	menuTagsT	tag			= (menuTagsT)[sender tag];
-	Vector3		rotation	= ZeroPoint3;
+	Vector3 rotation = ZeroPoint3;
 	
-	switch(tag)
-	{
-		case rotatePositiveXTag:	rotation = V3Make( 1,  0,  0);	break;
-		case rotateNegativeXTag:	rotation = V3Make(-1,  0,  0);	break;
-		case rotatePositiveYTag:	rotation = V3Make( 0,  1,  0);	break;
-		case rotateNegativeYTag:	rotation = V3Make( 0, -1,  0);	break;
-		case rotatePositiveZTag:	rotation = V3Make( 0,  0,  1);	break;
-		case rotateNegativeZTag:	rotation = V3Make( 0,  0, -1);	break;
-		default:													break;
-	}
-	[self rotateSelectionAround:rotation extraFine:YES aroundOrigin:YES];
+	if([LDrawSelectionOps quickRotationAxis:&rotation forMenuTag:[sender tag]])
+		[self rotateSelectionAround:rotation extraFine:YES aroundOrigin:YES];
 	
 }//end quickRotateFineAroundOriginClicked:
 
@@ -2261,55 +1889,18 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) randomizeLDrawColors:(id)sender
 {
-	// Build a hash set of all colors
-	NSArray     *selectedObjects    = [self selectedObjects];
-	id          currentObject       = nil;
-	NSUInteger  counter             = 0;
-	NSUInteger	count				= [selectedObjects count];
-	NSMutableSet *	allColors		= [NSMutableSet setWithCapacity:count];
-	
-	if(count == 0)
-		return;
-	
-	for(counter = 0; counter < count; ++counter)
+	NSArray *colorable = [LDrawSelectionOps colorableDirectivesInSelection:[self selectedObjects]];
+	NSArray *colors    = [LDrawSelectionOps randomizedColorsForDirectives:colorable];
+
+	NSUInteger count = [colors count];
+	for(NSUInteger counter = 0; counter < count; ++counter)
 	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		if([currentObject conformsToProtocol:@protocol(LDrawColorable)])
-		{
-			[allColors addObject:[currentObject LDrawColor]];
-		}
+		// setObject:toColor builds undo steps; AppKit merges them into one.
+		[self setObject:[colorable objectAtIndex:counter]
+				toColor:[colors objectAtIndex:counter]];
 	}
-
-	NSUInteger colorCount = [allColors count];
-	if(colorCount > 0)
+	if(count > 0)
 	{
-		NSArray * allColorsArray = [allColors allObjects];
-
-		int last = -1;
-
-		for(counter = 0; counter < count; ++counter)
-		{
-			currentObject = [selectedObjects objectAtIndex:counter];
-			if([currentObject conformsToProtocol:@protocol(LDrawColorable)])
-			{
-				int r = rand() % colorCount;
-				// Try to avoid consecutives if we have enough palette --
-				// this technically makes the distribution not random, but
-				// it probably looks better unless the parts are just super
-				// tiny.
-				while(colorCount > 1 && r == last)
-				{
-					r = rand() % colorCount;
-				}
-				last = r;
-				LDrawColor * randomColor = [allColorsArray objectAtIndex:r];
-				
-				// We don't have to worry about undo; setObject:toColor
-				// builds undo steps, and AppKit merges them into a single
-				// giant 
-				[self setObject:currentObject toColor:randomColor];
-			}
-		}
 		[[self documentContents] noteNeedsDisplay];
 	}
 }//end randomizeLDrawColors:
@@ -2317,111 +1908,34 @@ void AppendChoicesToNewItem(
 
 //========== changeOrigin: =====================================================
 //
-// Purpose:		Handles 3 related commands:
-//				1. Moves every part in the selection's parent model so that the
-//				   selected part is at 0,0,0.
-//				2. Moves every part in the selection's parent model so that the
-//				   rotation axis for selected part goes through 0,0,0.
-//				3. Rotates every part in the selection's parent model so that
-//				   the rotation of the selected part is aligned to 0, 90, 180
-//				   or 270º.
-//
-//				Also, find all uses of this MPD model and adjust their location
-//				in the opposite direction so parent models are not visually
-//				affected.
+// Purpose:		Applies origin-change matrices (undo). The host still localizes
+//				the undo name and redisplays.
 //
 //==============================================================================
 - (IBAction) changeOrigin:(NSButton *)sender
 {
-	NSUndoManager       *	undoManager	= [self undoManager];
-	NSArray *				directives 	= [self selectedObjects];
-	NSInteger				tag			= [sender tag];
-	Vector3					rotCenter;
-	Vector3					rotPlane;
-	Matrix4 				transformMatrix;
-	Matrix4 				correction;
+	NSUndoManager         *undoManager = [self undoManager];
+	LDrawOriginChangeKind  kind        = LDrawOriginChangeByPosition;
 
-	id thing = [directives objectAtIndex:0];
-	if (![thing isKindOfClass:[LDrawPart class]])
-		return;
-	
-	LDrawPart * anchor = (LDrawPart *) thing;
-	
-	if (tag == changeOriginByRotationMenuTag)
-	{
-		rotCenter = [PartSpecific rotationCenterForPart:anchor.displayName];
-		rotPlane = [PartSpecific rotationPlaneForPart:anchor.displayName];
-		Matrix4 anchorMatrix = [anchor transformationMatrix];
-		rotCenter = V3MulPointByProjMatrix(rotCenter, anchorMatrix);
-		rotPlane = V3Val(V3MulPointByProjMatrix(rotPlane, Matrix4ClearTranslation(anchorMatrix)));
-		Vector3 offset = V3Mul(rotCenter, rotPlane);
-		transformMatrix = Matrix4Translate(IdentityMatrix4, offset);
-	}
-	else if (tag == axesByPartRotationMenuTag)
-	{
-		TransformComponents	components	= [anchor transformComponents];
-		Tuple3 rotation;
-		rotation.x = degrees(components.rotate.x);
-		rotation.y = degrees(components.rotate.y);
-		rotation.z = degrees(components.rotate.z);
-		transformMatrix = Matrix4Rotate(IdentityMatrix4, rotation);
-		// align Y rotation to 0, 90, 180 or 270º
-		Tuple3 subRotation;
-		subRotation.x = 0;
-		subRotation.y = -roundf(rotation.y / 90.0) * 90.0;
-		subRotation.z = 0;
-		Matrix4 extraRotationMatrix = Matrix4Rotate(IdentityMatrix4, subRotation);
-		transformMatrix = Matrix4Multiply(extraRotationMatrix, transformMatrix);
-	}
-	else	// changeOriginMenuTag
-	{
-		transformMatrix = Matrix4Translate(IdentityMatrix4, anchor.position);
-	}
+	if([LDrawDocumentTree originChangeKind:&kind forMenuTag:[sender tag]] == NO)
+		kind = LDrawOriginChangeByPosition;
 
-	correction = Matrix4Invert(transformMatrix);
-	
-	LDrawModel * parentModel = [anchor enclosingModel];
-	
-	// Iterate the model and move every part based on the anchor part's
-	// inverse transform.  This also moves the anchor to 0,0,0.
-	[parentModel applyToAllParts:^(LDrawPart * part){
-		Matrix4 old = [part transformationMatrix];
-		Matrix4 newM = Matrix4Multiply(old, correction);
-		TransformComponents oldComp = [part transformComponents];
-		
+	NSArray *updates = [LDrawDocumentTree originPartUpdatesForSelection:[self selectedObjects]
+																   kind:kind];
+	if([updates count] == 0) return;
+
+	for(LDrawOriginPartUpdate *update in updates)
+	{
 		[[undoManager prepareWithInvocationTarget:self]
-			setTransformation:oldComp forPart:part];
-		
-		[part setTransformationMatrix:&newM];
-	}];
+			setTransformation:update.previousComponents forPart:update.part];
 
-	// Iterate sub-models.  For every _other_ sub-model, search every
-	// part and apply the anchor's transform to restore the model.
-	NSArray * submodels = [[anchor enclosingFile] submodels];
-	for(LDrawModel* model in submodels)
-	{
-		if(model != parentModel)
-		{
-			[model applyToAllParts:^(LDrawPart * part){
-			
-				if([part referencedMPDSubmodel] == parentModel)
-				{
-					Matrix4 old = [part transformationMatrix];
-					Matrix4 newM = Matrix4Multiply(transformMatrix, old);
-					TransformComponents oldComp = [part transformComponents];
-					
-					[[undoManager prepareWithInvocationTarget:self]
-						setTransformation:oldComp forPart:part];
-					
-					[part setTransformationMatrix:&newM];
-				}
-			}];
-		}
+		Matrix4 matrix = update.matrix;
+		[update.part setTransformationMatrix:&matrix];
 	}
-	
-	[undoManager setActionName:NSLocalizedString(@"UndoChangeOrigin", nil)];
+
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree changeOriginUndoActionKey], nil)];
 	[[self documentContents] noteNeedsDisplay];
-	
+
 }//end changeOrigin:
 
 
@@ -2490,24 +2004,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) gridGranularityMenuChanged:(id)sender
 {
-	NSInteger           menuTag     = [sender tag];
-	gridSpacingModeT    newGridMode = gridModeFine;;
-	
-	
-	switch(menuTag)
-	{
-		case gridFineMenuTag:
-			newGridMode = gridModeFine;
-			break;
-		
-		case gridMediumMenuTag:
-			newGridMode = gridModeMedium;
-			break;
-		
-		case gridCoarseMenuTag:
-			newGridMode = gridModeCoarse;
-			break;
-	}
+	gridSpacingModeT    newGridMode = gridModeFine;
+
+	if([LDrawGrid gridSpacingMode:&newGridMode forMenuTag:[sender tag]] == NO)
+		return;
 	
 	[self setGridSpacingMode:newGridMode];
 	
@@ -2527,19 +2027,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) gridOrientationModeChanged:(id)sender
 {
-	NSInteger				menuTag		= [sender tag];
 	gridOrientationModeT	newMode		= gridOrientationModel;
-	
-	switch(menuTag)
-	{
-		case coordModelMenuTag:
-			newMode = gridOrientationModel;
-			break;
-			
-		case coordPartMenuTag:
-			newMode = gridOrientationPart;
-			break;
-	}
+
+	if([LDrawGrid gridOrientationMode:&newMode forMenuTag:[sender tag]] == NO)
+		return;
 	
 	[self setGridOrientationMode:newMode];
 
@@ -2667,7 +2158,9 @@ void AppendChoicesToNewItem(
 	NSInteger       currentStep     = [activeModel maximumStepIndexForStepDisplay];
 	NSInteger       numberSteps     = [[activeModel steps] count];
 	
-	[self setCurrentStep: (currentStep+1) % numberSteps ];
+	[self setCurrentStep:[LDrawDocumentTree wrappedStepIndex:currentStep
+													 byDelta:1
+												   stepCount:numberSteps]];
 	
 }//end advanceOneStep:
 
@@ -2683,11 +2176,9 @@ void AppendChoicesToNewItem(
 	NSInteger       currentStep     = [activeModel maximumStepIndexForStepDisplay];
 	NSInteger       numberSteps     = [[activeModel steps] count];
 	
-	// Wrap around?
-	if(currentStep == 0)
-		currentStep = numberSteps;
-	
-	[self setCurrentStep: (currentStep-1) % numberSteps ];
+	[self setCurrentStep:[LDrawDocumentTree wrappedStepIndex:currentStep
+													 byDelta:-1
+												   stepCount:numberSteps]];
 
 }//end backOneStep:
 
@@ -2699,24 +2190,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) useSelectionForRotationCenter:(id)sender
 {
-	NSMutableArray *selectedDrawables = [NSMutableArray array];
-	
-	for(id currentDirective in self->selectedDirectives)
-	{
-		if([currentDirective isKindOfClass:[LDrawDrawableElement class]])
-		{
-			[selectedDrawables addObject:currentDirective];
-		}
-	}
-	
-	if([selectedDrawables count] == 0)
-	{
-		[[self->documentContents activeModel] setRotationCenter:ZeroPoint3];
-	}
-	else
-	{
-		[[self->documentContents activeModel] setRotationCenter:[(LDrawDrawableElement*)[selectedDrawables objectAtIndex:0] position]];
-	}
+	NSArray *selectedDrawables = [LDrawDocumentTree drawableDirectivesInSelection:self->selectedDirectives];
+	Point3   center            = [LDrawSelectionOps rotationCenterFromFirstDrawable:selectedDrawables];
+
+	[[self->documentContents activeModel] setRotationCenter:center];
 	
 }//end useSelectionForRotationCenter:
 
@@ -2767,21 +2244,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) showAllParts:(id)sender
 {
-	LDrawModel  *activeModel    = [[self documentContents] activeModel];
-	NSArray     *elements       = [activeModel allEnclosedElements];
-	id          currentElement  = nil;
-	NSInteger   counter         = 0;
-	
-	// Show everything
-	for(counter = 0; counter < [elements count]; counter++)
+	LDrawModel *activeModel = [[self documentContents] activeModel];
+	NSArray    *hidden      = [LDrawSelectionOps hiddenHideableDirectivesIn:[activeModel allEnclosedElements]];
+
+	for(id currentElement in hidden)
 	{
-		currentElement = [elements objectAtIndex:counter];
-		
-		if(		[currentElement respondsToSelector:@selector(setHidden:)]
-		   &&	[currentElement isHidden] == YES)
-		{
-			[self setElement:currentElement toHidden:NO]; //undoable hook.
-		}
+		[self setElement:currentElement toHidden:NO]; //undoable hook.
 	}
 }//end showAllParts:
 
@@ -2799,34 +2267,19 @@ void AppendChoicesToNewItem(
 - (IBAction) gotoModel:(id)sender
 {
 	NSArray     *selectedObjects    = [self selectedObjects];
-	
-	if([selectedObjects count] == 1)
-	{
-		id currentObject = [selectedObjects objectAtIndex:0];
-		
-		if([currentObject respondsToSelector:@selector(referencedMPDSubmodel)])
-		{
-			LDrawModel * m = [currentObject referencedMPDSubmodel];
-			if(m != nil)
-			{
-				if ([m isKindOfClass:[LDrawMPDModel class]])
-				{
-					[self setActiveModel:(LDrawMPDModel*) m];
-				}
-			}
-		}
+	LDrawMPDModel *mpdModel         = [LDrawDocumentTree mpdSubmodelToActivateFromSelection:selectedObjects];
+	NSString    *peerPath           = nil;
 
-		if([currentObject respondsToSelector:@selector(referencedPeerFile)])
-		{
-			LDrawModel * m = [currentObject referencedPeerFile];
-			if(m != nil)
-			{
-				NSString * fp = [[m enclosingFile] path];
-				[[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:fp  isDirectory:FALSE]
-																					   display:YES
-																			 completionHandler:^(NSDocument * _Nullable document, BOOL documentWasAlreadyOpen, NSError * _Nullable error) {}];
-			}
-		}		
+	if(mpdModel != nil)
+	{
+		[self setActiveModel:mpdModel];
+	}
+
+	if([LDrawDocumentTree peerFileFromSelection:selectedObjects path:&peerPath])
+	{
+		[[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:peerPath  isDirectory:FALSE]
+																			   display:YES
+																	 completionHandler:^(NSDocument * _Nullable document, BOOL documentWasAlreadyOpen, NSError * _Nullable error) {}];
 	}
 }//end gotoModel:
 
@@ -2838,49 +2291,17 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) snapSelectionToGrid:(id)sender
 {	
-	NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
-	NSArray             *selectedObjects    = [self selectedObjects];
-	id                  currentObject       = nil;
-	float               gridSpacing         = 0;
-	float               degreesToRotate     = 0;
-	NSInteger           counter             = 0;
-	TransformComponents snappedComponents   = IdentityComponents;
-	
-	//Determine granularity of grid.
-	switch([self gridSpacingMode])
+	float gridSpacing     = [LDrawGrid spacingForMode:[self gridSpacingMode]];
+	float degreesToRotate = [LDrawGrid rotationDegreesForMode:[self gridSpacingMode]
+														 kind:LDrawGridRotationSnap];
+
+	for(LDrawPartTransformUpdate *update in [LDrawSelectionOps snappedTransformUpdatesForSelection:[self selectedObjects]
+																					  gridSpacing:gridSpacing
+																					 minimumAngle:degreesToRotate])
 	{
-		case gridModeFine:
-			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_FINE];
-			degreesToRotate	= GRID_ROTATION_FINE;	//15 degrees
-			break;
-		
-		case gridModeMedium:
-			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_MEDIUM];
-			degreesToRotate	= GRID_ROTATION_MEDIUM;	//45 degrees
-			break;
-		
-		case gridModeCoarse:
-			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_COARSE];
-			degreesToRotate	= GRID_ROTATION_COARSE;	//90 degrees
-			break;
+		[self setTransformation:update.components forPart:update.part];
 	}
-	
-	//nudge everything that can be rotated. That would be parts and only parts.
-	for(counter = 0; counter < [selectedObjects count]; counter++)
-	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		
-		if([currentObject isKindOfClass:[LDrawPart class]])
-		{
-			snappedComponents = [currentObject 
-										componentsSnappedToGrid:gridSpacing
-												   minimumAngle:degreesToRotate];
-			[self setTransformation:snappedComponents
-							forPart:currentObject];
-		}
-		
-	}//end update loop
-	
+
 	[[self documentContents] noteNeedsDisplay];
 		
 }//end snapSelectionToGrid
@@ -2926,43 +2347,13 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) snapSelectionByAxis:(Vector3)axis
 {
-	NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
-	NSArray             *selectedObjects    = [self selectedObjects];
-	id                  currentObject       = nil;
-	float               gridSpacing         = 0;
-	NSInteger           counter             = 0;
-	TransformComponents snappedComponents   = IdentityComponents;
-	
-	//Determine granularity of grid.
-	switch([self gridSpacingMode])
+	float gridSpacing = [LDrawGrid spacingForMode:[self gridSpacingMode]];
+
+	for(LDrawPartTransformUpdate *update in [LDrawSelectionOps snappedTransformUpdatesForSelection:[self selectedObjects]
+																					  gridSpacing:gridSpacing
+																							axis:axis])
 	{
-		case gridModeFine:
-			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_FINE];
-			break;
-			
-		case gridModeMedium:
-			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_MEDIUM];
-			break;
-			
-		case gridModeCoarse:
-			gridSpacing		= [userDefaults floatForKey:GRID_SPACING_COARSE];
-			break;
-	}
-	
-	// nudge everything that can be moved. That would be parts and only parts.
-	for(counter = 0; counter < [selectedObjects count]; counter++)
-	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		
-		if([currentObject isKindOfClass:[LDrawPart class]])
-		{
-			snappedComponents = [currentObject componentsSnappedToGrid:gridSpacing
-																byAxis:axis];
-			
-			[self setTransformation:snappedComponents
-							forPart:currentObject];
-		}
-		
+		[self setTransformation:update.components forPart:update.part];
 	}
 	
 	[[self documentContents] noteNeedsDisplay];
@@ -2987,20 +2378,11 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) mirroredSelectionByAxis:(Vector3)axis
 {
-	NSArray             *selectedObjects    = [self selectedObjects];
-	TransformComponents snappedComponents   = IdentityComponents;
-	
-	for (id currentObject in selectedObjects) {
-
-		if([currentObject isKindOfClass:[LDrawPart class]])
-		{
-			snappedComponents = [currentObject
-								 componentsMirroredByAxis:axis];
-			
-			[self setTransformation:snappedComponents
-							forPart:currentObject];
-		}
-	}//end update loop
+	for(LDrawPartTransformUpdate *update in [LDrawSelectionOps mirroredTransformUpdatesForSelection:[self selectedObjects]
+																							  axis:axis])
+	{
+		[self setTransformation:update.components forPart:update.part];
+	}
 	
 	[[self documentContents] noteNeedsDisplay];
 
@@ -3014,51 +2396,34 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) setGroup:(id)sender
 {
-	NSCharacterSet				*whitespaceCharacterSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
 	NSArray						*selectedObjects		= [self selectedObjects];
-	NSMutableSet<NSString *>	*groups					= [NSMutableSet set];
-	LDrawObjectWithValue		*objectWithGroup;
-	
-	for (id object in selectedObjects) {
-		if ([object isKindOfClass:[LDrawDirective class]] && [object respondsToSelector:@selector(group)]) {
-			NSString *group = [object group];
-			[groups addObject:group != nil ? group : @""];
-		} else {
-			return;
-		}
+	NSSet<NSString *>			*groups					= [LDrawDocumentTree groupNamesInSelection:selectedObjects];
+
+	if (groups == nil) {
+		return;
 	}
-	
+
 	NSAlert *alert = [NSAlert new];
-	[alert addButtonWithTitle:NSLocalizedString(@"SetButtonName", nil)];
-	[alert addButtonWithTitle:NSLocalizedString(@"CancelButtonName", nil)];
-	alert.messageText = NSLocalizedString(@"MLCADGroupDialogMessage", nil);
-    alert.informativeText = NSLocalizedString(@"MLCADGroupDialogInformative", nil);
+	[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree mlcadGroupDialogSetButtonKey], nil)];
+	[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree mlcadGroupDialogCancelButtonKey], nil)];
+	alert.messageText = NSLocalizedString([LDrawDocumentTree mlcadGroupDialogMessageKey], nil);
+    alert.informativeText = NSLocalizedString([LDrawDocumentTree mlcadGroupDialogInformativeKey], nil);
 	if (groups.count <= 1) {
 		NSTextField *txt = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 240, 24)];
 		txt.stringValue = groups.anyObject;
 		alert.accessoryView = txt;
 	} else {
 		NSComboBox *cmb = [[NSComboBox alloc] initWithFrame:NSMakeRect(0, 0, 240, 24)];
-		[cmb addItemsWithObjectValues:[groups.allObjects filteredArrayUsingPredicate:
-									   [NSPredicate predicateWithFormat:@"SELF.length > 0"]]];
+		[cmb addItemsWithObjectValues:[LDrawDocumentTree nonEmptyGroupNamesFromSet:groups]];
 		alert.accessoryView = cmb;
 	}
 	NSModalResponse responce = [alert runModal];
 	if (responce == NSAlertFirstButtonReturn) {
-		NSString *group = [[((id)alert.accessoryView) stringValue]
-						   stringByTrimmingCharactersInSet:whitespaceCharacterSet];
-		NSMutableArray *directivesWithNewGroup = [NSMutableArray array];
-		for (id object in selectedObjects) {
-			if ([object isKindOfClass:[LDrawDirective class]] && [object respondsToSelector:@selector(group)]) {
-				if (![group isEqualToString:[object group]]) {
-					objectWithGroup = [[LDrawObjectWithValue alloc] initWithObject:object value:group];
-					[directivesWithNewGroup addObject:objectWithGroup];
-				}
-			}
-		}
-		[self setGroupForDirectives:directivesWithNewGroup];
+		NSString *group = [LDrawDocumentTree normalizedGroupName:[((id)alert.accessoryView) stringValue]];
+		[self setGroupForDirectives:[LDrawDocumentTree groupChangesInSelection:selectedObjects
+																   toGroupName:group]];
 	}
-	
+
 }//end setGroup:
 
 #pragma mark -
@@ -3093,81 +2458,52 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addModelFromSelectionClicked:(id)sender
 {
-	NSUndoManager       *	undoManager    = [self undoManager];
-	NSArray *				directives = [self selectedObjects];
-	NSUInteger				count = [directives count];
-	NSUInteger				index;
-	LDrawPart *				anchor = nil;
-	
-	// Find the anchor directive - this will define the location of the
-	// sub-part.
-	for(index = 0; index < count; ++index)
-	{
-		id directive = [directives objectAtIndex:index];
-		if ([directive isKindOfClass:[LDrawPart class]])
-		{
-			anchor = (LDrawPart *) directive;
-			break;
-		}
-	}
-	
+	NSUndoManager *undoManager = [self undoManager];
+	NSArray       *directives  = [self selectedObjects];
+	LDrawPart     *anchor      = [LDrawDocumentTree anchorPartInSelection:directives];
+	Matrix4        anchorMatrix;
+	Matrix4        correction;
+
 	if(anchor == nil)
 		return;
-	
-	LDrawContainer * anchorParent = [anchor enclosingDirective];
+	if([LDrawDocumentTree modelFromSelectionAnchorMatrix:&anchorMatrix
+											  correction:&correction
+											   forAnchor:anchor] == NO)
+		return;
+
+	LDrawContainer *anchorParent = [anchor enclosingDirective];
 	[fileContentsOutline deselectAll:sender];
-	Matrix4 anchorMatrix = [anchor transformationMatrix];
-	Matrix4 correction = Matrix4Invert(anchorMatrix);
 
-	// Build a new model.
-	LDrawMPDModel	*newModel		= [LDrawMPDModel model];
+	LDrawMPDModel *newModel = [LDrawMPDModel model];
 	[self addModel:newModel atIndex:NSNotFound preventNameCollisions:YES];
-	
-	for(index = 0; index < count; ++index)
-	{
-		// For each selected directive, find all of its sub-parts and
-		// change its transform.
-		id directive = [directives objectAtIndex:index];
-		if([directive respondsToSelector:@selector(applyToAllParts:)])
-		{
-			[directive applyToAllParts:^(LDrawPart * part){
-				Matrix4 old = [part transformationMatrix];
-				Matrix4 newM = Matrix4Multiply(old, correction);
-				TransformComponents oldComp = [part transformComponents];
-				
-				[[undoManager prepareWithInvocationTarget:self]
-					setTransformation:oldComp forPart:part];
 
-				[part setTransformationMatrix:&newM];
-			}];
-		}
-	}
-	
-	// Move each directive from the current model to the new sub-model.
-	LDrawStep * step = [[newModel steps] lastObject];
-	
-	for(index = 0; index < count; ++index)
+	for(LDrawOriginPartUpdate *update in [LDrawDocumentTree rebasedPartUpdatesInSelection:directives
+																			  correction:correction])
 	{
-		LDrawDirective * d = [directives objectAtIndex:index];
+		[[undoManager prepareWithInvocationTarget:self]
+			setTransformation:update.previousComponents forPart:update.part];
+
+		Matrix4 matrix = update.matrix;
+		[update.part setTransformationMatrix:&matrix];
+	}
+
+	LDrawStep *step = [LDrawDocumentTree lastStepOfModel:newModel];
+	for(LDrawDirective *d in directives)
+	{
 		[self deleteDirective:d];
-		
 		[self addDirective:d toParent:step atIndex:[[step subdirectives] count]];
 	}
-	
-	// Add one new part that refers to the new sub-model.
-	LDrawColor          *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	LDrawPart           *newPart        = [[LDrawPart alloc] init];
-	[newPart setLDrawColor:selectedColor];
-	[newPart setDisplayName:[newModel modelName]];
-	[newPart setTransformationMatrix:&anchorMatrix];
+
+	LDrawColor *selectedColor = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
+	LDrawPart  *newPart       = [LDrawDocumentTree referencePartForSubmodelName:[newModel modelName]
+																  anchorMatrix:anchorMatrix
+																		 color:selectedColor];
 	[self addStepComponent:newPart parent:anchorParent index:NSNotFound];
-	
-		
-	[undoManager setActionName:NSLocalizedString(@"UndoModelFromSelection", nil)];
-	
-	NSArray * movedDirectives = [NSArray arrayWithObject:newPart];
-	[self flushDocChangesAndSelect:movedDirectives];
-	
+
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree modelFromSelectionUndoActionKey], nil)];
+
+	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newPart]];
+
 }//end addModelFromSelectionClicked:
 
 
@@ -3180,12 +2516,8 @@ void AppendChoicesToNewItem(
 {
 	LDrawStep		*newStep		= [LDrawStep emptyStep];
 	LDrawMPDModel 	*model 			= [self selectedModel];
-	NSInteger 		selectedStepIdx = [model indexOfDirective:[self selectedStep]];
-	NSInteger 		nextStepIdx 	= selectedStepIdx + 1;
-
-	if (nextStepIdx >= model.subdirectives.count) {
-		nextStepIdx = NSNotFound;
-	}
+	NSInteger 		nextStepIdx 	= [LDrawInsertOps indexAfterDirective:[self selectedStep]
+																 inParent:model];
 
 	[self addStep:newStep parent:model index:nextStepIdx];
 
@@ -3224,20 +2556,16 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) addSubmodelReferenceClicked:(id)sender
 {
-	NSString		*partName			= nil;
-	LDrawMPDModel	*referencedModel = [[self documentContents] modelWithName:nil];
-	LDrawMPDModel	*destinationModel	= [self selectedModel];
-	BOOL			circularReference	= NO;
-	
-	if(destinationModel == nil)
-		destinationModel = [[self documentContents] activeModel];
-		
-	partName			= [[sender representedObject] modelName];
-	referencedModel 	= [[self documentContents] modelWithName:partName];
-	circularReference	= [referencedModel containsReferenceTo:[destinationModel modelName]];
+	NSString		*partName			= [[sender representedObject] modelName];
+	LDrawMPDModel	*destinationModel	= [LDrawInsertOps destinationModelPreferring:[self selectedModel]
+																	  fallingBackTo:[[self documentContents] activeModel]];
+	BOOL			circularReference	= [LDrawInsertOps insertingSubmodelNamed:partName
+																		 inFile:[self documentContents]
+														 wouldCycleWithDestination:destinationModel];
 	
 	//We got a part; let's add it!
-	if(partName != nil && circularReference == NO){
+	if([LDrawInsertOps shouldInsertSubmodelNamed:partName whenCircularReference:circularReference])
+	{
 		[self addPartNamed:partName];
 	}
 	
@@ -3245,8 +2573,8 @@ void AppendChoicesToNewItem(
 	{
 		NSAlert *alert = [[NSAlert alloc] init];
 		
-		[alert setMessageText:NSLocalizedString(@"CircularReferenceMessage", nil)];
-		[alert setInformativeText:NSLocalizedString(@"CircularReferenceInformative", nil)];
+		[alert setMessageText:NSLocalizedString([LDrawInsertOps circularReferenceMessageKey], nil)];
+		[alert setInformativeText:NSLocalizedString([LDrawInsertOps circularReferenceInformativeKey], nil)];
 		
 		NSBeep();
 		[alert beginSheetModalForWindow:[self windowForSheet] completionHandler:nil];
@@ -3261,23 +2589,14 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addLineClicked:(id)sender
 {
-	LDrawLine       *newLine        = [[LDrawLine alloc] init];
-	NSUndoManager   *undoManager    = [self undoManager];
 	LDrawColor      *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	Point3          position        = ZeroPoint3;
-	
-	if(self->lastSelectedPart)
-	{
-		position = [lastSelectedPart position];
-	}
-	[newLine setVertex1:position];
-	[newLine setVertex2:V3Make(position.x + 80, position.y - 80, position.z)];
-	
-	[newLine setLDrawColor:selectedColor];
+	LDrawLine       *newLine        = [LDrawInsertOps lineAtAnchor:[LDrawInsertOps anchorPositionForPart:self->lastSelectedPart]
+															 color:selectedColor];
+	NSUndoManager   *undoManager    = [self undoManager];
 	
 	[self addStepComponent:newLine parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddLine", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoLine], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newLine]];
 	
 }//end addLineClicked:
@@ -3290,24 +2609,14 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addTriangleClicked:(id)sender
 {
-	LDrawTriangle	*newTriangle	= [[LDrawTriangle alloc] init];
-	NSUndoManager	*undoManager	= [self undoManager];
 	LDrawColor      *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	Point3          position        = ZeroPoint3;
-	
-	if(self->lastSelectedPart)
-	{
-		position = [lastSelectedPart position];
-	}
-	[newTriangle setVertex1:position];
-	[newTriangle setVertex2:V3Make(position.x + 80, position.y -   0, position.z)];
-	[newTriangle setVertex3:V3Make(position.x + 40, position.y -  40, position.z)];
-	
-	[newTriangle setLDrawColor:selectedColor];
+	LDrawTriangle	*newTriangle	= [LDrawInsertOps triangleAtAnchor:[LDrawInsertOps anchorPositionForPart:self->lastSelectedPart]
+																 color:selectedColor];
+	NSUndoManager	*undoManager	= [self undoManager];
 	
 	[self addStepComponent:newTriangle parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddTriangle", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoTriangle], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newTriangle]];
 	
 }//end addTriangleClicked:
@@ -3321,25 +2630,14 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addQuadrilateralClicked:(id)sender
 {
-	LDrawQuadrilateral  *newQuadrilateral   = [[LDrawQuadrilateral alloc] init];
-	NSUndoManager       *undoManager        = [self undoManager];
 	LDrawColor          *selectedColor      = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	Point3              position            = ZeroPoint3;
-	
-	if(self->lastSelectedPart)
-	{
-		position = [lastSelectedPart position];
-	}
-	[newQuadrilateral setVertex1:position];
-	[newQuadrilateral setVertex2:V3Make(position.x + 80, position.y -   0, position.z)];
-	[newQuadrilateral setVertex3:V3Make(position.x + 80, position.y -  80, position.z)];
-	[newQuadrilateral setVertex4:V3Make(position.x +  0, position.y -  80, position.z)];
-	
-	[newQuadrilateral setLDrawColor:selectedColor];
+	LDrawQuadrilateral  *newQuadrilateral   = [LDrawInsertOps quadrilateralAtAnchor:[LDrawInsertOps anchorPositionForPart:self->lastSelectedPart]
+																			  color:selectedColor];
+	NSUndoManager       *undoManager        = [self undoManager];
 	
 	[self addStepComponent:newQuadrilateral parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddQuadrilateral", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoQuadrilateral], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newQuadrilateral]];
 	
 }//end addQuadrilateralClicked:
@@ -3353,23 +2651,14 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addConditionalClicked:(id)sender
 {
-	LDrawConditionalLine    *newConditional = [[LDrawConditionalLine alloc] init];
-	NSUndoManager           *undoManager    = [self undoManager];
 	LDrawColor              *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	Point3          position        = ZeroPoint3;
+	LDrawConditionalLine    *newConditional = [LDrawInsertOps conditionalLineAtAnchor:[LDrawInsertOps anchorPositionForPart:self->lastSelectedPart]
+																			   color:selectedColor];
+	NSUndoManager           *undoManager    = [self undoManager];
 
-	if(self->lastSelectedPart)
-	{
-		position = [lastSelectedPart position];
-	}
-	[newConditional setVertex1:position];
-	[newConditional setVertex2:V3Make(position.x + 80, position.y - 80, position.z)];
-
-	[newConditional setLDrawColor:selectedColor];
-	
 	[self addStepComponent:newConditional parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddConditionalLine", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoConditionalLine], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newConditional]];
 	
 }//end addConditionalClicked:
@@ -3382,12 +2671,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addCommentClicked:(id)sender
 {
-	LDrawComment	*newComment		= [[LDrawComment alloc] init];
+	LDrawComment	*newComment		= [LDrawInsertOps comment];
 	NSUndoManager	*undoManager	= [self undoManager];
 	
 	[self addStepComponent:newComment parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddComment", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoComment], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newComment]];
 	
 }//end addCommentClicked:
@@ -3400,12 +2689,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addRawCommandClicked:(id)sender
 {
-	LDrawMetaCommand	*newCommand		= [[LDrawMetaCommand alloc] init];
+	LDrawMetaCommand	*newCommand		= [LDrawInsertOps metaCommand];
 	NSUndoManager		*undoManager	= [self undoManager];
 	
 	[self addStepComponent:newCommand parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddMetaCommand", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoMetaCommand], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newCommand]];
 	
 }//end addCommentClicked:
@@ -3418,12 +2707,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addLPubCommandClicked:(id)sender
 {
-	LPubCommand		*newCommand		= [[LPubCommand alloc] init];
+	LPubCommand		*newCommand		= [LDrawInsertOps lpubCommand];
 	NSUndoManager	*undoManager	= [self undoManager];
 	
 	[self addStepComponent:newCommand parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddLPubCommand", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoLPubCommand], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newCommand]];
 	
 }//end addLPubCommandClicked:
@@ -3437,13 +2726,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addRemoveGroupClicked:(id)sender
 {
-	LPubRemoveGroup	*newCommand		= [[LPubRemoveGroup alloc] init];
+	LPubRemoveGroup	*newCommand		= [LDrawInsertOps lpubRemoveGroup];
 	NSUndoManager	*undoManager	= [self undoManager];
 	
-	newCommand.groupName = @"group name";
 	[self addStepComponent:newCommand parent:nil index:NSNotFound];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddRemoveGroup", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoRemoveGroup], nil)];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newCommand]];
 	
 }//end addRemoveGroupClicked:
@@ -3463,49 +2751,21 @@ void AppendChoicesToNewItem(
 - (IBAction) addRelatedPartClicked:(id)sender
 {
 #if WANT_RELATED_PARTS
-	RelatedPart *		relatedPart 	= [sender representedObject];	
-	NSString *			partName		= [relatedPart child];
-	NSUndoManager		*undoManager	= [self undoManager];
-	LDrawColor			*selectedColor	= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	TransformComponents transformation	= IdentityComponents;
-	id					parentPart		= nil;
-	LDrawPart * 		newPart 		= nil;
-	NSUInteger			i				= 0;
-	NSUInteger			counter 		= 0;
+	RelatedPart   *relatedPart   = [sender representedObject];
+	NSUndoManager *undoManager   = [self undoManager];
+	LDrawColor    *selectedColor = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
 
-	// We have to save the selection up-front - as we go adding parts, the selection
-	// will change out from under us.
-	NSArray *			parentParts		= [NSArray arrayWithArray:selectedDirectives];			 // Selection at start that spawns new parts
-	NSMutableArray *	newParts		= [NSMutableArray arrayWithCapacity:[parentParts count]];// All new parts added, one for each selected part.
-		
-	// Step 1: for each selected part, we are going to add one child part.
-	
-	counter = [parentParts count];
-	for(i = 0; i < counter; ++i)
+	// Snapshot selection first — inserting parts would change it under us.
+	NSArray *parentParts = [NSArray arrayWithArray:selectedDirectives];
+	NSArray *newParts    = [relatedPart childPartsForSelection:parentParts color:selectedColor];
+
+	for(LDrawPart *newPart in newParts)
 	{
-		parentPart = [parentParts objectAtIndex:i];
-		if([parentPart isKindOfClass:[LDrawPart class]])
-		{
-			// Create our new part to match the parent.
-			newPart = [[LDrawPart alloc] init];
-			[newPart setLDrawColor:selectedColor];
-			[newPart setDisplayName:partName];
-			
-			// Collect the transformation from the previous part and apply it to 
-			// the new one.  Ideally we'd use the selection someday, but
-			// we can only add one directive for now.
-			transformation = [parentPart transformComponents];
-			transformation = [relatedPart calcChildPosition:transformation];			
-			[newPart setTransformComponents:transformation];
-			
-			// Add the part to our model and remember it for later.
-			[self addStepComponent:newPart parent:nil index:NSNotFound];
-			[newParts addObject:newPart]; 
-		}
+		[self addStepComponent:newPart parent:nil index:NSNotFound];
 	}
 
 	[self flushDocChangesAndSelect:newParts];
-	[undoManager setActionName:NSLocalizedString(@"UndoAddRelatedPart", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoRelatedPart], nil)];
 #endif	
 }//end addRelatedPartClicked
 
@@ -3561,38 +2821,18 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) insertSynthesizableDirective:(id)sender
 {
-    LDrawLSynth		*synthesizedObject	= [[LDrawLSynth alloc] init];
 	NSDictionary	*synthEntry			= [sender representedObject];
 	NSString		*type				= [synthEntry objectForKey:@"LSYNTH_TYPE"];
-    LDrawColor		*selectedColor		= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-    NSUndoManager	*undoManager		= [self undoManager];
-	NSString		*undoName			= nil;
+	LDrawColor		*selectedColor		= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
+	NSUndoManager	*undoManager		= [self undoManager];
+	LDrawLSynth		*synthesizedObject	= [[LSynthConfiguration sharedInstance]
+											synthesizableDirectiveWithType:type
+																	 color:selectedColor];
 
-    [synthesizedObject setLDrawColor:selectedColor];
-    [synthesizedObject setLsynthType:type];
-
-    // The represented object passed in from the menu click indicates whether it's a band or a hose.
-    // All well and good, and useful when e.g. deciding how and whether to display constraints.
-    // However we also have to consider Parts, which can be either Band Parts or Hose Parts, and
-    // need to retain their Part-ness.  To this end we must do a manual lookup of the actual class.
-    // TODO: another place that config should provide a convenience method for this
-    if ([[[[LDrawApplication shared] lsynthConfiguration] getQuickRefHoses] containsObject:type])
-	{
-        [synthesizedObject setLsynthClass:LSYNTH_HOSE];
-    }
-    else if ([[[[LDrawApplication shared] lsynthConfiguration] getQuickRefBands] containsObject:type])
-	{
-        [synthesizedObject setLsynthClass:LSYNTH_BAND];
-    }
-    else if ([[[[LDrawApplication shared] lsynthConfiguration] getQuickRefParts] containsObject:type])
-	{
-        [synthesizedObject setLsynthClass:LSYNTH_PART];
-    }
-	
 	[self addStepComponent:synthesizedObject parent:nil index:NSNotFound];
 
-	undoName = [NSString stringWithFormat:NSLocalizedString(@"UndoAddLSynth", nil), [synthEntry objectForKey:@"title"]];
-	[undoManager setActionName:undoName];
+	[undoManager setActionName:[NSString stringWithFormat:NSLocalizedString([LDrawInsertOps undoActionFormatKeyForAddingLSynth], nil),
+														  [synthEntry objectForKey:@"title"]]];
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:synthesizedObject]];
 
 }//end insertSynthesizedDirective:
@@ -3609,70 +2849,56 @@ void AppendChoicesToNewItem(
 //==============================================================================
 -(void) insertLSynthConstraint:(id)sender
 {
-    NSUndoManager	*undoManager		= [self undoManager];
-	
-    // We are fussier than for synthesizable containers; we can *only* be added to them.
-    // We just have to worry about the relative position
+	NSUndoManager	*undoManager		= [self undoManager];
+	LDrawContainer	*parent				= nil;
+	NSInteger		 index				= NSNotFound;
 
-    if(self->lastSelectedPart != nil)
+	if(self->lastSelectedPart == nil)
 	{
-        LDrawPart *constraint = [[LDrawPart alloc] init];
-        [constraint setDisplayName:[[sender representedObject] objectForKey:@"partName"]];
-        [constraint setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]]; // parent's colour
-		
-        LDrawContainer *parent = nil;
-        NSInteger index = NSNotFound;
-        LDrawLSynth *synthesizablePart = nil;
-        TransformComponents transformation = [lastSelectedPart transformComponents];
-        [constraint setTransformComponents:transformation];
-		
-        // LDrawLSynth part selected, add at the end
-        if ([self->lastSelectedPart isKindOfClass:[LDrawLSynth class]])
-		{
-            parent = (LDrawLSynth *)self->lastSelectedPart;
-            index = [[parent subdirectives] count];
-            synthesizablePart = (LDrawLSynth *)parent;
-			
-            //  Add our constraint, resynthesize and mark as needing display
-			[self addDirective:constraint toParent:parent atIndex:index];
-            [synthesizablePart synthesize];
-			[synthesizablePart noteNeedsDisplay];
-        }
-		
-        // If a constraint is selected (i.e. a part with an LDrawLSynth parent) add ourselves after it
-        else if (	[self->lastSelectedPart isKindOfClass:[LDrawDirective class]]
-				 &&	[[fileContentsOutline parentForItem:self->lastSelectedPart] isMemberOfClass:[LDrawLSynth class]])
-		{
-			parent = [fileContentsOutline parentForItem:self->lastSelectedPart];
-			NSInteger row = [parent indexOfDirective:self->lastSelectedPart];
-			index = row + 1;
-			synthesizablePart = (LDrawLSynth *)parent;
+		return;
+	}
 
-			//  Add our constraint, resynthesize and mark as needing display
-			[self addDirective:constraint toParent:parent atIndex:index];
-			[synthesizablePart synthesize];
-			[synthesizablePart noteNeedsDisplay];
-        }
-		
-        else {
-            NSLog(@"BIG FAT CONSTRAINT ADDING ERROR");
-        }
-		
-		// Show the new element.
-		if(parent)
-		{
-			[self flushDocChangesAndSelect:[NSArray arrayWithObject:constraint]];
-			[undoManager setActionName:NSLocalizedString(@"UndoAddLSynthConstraint", nil)];
-		}
-		
-    }
+	if([LDrawDocumentTree lsynthInsertionParent:&parent
+										  index:&index
+								forLastSelected:self->lastSelectedPart] == NO)
+	{
+		NSLog(@"BIG FAT CONSTRAINT ADDING ERROR");
+		return;
+	}
+
+	LDrawPart *constraint = [LDrawInsertOps partNamed:[[sender representedObject] objectForKey:@"partName"]
+												color:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+								 copyingTransformFrom:lastSelectedPart];
+
+	[self addDirective:constraint toParent:parent atIndex:index];
+	[(LDrawLSynth *)parent synthesize];
+	[parent noteNeedsDisplay];
+
+	[self flushDocChangesAndSelect:[NSArray arrayWithObject:constraint]];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoLSynthConstraint], nil)];
+
 } // end insertLSynthConstraint
 
+//========== surroundLSynthConstraints: ========================================
+//
+// Purpose:		Placeholder for a future Model → LSynth → Surround Selection
+//				command. Would wrap the current selection in INSIDE/OUTSIDE
+//				constraints. Menu wiring is still commented out in
+//				-buildMainMenu.
+//
+//==============================================================================
 -(void) surroundLSynthConstraints:(id)sender
 {
     NSLog(@"surroundLSynthConstraints");
 }
 
+//========== invertLSynthConstraintSelection: ==================================
+//
+// Purpose:		Placeholder for a future Model → LSynth → Invert Selection
+//				command. Would flip INSIDE/OUTSIDE on selected constraints.
+//				Menu wiring is still commented out in -buildMainMenu.
+//
+//==============================================================================
 -(void) invertLSynthConstraintSelection:(id)sender
 {
     NSLog(@"invertLSynthConstraintSelection");
@@ -3686,60 +2912,34 @@ void AppendChoicesToNewItem(
 //==============================================================================
 -(void) insertINSIDEOUTSIDELSynthDirective:(id)sender
 {
-    NSUndoManager	*undoManager		= [self undoManager];
+	NSUndoManager	*undoManager		= [self undoManager];
+	LDrawContainer	*parent				= nil;
+	NSInteger		 index				= NSNotFound;
+	NSString		*command			= [LDrawDocumentTree lsynthDirectionCommandForMenuTag:[(NSMenuItem *)sender tag]];
+	NSString		*undoKey			= [LDrawDocumentTree lsynthInsertUndoKeyForMenuTag:[(NSMenuItem *)sender tag]];
 
-    if(self->lastSelectedPart != nil)
+	if(self->lastSelectedPart == nil || command == nil)
 	{
-        LDrawLSynthDirective	*direction	= [[LDrawLSynthDirective alloc] init];
-        LDrawContainer			*parent		= nil;
-        NSInteger				index		= NSNotFound;
-		NSString				*undoName	= nil;
+		return;
+	}
+	if([LDrawDocumentTree lsynthInsertionParent:&parent
+										  index:&index
+								forLastSelected:self->lastSelectedPart] == NO)
+	{
+		return;
+	}
 
-        // Set direction based on menuItem tag
-        if ([(NSMenuItem *)sender tag] == lsynthInsertINSIDETag) {
-            [direction setCommandString:@"INSIDE"];
-			undoName = NSLocalizedString(@"UndoAddLSynthInside", nil);
-        }
-        else if ([(NSMenuItem *)sender tag] == lsynthInsertOUTSIDETag) {
-            [direction setCommandString:@"OUTSIDE"];
-			undoName = NSLocalizedString(@"UndoAddLSynthOutside", nil);
-        }
-        else if ([(NSMenuItem *)sender tag] == lsynthInsertCROSSTag) {
-            [direction setCommandString:@"CROSS"];
-			undoName = NSLocalizedString(@"UndoAddLSynthCross", nil);
-        }
+	LDrawLSynthDirective *direction = [[LDrawLSynthDirective alloc] init];
+	[direction setCommandString:command];
 
-        // LDrawLSynth part selected, add at the end
-        if ([self->lastSelectedPart isKindOfClass:[LDrawLSynth class]])
-		{
-            parent = (LDrawLSynth *)self->lastSelectedPart;
-            index = [[parent subdirectives] count];
-        }
+	[self addDirective:direction toParent:parent atIndex:index];
+	[(LDrawLSynth *)parent synthesize];
+	[parent noteNeedsDisplay];
 
-        // If a constraint is selected (i.e. a part with an LDrawLSynth parent) add ourselves after it
-        else if (	[self->lastSelectedPart isKindOfClass:[LDrawDirective class]]
-				 &&	[[fileContentsOutline parentForItem:self->lastSelectedPart] isMemberOfClass:[LDrawLSynth class]])
-		{
-            parent = [fileContentsOutline parentForItem:self->lastSelectedPart];
-			NSInteger row = [parent indexOfDirective:self->lastSelectedPart];
-            index = row + 1;
-        }
+	[self flushDocChangesAndSelect:[NSArray arrayWithObject:direction]];
+	[[self foremostWindow] makeFirstResponder:mostRecentLDrawView];
+	[undoManager setActionName:NSLocalizedString(undoKey, nil)];
 
-		[self addDirective:direction toParent:parent atIndex:index];
-        [(LDrawLSynth *)parent synthesize];
-        [parent noteNeedsDisplay];
-		
-		// Show the new element.
-		if(parent)
-		{
-			[self flushDocChangesAndSelect:[NSArray arrayWithObject:direction]];			
-			// Allow us to immediately use the keyboard to move the new part.
-			[[self foremostWindow] makeFirstResponder:mostRecentLDrawView];
-			
-			[undoManager setActionName:undoName];
-		}
-
-    }
 }//end insertINSIDEOUTSIDELSynthDirective:
 
 
@@ -3752,129 +2952,39 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) convertToHighResPrimitives:(id)sender
 {
-	NSUndoManager			*undoManager		= [self undoManager];
-	NSMutableArray			*directives			= [[self selectedObjects] mutableCopy];
-	NSMutableArray			*replacements		= [NSMutableArray array];
-	NSMutableArray			*unknownLines		= [NSMutableArray array];
-	NSString				*kOriginalDirective	= @"originalDirective";
-	NSString				*kHighResDirectives	= @"highResDirectives";
-	
+	NSUndoManager  *undoManager  = [self undoManager];
+	NSMutableArray *directives   = [[LDrawDocumentTree highResSourceDirectivesFromSelection:[self selectedObjects]
+																				activeModel:self.documentContents.activeModel] mutableCopy];
+	NSMutableArray *unknownLines = [NSMutableArray array];
+
 	[fileContentsOutline deselectAll:sender];
-	
-	if(directives.count == 0)
+
+	for(int axis = 0; axis < 3; axis++)
 	{
-		LDrawStep *step = self.documentContents.activeModel.steps.firstObject;
-		directives = step.subdirectives;
-	}
-	
-	for (int axis = 0; axis < 3; axis++)
-	{
-		if (![LDrawHighResPrimitives hasRotationByAxis:axis forPrimitives:directives]) {
-			continue;
-		}
-		
-		// do rotate
-		
-		for (LDrawDirective *directive in directives)
+		NSArray<LDrawHighResReplacement *> *replacements =
+			[LDrawHighResPrimitives replacementsForDirectives:directives
+														 axis:(Axis)axis
+												 unknownLines:unknownLines];
+
+		for(LDrawHighResReplacement *replacement in replacements)
 		{
-			LDrawHighResPrimitives *newDirectives = [LDrawHighResPrimitives highResPrimitivesFor:directive axis:axis];
-			if (newDirectives.primitives.count > 0)
-			{
-				NSDictionary *replacement = @{ kOriginalDirective: directive, kHighResDirectives: newDirectives };
-				[replacements addObject:replacement];
-			}
-			else if ([directive isKindOfClass:[LDrawLine class]])
-			{
-				[unknownLines addObject:directive];
-			}
-		}
-		
-		if (unknownLines.count > 0 && replacements.count > 0)
-		{
-			NSMutableArray *extraReplacements = [NSMutableArray array];
-			NSMutableArray *allNewLines = [NSMutableArray array];
-			for (LDrawLine *line in unknownLines)
-			{
-				for (NSDictionary *replacement in replacements)
-				{
-					NSMutableArray *newLines = [NSMutableArray arrayWithObject:[line copy]];
-					LDrawDirective *originalDidective = replacement[kOriginalDirective];
-					RotationParameters rotation = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).rotation;
-					Matrix4 forvardMatrix = rotation.rotationMatrix;
-					Matrix4 oppositeMatrix = Matrix4Transpose(forvardMatrix);
-					
-					if ([LDrawHighResPrimitives isPrimitive:originalDidective includesLine:line])
-					{
-						LDrawLine *newLine = line;
-						LDrawLine *newLine2 = line;
-						for (int i = 0; i < 2; i++)
-						{
-							newLine = [newLine copy];
-							newLine2 = [newLine2 copy];
-							
-							[LDrawHighResPrimitives rotateLine:newLine byMatrix:forvardMatrix];
-							if (![LDrawHighResPrimitives isLine:newLine withinLines:allNewLines])
-							{
-								[newLines addObject:newLine];
-							}
-							
-							[LDrawHighResPrimitives rotateLine:newLine2 byMatrix:oppositeMatrix];
-							if (![LDrawHighResPrimitives isLine:newLine2 withinLines:allNewLines]) {
-								[newLines addObject:newLine2];
-							}
-						}
-						
-						for (NSInteger i = newLines.count - 1; i > 0; i--)
-						{
-							LDrawLine *newLine = newLines[i];
-							NSArray *newDirectives = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).primitives;
-							BOOL isInside = NO;
-							for (LDrawDirective *directive in newDirectives)
-							{
-								if ([LDrawHighResPrimitives isPrimitive:directive includesLine:newLine])
-								{
-									isInside = YES;
-									break;
-								}
-							}
-							if (!isInside)
-							{
-								[newLines removeObjectAtIndex:i];
-							}
-						}
-						if (newLines.count > 1)
-						{
-							[allNewLines addObjectsFromArray:newLines];
-							LDrawHighResPrimitives *newPrimitives = [[LDrawHighResPrimitives alloc] initWithPrimitives:newLines rotation:rotation];
-							NSDictionary *replacement = @{ kOriginalDirective: line, kHighResDirectives: newPrimitives };
-							[extraReplacements addObject:replacement];
-							break;
-						}
-					}
-				}
-			}
-			[replacements addObjectsFromArray:extraReplacements];
-		}
-		
-		for (NSDictionary *replacement in replacements)
-		{
-			LDrawDirective *originalDidective = replacement[kOriginalDirective];
-			NSArray *newDirectives = ((LDrawHighResPrimitives *)replacement[kHighResDirectives]).primitives;
-			LDrawContainer * parent = [originalDidective enclosingDirective];
+			LDrawDirective *originalDirective = replacement.original;
+			NSArray        *newDirectives     = replacement.highRes.primitives;
+			LDrawContainer *parent            = [originalDirective enclosingDirective];
 			if(parent)
 			{
-				NSInteger index = [parent indexOfDirective:originalDidective];
-				[self deleteDirective:originalDidective];
-				for (LDrawDirective *directive in newDirectives) {
+				NSInteger index = [parent indexOfDirective:originalDirective];
+				[self deleteDirective:originalDirective];
+				for(LDrawDirective *directive in newDirectives)
+				{
 					[self addDirective:directive toParent:parent atIndex:index++];
 				}
 			}
-			[directives removeObjectIdenticalTo:originalDidective];
+			[directives removeObjectIdenticalTo:originalDirective];
 		}
-		[replacements removeAllObjects];
 	}
-	
-	[undoManager setActionName:NSLocalizedString(@"UndoConvertPrimitives", nil)];
+
+	[undoManager setActionName:NSLocalizedString([LDrawDocumentTree convertPrimitivesUndoActionKey], nil)];
 	[[self documentContents] noteNeedsDisplay];
 }//end convertToHighResPrimitives:
 
@@ -3976,19 +3086,13 @@ void AppendChoicesToNewItem(
 		   inDirection:(Vector3)moveVector
 {
 	NSUndoManager	*undoManager	= [self undoManager];
-	Vector3			 opposite		= {0};
-	
-	//Prepare the undo.
-	
-	opposite.x = -(moveVector.x);
-	opposite.y = -(moveVector.y);
-	opposite.z = -(moveVector.z);
+	Vector3			 opposite		= V3Negate(moveVector);
 	
 	{
 			[[undoManager prepareWithInvocationTarget:self]
 				moveDirective: object
 				  inDirection: opposite ];
-		[undoManager setActionName:NSLocalizedString(@"UndoMove", nil)];
+		[undoManager setActionName:NSLocalizedString([LDrawSelectionOps moveUndoActionKey], nil)];
 		
 		//Do the move.
 		[object moveBy:moveVector];
@@ -4059,7 +3163,7 @@ void AppendChoicesToNewItem(
 			rotatePart: part
 			 byDegrees: oppositeRotation
 		   aroundPoint: rotationCenter  ]; //undo: rotate backwards
-	[undoManager setActionName:NSLocalizedString(@"UndoRotate", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawSelectionOps rotateUndoActionKey], nil)];
 	
 	
 	{
@@ -4079,18 +3183,13 @@ void AppendChoicesToNewItem(
 - (void) setElement:(LDrawDrawableElement *)element toHidden:(BOOL)hideFlag
 {
 	NSUndoManager	*undoManager	= [self undoManager];
-	NSString		*actionName		= nil;
-	
-	if(hideFlag == YES)
-		actionName = NSLocalizedString(@"UndoHidePart", nil);
-	else
-		actionName = NSLocalizedString(@"UndoShowPart", nil);
+	NSString		*actionName		= [LDrawSelectionOps hideShowUndoActionKeyForHidden:hideFlag];
 	
 	{
 			[[undoManager prepareWithInvocationTarget:self]
 			setElement:element
 			  toHidden:(!hideFlag) ];
-		[undoManager setActionName:actionName];
+		[undoManager setActionName:NSLocalizedString(actionName, nil)];
 		
 		[element setHidden:hideFlag];
 	}
@@ -4111,7 +3210,7 @@ void AppendChoicesToNewItem(
 	[[undoManager prepareWithInvocationTarget:self]
 												setObject:object
 												  toColor:[object LDrawColor] ];
-	[undoManager setActionName:NSLocalizedString(@"UndoColor", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawSelectionOps colorUndoActionKey], nil)];
 	
 	{
 		[object setLDrawColor:newColor];
@@ -4141,7 +3240,7 @@ void AppendChoicesToNewItem(
 				setTransformation:currentComponents
 						  forPart:part ];
 		
-		[undoManager setActionName:NSLocalizedString(@"UndoSnapToGrid", nil)];
+		[undoManager setActionName:NSLocalizedString([LDrawSelectionOps snapToGridUndoActionKey], nil)];
 	}
 	[part noteNeedsDisplay];
 	
@@ -4155,26 +3254,18 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) setGroupForDirectives:(NSArray *)directivesAndGroups
 {
-	NSUndoManager			*undoManager			= [self undoManager];
-	NSMutableArray			*directivesAndOldGroups = [NSMutableArray array];
-	LDrawObjectWithValue	*directiveWithNewGroup;
-	LDrawObjectWithValue	*directiveWithOldGroup;
-	
+	NSUndoManager *undoManager = [self undoManager];
+
 	if (directivesAndGroups.count == 0) {
 		return;
 	}
 
-	for (directiveWithNewGroup in directivesAndGroups) {
-		LDrawDirective *directive = directiveWithNewGroup.object;
-		NSString *oldGroup = [directive performSelector:@selector(group)];
-		directiveWithOldGroup = [[LDrawObjectWithValue alloc] initWithObject:directive value:oldGroup != nil ? oldGroup : @""];
-		[directivesAndOldGroups addObject:directiveWithOldGroup];
+	NSArray *directivesAndOldGroups = [LDrawDocumentTree invertedGroupChanges:directivesAndGroups];
+	[LDrawDocumentTree applyGroupChanges:directivesAndGroups];
 
-		[directive performSelector:@selector(setGroup:) withObject:directiveWithNewGroup.value];
-	}
 	[[undoManager prepareWithInvocationTarget:self] setGroupForDirectives:directivesAndOldGroups];
 	[[undoManager prepareWithInvocationTarget:fileContentsOutline] reloadData];
-	[undoManager setActionName:NSLocalizedString(@"UndoSetGroup", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawSelectionOps setGroupUndoActionKey], nil)];
 	
 }//end setGroupForDirectives:
 
@@ -4194,17 +3285,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (NSInteger)outlineView:(NSOutlineView *)outlineView numberOfChildrenOfItem:(id)item
 {
-	NSInteger numberOfChildren = 0;
-	
-	//root object; return the number of submodels
-	if(item == nil)
-		numberOfChildren = [[documentContents submodels] count];
-	
-	//a step or model (or something); return the nth directives command
-	else if([item isKindOfClass:[LDrawContainer class]])
-		numberOfChildren = [[item subdirectives] count];
-
-	return numberOfChildren;
+	return [LDrawDocumentTree outlineChildCountOfItem:item file:documentContents];
 	
 }//end outlineView:numberOfChildrenOfItem:
 
@@ -4218,11 +3299,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (BOOL)outlineView:(NSOutlineView *)outlineView isItemExpandable:(id)item
 {
-	//You can expand models and steps.
-	if([item isKindOfClass:[LDrawContainer class]] )
-		return YES;
-	else
-		return NO;
+	return [LDrawDocumentTree outlineItemIsExpandable:item];
 	
 }//end outlineView:isItemExpandable:
 
@@ -4237,17 +3314,7 @@ void AppendChoicesToNewItem(
 			child:(NSInteger)index
 		   ofItem:(id)item
 {
-	NSArray *children = nil;
-	
-	//children of the root object; the nth of models.
-	if(item == nil)
-		children = [documentContents submodels];
-		
-	//a container; return the nth subdirective.	
-	else if([item isKindOfClass:[LDrawContainer class]])
-		children = [item subdirectives];
-
-	return [children objectAtIndex:index];
+	return [LDrawDocumentTree outlineChild:index ofItem:item file:documentContents];
 	
 }//end outlineView:child:ofItem:
 
@@ -4263,14 +3330,9 @@ void AppendChoicesToNewItem(
   objectValueForTableColumn:(NSTableColumn *)tableColumn
 					 byItem:(id)item
 {
-	//Start off with a simple error message. Hopefully we won't see it.
-	id representation = @"<Something went wrong here.>";
+	id representation = [LDrawDocumentTree outlineDescriptionForItem:item];
 	
-	//an LDraw directive; thank goodness! It knows how to describe itself.
-	// The description will form the basis of the attributed text for the cell.
 	if([item isKindOfClass:[LDrawDirective class]]) {
-		representation = [item browsingDescription];
-		
 		//Apply formatting to our little string.
 		representation = [self formatDirective:item
 					  withStringRepresentation:representation];
@@ -4300,38 +3362,22 @@ void AppendChoicesToNewItem(
 		 writeItems:(NSArray *)items
 	   toPasteboard:(NSPasteboard *)pboard
 {
-	NSInteger		numberItems = [items count];
-	NSMutableArray	*rowIndexes = [NSMutableArray arrayWithCapacity:numberItems];
-	NSInteger		itemIndex	= 0;
-	NSInteger		counter 	= 0;
-	LDrawDirective	*firstItem	= [items objectAtIndex:0];
-	BOOL disallow = NO;
-	
-	// Disallow dragging if it is the only step in the model
-	if(		[items count] == 1
-	   &&	[firstItem isKindOfClass:[LDrawStep class]]
-	   &&	[[[firstItem enclosingModel] steps] count] == 1)
-	{
-		disallow = YES;
-	}
+	BOOL			disallow	= [LDrawDocumentTree shouldDisallowDraggingItems:items];
+	NSArray         *rowIndexes = nil;
 	
 	//Write the objects as data.
 	[self writeDirectives:items toPasteboard:pboard];
 	
 	//Now write the row indexes out. We'll use them to delete the original 
 	// objects in the event of a successful drag.
-	for(counter = 0; counter < numberItems; counter++){
-		itemIndex = [outlineView rowForItem:[items objectAtIndex:counter]];
-		[rowIndexes addObject:[NSNumber numberWithInteger:itemIndex]];
-	}
-	[pboard addTypes:[NSArray arrayWithObjects:LDrawDragSourceRowsPboardType, LDrawDisallowDragToSourcePboardType, nil]
+	rowIndexes = [LDrawClipboard outlineDragSourceRowIndexesForItems:items
+												  rowForItemTarget:outlineView];
+	[pboard addTypes:[LDrawClipboard outlineDragSourcePasteboardTypes]
 			   owner:nil];
 	[pboard setPropertyList:rowIndexes forType:LDrawDragSourceRowsPboardType];
 	
-	if(disallow)
-		[pboard setPropertyList:(id)kCFBooleanTrue forType:LDrawDisallowDragToSourcePboardType];
-	else
-		[pboard setPropertyList:(id)kCFBooleanFalse forType:LDrawDisallowDragToSourcePboardType];
+	[pboard setPropertyList:[LDrawClipboard outlineDragDisallowPropertyListForDisallow:disallow]
+					 forType:LDrawDisallowDragToSourcePboardType];
 	
 	return YES;
 	
@@ -4352,86 +3398,37 @@ void AppendChoicesToNewItem(
 {
 	NSPasteboard		*pasteboard		= [info draggingPasteboard];
 	NSOutlineView		*sourceView		= [info draggingSource];
-	NSDragOperation		 dragOperation	= NSDragOperationNone;
-	NSKeyedUnarchiver 	*unarchiver		= nil;
+	NSArray             *types          = [pasteboard types];
+	BOOL                 disallow       = [LDrawClipboard outlinePasteboardDisallowsDragToSourceFromTypes:types
+																			 disallowPropertyList:
+																			 [pasteboard propertyListForType:LDrawDisallowDragToSourcePboardType]];
 
 	//Fix our logic for handling drags to the root of the outline.
-	if(newParent == nil)
-		newParent = [self documentContents];
-	
-	//We must make sure we have the proper pasteboard type available.
-	if(		index != NSOutlineViewDropOnItemIndex //not a "drop-on" operation.
-	   &&	[[pasteboard types] containsObject:LDrawDirectivePboardType])
+	newParent = [LDrawDocumentTree outlineDropParent:newParent file:[self documentContents]];
+
+	NSArray *archivedObjects = nil;
+	if(index != NSOutlineViewDropOnItemIndex
+	   && [types containsObject:LDrawDirectivePboardType])
 	{
-		
-		//This drag is acceptable. Now figure out the operation.
-		if(sourceView == outlineView)
-			dragOperation = NSDragOperationMove;
-		else
-			dragOperation = NSDragOperationCopy;
-		
-		//---------- Eliminate Illegal Positions -------------------------------
-		
-		//Read the first object off the pasteboard so we can figure 
-		// out where this drop is allowed to happen.
-		NSArray			*objects		= [pasteboard propertyListForType:LDrawDirectivePboardType];
-		NSData			*data			= nil;
-		id				 currentObject	= nil;
-		
-		//Unarchive.
-		data			= [objects objectAtIndex:0];
-		unarchiver		= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
-		[unarchiver setRequiresSecureCoding:NO];
-		currentObject	= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
-		[unarchiver finishDecoding];
-		
-		//Now pop the data into our file.
-		if(		sourceView == outlineView
-		   &&	[[pasteboard types] containsObject:LDrawDisallowDragToSourcePboardType]
-		   &&	[[pasteboard propertyListForType:LDrawDisallowDragToSourcePboardType] boolValue])
-		{
-//			NSLog(@"killing prohibited-into-source drag");
-			dragOperation	= NSDragOperationNone;
-		}
-		
-		else if(	[currentObject	isKindOfClass:[LDrawModel class]] == YES
-				&&	[newParent		isKindOfClass:[LDrawFile class]] == NO)
-		{
-//			NSLog(@"killing model-not-in-file drag");
-			dragOperation	= NSDragOperationNone;
-		}
-			
-		else if(	[currentObject	isKindOfClass:[LDrawStep class]] == YES
-				&&	[newParent		isKindOfClass:[LDrawModel class]] == NO)
-		{
-//			if([newParent isKindOfClass:[LDrawStep class]])
-//				[outlineView setDropItem:[newParent enclosingDirective]
-//							dropChildIndex:0];
-//			NSLog(@"rejecting step drag to %@", [newParent class]);
-			dragOperation	= NSDragOperationNone;
-		}
-		
-		else if(	[currentObject	isKindOfClass:[LDrawContainer class]] == NO
-				&&	[newParent		isKindOfClass:[LDrawContainer class]] == NO)
-		{
-//			NSLog(@"killing thingy-not-in-step");
-			dragOperation	= NSDragOperationNone;
-		}
-
-        // Prohibit dragging non-constraint objects onto an LDrawLSynth part
-        else if (   [currentObject	isKindOfClass:[LDrawPart class]]
-                 && [newParent isKindOfClass:[LDrawLSynth class]]
-                 && ![[LSynthConfiguration sharedInstance] isLSynthConstraint:currentObject]) {
-            dragOperation	= NSDragOperationNone;
-        }
-
-        // Prohibit dragging things onto a container that it's not happy to accept
-        else if (   [newParent isKindOfClass:[LDrawContainer class]]
-                 && ![(LDrawContainer *)newParent acceptsDroppedDirective:currentObject]) {
-            dragOperation	= NSDragOperationNone;
-        }
+		archivedObjects = [pasteboard propertyListForType:LDrawDirectivePboardType];
 	}
-	return dragOperation;
+
+	LDrawOutlineDropKind kind = [LDrawDocumentTree outlineDropKindForValidateDropWithProposedParent:newParent
+																							  file:[self documentContents]
+																						dropOnItem:(index == NSOutlineViewDropOnItemIndex)
+																				   pasteboardTypes:types
+																			  disallowDragToSource:disallow
+																					 sameOutline:(sourceView == outlineView)
+																		archivedDirectiveObjects:archivedObjects];
+	if(kind == LDrawOutlineDropMove)
+	{
+		return NSDragOperationMove;
+	}
+	if(kind == LDrawOutlineDropCopy)
+	{
+		return NSDragOperationCopy;
+	}
+	return NSDragOperationNone;
 
 }//end outlineView:validateDrop:proposedItem:proposedChildIndex:
 
@@ -4451,18 +3448,18 @@ void AppendChoicesToNewItem(
 		 childIndex:(NSInteger)dropIndex
 {
 	//Identify the root object if needed.
-	if(newParent == nil)
-		newParent = [self documentContents];
+	newParent = [LDrawDocumentTree outlineDropParent:newParent file:[self documentContents]];
 	
 	NSPasteboard    *pasteboard             = [info draggingPasteboard];
 	NSUndoManager   *undoManager            = [self undoManager];
 	NSOutlineView   *sourceView             = [info draggingSource];
-	NSMutableArray  *doomedObjects          = [NSMutableArray array];
+	BOOL            sameOutline             = (sourceView == outlineView);
+	NSArray         *doomedObjects          = [NSArray array];
 	NSArray         *pastedObjects          = nil;
-	BOOL            renameDuplicateModels   = YES;
+	BOOL            renameDuplicateModels   = (sameOutline == NO);
 	NSInteger       counter                 = 0;
 	
-	if(sourceView == outlineView)
+	if(sameOutline)
 	{
 		//We dragged within the same table. That means we expect the original 
 		// objects dragged to "move" to the new position. Well, we can't 
@@ -4472,30 +3469,11 @@ void AppendChoicesToNewItem(
 		//
 		// Note we're doing this *before* moving, so that the indexes are 
 		// still correct.
-		NSIndexSet		*rowsToDelete	= nil;
-		
-		//Gather up the objects we'll be removing.
-		rowsToDelete = outlineView.selectedRowIndexes;
-		[rowsToDelete enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL * stop) {
-			NSInteger doomedIndex = idx;
-			LDrawDirective *objectToDelete = [outlineView itemAtRow:doomedIndex];
-			[doomedObjects addObject:objectToDelete];
-		}];
-		
-		// When rearranging models within a file, don't do "copy X" renaming.
-		renameDuplicateModels = NO;
+		doomedObjects = [LDrawClipboard outlineItemsAtRowIndexes:outlineView.selectedRowIndexes
+												 itemAtRowTarget:outlineView];
 	}
 
-    // Gather up (unique) parents that are donating child nodes to this move
-    // If the parents support tidying up they'll be given a chance later.
-    // This is intended for e.g. containers such as LDrawSynth that may need
-    // to take action if their subdirectives change.
-    NSMutableSet *donatingParents = [[NSMutableSet alloc] init];
-    for (LDrawPart *part in doomedObjects) {
-		NSObject * donatingParent = [sourceView parentForItem:part];
-		if(donatingParent != nil)
-			[donatingParents addObject:donatingParent];
-    }
+	NSSet *donatingParents = [LDrawDocumentTree donatingParentsFromMovedDirectives:doomedObjects];
 
     // Do The Move.
 	pastedObjects = [self pasteFromPasteboard:pasteboard
@@ -4504,28 +3482,19 @@ void AppendChoicesToNewItem(
 										index:dropIndex
 								nextToSimilar:NO];
 
-	if(sourceView == outlineView)
+	if(sameOutline)
 	{
 		//Now that we've inserted the new objects, we need to delete the 
 		// old ones.
 		for(counter = 0; counter < [doomedObjects count]; counter++)
 			[self deleteDirective:[doomedObjects objectAtIndex:counter]];
 		
-		[undoManager setActionName:NSLocalizedString(@"UndoReorder", nil)];
+		NSString *undoKey = [LDrawDocumentTree outlineDropUndoActionKeyForSameOutline:sameOutline];
+		if(undoKey != nil)
+			[undoManager setActionName:NSLocalizedString(undoKey, nil)];
 	}
 
-    // Ask the source and target parents to cleanup if they can e.g. used for
-    // updating container selection state
-    for (LDrawDirective *parent in [donatingParents allObjects]) {
-        if ([parent isKindOfClass:[LDrawContainer class]] &&
-            [parent respondsToSelector:@selector(cleanupAfterDropIsDonor:)]) {
-            [parent performSelector:@selector(cleanupAfterDropIsDonor:) withObject:[NSNumber numberWithBool:YES]];
-        }
-    }
-
-    if ([newParent respondsToSelector:@selector(cleanupAfterDropIsDonor:)]) {
-        [newParent performSelector:@selector(cleanupAfterDropIsDonor:) withObject:[NSNumber numberWithBool:NO]];
-    }
+	[LDrawDocumentTree cleanupAfterOutlineDropDonors:donatingParents destination:newParent];
 
     //And lastly, select the dragged objects.
 	[(LDrawFileOutlineView*)outlineView selectObjects:pastedObjects];
@@ -4551,16 +3520,13 @@ void AppendChoicesToNewItem(
 	  forTableColumn:(NSTableColumn *)tableColumn
 				item:(id)item
 {
-	NSString	*imageName = nil;
-	NSImage		*theImage;
-	
-	if([item isKindOfClass:[LDrawDirective class]])
-		imageName = [item iconName];
+	NSString	*imageName = [LDrawDocumentTree outlineIconNameForItem:item];
+	NSImage		*theImage  = nil;
 		
-	if(imageName == nil || [imageName isEqualToString:@""])
-		theImage = nil;
-	else
+	if(imageName != nil)
+	{
 		theImage = [NSImage imageNamed:imageName];
+	}
 		
 	[(IconTextCell *)cell setImage:theImage];
 	
@@ -4586,12 +3552,12 @@ void AppendChoicesToNewItem(
 	NSColor *questionableColor	= [NSColor colorWithCalibratedWhite:0.3 alpha:1.0];
 	NSColor *confidentColor 	= [NSColor colorWithCalibratedWhite:0.1 alpha:1.0];
 	
-	[self->coordinateFieldX setTextColor:(confidence.x == 0.0) ? questionableColor : confidentColor];
-	[self->coordinateFieldY setTextColor:(confidence.y == 0.0) ? questionableColor : confidentColor];
-	[self->coordinateFieldZ setTextColor:(confidence.z == 0.0) ? questionableColor : confidentColor];
-	[self->coordinateLabelX setTextColor:(confidence.x == 0.0) ? questionableColor : confidentColor];
-	[self->coordinateLabelY setTextColor:(confidence.y == 0.0) ? questionableColor : confidentColor];
-	[self->coordinateLabelZ setTextColor:(confidence.z == 0.0) ? questionableColor : confidentColor];
+	[self->coordinateFieldX setTextColor:[LDrawUtilities hoverCoordinateAxisIsQuestionable:confidence.x] ? questionableColor : confidentColor];
+	[self->coordinateFieldY setTextColor:[LDrawUtilities hoverCoordinateAxisIsQuestionable:confidence.y] ? questionableColor : confidentColor];
+	[self->coordinateFieldZ setTextColor:[LDrawUtilities hoverCoordinateAxisIsQuestionable:confidence.z] ? questionableColor : confidentColor];
+	[self->coordinateLabelX setTextColor:[LDrawUtilities hoverCoordinateAxisIsQuestionable:confidence.x] ? questionableColor : confidentColor];
+	[self->coordinateLabelY setTextColor:[LDrawUtilities hoverCoordinateAxisIsQuestionable:confidence.y] ? questionableColor : confidentColor];
+	[self->coordinateLabelZ setTextColor:[LDrawUtilities hoverCoordinateAxisIsQuestionable:confidence.z] ? questionableColor : confidentColor];
 	
 	[self->coordinateFieldX setHidden:NO];
 	[self->coordinateFieldY setHidden:NO];
@@ -4639,44 +3605,25 @@ void AppendChoicesToNewItem(
 		acceptDrop:(id < NSDraggingInfo >)info
 		directives:(NSArray *)directives
 {
-	NSPasteboard    *pasteboard         = [NSPasteboard pasteboardWithName:@"BricksmithDragAndDropPboard"];
+	NSPasteboard    *pasteboard         = [NSPasteboard pasteboardWithName:[LDrawClipboard viewDropPasteboardName]];
 	NSUndoManager   *undoManager        = [self undoManager];
-	NSInteger       selectionCount      = [self->selectedDirectives count];
-	id              currentDirective    = nil;
-	id              dragPart            = nil;
-	Point3          originalPosition    = ZeroPoint3;
-	Point3          dragPosition        = ZeroPoint3;
-	Vector3         displacement        = ZeroPoint3;
-	NSInteger       counter             = 0;
-	NSInteger       dropDirectiveIndex  = 0;
-	
-	// Being dragged within the same document. We must simply apply the 
-	// transforms from the dragged parts to the original parts, which have been 
-	// hidden during the drag. 
-	//
-	// Exception: If we have no current selection, it means this was a copy 
-	//			  drag. Just paste instead of updating.
-	if(		[[info draggingSource] respondsToSelector:@selector(LDrawDirective)]
-	   &&	[[info draggingSource] LDrawDirective] == [self documentContents]
-	   &&	selectionCount > 0 )
-	{
-		for(counter = 0; counter < selectionCount; counter++)
-		{
-			currentDirective	= [self->selectedDirectives objectAtIndex:counter];
-			
-			if([currentDirective isKindOfClass:[LDrawDrawableElement class]])
-			{
-				dragPart		= [directives objectAtIndex:dropDirectiveIndex];
-				originalPosition= [(LDrawDrawableElement*)currentDirective position];
-				dragPosition	= [(LDrawDrawableElement*)dragPart position];
-				displacement	= V3Sub(dragPosition, originalPosition);
+	id               sourceFile         = nil;
 
-				[self moveDirective:currentDirective inDirection:displacement];
-				[currentDirective setHidden:NO];
-				
-				dropDirectiveIndex++;
-			}
+	if([[info draggingSource] respondsToSelector:@selector(LDrawDirective)])
+		sourceFile = [[info draggingSource] LDrawDirective];
+
+	if([LDrawDocumentTree viewDropIsSameDocumentMoveFromSource:sourceFile
+													toDocument:[self documentContents]
+												selectionCount:[self->selectedDirectives count]])
+	{
+		NSArray *moves = [LDrawDocumentTree viewDropMovesForSelection:self->selectedDirectives
+													 droppedCopies:directives];
+
+		for(LDrawViewDropMove *move in moves)
+		{
+			[self moveDirective:move.directive inDirection:move.displacement];
 		}
+		[LDrawDocumentTree unhideDirectivesInViewDropMoves:moves];
 	}
 	else
 	{
@@ -4687,7 +3634,7 @@ void AppendChoicesToNewItem(
 									index:NSNotFound
 							nextToSimilar:NO];
 
-		[undoManager setActionName:NSLocalizedString(@"UndoDrop", nil)];
+		[undoManager setActionName:NSLocalizedString([LDrawDocumentTree viewDropPasteUndoActionKey], nil)];
 	}
 	
 }//end LDrawView:acceptDrop:
@@ -4752,20 +3699,13 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) LDrawViewPartsWereDraggedIntoOblivion:(LDrawView *)glView
 {
-	NSArray *directivesToDelete = [self->selectedDirectives mutableCopy];
-	id		currentDirective	= nil;
-	
-	for(currentDirective in directivesToDelete)
+	NSArray *directivesToDelete = [LDrawDocumentTree viewDragOblivionDirectivesFromSelection:self->selectedDirectives];
+
+	[LDrawDocumentTree restoreVisibilityBeforeDeletingViewDragOblivionDirectives:directivesToDelete];
+
+	for(id currentDirective in directivesToDelete)
 	{
-		if([currentDirective isKindOfClass:[LDrawDrawableElement class]])
-		{
-			// Even though the directive has been drag-deleted, we still need to 
-			// delete it in an undo-friendly way. That means we need to restore 
-			// its visibility, since we hid the part when dragging began. 
-			[currentDirective setHidden:NO];
-		
-			[self deleteDirective:currentDirective];
-		}
+		[self deleteDirective:currentDirective];
 	}
 	
 }//end LDrawViewPartsWereDraggedIntoOblivion:
@@ -4780,13 +3720,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (TransformComponents) LDrawViewPreferredPartTransform:(LDrawView *)glView
 {
-	TransformComponents	components	 = IdentityComponents;
-	
-	// If we have a previously-selected part, honor it.
-	if(self->lastSelectedPart != nil)
-		components = [self->lastSelectedPart transformComponents];
-		
-	return components;
+	return [LDrawInsertOps preferredPartTransformFromPart:self->lastSelectedPart];
 	
 }//end LDrawViewPreferredPartTransform:
 
@@ -4841,24 +3775,9 @@ void AppendChoicesToNewItem(
  {
 	if(markedSelection)
 	{
-		// Since we are going to do a bulk selection, calculate 
-		// the union of the past selection and this one if we are
-		// extending.  Otherwise we only want the new selection.
-		NSMutableArray * all;
-		NSArray * sel = (all = (selectionMode != SelectionReplace)
-			? [NSMutableArray arrayWithArray:markedSelection] 
-			: [NSMutableArray arrayWithArray:directivesToSelect]) ;
-		
-		if(selectionMode == SelectionExtend)
-			[all addObjectsFromArray:directivesToSelect];
-		else if(selectionMode == SelectionSubtract)
-			[all removeObjectsInArray:directivesToSelect];
-		else if(selectionMode == SelectionIntersection)
-		{
-			NSMutableSet *orig = [NSMutableSet setWithArray:markedSelection];
-			[orig intersectSet:[NSSet setWithArray:directivesToSelect]];
-			sel = [orig allObjects];
-		}
+		NSArray *sel = [LDrawSelectionOps mergedSelectionWithMarked:markedSelection
+													  newDirectives:directivesToSelect
+															   mode:selectionMode];
 		
 		if([sel count])		
 		{
@@ -4921,50 +3840,28 @@ void AppendChoicesToNewItem(
  writeDirectivesToPasteboard:(NSPasteboard *)pasteboard
 					  asCopy:(BOOL)copyFlag
 {
-	NSInteger       selectionCount      = [self->selectedDirectives count];
-	NSMutableArray  *archivedParts      = [NSMutableArray array];
-	id              currentDirective    = nil;
-	NSData          *partData           = nil;
-	NSInteger       counter             = 0;
-	BOOL            success             = NO;
-	
-	// Archive selected moveable directives.
-	for(counter = 0; counter < selectionCount; counter++)
+	NSArray *drawables     = nil;
+	NSArray *archivedParts = [LDrawClipboard archivedDraggingDataFromSelection:self->selectedDirectives
+															 drawableOriginals:&drawables];
+
+	[LDrawSelectionOps prepareViewDragOriginals:drawables asCopy:copyFlag];
+	if(copyFlag)
 	{
-		currentDirective = [self->selectedDirectives objectAtIndex:counter];
-		
-		if([currentDirective isKindOfClass:[LDrawDrawableElement class]])
-		{
-			partData	= [NSKeyedArchiver archivedDataWithRootObject:currentDirective requiringSecureCoding:NO error:nil];
-			[archivedParts addObject:partData];
-			
-			if(copyFlag == NO)
-			{
-				// Not copying; we want the dragging instance to be the only 
-				// visual manifestation of this part as it moves. 
-				[currentDirective setHidden:YES];
-			}
-		}
-	}
-	
-	// If copying, DESELECT all current directives as a visual indicator that 
-	// the originals will stay put. 
-	if(copyFlag == YES)
-	{
+		// If copying, DESELECT all current directives as a visual indicator that
+		// the originals will stay put.
 		self->selectedDirectivesBeforeCopyDrag = [self->selectedDirectives copy];
 		[self selectDirective:nil byExtendingSelection:NO];
 	}
-	
+
 	// Set up pasteboard
 	if([archivedParts count] > 0)
 	{
-		[pasteboard declareTypes:[NSArray arrayWithObject:LDrawDraggingPboardType] owner:self];
+		[pasteboard declareTypes:[LDrawClipboard viewRegisteredDragTypes] owner:self];
 		[pasteboard setPropertyList:archivedParts forType:LDrawDraggingPboardType];
-		
-		success = YES;
+		return YES;
 	}
 
-	return success;
+	return NO;
 	
 }//end LDrawView:writeDirectivesToPasteboard:asCopy:
 
@@ -5013,17 +3910,9 @@ void AppendChoicesToNewItem(
  constrainMinCoordinate:(CGFloat)proposedMin
 			ofSubviewAt:(NSInteger)offset
 {
-	CGFloat	actualMin	= 0.0;
-
-	if(		sender == self->fileContentsSplitView
-	   &&	offset == 0 )
-	{
-		actualMin = 100; // only return a collapsible minimum for the file contents
-	}
-	else
-		actualMin = proposedMin;
-	
-	return actualMin;
+	return [LDrawPreferences constrainedSplitMinCoordinate:proposedMin
+											forFileContents:(sender == self->fileContentsSplitView)
+											  subviewOffset:offset];
 	
 }//end splitView:constrainMinCoordinate:ofSubviewAt:
 
@@ -5039,21 +3928,10 @@ void AppendChoicesToNewItem(
  constrainMaxCoordinate:(CGFloat)proposedMax
 			ofSubviewAt:(NSInteger)offset
 {
-	CGFloat	actualMax	= 0.0;
-	
-	// In order to allow the detail column to collapse, we have to do something 
-	// strange: specify a maximum position for the main graphic view pane. When 
-	// the divider is dragged more than halfway beyond that maximum point, the 
-	// detail column (view index 1) automatically collapses. Weird...
-	if(		sender == self->viewportArranger
-		&&	offset == 0 ) // yes, that offset is correct. This method is NEVER called with offset == 1.
-	{
-		actualMax = NSMaxX([sender frame]) - 80; // min size of 80 for the detail column
-	}
-	else
-		actualMax = proposedMax;
-	
-	return actualMax;
+	return [LDrawPreferences constrainedSplitMaxCoordinate:proposedMax
+										forViewportArranger:(sender == self->viewportArranger)
+											  subviewOffset:offset
+											  containerMaxX:NSMaxX([sender frame])];
 	
 }//end splitView:constrainMinCoordinate:ofSubviewAt:
 
@@ -5071,10 +3949,12 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) splitView:(NSSplitView *)sender resizeSubviewsWithOldSize:(NSSize)oldSize
 {
+	BOOL inLiveResize = [[[sender window] contentView] inLiveResize];
+
 	// Make sure the width of the File Contents column remains constant during 
 	// live window resize. 
 	if(		sender == self->fileContentsSplitView
-		&&	[[[sender window] contentView] inLiveResize] == YES )
+		&&	inLiveResize )
 	{
 		NSView	*fileContentsPane	= [[sender subviews] objectAtIndex:0];
 		NSView	*graphicPane		= [[sender subviews] objectAtIndex:1];
@@ -5094,7 +3974,7 @@ void AppendChoicesToNewItem(
 	// Preferred Viewport Layout, in which there is a set of detail views on the 
 	// right. People who prefer otherwise are up a creek.
 	if(		sender == self->viewportArranger
-		&&	[[[sender window] contentView] inLiveResize] == YES
+		&&	inLiveResize
 		&&	[[sender subviews] count] == 2 )
 	{
 		NSView	*mainViewPane		= [[sender subviews] objectAtIndex:0];
@@ -5365,15 +4245,17 @@ void AppendChoicesToNewItem(
 	NSDate *outerDate = attributes.fileModificationDate;
 	
 	if ([outerDate compare:innerDate] == NSOrderedDescending) {
+		BOOL fileNewer = YES;
 
-		if (self.isDocumentEdited) {
+		if ([LDrawDocumentTree shouldPromptUnsavedExternalChangeWhenDocumentEdited:self.isDocumentEdited
+																fileNewerThanKnown:fileNewer]) {
 			alertIsPresenting = YES;
 			dispatch_async(dispatch_get_main_queue(), ^{
 				NSAlert *alert = [NSAlert new];
-				alert.messageText = [NSString stringWithFormat:NSLocalizedString(@"UnsavedDocumentMessage", nil), [self displayName]];
-				alert.informativeText = NSLocalizedString(@"UnsavedDocumentInformative", nil);
-				[alert addButtonWithTitle:NSLocalizedString(@"UnsavedDocumentRevertButton", nil)];
-				[alert addButtonWithTitle:NSLocalizedString(@"UnsavedDocumentKeepButton", nil)];
+				alert.messageText = [NSString stringWithFormat:NSLocalizedString([LDrawDocumentTree unsavedDocumentMessageFormatKey], nil), [self displayName]];
+				alert.informativeText = NSLocalizedString([LDrawDocumentTree unsavedDocumentInformativeKey], nil);
+				[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree unsavedDocumentRevertButtonKey], nil)];
+				[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree unsavedDocumentKeepButtonKey], nil)];
 
 				NSInteger buttonReturned = [alert runModal];
 				if (buttonReturned == NSAlertFirstButtonReturn)
@@ -5382,7 +4264,8 @@ void AppendChoicesToNewItem(
 				}
 				alertIsPresenting = NO;
 			});
-		} else {
+		} else if ([LDrawDocumentTree shouldSilentRevertExternalChangeWhenDocumentEdited:self.isDocumentEdited
+																	  fileNewerThanKnown:fileNewer]) {
 			// reload without any prompt
 			dispatch_async(dispatch_get_main_queue(), ^{
 				[self revertToContentsOfURL:self.fileURL ofType:self.fileType error:nil];
@@ -5412,23 +4295,6 @@ void AppendChoicesToNewItem(
 	NSPasteboard    *pasteboard     = [NSPasteboard generalPasteboard];
 	LDrawMPDModel   *activeModel    = [[self documentContents] activeModel];
 	BOOL            enable          = NO;
-	NSUInteger		selCount		= [selectedItems count];
-	id				selTypes		= nil;
-	
-	if(selCount > 0)
-	{
-		selTypes = [[selectedItems objectAtIndex:0] class];
-		
-		for(id obj in selectedItems)
-		{
-			id mt = [obj class];
-			if(mt != selTypes)
-			{
-				selTypes = nil;
-				break;
-			}
-		}
-	}
 	
 	switch(tag)
 	{
@@ -5439,10 +4305,7 @@ void AppendChoicesToNewItem(
         ////////////////////////////////////////
 
         case revealInFinderTag:
-            enable = YES;
-            if ([self fileURL] == nil) {
-                enable = NO;
-            }
+            enable = ([self fileURL] != nil);
             break;
 
 		////////////////////////////////////////
@@ -5461,62 +4324,34 @@ void AppendChoicesToNewItem(
 		case rotateNegativeYTag:
 		case rotatePositiveZTag:
 		case rotateNegativeZTag:
-			if([selectedItems count] > 0)
-				enable = YES;
+			enable = [selectedItems count] > 0;
 			break;
 		
 		case changeOriginMenuTag:
 		case axesByPartRotationMenuTag:
-			if(selCount == 1 && selTypes == [LDrawPart class])
-				enable = YES;
+			enable = [LDrawDocumentTree selectionCanChangeOrigin:selectedItems];
 			break;
 		
 		case changeOriginByRotationMenuTag:
-			if(selCount == 1 && selTypes == [LDrawPart class] && [PartSpecific hasRotationCenter:selectedPart.displayName])
-				enable = YES;
+			enable = [LDrawDocumentTree selectionCanChangeOriginByRotation:selectedItems];
 			break;
 		
 		case splitModelMenuTag:
-			if(selCount > 0 && selTypes == [LDrawPart class])
-				enable = YES;
+			enable = [LDrawDocumentTree selectionCanSplitModel:selectedItems];
 			break;
 			
 		case moveToParentMenuTag:
-			if(selCount > 0 && selTypes != [LDrawMPDModel class] && selTypes != [LDrawStep class])
-				enable = YES;
+			enable = [LDrawDocumentTree selectionCanMoveToParentModel:selectedItems];
 			break;
 		
 		case splitStepMenuTag:
-			// We can only split a step if the selection is entirely direct children of steps.
-			// Also, all parent steps must be from the same model.
-			if([selectedItems count] > 0)
-			{
-				LDrawModel * commonModel = nil;
-				enable = YES;
-				for(id currentDirective in self->selectedDirectives)
-				{
-					LDrawModel * model = [currentDirective enclosingModel];
-					LDrawContainer * parent = [currentDirective enclosingDirective];
-					if(commonModel == nil)
-						commonModel = model;
-						
-					if(parent == nil || model == nil ||					// Selection has no parent or
-						model != commonModel ||							// Two selections have different MPD models or
-						![parent isKindOfClass:[LDrawStep class]])		// Not a part of a step.
-					{
-						enable = NO;
-						break;
-					}
-				}
-			}	
-			else
-				enable = NO;
+			// Direct children of steps, all from the same model.
+			enable = [LDrawDocumentTree selectionCanSplitStep:selectedItems];
 			break;
 			
 		
 		case pasteMenuTag:
-			if([[pasteboard types] containsObject:LDrawDirectivePboardType])
-				enable = YES;
+			enable = [[pasteboard types] containsObject:LDrawDirectivePboardType];
 			break;
 		
 		
@@ -5529,25 +4364,17 @@ void AppendChoicesToNewItem(
 		//The grid menus are always enabled, but this is a fine place to keep 
 		// track of their state.
 		case gridFineMenuTag:
-			[menuItem setState:(self->gridMode == gridModeFine)];
-			enable = YES;
-			break;
 		case gridMediumMenuTag:
-			[menuItem setState:(self->gridMode == gridModeMedium)];
-			enable = YES;
-			break;
 		case gridCoarseMenuTag:
-			[menuItem setState:(self->gridMode == gridModeCoarse)];
+			[menuItem setState:[LDrawGrid menuItemShouldBeSelectedForGridModeTag:tag
+																   currentMode:self->gridMode]];
 			enable = YES;
 			break;
 		
 		case coordModelMenuTag:
-			[menuItem setState:(self->gridOrientation == gridOrientationModel)];
-			enable = YES;
-			break;
-			
 		case coordPartMenuTag:
-			[menuItem setState:(self->gridOrientation == gridOrientationPart)];
+			[menuItem setState:[LDrawGrid menuItemShouldBeSelectedForGridOrientationTag:tag
+																 currentOrientation:self->gridOrientation]];
 			enable = YES;
 			break;
 			
@@ -5558,11 +4385,11 @@ void AppendChoicesToNewItem(
 		////////////////////////////////////////
 		
 		case useSelectionForSpinCenterMenuTag:
-			enable = ([selectedItems count] > 0);
+			enable = [selectedItems count] > 0;
 			break;
 		
 		case resetSpinCenterMenuTag:
-			enable = !V3EqualPoints(ZeroPoint3, [[self->documentContents activeModel] rotationCenter]);
+			enable = (V3EqualPoints(ZeroPoint3, [[self->documentContents activeModel] rotationCenter]) == NO);
 			break;
 
 		case stepDisplayMenuTag:
@@ -5571,10 +4398,8 @@ void AppendChoicesToNewItem(
 			break;
 			
 		case nextStepMenuTag:
-			enable = ([activeModel stepDisplay] == YES);
-			break;
 		case previousStepMenuTag:
-			enable = ([activeModel stepDisplay] == YES);
+			enable = [activeModel stepDisplay];
 			break;
 		
 		
@@ -5585,11 +4410,11 @@ void AppendChoicesToNewItem(
 		////////////////////////////////////////
 			
 		case hidePieceMenuTag:
-			enable = [self elementsAreSelectedOfVisibility:YES]; //there are visible parts to hide.
+			enable = [LDrawSelectionOps selection:selectedItems containsVisibility:YES];
 			break;
 			
 		case showPieceMenuTag:
-			enable = [self elementsAreSelectedOfVisibility:NO]; //there are invisible parts to show.
+			enable = [LDrawSelectionOps selection:selectedItems containsVisibility:NO];
 			break;
 			
 		case snapToGridMenuTag:
@@ -5601,21 +4426,7 @@ void AppendChoicesToNewItem(
 			break;		
 			
 		case setGroupMenuTag:
-			if (selectedItems.count > 0)
-			{
-				enable = YES;
-				for (id directive in self->selectedDirectives)
-				{
-					if (![directive isKindOfClass:[LDrawDirective class]] ||
-						![directive respondsToSelector:@selector(group)])
-					{
-						enable = NO;
-						break;
-					}
-				}
-			}
-			else
-				enable = NO;
+			enable = [LDrawDocumentTree selectionCanSetGroup:selectedItems];
 			break;
 
 		////////////////////////////////////////
@@ -5625,19 +4436,17 @@ void AppendChoicesToNewItem(
 		////////////////////////////////////////
 		
 		case addModelSelectionMenuTag:
-			if(selCount > 0 && selTypes == [LDrawPart class])
-				enable = YES;
+			enable = [LDrawDocumentTree selectionCanSplitModel:selectedItems];
 			break;
 		
 		case submodelReferenceMenuTag:
 			//we can't insert a reference to the active model into itself.
 			// That would be an inifinite loop.
-			enable = (activeModel != [menuItem representedObject]);
+			enable = [LDrawInsertOps canInsertSubmodel:[menuItem representedObject]
+									   intoActiveModel:activeModel];
 			break;
 
 		case relatedPartMenuTag:
-			// Related parts is enabled if it has a sub-menu, which happens when we have
-			// usable suggestions.
 			enable = [menuItem submenu] != nil;
 			break;
 
@@ -5651,8 +4460,7 @@ void AppendChoicesToNewItem(
 		case lsynthBandConstraintMenuTag:
             // We can only insert a constraint into an LDrawLSynth part.
             // Ensure it (or a constraint) is selected
-            enable = ([selectedPart isKindOfClass:[LDrawLSynth class]] ||
-                      [[fileContentsOutline parentForItem:selectedPart] isKindOfClass:[LDrawLSynth class]]);
+            enable = [LDrawInsertOps canInsertLSynthConstraintForPart:selectedPart];
             break;
 
 // TODO: add these in later
@@ -5730,8 +4538,7 @@ void AppendChoicesToNewItem(
 	//Must have a part selected.
 	if([identifier isEqualToString:TOOLBAR_SNAP_TO_GRID]  )
 	{
-		if(selectedPart != nil)
-			enabled = YES;
+		enabled = (selectedPart != nil);
 	}
 	
 	//We don't have special conditions for it; give it a pass.
@@ -5869,83 +4676,34 @@ void AppendChoicesToNewItem(
 		[relatedItem setSubmenu:nil];
 	}
 	
-	// We're going to go looking for the selection's part name.  This code will find
-	// a string if the entire selection shares a single part-type, or nil if we have
-	// no parts selected or two parts with different reference names.
-	//
-	// This is over-kill for now, but written in anticipation of someday being able
-	// to add a related child to a set of parents that all can accept the same
-	// relation.
-	NSString *	parentName = nil;
-	NSUInteger	selCount, pidx;
+	// Shared part-type among selected parts, or nil if none or mixed types.
+	NSString *parentName = [LDrawSelectionOps sharedReferenceNameInSelection:selectedDirectives];
 	
-	selCount = [selectedDirectives count];
-	for(pidx = 0; pidx < selCount; ++pidx)
+	if(parentName != nil)
 	{
-		LDrawDirective * p = [selectedDirectives objectAtIndex:pidx];
-		if([p isKindOfClass:[LDrawPart class]])
+		LDrawRelatedPartsMenuPlan *plan = [[RelatedParts sharedRelatedParts] menuPlanForParentName:parentName];
+
+		if(plan != nil)
 		{
-			LDrawPart * pp = (LDrawPart *) p;
-			NSString * this_name = [pp referenceName];
-			if(parentName == nil || [this_name compare:parentName] == NSOrderedSame)
-			{
-				parentName = this_name;
-			} 
-			else
-			{
-				parentName = nil;
-				break;
-			}
-		}
-	}
-	
-	// For now: require not only same parent, but also that we have only one part
-	// selected, because we can only insert the child for one part.
-	if(parentName != nil && selCount > 0)
-	{
-		RelatedParts * s = [RelatedParts sharedRelatedParts];
-		
-		NSArray * kids = [s getChildPartList:parentName];
-		NSArray * roles = [s getChildRoleList:parentName];
-		
-		assert(([kids count] == 0) == ([roles count] == 0));
-		
-		if([kids count])
-		{
-			NSMenu * kids_and_roles = [[NSMenu alloc] initWithTitle:@"Related Parts"];
-			
+			NSMenu * kids_and_roles = [[NSMenu alloc] initWithTitle:[RelatedParts relatedPartsMenuTitle]];
+
 			[relatedItem setSubmenu:kids_and_roles];
 			[relatedItem setEnabled:TRUE];
-			
-			// If we only have one role or one child type of part, don't build two-level menus - there's no need.
-			BOOL is_flat = ([kids count] == 1 || [roles count] == 1);
-			
-			NSUInteger count, i;
-			
-			// Do all children
-			count = [kids count];
-			for (i = 0; i < count; ++i)
+
+			for(LDrawRelatedPartsMenuGroup *group in plan.childGroups)
 			{
-				NSString * child = [kids objectAtIndex:i];
-				NSArray * choices = [s getRelatedPartList:parentName withChild:child];
-				// If this particular relation has only one child fo the role, we will 'flatten' the menu, rather than having a menu item that has a submenu with
-				// only one meu item.
-				AppendChoicesToNewItem(kids_and_roles,[[choices objectAtIndex:0] childName],choices,(is_flat || [choices count] == 1) ? rpm_merged : rpm_list_role);
+				AppendChoicesToNewItem(kids_and_roles, group);
 			}
-			
-			// If we made the 'flat' menu, we don't need a second menu by roles - everything is there in the first menu.
-			if(!is_flat)
+
+			if([plan.roleGroups count] > 0)
 			{
 				[kids_and_roles addItem:[NSMenuItem separatorItem]];
-				
-				count = [roles count];
-				for(i = 0; i < count; ++i)
+
+				for(LDrawRelatedPartsMenuGroup *group in plan.roleGroups)
 				{
-					NSString * role = [roles objectAtIndex:i];
-					NSArray * choices = [s getRelatedPartList:parentName withRole:role];
-					AppendChoicesToNewItem(kids_and_roles,role,choices,[choices count] == 1 ? rpm_merged : rpm_list_child);
+					AppendChoicesToNewItem(kids_and_roles, group);
 				}
-			}			
+			}
 		}
 	}
 	
@@ -6021,26 +4779,20 @@ void AppendChoicesToNewItem(
 - (LDrawView *) main3DViewport
 {
 	NSArray<LDrawView*>*	allViewports	= [self all3DViewports];
-	CGFloat 				largestArea 	= 0.0;
-	CGFloat 				currentArea 	= 0.0;
-	NSSize					currentSize 	= NSZeroSize;
-	LDrawView*				largestViewport = nil;
+	NSMutableArray			*areas			= [NSMutableArray arrayWithCapacity:[allViewports count]];
 
 	// Find the largest viewport. We'll assume that's the one the user wants to 
 	// be the main one. 
 	for(LDrawView *currentViewport in allViewports)
 	{
-		currentSize = currentViewport.frame.size;
-		currentArea = currentSize.width * currentSize.height;
-		
-		if(currentArea > largestArea)
-		{
-			largestArea     = currentArea;
-			largestViewport = currentViewport;
-		}
+		NSSize currentSize = currentViewport.frame.size;
+		[areas addObject:[NSNumber numberWithDouble:currentSize.width * currentSize.height]];
 	}
-		
-	return largestViewport;
+
+	NSUInteger largestIndex = [LDrawViewOps indexOfLargestViewportAmongAreas:areas];
+	if(largestIndex == NSNotFound)
+		return nil;
+	return [allViewports objectAtIndex:largestIndex];
 	
 }//end main3DViewport
 
@@ -6065,8 +4817,7 @@ void AppendChoicesToNewItem(
 	{
 		glView          = [viewports objectAtIndex:counter];
 		
-		[glView setAutosaveName:[NSString stringWithFormat:@"fileGraphicView_%ld", (long)counter]];
-		[glView setAutosaveName:[NSString stringWithFormat:@"fileGraphicView_%ld", (long)counter]];
+		[glView setAutosaveName:[LDrawPreferences documentViewportAutosaveNameAtIndex:counter]];
 		
 		if(shouldRestore == YES)
 			[glView restoreConfiguration];
@@ -6237,7 +4988,7 @@ void AppendChoicesToNewItem(
 	[fileContentsOutline selectRowIndexes:[NSIndexSet indexSetWithIndex:rowForItem]
 					 byExtendingSelection:NO];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddModel", nil)];
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoModel], nil)];
 	
 }//end addModel:
 
@@ -6269,7 +5020,7 @@ void AppendChoicesToNewItem(
 		[self addDirective:newStep toParent:selectedModel atIndex:insertAtIndex];
 	}
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAddStep", nil)];	
+	[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoStep], nil)];	
 	[self flushDocChangesAndSelect:[NSArray arrayWithObject:newStep]];
 	
 }//end addStep:
@@ -6283,29 +5034,20 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) addPartNamed:(NSString *)partName
 {
-	LDrawPart           *newPart        = [[LDrawPart alloc] init];
 	NSUndoManager       *undoManager    = [self undoManager];
 	LDrawColor          *selectedColor  = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	TransformComponents transformation  = IdentityComponents;
+	LDrawPart           *newPart        = nil;
 	
 	//We got a part; let's add it!
 	if(partName != nil)
 	{
-		//Set up the part attributes
-		[newPart setLDrawColor:selectedColor];
-		[newPart setDisplayName:partName];
-		
-		if(self->lastSelectedPart != nil)
-		{
-			// Collect the transformation from the previous part and apply it to 
-			// the new one. 
-			transformation = [lastSelectedPart transformComponents];
-			[newPart setTransformComponents:transformation];
-		}
+		newPart = [LDrawInsertOps partNamed:partName
+									  color:selectedColor
+					   copyingTransformFrom:self->lastSelectedPart];
 		
 		[self addStepComponent:newPart parent:nil index:NSNotFound];
 		
-		[undoManager setActionName:NSLocalizedString(@"UndoAddPart", nil)];
+		[undoManager setActionName:NSLocalizedString([LDrawInsertOps undoActionKeyForInsertKind:LDrawInsertUndoPart], nil)];
 		[self flushDocChangesAndSelect:[NSArray arrayWithObject:newPart]];
 	}
 }//end addPartNamed:
@@ -6346,26 +5088,9 @@ void AppendChoicesToNewItem(
 	// element to the very bottom of the model.
 	if(targetContainer == nil)
 	{
-		LDrawContainer *selectedContainer = [self selectedContainer];
-		
-		if(		selectedContainer != nil
-		   &&	[selectedContainer isKindOfClass:[LDrawFile class]] == NO
-		   &&	[selectedContainer isKindOfClass:[LDrawModel class]] == NO
-		   &&	[selectedContainer isKindOfClass:[LDrawStep class]] == NO
-           &&   [selectedContainer acceptsDroppedDirective:newDirective] == YES)
-		{
-			// If we have an "interesting" container selected -- like a texture 
-			// -- that accepts the dropped directive add directives to it instead
-			// of at the end of the model. The theory here is that these special
-			// containers are kind of their  own little world, and as long as you
-			// have one selected, you should continue working within it.
-			targetContainer = selectedContainer;
-		}        
-        // We can't find a container that wants this part so add it to the bottom of the model
-		else
-		{
-			targetContainer = [selectedModel visibleStep];
-		}
+		targetContainer = [LDrawDocumentTree insertionParentForDirective:newDirective
+													  selectedContainer:[self selectedContainer]
+															visibleStep:[selectedModel visibleStep]];
 	}
 	if(insertAtIndex == NSNotFound)
 	{
@@ -6400,34 +5125,25 @@ void AppendChoicesToNewItem(
 - (BOOL) canDeleteDirective:(LDrawDirective *)directive
 			  displayErrors:(BOOL)errorFlag
 {
-	LDrawContainer	*parentDirective	= [directive enclosingDirective];
-	BOOL			 isLastDirective	= ([[parentDirective subdirectives] count] <= 1);
-	NSAlert			*alert				= nil;
-	NSString		*message			= nil;
-	NSString		*informative		= nil;
-	BOOL			 canDelete			= YES;
-	
-	if([directive isKindOfClass:[LDrawModel class]] && isLastDirective == YES)
+	LDrawDeleteRefusal	refusal			= [LDrawDocumentTree deleteRefusalForDirective:directive];
+	BOOL				 canDelete		= (refusal == LDrawDeleteAllowed);
+	NSString			*informativeKey	= [LDrawDocumentTree deleteRefusalInformativeKey:refusal];
+	NSAlert				*alert			= nil;
+	NSString			*message		= nil;
+	NSString			*informative	= nil;
+
+	if(informativeKey != nil && errorFlag == YES)
 	{
-		canDelete = NO;
-		informative = NSLocalizedString(@"DeleteLastModelInformative", nil);
-	}
-	else if([directive isKindOfClass:[LDrawStep class]] && isLastDirective == YES)
-	{
-		canDelete = NO;
-		informative = NSLocalizedString(@"DeleteLastStepInformative", nil);
-	}
-	
-	if(canDelete == NO && errorFlag == YES)
-	{
-		message = NSLocalizedString(@"DeleteDirectiveError", nil);
+		informative = NSLocalizedString(informativeKey, nil);
+
+		message = NSLocalizedString([LDrawDocumentTree deleteDirectiveErrorMessageKey], nil);
 		message = [NSString stringWithFormat:message, [directive browsingDescription]];
 		
 		alert = [[NSAlert alloc] init];		
 		[alert setMessageText:message];
 		[alert setInformativeText:informative];
 		
-		[alert addButtonWithTitle:NSLocalizedString(@"OKButtonName", nil)];
+		[alert addButtonWithTitle:NSLocalizedString([LDrawDocumentTree okButtonNameKey], nil)];
 		
 		[alert beginSheetModalForWindow:[self windowForSheet]
 					  completionHandler:nil];
@@ -6437,39 +5153,6 @@ void AppendChoicesToNewItem(
 	return canDelete;
 	
 }//end canDeleteDirective:displayErrors:
-
-
-//========== elementsAreSelectedOfVisibility: ==================================
-//
-// Purpose:		Returns YES if there are elements selected which have the 
-//				requested visibility. 
-//
-//==============================================================================
-- (BOOL) elementsAreSelectedOfVisibility:(BOOL)visibleFlag
-{
-	NSArray     *selectedObjects    = [self selectedObjects];
-	id          currentObject       = nil;
-	NSInteger   counter             = 0;
-	BOOL        invisibleSelected   = NO;
-	BOOL        visibleSelected     = NO;
-	
-	
-	for(counter = 0; counter < [selectedObjects count]; counter++)
-	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		if([currentObject respondsToSelector:@selector(isHidden)])
-		{
-			invisibleSelected	= invisibleSelected || [currentObject isHidden];
-			visibleSelected		= visibleSelected   || ([currentObject isHidden] == NO);
-		}
-	}
-	
-	if(visibleFlag == YES)
-		return visibleSelected;
-	else
-		return invisibleSelected;
-		
-}//end elementsAreSelectedOfVisibility:
 
 
 //========== formatDirective:withStringRepresentation: =========================
@@ -6482,9 +5165,9 @@ void AppendChoicesToNewItem(
 				withStringRepresentation:(NSString *)representation
 {
 	NSUserDefaults			*userDefaults	= [NSUserDefaults standardUserDefaults];
-	NSString				*colorKey		= nil; //preference key for object's syntax color.
+	NSString				*colorKey		= [LDrawDocumentTree outlineSyntaxColorKeyForDirective:item];
 	NSColor					*syntaxColor	= nil;
-	NSNumber				*obliqueness	= [NSNumber numberWithDouble:0.0]; //italicize?
+	NSNumber				*obliqueness	= [NSNumber numberWithDouble:[LDrawDocumentTree outlineObliquenessForDirective:item]];
 	NSAttributedString		*styledString	= nil;
 	NSMutableDictionary		*attributes		= [NSMutableDictionary dictionary];
 	NSMutableParagraphStyle	*paragraphStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
@@ -6494,67 +5177,38 @@ void AppendChoicesToNewItem(
 	// truncate, we achieve the desired effect.
 	[paragraphStyle setLineBreakMode:NSLineBreakByTruncatingTail];
 	
-	//Find the specified syntax color for the directive.
-	if([item isKindOfClass:[LDrawModel class]])
-		colorKey = SYNTAX_COLOR_MODELS_KEY;
-	
-	else if([item isKindOfClass:[LDrawStep class]])
-		colorKey = SYNTAX_COLOR_STEPS_KEY;
-	
-	else if([item isKindOfClass:[LDrawComment class]])
-		colorKey = SYNTAX_COLOR_COMMENTS_KEY;
-		
-	else if([item isKindOfClass:[LDrawPart class]])
-		colorKey = SYNTAX_COLOR_PARTS_KEY;
-
-    else if ([item isKindOfClass:[LDrawLSynth class]] ||
-             [item isKindOfClass:[LDrawLSynthDirective class]])
-        colorKey = SYNTAX_COLOR_PARTS_KEY;
-
-	else if([item isKindOfClass:[LDrawLine				class]] ||
-	        [item isKindOfClass:[LDrawTriangle			class]] ||
-			[item isKindOfClass:[LDrawQuadrilateral		class]] ||
-			[item isKindOfClass:[LDrawConditionalLine	class]]    )
-		colorKey = SYNTAX_COLOR_PRIMITIVES_KEY;
-	
-	else if([item isKindOfClass:[LDrawColor class]])
-		colorKey = SYNTAX_COLOR_COLORS_KEY;
-	
-	else if([item isKindOfClass:[LPubRemoveGroup class]])
-		colorKey = SYNTAX_COLOR_REMOVE_GROUP_KEY;
-	
-	else
-		colorKey = SYNTAX_COLOR_UNKNOWN_KEY;
-	
 	//We have the syntax coloring we want.
 	syntaxColor = [userDefaults colorForKey:colorKey];
 	
-	// Fallback to default color if unarchiving failed
-	// Can be removed in the future
 	if (syntaxColor == nil) {
-		if ([colorKey isEqualToString:SYNTAX_COLOR_COMMENTS_KEY]) {
-			syntaxColor = [NSColor systemGreenColor];
-		} else if ([colorKey isEqualToString:SYNTAX_COLOR_PARTS_KEY]) {
-			syntaxColor = [NSColor systemBlueColor];
-		} else if ([colorKey isEqualToString:SYNTAX_COLOR_PRIMITIVES_KEY]) {
-			syntaxColor = [NSColor systemOrangeColor];
-		} else if ([colorKey isEqualToString:SYNTAX_COLOR_MODELS_KEY]) {
-			syntaxColor = [NSColor systemPurpleColor];
-		} else if ([colorKey isEqualToString:SYNTAX_COLOR_STEPS_KEY]) {
-			syntaxColor = [NSColor systemYellowColor];
-		} else if ([colorKey isEqualToString:SYNTAX_COLOR_COLORS_KEY]) {
-			syntaxColor = [NSColor systemPinkColor];
-		} else if ([colorKey isEqualToString:SYNTAX_COLOR_REMOVE_GROUP_KEY]) {
-			syntaxColor = [NSColor systemRedColor];
-		} else {
-			syntaxColor = [NSColor labelColor]; // Default for unknown
+		switch([LDrawDocumentTree outlineSyntaxFallbackColorForKey:colorKey])
+		{
+			case LDrawOutlineSyntaxFallbackSystemGreen:
+				syntaxColor = [NSColor systemGreenColor];
+				break;
+			case LDrawOutlineSyntaxFallbackSystemBlue:
+				syntaxColor = [NSColor systemBlueColor];
+				break;
+			case LDrawOutlineSyntaxFallbackSystemOrange:
+				syntaxColor = [NSColor systemOrangeColor];
+				break;
+			case LDrawOutlineSyntaxFallbackSystemPurple:
+				syntaxColor = [NSColor systemPurpleColor];
+				break;
+			case LDrawOutlineSyntaxFallbackSystemYellow:
+				syntaxColor = [NSColor systemYellowColor];
+				break;
+			case LDrawOutlineSyntaxFallbackSystemPink:
+				syntaxColor = [NSColor systemPinkColor];
+				break;
+			case LDrawOutlineSyntaxFallbackSystemRed:
+				syntaxColor = [NSColor systemRedColor];
+				break;
+			case LDrawOutlineSyntaxFallbackLabel:
+				syntaxColor = [NSColor labelColor];
+				break;
 		}
 	}
-	
-	if([item respondsToSelector:@selector(isHidden)])
-		if([(id)item isHidden])
-			obliqueness = [NSNumber numberWithDouble:0.5];
-	
 	
 	//Assemble the attributes dictionary.
 	[attributes setObject:paragraphStyle	forKey:NSParagraphStyleAttributeName];
@@ -6611,22 +5265,15 @@ void AppendChoicesToNewItem(
 {
 	NSInteger		selectedRow 		= [fileContentsOutline selectedRow];
 	id				selectedItem		= [fileContentsOutline itemAtRow:selectedRow];
-	LDrawContainer	*selectedContainer	= nil;
 	
 	// Hack alert!
 	// If we are doing a copy-drag operation, remember the original selection 
 	// and use it. (We can't use the current selection during copy drag because 
 	// we clear it when the drag begins.)
-	if([self->selectedDirectivesBeforeCopyDrag count] > 0)
-		selectedItem = [selectedDirectivesBeforeCopyDrag objectAtIndex:0];
+	selectedItem = [LDrawSelectionOps outlineItemForCopyDragContainerLookupWithCurrentItem:selectedItem
+															  selectedBeforeCopyDrag:self->selectedDirectivesBeforeCopyDrag];
 	
-	// Find selected container
-	if([selectedItem isKindOfClass:[LDrawContainer class]])
-		selectedContainer = selectedItem;
-	else
-		selectedContainer = [selectedItem enclosingDirective];
-	
-	return selectedContainer;
+	return [LDrawDocumentTree containerEnclosingOutlineItem:selectedItem];
 	
 }//end selectedContainer
 
@@ -6709,17 +5356,7 @@ void AppendChoicesToNewItem(
 	NSInteger   selectedRow     = [fileContentsOutline selectedRow];
 	id          selectedItem    = [fileContentsOutline itemAtRow:selectedRow];
 	
-	//If a model is selected, a step can't be!
-	if(		selectedItem == nil
-       ||	[selectedItem isKindOfClass:[LDrawFile class]]
-	   ||	[selectedItem isKindOfClass:[LDrawModel class]]
-	   ||	[selectedItem isKindOfClass:[LDrawStep class]] )
-		return nil;
-	
-	else { //it's not a file, model, or step; whatever it is, it's what we are 
-			// looking for.
-		return selectedItem;
-	}
+	return [LDrawDocumentTree stepComponentFromOutlineItem:selectedItem];
 }//end selectedStep
 
 
@@ -6731,21 +5368,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (LDrawPart *) selectedPart
 {
-	NSArray     *selectedObjects    = [self selectedObjects];
-	id          currentObject       = nil;
-	NSInteger   counter             = 0;
-	
-	while(counter < [selectedObjects count])
-	{
-		currentObject = [selectedObjects objectAtIndex:counter];
-		if([currentObject isKindOfClass:[LDrawPart class]])
-			break;
-		else
-			counter++;
-	}
-	
-	//Either we just found one, on we found nothing.
-	return currentObject;
+	return [LDrawSelectionOps firstPartInSelection:[self selectedObjects]];
 }//end 
 
 
@@ -6758,15 +5381,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (NSInteger) nextModelIndex
 {
-	LDrawModel *selectedModel 	= self.selectedModel;
-	NSInteger indexOfObject 	= [self.documentContents indexOfDirective:selectedModel];
-
-	if(indexOfObject != NSNotFound)
-	{
-		indexOfObject++;
-	}
-	
-	return indexOfObject;
+	return [LDrawDocumentTree insertIndexAfterModel:self.selectedModel inFile:self.documentContents];
 	
 }//end nextModelIndex
 
@@ -6803,10 +5418,7 @@ void AppendChoicesToNewItem(
 	LDrawView           *affectedViewport   = [self main3DViewport];
 	
 	// Set the Viewing angle
-	if(viewOrientation != ViewOrientation3D)
-		[affectedViewport setProjectionMode:ProjectionModeOrthographic];
-	else
-		[affectedViewport setProjectionMode:ProjectionModePerspective];
+	[affectedViewport setProjectionMode:[LDrawViewOps projectionModeForViewOrientation:viewOrientation]];
 	
 	[affectedViewport setViewOrientation:viewOrientation];
 	[affectedViewport setViewingAngle:viewingAngle];
@@ -6833,62 +5445,13 @@ void AppendChoicesToNewItem(
 			toPasteboard:(NSPasteboard *)pasteboard
 {
 	//Pasteboard types.
-	NSArray			*pboardTypes		= [NSArray arrayWithObjects:
-												LDrawDirectivePboardType, //Bricksmith's preferred type.
-												NSPasteboardTypeString, //representation for other applications.
-												nil ];
-	LDrawDirective	*currentObject		= nil;
-	NSMutableArray	*objectsToCopy		= [NSMutableArray array];
-	//list of containers we've already archived. We don't want to re-archive any 
-	// of their children.
-	NSMutableArray	*archivedContainers	= [NSMutableArray array];
-	NSData			*data				= nil;
-	NSString		*string				= nil;
-	//list of LDrawDirectives which have been converted to data.
-	NSMutableArray	*archivedObjects	= [NSMutableArray array];
-	//list of LDrawDirectives which have been converted to strings.
-	NSMutableString	*stringedObjects	= [NSMutableString stringWithCapacity:256];
-	NSInteger		counter				= 0;
-	
-	//Write out the selected objects, but only once for each object. 
-	// Don't write out items whose parent is selected; the parent will 
-	// automatically write its children.
-	for(counter = 0; counter < [directives count]; counter++)
-	{
-		currentObject = [directives objectAtIndex:counter];
-		//If we haven't already run into this object (via its parent container)
-		// then we want to write it out. Otherwise, it will be copied implicitly 
-		// along with its parent rather than copied explicitly.
-		if([currentObject isAncestorInList:archivedContainers] == NO){
-			[objectsToCopy addObject:currentObject];
-		}
-		//If this object is a container, we must record that it has been 
-		// archived. Either it was archived just now, or it was archived 
-		// earlier when its parent was archived.
-		if([currentObject isKindOfClass:[LDrawContainer class]]){
-			[archivedContainers addObject:currentObject];
-		}
-	}
-	
-	
-	//Now that we have figured out *what* to copy, convert it into the 
-	// *representations* we will use to copy.
-	for(counter = 0; counter < [objectsToCopy count]; counter++)
-	{
-		currentObject = [objectsToCopy objectAtIndex:counter];
-		
-		//Convert the object into the two representations we know how to write.
-		data	= [NSKeyedArchiver archivedDataWithRootObject:currentObject requiringSecureCoding:NO error:nil];
-		string	= [currentObject write];
-		
-		//Save the representations into the arrays we'll write to the pasteboard.
-		[archivedObjects addObject:data];
-		[stringedObjects appendFormat:@"%@\n", string];
-								//not using CRLF here because any Mac program that 
-								// knows enough to do DOS line-endings will automatically
-								// add them to pasted content.
-	}
-	
+	NSArray			*pboardTypes		= [LDrawClipboard copyPasteboardTypesIncludingStringType:NSPasteboardTypeString];
+	NSArray			*archivedObjects	= nil;
+	NSString		*stringedObjects	= nil;
+
+	[LDrawClipboard copyPayloadFromDirectives:directives
+								 archivedData:&archivedObjects
+									ldrString:&stringedObjects];
 	
 	//Set up our pasteboard.
 	[pasteboard declareTypes:pboardTypes owner:nil];
@@ -6898,7 +5461,8 @@ void AppendChoicesToNewItem(
 	
 	//For other applications, however, we provide the LDraw file contents for 
 	// the objects. Note that these strings cannot be pasted back into the 
-	// program.
+	// program. (Not using CRLF here because any Mac program that knows enough
+	// to do DOS line-endings will automatically add them to pasted content.)
 	[pasteboard setString:stringedObjects forType:NSPasteboardTypeString];
 	
 }//end writeDirectives:toPasteboard:
@@ -6931,80 +5495,52 @@ void AppendChoicesToNewItem(
 					nextToSimilar:(BOOL)nextToSimilar
 {
 	NSArray				*objects			= nil;
-	id					 currentObject		= nil; //some kind of unarchived LDrawDirective
-	NSData				*data				= nil;
 	NSMutableArray		*addedObjects		= [NSMutableArray array];
-	NSInteger			 counter			= 0;
 	NSMutableArray		*models				= [NSMutableArray array];
 	NSMutableArray		*steps				= [NSMutableArray array];
 	NSMutableArray		*directives			= [NSMutableArray array];
 	LDrawContainer		*parentStep			= nil;
-	LDrawDirective		*similarDirective	= nil;
 	NSInteger			 real_index			= NSNotFound;
 	NSArray				*selectedObjects	= self.selectedObjects; // initial selection
-	NSKeyedUnarchiver	*unarchiver			= nil;
 
 	//We must make sure we have the proper pasteboard type available.
  	if([[pasteboard types] containsObject:LDrawDirectivePboardType])
 	{
 		//Unarchived everything and dump it into our file.
-		objects = [pasteboard propertyListForType:LDrawDirectivePboardType];
-		for(counter = 0; counter < [objects count]; counter++)
-		{
-			data			= [objects objectAtIndex:counter];
-			unarchiver		= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
-			[unarchiver setRequiresSecureCoding:NO];
-			currentObject	= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
-			[unarchiver finishDecoding];
-
-            // Reset the object icon if we can.  New parents get a chance later (in e.g. outlineView:acceptDrop:)
-            // to change them if they want
-            if ([[currentObject class] respondsToSelector:@selector(defaultIconName)]) {
-                NSString *iconName = [[currentObject class] performSelector:@selector(defaultIconName)];
-                if (iconName) {
-                    [currentObject setIconName:iconName];
-                }
-            }
-
-			if ([currentObject isKindOfClass:[LDrawModel class]]) {
-				[models addObject:currentObject];
-			} else if([currentObject isKindOfClass:[LDrawStep class]]) {
-				[steps addObject:currentObject];
-			} else {
-				[directives addObject:currentObject];
-			}
-		}
+		objects = [LDrawClipboard unarchivedDirectivesFromDataArray:
+				   [pasteboard propertyListForType:LDrawDirectivePboardType]];
+		[LDrawDocumentTree partitionPastedObjects:objects
+										   models:models
+											steps:steps
+									   directives:directives];
 		
 		//Now pop the data into our file.
 		if (directives.count > 0) {
 			real_index = insertAtIndex;
 			for (LDrawDirective *directive in directives) {
-				if (nextToSimilar) {
-					similarDirective = [LDrawDocumentTree similarDirective:directive amongObjects:selectedObjects];
-					if (similarDirective != nil) {
-						parentStep = [fileContentsOutline parentForItem:similarDirective];
-						real_index = [parentStep indexOfDirective:similarDirective] + 1;
-					} else {
-						parentStep = [self selectedStep];
-						real_index = NSNotFound;
-					}
-				} else if ([parent isKindOfClass:[LDrawStep class]]) {
-					parentStep = parent;
-				}
+				[LDrawDocumentTree resolveStepPasteParent:&parentStep
+													index:&real_index
+											 forDirective:directive
+												   parent:parent
+											insertAtIndex:insertAtIndex
+											nextToSimilar:nextToSimilar
+											  inSelection:selectedObjects
+									   fallbackParentStep:[self selectedStep]];
 				[self addStepComponent:directive parent:parentStep index:real_index];
 				[addedObjects addObject:directive];
 			}
 		} else if (steps.count > 0) {
 			for (LDrawStep *step in steps) {
-				LDrawMPDModel * parentModel = [parent isKindOfClass:[LDrawMPDModel class]] ? (LDrawMPDModel*)parent : nil;
+				LDrawMPDModel * parentModel = [LDrawDocumentTree pasteModelParentFromParent:parent];
 				[self addStep:step parent:parentModel index:insertAtIndex];
 				[addedObjects addObject:step];
 			}
 		} else {
-			real_index = insertAtIndex != NSNotFound ? insertAtIndex : [self nextModelIndex];
+			real_index = [LDrawDocumentTree modelPasteStartIndexForInsertAtIndex:insertAtIndex
+																defaultIndex:[self nextModelIndex]];
 			for (LDrawMPDModel *model in models) {
 				[self addModel:model atIndex:real_index preventNameCollisions:renameModels];
-				if (real_index != NSNotFound) real_index++;
+				real_index = [LDrawDocumentTree nextSequentialModelInsertIndexAfter:real_index];
 				[addedObjects addObject:model];
 			}
 		}

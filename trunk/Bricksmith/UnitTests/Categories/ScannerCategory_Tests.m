@@ -5,7 +5,7 @@
 //  Created by Sergey Slobodenyuk on 2023-03-03.
 //
 
-#import "ScannerCategory.h"
+#import <LDrawCore/ScannerCategory.h>
 
 #import <XCTest/XCTest.h>
 

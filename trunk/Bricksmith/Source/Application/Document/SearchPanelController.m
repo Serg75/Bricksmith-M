@@ -8,17 +8,12 @@
 #import "SearchPanelController.h"
 
 #import "LDrawDocument.h"
-#import "LDrawMPDModel.h"
-#import "LDrawFile.h"
-#import "LDrawStep.h"
-#import "LDrawModel.h"
-#import "LDrawPart.h"
-#import "LDrawLSynth.h"
+#import <LDrawCore/LDrawFile.h>
 #import "LDrawColorPanelController.h"
-#import "LDrawView.h"
 #import "LDrawFileOutlineView.h"
 #import "PartBrowserTableView.h"
-#import "MacLDraw.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawEditing/LDrawClipboard.h>
 
 @implementation SearchPanelController
 
@@ -35,7 +30,7 @@ SearchPanelController *sharedSearchPanel = nil;
 - (void) awakeFromNib
 {
     // Register for dragging operations - we want to be able to drag parts into the search box
-    [[self window] registerForDraggedTypes:[NSArray arrayWithObjects:LDrawDirectivePboardType, LDrawDraggingPboardType, nil]];
+    [[self window] registerForDraggedTypes:[LDrawClipboard searchPanelRegisteredDragTypes]];
     
 	// Set the initial state of the UI
 	NSDocumentController *documentController = [NSDocumentController sharedDocumentController];
@@ -114,195 +109,34 @@ SearchPanelController *sharedSearchPanel = nil;
     ScopeT                scope              = (ScopeT)[[scopeMatrix selectedCell] tag];
     SearchPartCriteriaT   criterion          = (SearchPartCriteriaT)[[findTypeMatrix selectedCell] tag];
     ColorFilterT          colorCriterion     = (ColorFilterT)[[colorMatrix selectedCell] tag];
-    
-    //
-    // Determine our search criteria
-    //
 
-    NSArray *colorFilter = nil;
-    NSArray *partFilter = nil;
-    NSMutableArray *selectedParts = [[NSMutableArray alloc] init];
-    NSMutableArray *searchableObjects = [[NSMutableArray alloc] init];
-    
-    // First up, adjust the options if there's no selection
     if ([selectedObjects count] == 0) {
-        if (scope == ScopeStep || scope == ScopeSelection) {
-            scope = ScopeFile;
-        }
-        
-        if (colorCriterion == ColorSelectionFilter) {
-            colorCriterion = ColorNoFilter;
-        }
-        
-        if (criterion == SearchSelectedParts) {
-            criterion = SearchAllParts;
-        }
-    }
-    
-    // Where to search - File, Model and Step
-    if (scope != ScopeSelection) {
-        
-        // Nothing selected?  Search the current model or default to searching the entire file
-        if (![selectedObjects count]) {
-            if (scope == ScopeModel) {
-                if ([[currentDocument documentContents] activeModel]) {
-                    [searchableObjects addObject:[[currentDocument documentContents] activeModel]];
-                }
-            }
-            else {
-                if ([currentDocument  documentContents]) {
-                    [searchableObjects addObject:[currentDocument  documentContents]];
-                };
-            }
-        }
-        
-        // filter non-parts from the selection (we can't search *for* steps, but we can search
-        // *in* the current step, model etc.
-        [selectedObjects enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[LDrawPart class]] || [obj isKindOfClass:[LDrawLSynth class]] // parts
-                || ([obj isKindOfClass:[LDrawStep class]] && scope == ScopeStep)                 // steps
-                || ([obj isKindOfClass:[LDrawModel class]] && scope == ScopeModel)) {            // models
-                [selectedParts addObject:obj];
-            }
-        }];
-        
-        for (LDrawPart *part in selectedParts) {
-            
-            // Find the container at the correct scope
-            id scopedContainer = nil;
-            if (scope == ScopeStep) {
-                scopedContainer = [part enclosingStep];
-            }
-            else if (scope == ScopeModel) {
-                scopedContainer = [part enclosingModel];
-            }
-            else if (scope == ScopeFile) {
-                scopedContainer = [part enclosingFile];
-            }
-            
-            // Keep it if we don't already have it
-            if ([searchableObjects indexOfObject:scopedContainer] == NSNotFound) {
-                [searchableObjects addObject:scopedContainer];
-            }
-        }
-    }
-    
-    // Search within the selection, so just take it wholesale
-    else {
-        searchableObjects = [selectedObjects mutableCopy];
-    }
-    
-    // Color
-    if (colorCriterion == ColorFilter) {
-        colorFilter = [NSArray arrayWithObject:[colorWell LDrawColor]];
-    }
-    else if (colorCriterion == ColorSelectionFilter) {
-        NSMutableArray *colors = [[NSMutableArray alloc] init];
-        [selectedObjects enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[LDrawPart class]] || [obj isKindOfClass:[LDrawLSynth class]]) {
-                if ([colors indexOfObject:[obj LDrawColor]] == NSNotFound) {
-                    [colors addObject:[obj LDrawColor]];
-                }
-            }
-        }];
-        colorFilter = colors;
-    }
-    
-    // What to search for
-    if (criterion == SearchSpecificPart) {
-
-        // Split the text field on commas
-        NSArray *tmpParts = [[partName stringValue] componentsSeparatedByString:@","];
-        __block NSMutableArray *partNames = [[NSMutableArray alloc] init];
-        __block NSString *part = nil;
-        
-        // Add ".dat" to parts without a recognised suffix
-        [tmpParts enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            part = [[obj stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] lowercaseString];
-            if (![part hasSuffix:@".dat"] && ![part hasSuffix:@".ldr"]) {
-                part = [NSString stringWithFormat:@"%@.dat", part];
-            }
-            [partNames addObject:part];
-        }];
-        
-        partFilter = partNames;
-    }
-    else if (criterion == SearchSelectedParts) {
-        NSMutableArray *partNames = [[NSMutableArray alloc] init];
-        [selectedObjects enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[LDrawPart class]]) {
-                [partNames addObject:[obj referenceName]];
-            }
-            else if ([obj isKindOfClass:[LDrawLSynth class]]) {
-                [partNames addObject:[obj lsynthType]];
-            }
-        }];
-        partFilter = partNames;
-    }
-    
-    //
-    // Collect up all potential matches
-    //
-    
-    NSMutableArray *matchables = [[NSMutableArray alloc] init];
-    for (id searchableObject in searchableObjects) {
-        // Parts
-        if ([searchableObject isKindOfClass:[LDrawPart class]]) {
-            [matchables addObject:searchableObject];
-        }
-        
-        // Containers
-        else if ([searchableObject isKindOfClass:[LDrawContainer class]]) {
-            [matchables addObjectsFromArray:[self partsInContainer:searchableObject]];
-        }
-        
-        // Include LSynth objects, as well as their contained constraints
-        if ([searchableObject isKindOfClass:[LDrawLSynth class]]) {
-            [matchables addObject:searchableObject];
-        }
-    }
-    
-    //
-    // Filter potential matches against our criteria
-    //
-    
-    NSMutableArray *nonMatchingParts = [[NSMutableArray alloc] init];
-    
-    for (id part in matchables) {
-        
-        // Filter on color
-        if (colorFilter && [colorFilter indexOfObject:[part LDrawColor]] == NSNotFound) {
-            [nonMatchingParts addObject:part];
-            continue;
-        }
-        
-        // Filter on part criterion
-        NSString *name = nil;
-        if ([part isKindOfClass:[LDrawPart class]]) {
-            name = [part referenceName];
-        }
-        else if ([part isKindOfClass:[LDrawLSynth class]]) {
-            name = [part lsynthType];
-        }
-        
-        if (partFilter && [partFilter indexOfObject:name] == NSNotFound) {
-            [nonMatchingParts addObject:part];
-            continue;
-        }
+        [LDrawSearchOps normalizeEmptySelectionScope:&scope
+                                         colorFilter:&colorCriterion
+                                       partCriterion:&criterion];
     }
 
-    // Filter hidden parts out if appropriate
-	if ([searchHiddenParts state] == NSControlStateValueOn) {
-        [matchables enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj respondsToSelector:@selector(setHidden:)] && [obj isHidden] &&
-                [nonMatchingParts indexOfObject:obj] == NSNotFound) {
-                [nonMatchingParts addObject:obj];
-            }
-        }];
-    }
-    
-    [matchables removeObjectsInArray:nonMatchingParts];
-    
+    NSArray *searchableObjects = [LDrawSearchOps searchableObjectsForScope:scope
+                                                                selection:selectedObjects
+                                                              activeModel:[[currentDocument documentContents] activeModel]
+                                                                     file:[currentDocument documentContents]];
+
+    NSArray *colorFilter = [LDrawSearchOps colorFilterForCriterion:colorCriterion
+                                                         wellColor:[colorWell LDrawColor]
+                                                        selection:selectedObjects];
+
+    NSArray *partFilter = [LDrawSearchOps partFilterForCriterion:criterion
+                                                   specificNames:[partName stringValue]
+                                                      selection:selectedObjects];
+
+    NSArray *matchables = [LDrawSearchOps matchablesInSearchableObjects:searchableObjects
+                                                 includeLSynthContents:([searchInsideLSynthContainers state] == NSControlStateValueOn)];
+
+    matchables = [LDrawSearchOps filterMatchables:matchables
+                                      colorFilter:colorFilter
+                                       partFilter:partFilter
+                               excludeHiddenParts:([searchHiddenParts state] == NSControlStateValueOn)];
+
     [currentDocument selectDirectives:matchables];
 } // end doSearchAndSelect:
 
@@ -367,33 +201,6 @@ SearchPanelController *sharedSearchPanel = nil;
 
 #pragma mark - UTILITIES -
 
-//========== partsInContainer: =================================================
-//
-// Purpose:		A recursive helper function to find all parts in a container
-//
-//==============================================================================
--(NSArray *)partsInContainer:(LDrawContainer *)container
-{
-    NSMutableArray *parts = [[NSMutableArray alloc] init];
-    for (id directive in [container subdirectives]) {
-        if ([directive isKindOfClass:[LDrawPart class]]) {
-            [parts addObject:directive];
-        }
-        // Recurse on subcontainers
-        else if (([directive isKindOfClass:[LDrawContainer class]] && ![directive isKindOfClass:[LDrawLSynth class]])
-				 || ([directive isKindOfClass:[LDrawLSynth class]] && [searchInsideLSynthContainers state] == NSControlStateValueOn)) {
-            [parts addObjectsFromArray:[self partsInContainer:directive]];
-        }
-        
-        // Add LSynth "Parts" specifically. Their contents are handled above
-        if ([directive isKindOfClass:[LDrawLSynth class]]) {
-            [parts addObject:directive];
-        }
-    }
-    
-    return parts;
-} // end partsInContainer:
-
 //========== updateInterfaceForSelection: ======================================
 //
 // Purpose:		The Document lets us know when the selection changes.  We can in
@@ -405,56 +212,23 @@ SearchPanelController *sharedSearchPanel = nil;
 {
     // The selection's changed which means we shouldn't be the active color well anymore
     [LDrawColorWell setActiveColorWell:nil];
-    
-    // No selection so display a suitable warning message and disable the UI elements
-    NSMutableArray *warningComponents = [[NSMutableArray alloc] init];
 
-    if ([selectedObjects count] == 0
-        &&
-        // Even if we have nothing selected the combination of options might not be cause for alarm
-        ([scopeMatrix selectedTag] == ScopeSelection ||
-         [scopeMatrix selectedTag] == ScopeStep ||
-         [colorMatrix selectedTag] == ColorSelectionFilter ||
-         [findTypeMatrix selectedTag] == SearchSelectedParts)
-        ) {
-        
-        [warningComponents addObject:NSLocalizedString(@"SearchWarningRoot", @"")];
-        
-        // The "what"
-        if ([findTypeMatrix selectedTag] == SearchAllParts || [findTypeMatrix selectedTag] == SearchSelectedParts) {
-            [warningComponents addObject:NSLocalizedString(@"SearchWarningAllParts", @"")];
+    NSArray *keys = [LDrawSearchOps emptySelectionWarningKeysWithCount:[selectedObjects count]
+                                                                scope:(ScopeT)[scopeMatrix selectedTag]
+                                                          colorFilter:(ColorFilterT)[colorMatrix selectedTag]
+                                                        partCriterion:(SearchPartCriteriaT)[findTypeMatrix selectedTag]];
+    if(keys != nil)
+    {
+        NSMutableArray *localized = [NSMutableArray array];
+        for(NSString *key in keys)
+        {
+            [localized addObject:NSLocalizedString(key, @"")];
         }
-        else if ([findTypeMatrix selectedTag] == SearchSpecificPart) {
-            [warningComponents addObject:NSLocalizedString(@"SearchWarningSpecifiedParts", @"")];
-        }
-        
-        [warningComponents addObject:@"of"]; // preposition
-        
-        // The color
-        if ([colorMatrix selectedTag] == ColorNoFilter || [colorMatrix selectedTag] == ColorSelectionFilter) {
-            [warningComponents addObject:NSLocalizedString(@"SearchWarningAnyColor", @"")];
-        }
-        else if ([colorMatrix selectedTag] == ColorFilter) {
-            [warningComponents addObject:NSLocalizedString(@"SearchWarningSpecifiedColor", @"")];
-        }
-        
-        [warningComponents addObject:@"in"]; // preposition
-        
-        // The "where"
-        if ([scopeMatrix selectedTag] == ScopeFile || [scopeMatrix selectedTag] == ScopeStep || [scopeMatrix selectedTag] == ScopeSelection) {
-            [warningComponents addObject:NSLocalizedString(@"SearchWarningFileScope", @"")];
-        }
-        else if ([scopeMatrix selectedTag] == ScopeModel) {
-            [warningComponents addObject:NSLocalizedString(@"SearchWarningModelScope", @"")];
-        }
-
-        [warningText setStringValue:[[warningComponents componentsJoinedByString:@" "] stringByAppendingString:@"."]];
+        [warningText setStringValue:[LDrawSearchOps emptySelectionWarningFromLocalizedParts:localized]];
         [warningText setHidden:NO];
-        
     }
-    
-    // No warnings
-    else {
+    else
+    {
         [warningText setHidden:YES];
     }
 } // end updateInterfaceForSelection:
@@ -509,51 +283,18 @@ SearchPanelController *sharedSearchPanel = nil;
 //==============================================================================
 - (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender
 {
-    NSArray				*archivedDirectives = nil;
-    NSMutableArray		*directiveNames     = [[NSMutableArray alloc] init];
-    NSUInteger			 directiveCount     = 0;
-	NSUInteger			 counter            = 0;
-	id					 currentObject      = nil;
-	NSData				*data               = nil;
-    NSString			*partNames          = nil;
-	NSKeyedUnarchiver	*unarchiver			= nil;
+    NSString *partNames = nil;
+    BOOL fromOutline     = [[sender draggingSource] isKindOfClass:[LDrawFileOutlineView class]];
+    BOOL fromPartBrowser = [[sender draggingSource] isKindOfClass:[PartBrowserTableView class]];
+    NSString *pasteboardType = [LDrawSearchOps searchDropPasteboardTypeFromOutline:fromOutline
+                                                                    fromPartBrowser:fromPartBrowser];
 
-    // Parts can be dragged from the outline view or the part browser.  GLView drags
-    // remove the pieces once they leave the window, so we ignore those.
-    
-    if ([[sender draggingSource] isKindOfClass:[LDrawFileOutlineView class]]
-        || [[sender draggingSource] isKindOfClass:[PartBrowserTableView class]]) {
-
+    if(pasteboardType != nil)
+    {
         NSPasteboard *pasteboard = [sender draggingPasteboard];
-        
-        // Outline View
-        if ([[sender draggingSource] isKindOfClass:[LDrawFileOutlineView class]]) {
-            archivedDirectives	= [pasteboard propertyListForType:LDrawDirectivePboardType];
-        }
-        
-        // Part browser
-        else if ([[sender draggingSource] isKindOfClass:[PartBrowserTableView class]]) {
-            archivedDirectives	= [pasteboard propertyListForType:LDrawDraggingPboardType];
-        }
-        
-        // Grab the part names
-        directiveCount = [archivedDirectives count];
-        for(counter = 0; counter < directiveCount; counter++)
-        {
-            data = [archivedDirectives objectAtIndex:counter];
-            unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
-            [unarchiver setRequiresSecureCoding:NO];
-            currentObject = [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
-            [unarchiver finishDecoding];
-            
-            // We're only interested in LDrawParts we've not already found
-            if ([currentObject isKindOfClass:[LDrawPart class]] &&
-                [directiveNames indexOfObject:[currentObject referenceName]] == NSNotFound) {
-                [directiveNames addObject:[currentObject referenceName]];
-            }
-        }
-        
-        partNames = [directiveNames componentsJoinedByString:@","];
+        NSArray *archivedDirectives = [pasteboard propertyListForType:pasteboardType];
+
+        partNames = [LDrawSearchOps commaSeparatedPartNamesFromArchivedDirectivesData:archivedDirectives];
     }
 
     [partName setStringValue:partNames];

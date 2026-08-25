@@ -18,7 +18,10 @@
 
 @interface LDrawView (Metal)
 
+/// No-op on Metal; keeps shared LDrawView code uniform with OpenGL.
 - (void)makeCurrentContext;
+
+/// Run block immediately; Metal has no GL context lock.
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
 
 - (void) internalInit;

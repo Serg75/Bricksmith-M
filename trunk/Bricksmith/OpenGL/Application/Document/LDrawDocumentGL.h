@@ -24,6 +24,7 @@
 
 @interface LDrawDocument (OpenGL)
 
+/// Bracket an undoable edit with the shared OpenGL context lock.
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
 
 @end

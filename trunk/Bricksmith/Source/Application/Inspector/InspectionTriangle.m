@@ -12,8 +12,9 @@
 #import "InspectionTriangle.h"
 
 #import "LDrawColorWell.h"
-#import "LDrawModel.h"
-#import "LDrawTriangle.h"
+#import <LDrawCore/LDrawModel.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawCore/LDrawTriangle.h>
 
 @implementation TriangleView
 
@@ -179,7 +180,7 @@
 	Point3 vertex1		= [[self object] vertex1];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex1) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex1])
 	{
 		[self finishedEditing:sender];
 	}
@@ -200,7 +201,7 @@
 	Point3 vertex2		= [[self object] vertex2];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex2) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex2])
 	{
 		[self finishedEditing:sender];
 	}
@@ -221,7 +222,7 @@
 	Point3 vertex3		= [[self object] vertex3];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex3) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex3])
 	{
 		[self finishedEditing:sender];
 	}

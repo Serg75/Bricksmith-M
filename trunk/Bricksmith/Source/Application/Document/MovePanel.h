@@ -10,7 +10,7 @@
 #import <Cocoa/Cocoa.h>
 
 #import "DialogPanel.h"
-#import "MatrixMath.h"
+#import <LDrawCore/MatrixMath.h>
 
 @interface MovePanel : DialogPanel
 {

@@ -11,13 +11,13 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import "BricksmithUtilities.h"
-#import "ColorLibrary.h"
+#import <LDrawCore/ColorLibrary.h>
+#import <LDrawFeatures/LDrawGrid.h>
 #import "GPU.h"
-#import "LDrawRenderer.h"
-#import "LDrawCamera.h"
-#import "LDrawUtilities.h"
-#import "MatrixMath.h"
+#import <LDrawRenderCore/LDrawRenderer.h>
+#import <LDrawRenderCore/LDrawCamera.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/MatrixMath.h>
 #import "ToolPalette.h"
 
 //Forward declarations
@@ -25,6 +25,7 @@
 @class LDrawDirective;
 @class LDrawDragHandle;
 @class LDrawRenderer;
+@class LDrawSceneController;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,6 +40,7 @@
 	// preceeded by activating the correct context. Thus any renderer-modifying 
 	// calls must pass through the LDrawOpenGLView first. 
 	LDrawRenderer			*renderer;
+	LDrawSceneController	*sceneController;
 	
 @private
 	FocusRingView	*focusRingView;

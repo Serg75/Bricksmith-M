@@ -12,8 +12,9 @@
 #import "InspectionQuadrilateral.h"
 
 #import "LDrawColorWell.h"
-#import "LDrawModel.h"
-#import "LDrawQuadrilateral.h"
+#import <LDrawCore/LDrawModel.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawCore/LDrawQuadrilateral.h>
 
 @implementation QuadrilateralView
 
@@ -195,7 +196,7 @@
 	Point3 vertex1		= [[self object] vertex1];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex1) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex1])
 	{
 		[self finishedEditing:sender];
 	}
@@ -216,7 +217,7 @@
 	Point3 vertex2		= [[self object] vertex2];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex2) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex2])
 	{
 		[self finishedEditing:sender];
 	}
@@ -237,7 +238,7 @@
 	Point3 vertex3		= [[self object] vertex3];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex3) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex3])
 	{
 		[self finishedEditing:sender];
 	}
@@ -258,7 +259,7 @@
 	Point3 vertex4		= [[self object] vertex4];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex4) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex4])
 	{
 		[self finishedEditing:sender];
 	}

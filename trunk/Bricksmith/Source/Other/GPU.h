@@ -2,7 +2,9 @@
 //  GPU.h
 //  Bricksmith
 //
-//  Created by Sergey Slobodenyuk on 2023-06-20.
+//  App-target GPU routing header. GPU-agnostic types live in
+//  LDrawRenderCore/GPUTypes.h; this header wires AppKit view types and
+//  legacy macro indirection used by the macOS shell.
 //
 
 #ifndef GPU_h
@@ -10,19 +12,21 @@
 
 #ifdef METAL
 
-#import "MTL.h"
-#define RenderEncoder			id<MTLRenderCommandEncoder>
-#define Buffer					id<MTLBuffer>
-#define Texture					id<MTLTexture>
-#define NEED_CORRECT_PROJECTION	1
+#import <LDrawRenderMetal/MTL.h>
+#import <LDrawRenderCore/GPUTypes.h>
+
+#define RenderEncoder           id<MTLRenderCommandEncoder>
+#define Buffer                  id<MTLBuffer>
+#define Texture                 id<MTLTexture>
 
 #else
 
-#import "GL.h"
-#define RenderEncoder			id
-#define Buffer					id
-#define Texture					id
-#define NEED_CORRECT_PROJECTION	0
+#import <LDrawRenderOpenGL/GL.h>
+#import <LDrawRenderCore/GPUTypes.h>
+
+#define RenderEncoder           id
+#define Buffer                  id
+#define Texture                 id
 
 #endif
 

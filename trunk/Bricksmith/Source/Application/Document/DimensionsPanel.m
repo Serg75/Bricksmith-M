@@ -9,19 +9,12 @@
 //==============================================================================
 #import "DimensionsPanel.h"
 
-#import "LDrawFile.h"
-#import "LDrawMPDModel.h"
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawUtilities.h>
 #import <math.h>
 
 @implementation DimensionsPanel
-
-#define STUDS_ROW_INDEX			0
-#define INCHES_ROW_INDEX		1
-#define CENTIMETERS_ROW_INDEX	2
-#define LEGONIAN_FEET_ROW_INDEX	3
-#define LDU_ROW_INDEX           4
-
-#define NUMBER_OF_UNITS			5
 
 #define UNITS_COLUMN		@"UnitsIdentifier"
 #define WIDTH_COLUMN		@"WidthIdentifier"
@@ -174,7 +167,7 @@
 //==============================================================================
 - (NSInteger) numberOfRowsInTableView:(NSTableView *)aTableView
 {
-	return NUMBER_OF_UNITS;
+	return LDrawDimensionUnitCount;
 	
 }//end numberOfRowsInTableView:
 
@@ -193,26 +186,15 @@
 	objectValueForTableColumn:(NSTableColumn *)tableColumn
 						  row:(NSInteger)rowIndex
 {
-	NSNumberFormatter*  floatFormatter = [NSNumberFormatter new];
-	NSNumberFormatter*  studFormatter 	= [NSNumberFormatter new];
 	id                  object          = nil;
 	Box3                bounds          = [self->activeModel boundingBox3];
 	double              width           = 0;
 	double              height          = 0;
 	double              length          = 0;
 	double              value           = 0;
+	LDrawDimensionUnitT unit            = (LDrawDimensionUnitT)rowIndex;
+	BOOL                isHeight        = [[tableColumn identifier] isEqualToString:HEIGHT_COLUMN];
 	
-	 // 1 stud = 20 LDraw units = 8 mm ≈ 3/8".
-	double	studsPerLDU			= 1 / 20.0; //HORIZONTAL studs!
-	double	mmPerStud			= 8.0; //HORIZONTAL studs!
-	double	inchesPerMM			= 1 / 25.4;
-	double	brickHeightPerLDU	= 1 / 24.; // brick aspect ratio of width to height is 5:6
-	double	legoInchPerInch		= 128 / 3.0; // Legonian Imperial Feet are a 3:128 scale.
-	
-	
-	[floatFormatter setPositiveFormat:@"0.0"];
-	[studFormatter setPositiveFormat:@"0.##"];
-
 	//If we got valid bounds, analyze them.
 	if(V3EqualBoxes(bounds, InvalidBox) == NO)
 	{
@@ -224,14 +206,8 @@
 	//Units Label?
 	if([[tableColumn identifier] isEqualToString:UNITS_COLUMN])
 	{
-		switch(rowIndex)
-		{
-			case STUDS_ROW_INDEX:			object = NSLocalizedString(@"Studs", nil);			break;
-			case INCHES_ROW_INDEX:			object = NSLocalizedString(@"Inches", nil);			break;
-			case CENTIMETERS_ROW_INDEX:		object = NSLocalizedString(@"Centimeters", nil);	break;
-			case LEGONIAN_FEET_ROW_INDEX:	object = NSLocalizedString(@"LegonianFeet", nil);	break;
-			case LDU_ROW_INDEX:             object = NSLocalizedString(@"LDU", nil);            break;
-		}
+		NSString *unitKey = [LDrawUtilities dimensionUnitNameKey:unit];
+		object = unitKey != nil ? NSLocalizedString(unitKey, nil) : nil;
 	}
 	//Dimension value, then.
 	else
@@ -244,54 +220,10 @@
 		else if([[tableColumn identifier] isEqualToString:HEIGHT_COLUMN])
 			value = height;
 			
-		// We have the value in LDraw Units; convert to display units.
-		switch(rowIndex)
-		{
-			//oh dear. Studs are difficult.
-			case STUDS_ROW_INDEX:
-				if([[tableColumn identifier] isEqualToString:HEIGHT_COLUMN])
-					value *= brickHeightPerLDU; //get vertical studs.
-				else
-					value *= studsPerLDU; //get horizontal studs
-				break;
-				
-			case INCHES_ROW_INDEX:			value *= studsPerLDU * mmPerStud * inchesPerMM;						break;
-			case CENTIMETERS_ROW_INDEX:		value *= studsPerLDU * mmPerStud / 10.;								break;
-			case LEGONIAN_FEET_ROW_INDEX:	value *= studsPerLDU * mmPerStud * inchesPerMM * legoInchPerInch;	break;
-			case LDU_ROW_INDEX:				value *= 1;															break; // nothing to convert for LDU
-		}
-		
-		// Format output.
-		switch(rowIndex)
-		{
-			case STUDS_ROW_INDEX:
-				object = [NSNumber numberWithDouble:value];
-				object = [studFormatter stringForObjectValue:object];
-				break;
-			
-			case INCHES_ROW_INDEX:
-				object = [NSNumber numberWithDouble:value];
-				object = [floatFormatter stringForObjectValue:object];
-				break;
-			
-			case CENTIMETERS_ROW_INDEX:
-				object = [NSNumber numberWithDouble:value];
-				object = [floatFormatter stringForObjectValue:object];
-				break;
-			
-			//This one's a doozy--format in feet and inches.
-			case LEGONIAN_FEET_ROW_INDEX:
-				object = [NSString stringWithFormat:	NSLocalizedString(@"FeetAndInchesFormat", nil),
-														(int) floor(value / 12),	//feet
-														(int) fmod(value, 12)		//inches
-						];
-				break;
-			
-			case LDU_ROW_INDEX:
-				object = [NSNumber numberWithInteger:ceil(value)];
-				break;
-		}
-		
+		object = [LDrawUtilities formattedDimensionDisplayFromLDU:value
+															 unit:unit
+														 isHeight:isHeight
+										feetAndInchesFormatString:NSLocalizedString([LDrawUtilities feetAndInchesFormatKey], nil)];
 	}
 		
 	return object;

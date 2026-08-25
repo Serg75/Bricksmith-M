@@ -12,6 +12,7 @@
 
 #import "PartBrowserDataSource.h"
 #import "ExtendedSplitView.h"
+#import <LDrawFeatures/LDrawPreferences.h>
 
 @implementation PartBrowserPanelController
 
@@ -25,7 +26,7 @@ static PartBrowserPanelController *sharedPartBrowserPanel = nil;
 //==============================================================================
 - (void) awakeFromNib
 {
-	[self->splitView setAutosaveName:@"PartBrowserPanelSplitView"];
+	[self->splitView setAutosaveName:[LDrawPreferences partBrowserPanelSplitAutosaveName]];
 	[self->splitView restoreConfiguration];
 
 }//end awakeFromNib
@@ -137,7 +138,7 @@ static PartBrowserPanelController *sharedPartBrowserPanel = nil;
 //==============================================================================
 - (CGFloat)splitView:(NSSplitView *)sender constrainMinCoordinate:(CGFloat)proposedMin ofSubviewAt:(NSInteger)offset
 {
-	return 96;
+	return [LDrawPreferences partBrowserSplitMinCoordinate];
 	
 }//end splitView:constrainMinCoordinate:ofSubviewAt:
 

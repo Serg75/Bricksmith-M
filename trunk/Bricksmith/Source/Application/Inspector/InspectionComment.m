@@ -11,7 +11,7 @@
 //==============================================================================
 #import "InspectionComment.h"
 
-#import "LDrawComment.h"
+#import <LDrawCore/LDrawComment.h>
 
 @implementation InspectionComment
 

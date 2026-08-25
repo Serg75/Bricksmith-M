@@ -24,9 +24,11 @@
 
 #import "LDrawViewGL.h"
 
+#import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
+#import <LDrawEditing/LDrawSceneController.h>
 #import "FocusRingView.h"
 #import "LDrawApplicationGL.h"
-#import "LDrawRendererGL.h"
+#import <LDrawRenderOpenGL/LDrawRendererGL.h>
 #import "OverlayViewCategory.h"
 
 #include OPEN_GL_HEADER
@@ -34,11 +36,22 @@
 
 @implementation LDrawView (OpenGL)
 
+//========== makeCurrentContext ================================================
+//
+// Purpose:		Activate this view's OpenGL context before renderer calls.
+//
+//==============================================================================
 - (void)makeCurrentContext
 {
 	[[self openGLContext] makeCurrentContext];
 }
 
+//========== lockContextAndExecute: ============================================
+//
+// Purpose:		Bracket block with CGL lock/unlock on this view's context so
+//				concurrent document edits cannot interleave with drawing.
+//
+//==============================================================================
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block
 {
 	CGLLockContext([[self openGLContext] CGLContextObj]);
@@ -70,7 +83,7 @@
 
 //========== internalInit ======================================================
 //
-// Purpose:		Set up the beatiful OpenGL view.
+// Purpose:		Set up the beautiful OpenGL view.
 //
 //==============================================================================
 - (void) internalInit
@@ -134,6 +147,7 @@
 	renderer = [[LDrawRenderer alloc] initWithBounds:[self bounds].size];
 	[renderer setDelegate:self withScroller:self];
 	[renderer setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
+	sceneController = [[LDrawSceneController alloc] initWithRendererBridge:renderer];
 	[renderer prepareOpenGL];
 
 	[self takeBackgroundColorFromUserDefaults];

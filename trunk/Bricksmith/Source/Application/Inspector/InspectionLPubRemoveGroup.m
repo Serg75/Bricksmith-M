@@ -7,8 +7,8 @@
 
 #import "InspectionLPubRemoveGroup.h"
 
-#import "LDrawDocumentTree.h"
-#import "LPubRemoveGroup.h"
+#import <LDrawEditing/LDrawDocumentTree.h>
+#import <LDrawCore/LPubRemoveGroup.h>
 
 @interface InspectionLPubRemoveGroup ()
 

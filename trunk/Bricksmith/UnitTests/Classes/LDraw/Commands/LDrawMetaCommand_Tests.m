@@ -5,14 +5,14 @@
 //  Created by Sergey Slobodenyuk on 2023-03-12.
 //
 
-#import "LDrawMetaCommand.h"
+#import <LDrawCore/LDrawMetaCommand.h>
 
 #import <XCTest/XCTest.h>
-#import "LDrawColor.h"
-#import "LDrawComment.h"
-#import "LDrawLSynthDirective.h"
-#import "LPubCommand.h"
-#import "LPubRemoveGroup.h"
+#import <LDrawCore/LDrawColor.h>
+#import <LDrawCore/LDrawComment.h>
+#import <LDrawCore/LDrawLSynthDirective.h>
+#import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubRemoveGroup.h>
 #import "MockArchiver.h"
 #import "MockScanner.h"
 

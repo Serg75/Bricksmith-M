@@ -9,8 +9,11 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import "GPU.h"
-#import PartLibraryGPU_h
+#ifdef METAL
+#import <LDrawRenderMetal/PartLibraryMTL.h>
+#else
+#import <LDrawRenderOpenGL/PartLibraryGL.h>
+#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////

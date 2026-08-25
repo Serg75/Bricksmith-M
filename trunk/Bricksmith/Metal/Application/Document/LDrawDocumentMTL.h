@@ -24,6 +24,7 @@
 
 @interface LDrawDocument (Metal)
 
+/// Run block immediately; Metal has no shared GL context to lock.
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
 
 @end

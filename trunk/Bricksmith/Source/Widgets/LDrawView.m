@@ -20,28 +20,36 @@
 //==============================================================================
 #import "LDrawView.h"
 
+#import <LDrawCore/LDrawColor.h>
+#import <LDrawCore/LDrawDirective.h>
+#import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawModel.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawEditing/LDrawClipboard.h>
+#import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
+#import <LDrawEditing/LDrawSceneController.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawViewOps.h>
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawPreferences.h>
+#import "BricksmithUtilities.h"
 #import "FocusRingView.h"
 #import "LDrawApplication.h"
-#import "LDrawColor.h"
-#import "LDrawDirective.h"
 #import "LDrawDocument.h"
-#import "LDrawDragHandle.h"
-#import "LDrawFile.h"
 #import  LDrawRendererGPU_h
-#import "LDrawModel.h"
-#import "LDrawPart.h"
-#import "LDrawStep.h"
-#import "LDrawUtilities.h"
 #import "LDrawViewerContainer.h"
 #import  LDrawViewGPU_h
-#import "MacLDraw.h"
 #import "OverlayViewCategory.h"
 #import "UserDefaultsCategory.h"
 
 // Macros for pref-based UI tricks.
-#define USE_TURNTABLE				([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == RotateModeTurntable)
-#define USE_RIGHT_SPIN				([[NSUserDefaults standardUserDefaults] integerForKey:RIGHT_BUTTON_BEHAVIOR_KEY] == RightButtonRotates)
-#define USE_ZOOM_WHEEL				([[NSUserDefaults standardUserDefaults] integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY] == MouseWheelZooms)
+#define USE_TURNTABLE	([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == RotateModeTurntable)
+#define USE_RIGHT_SPIN	([[NSUserDefaults standardUserDefaults] integerForKey:RIGHT_BUTTON_BEHAVIOR_KEY] == RightButtonRotates)
+#define USE_ZOOM_WHEEL	([[NSUserDefaults standardUserDefaults] integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY] == MouseWheelZooms)
 
 
 //========== NSRectToBox2 ======================================================
@@ -141,157 +149,11 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix
 {
-	Matrix4 cameraMatrix = [self->renderer getMatrix];
-
-	// These 3 axes are the directions the _user_ thinks are right, down, and away, in model coordinates.
-	// Note that this assumes that the rotation elements of the camera matrix have no skew or scaling,
-	// so we can use the transpose as an inverse.
-	Vector3 xUser = V3Make(cameraMatrix.element[0][0], cameraMatrix.element[1][0], cameraMatrix.element[2][0]);
-	Vector3 yUser = V3Make(cameraMatrix.element[0][1], cameraMatrix.element[1][1], cameraMatrix.element[2][1]);
-	Vector3 zUser = V3Make(cameraMatrix.element[0][2], cameraMatrix.element[1][2], cameraMatrix.element[2][2]);
-
-	// If we are in a non-orthographic turn-table view, assume that the user's idea of up is up in model
-	// coordinates, no matter how silly the alignment is.  In turn-table view, the user really knows where
-	// the model's "up" is and eexpects to go that way.
-	if ([self projectionMode] != ProjectionModeOrthographic && USE_TURNTABLE)
-	{
-		// But use the original screen space Y to know if we are "upside down" and reverse THAT.  Otherwise
-		// editing the undersides of plates is insane.
-		if(yUser.y < 0.0)
-			yUser = V3Make(0, -1, 0);
-		else
-			yUser = V3Make(0, 1, 0);
-	}
-	
-	// Get the axis basis vectors of the model - this is the direction we will nudge, e.g. an "x part"
-	// nudge moves the part to its own right.
-	Vector3 xPart = V3Make(partMatrix.element[0][0],partMatrix.element[0][1],partMatrix.element[0][2]);
-	Vector3 yPart = V3Make(partMatrix.element[1][0],partMatrix.element[1][1],partMatrix.element[1][2]);
-	Vector3 zPart = V3Make(partMatrix.element[2][0],partMatrix.element[2][1],partMatrix.element[2][2]);
-	
-	// Now, take lots o dot products to find the correlation between the user and model axes.
-	float xUp = V3Dot(yUser,xPart);
-	float yUp = V3Dot(yUser,yPart);
-	float zUp = V3Dot(yUser,zPart);
-	
-	float xRight = V3Dot(xUser,xPart);
-	float yRight = V3Dot(xUser,yPart);
-	float zRight = V3Dot(xUser,zPart);
-
-	float xBack = V3Dot(zUser,xPart);
-	float yBack = V3Dot(zUser,yPart);
-	float zBack = V3Dot(zUser,zPart);
-
-	// We're going to compare them and link the strongest axes together, saving the dot product that we got.
-	Vector3	xNudge = ZeroPoint3, yNudge = ZeroPoint3, zNudge = ZeroPoint3;
-	float xDot = 0.0f, yDot = 0.0f, zDot = 0.0f;
-
-	// Settle Y first, then X.  Since Y is hacked to not be in screen space for some views, there is
-	// a risk that model Y and screen Z are closely correlated.  Find the "up" vector, then take the
-	// right-most of remaining as X.
-	if(fabsf(xUp) > fabsf(yUp) && fabsf(xUp) > fabsf(zUp))
-	{
-		// CASE 1: model "X" axis is up.
-		yNudge = xPart;
-		yDot = xUp;
-		
-		// Figure out which is more "to the right" - Y or Z
-		if(fabsf(yRight) > fabsf(zRight))
-		{
-			// Y axis is to the right.
-			xNudge = yPart;
-			xDot = yRight;
-			// Z is forward
-			zNudge = zPart;
-			zDot = zBack;
-		}
-		else
-		{
-			// Z axis is to the right.
-			xNudge = zPart;
-			xDot = zRight;
-			// Y is forward
-			zNudge = yPart;
-			zDot = yBack;
-		}
-		
-	}
-	else if(fabsf(yUp) > fabsf(zUp))
-	{
-		// CASE 2: model "Y" axis is up.
-		yNudge = yPart;
-		yDot = yUp;
-		
-		if(fabsf(xRight) > fabsf(zRight))
-		{
-			// X axis is right
-			xNudge = xPart;
-			xDot = xRight;
-			// Z is forward
-			zNudge = zPart;
-			zDot = zBack;
-		}
-		else
-		{
-			// Z axis is right
-			xNudge = zPart;
-			xDot = zRight;
-			// X is forward
-			zNudge = xPart;
-			zDot = xBack;
-		}
-	}
-	else
-	{
-		// CASE 3: model "Z" axis is up.
-		yNudge = zPart;
-		yDot = zUp;
-		float yRight = V3Dot(xUser,yPart);
-		if(fabsf(xRight) > fabsf(yRight))
-		{
-			// X is right
-			xNudge = xPart;
-			xDot = xRight;
-			// Y is forward
-			zNudge = yPart;
-			zDot = yBack;
-		}
-		else
-		{
-			// Y is right
-			xNudge = yPart;
-			xDot = yRight;
-			// X is forward
-			zNudge = xPart;
-			zDot = xBack;
-		}
-	}
-	
-	// If any correlation was highly negative, the axis goes the wrong way.
-	// Flip the nudge sign.
-	
-	if(xDot < 0.0f)
-		xNudge = V3Negate(xNudge);
-	if(yDot < 0.0f)
-		yNudge = V3Negate(yNudge);
-	if(zDot < 0.0f)
-		zNudge = V3Negate(zNudge);
-
-	// Now apply the nudge - basically .x of the nudge vector from the
-	// key stroke applies xNudge, etc.
-	return V3Make(
-				self->nudgeVector.x * xNudge.x +
-				self->nudgeVector.y * yNudge.x +
-				self->nudgeVector.z * zNudge.x,
-
-				self->nudgeVector.x * xNudge.y +
-				self->nudgeVector.y * yNudge.y +
-				self->nudgeVector.z * zNudge.y,
-
-				self->nudgeVector.x * xNudge.z +
-				self->nudgeVector.y * yNudge.z +
-				self->nudgeVector.z * zNudge.z);
-
+	return [LDrawSelectionOps nudgeVector:self->nudgeVector
+							   partMatrix:partMatrix
+							 cameraMatrix:[self->renderer getMatrix]
+							 orthographic:([self projectionMode] == ProjectionModeOrthographic)
+							 useTurntable:USE_TURNTABLE];
 
 }//end nudgeVectorForMatrix:
 
@@ -404,7 +266,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Drag and Drop support. We only accept drags if we have a document to add 
 	// them to. 
 	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:acceptDrop:directives:)])
-		[self registerForDraggedTypes:[NSArray arrayWithObject:LDrawDraggingPboardType]];
+		[self registerForDraggedTypes:[LDrawClipboard viewRegisteredDragTypes]];
 	else
 		[self unregisterDraggedTypes];
 		
@@ -497,7 +359,7 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode
 {
 	[self makeCurrentContext];
-	[self->renderer setGridSpacing:[BricksmithUtilities gridSpacingForMode:newMode]];
+	[self->renderer setGridSpacing:[LDrawGrid spacingForMode:newMode]];
 
 }//end setGridSpacingMode:
 
@@ -704,15 +566,8 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	//We treat 3D as a request for perspective, but any straight-on view can
 	// logically be expected to be displayed orthographically.
-	if(newAngle == ViewOrientation3D || newAngle == ViewOrientationWalkThrough)
-		[self->renderer setProjectionMode:ProjectionModePerspective];
-	else
-		[self->renderer setProjectionMode:ProjectionModeOrthographic];
-
-	if(newAngle == ViewOrientationWalkThrough)
-		[self->renderer setLocationMode:LocationModeWalkthrough];
-	else
-		[self->renderer setLocationMode:LocationModeModel];
+	[self->renderer setProjectionMode:[LDrawViewOps projectionModeForViewOrientation:newAngle]];
+	[self->renderer setLocationMode:[LDrawViewOps locationModeForViewOrientation:newAngle]];
 
 	[self saveConfiguration];
 
@@ -1027,41 +882,23 @@ static Box2 NSRectToBox2(NSRect rect)
 
 			//viewing angle
 			case '4':
-				[self setProjectionMode:ProjectionModeOrthographic];
-				[self setViewOrientation:ViewOrientationLeft];
-				[self setLocationMode:LocationModeModel];
-				break;
 			case '6':
-				[self setProjectionMode:ProjectionModeOrthographic];
-				[self setViewOrientation:ViewOrientationRight];
-				[self setLocationMode:LocationModeModel];
-				break;
 			case '2':
-				[self setProjectionMode:ProjectionModeOrthographic];
-				[self setViewOrientation:ViewOrientationBottom];
-				[self setLocationMode:LocationModeModel];
-				break;
 			case '8':
-				[self setProjectionMode:ProjectionModeOrthographic];
-				[self setViewOrientation:ViewOrientationTop];
-				[self setLocationMode:LocationModeModel];
-				break;
 			case '5':
-				[self setProjectionMode:ProjectionModeOrthographic];
-				[self setViewOrientation:ViewOrientationFront];
-				[self setLocationMode:LocationModeModel];
-				break;
 			case '7':
 			case '9':
-				[self setProjectionMode:ProjectionModeOrthographic];
-				[self setViewOrientation:ViewOrientationBack];
-				[self setLocationMode:LocationModeModel];
-				break;
 			case '0':
-				[self setProjectionMode:ProjectionModePerspective];
-				[self setViewOrientation:ViewOrientation3D];
-				[self setLocationMode:LocationModeModel];
+			{
+				ViewOrientationT orientation = ViewOrientation3D;
+				if([LDrawViewOps viewOrientation:&orientation fromHotkeyCharacter:firstCharacter])
+				{
+					[self setProjectionMode:[LDrawViewOps projectionModeForViewOrientation:orientation]];
+					[self setViewOrientation:orientation];
+					[self setLocationMode:[LDrawViewOps locationModeForViewOrientation:orientation]];
+				}
 				break;
+			}
 				
 			default:
 				[super keyDown:theEvent];
@@ -1083,117 +920,42 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void) nudgeKeyDown:(NSEvent *)theEvent
 {
 	__block NSString	*characters		= [theEvent characters];
-	__block unichar		firstCharacter	= '\0';
-	__block Vector3		xNudge			= ZeroPoint3;
-	__block Vector3		yNudge			= ZeroPoint3;
-	__block Vector3		zNudge			= ZeroPoint3;
-	__block Vector3		actualNudge		= ZeroPoint3;
-	__block BOOL		isZMovement		= NO;
-	__block BOOL		isFastNudge		= NO;
-	__block BOOL		isSlowNudge		= NO;
-	__block BOOL		isNudge			= NO;
 
 	[self lockContextAndExecute:^
 	{
 		[self makeCurrentContext];
 
-		if([characters length] > 0)
+		if([characters length] == 0)
 		{
-			firstCharacter	= [characters characterAtIndex:0]; //the key pressed
-
-			xNudge.x = 1.0;
-			yNudge.y = 1.0;
-			zNudge.z = 1.0;
-
-
-			// By holding down the option key, we transcend the two-plane
-			// limitation presented by the arrow keys. Option-presses mean
-			// movement along the z-axis. Note that move "in" to the screen (up
-			// arrow, left arrow?) is a movement along the screen's negative
-			// z-axis.
-			isZMovement	= ([theEvent modifierFlags] & NSEventModifierFlagOption) != 0;
-			isFastNudge = ([theEvent modifierFlags] & NSEventModifierFlagShift) != 0;
-			isSlowNudge = ([theEvent modifierFlags] & NSEventModifierFlagCommand) != 0;
-			isNudge		= NO;
-
-
-			//now we must select which axis we actually are nudging on.
-			switch(firstCharacter)
-			{
-				case NSUpArrowFunctionKey:
-
-					if(isZMovement == YES)
-					{
-						//into the screen (-z)
-						actualNudge = V3Negate(zNudge);
-					}
-					else
-						actualNudge = yNudge;
-					isNudge = YES;
-					break;
-
-				case NSDownArrowFunctionKey:
-
-					if(isZMovement == YES)
-						actualNudge = zNudge;
-					else
-					{
-						actualNudge = V3Negate(yNudge);
-					}
-					isNudge = YES;
-					break;
-
-				case NSLeftArrowFunctionKey:
-
-					if(isZMovement == YES)
-					{
-						//this is iffy at best
-						// -- and it made things go the wrong way in default 3D
-						// perspective view, so I switched signs.
-//						actualNudge = V3Negate(zNudge);
-						actualNudge = zNudge;
-					}
-					else
-					{
-						actualNudge = V3Negate(xNudge);
-					}
-					isNudge = YES;
-					break;
-
-				case NSRightArrowFunctionKey:
-
-					if(isZMovement == YES)
-					{
-//						actualNudge = zNudge;
-						actualNudge = V3Negate(zNudge);
-					}
-					else
-						actualNudge = xNudge;
-					isNudge = YES;
-					break;
-
-				default:
-					break;
-			}
-
-			//Pass the nudge along to the document, which is the one actually in
-			// charge of manipulating the data.
-			if(isNudge == YES)
-			{
-				if(isFastNudge)
-					actualNudge = V3Scale(actualNudge,10.0);
-				else if(isSlowNudge)
-					actualNudge = V3Scale(actualNudge,0.04);
-				
-				self->nudgeVector = actualNudge;
-
-				if([self locationMode] == LocationModeWalkthrough)
-					[renderer moveCamera:actualNudge];
-				else
-					[NSApp sendAction:self->nudgeAction to:self->target from:self];
-				self->nudgeVector = ZeroPoint3;
-			}
+			return;
 		}
+
+		unichar firstCharacter = [characters characterAtIndex:0];
+		LDrawArrowNudge arrow = LDrawArrowNudgeNone;
+		switch(firstCharacter)
+		{
+			case NSUpArrowFunctionKey:    arrow = LDrawArrowNudgeUp;    break;
+			case NSDownArrowFunctionKey:  arrow = LDrawArrowNudgeDown;  break;
+			case NSLeftArrowFunctionKey:  arrow = LDrawArrowNudgeLeft;  break;
+			case NSRightArrowFunctionKey: arrow = LDrawArrowNudgeRight; break;
+			default: break;
+		}
+
+		Vector3 actualNudge = ZeroPoint3;
+		if([LDrawSelectionOps screenNudge:&actualNudge
+								 forArrow:arrow
+								modifiers:[theEvent modifierFlags]] == NO)
+		{
+			return;
+		}
+
+		self->nudgeVector = actualNudge;
+
+		if([self locationMode] == LocationModeWalkthrough)
+			[renderer moveCamera:actualNudge];
+		else
+			[NSApp sendAction:self->nudgeAction to:self->target from:self];
+		self->nudgeVector = ZeroPoint3;
 	}];
 
 }//end nudgeKeyDown:
@@ -1215,7 +977,14 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
-	[self->renderer mouseMoved:view_point];
+	if(self->sceneController != nil)
+	{
+		[self->sceneController mouseMovedToPoint:view_point];
+	}
+	else
+	{
+		[self->renderer mouseMoved:view_point];
+	}
 }
 
 
@@ -1247,6 +1016,14 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
+	// Forward normalized view-space events to the portable scene controller.
+	if(self->sceneController != nil)
+	{
+		NSPoint pointInWindow = [theEvent locationInWindow];
+		NSPoint pointInView = [self convertPoint:pointInWindow fromView:nil];
+		[self->sceneController mouseDownAtPoint:V2Make(pointInView.x, pointInView.y)];
+	}
+
 	// Reset event tracking flags.
 
 	selectionIsMarquee = NO;
@@ -1275,36 +1052,24 @@ static Box2 NSRectToBox2(NSRect rect)
 	}
 	else if(toolMode == RotateSelectTool)
 	{
-		switch(draggingBehavior)
+		if(draggingBehavior == MouseDraggingBeginAfterDelay)
 		{
-			case MouseDraggingOff:
-				// No-op.  During a drag we'll actually start the marquee
-				break;
+			[self cancelClickAndHoldTimer]; // just in case
 
-			case MouseDraggingBeginAfterDelay:
-				[self cancelClickAndHoldTimer]; // just in case
-
-				// Try waiting for a click-and-hold; that means "begin
-				// drag-and-drop"
-				self->mouseDownTimer = [NSTimer scheduledTimerWithTimeInterval:0.25
-																		target:self
-																	  selector:@selector(clickAndHoldTimerFired:)
-																	  userInfo:theEvent
-																	   repeats:NO ];
-				break;
-
-			case MouseDraggingBeginImmediately:
-				[self mousePartSelection:theEvent];
-				break;
-
-			case MouseDraggingImmediatelyInOrthoNeverInPerspective:
-				if([self->renderer projectionMode] == ProjectionModeOrthographic)
-				{
-					[self mousePartSelection:theEvent];
-				}
-				break;
+			// Try waiting for a click-and-hold; that means "begin
+			// drag-and-drop"
+			self->mouseDownTimer = [NSTimer scheduledTimerWithTimeInterval:[LDrawViewOps clickAndHoldDelayInterval]
+																	target:self
+																  selector:@selector(clickAndHoldTimerFired:)
+																  userInfo:theEvent
+																   repeats:NO ];
 		}
-
+		else if([LDrawViewOps shouldSelectPartsOnMouseDownForDraggingBehavior:draggingBehavior
+																isOrthographic:([self->renderer projectionMode] == ProjectionModeOrthographic)])
+		{
+			[self mousePartSelection:theEvent];
+		}
+		// MouseDraggingOff: no-op. During a drag we'll actually start the marquee.
 	}
 
 }//end mouseDown:
@@ -1326,6 +1091,13 @@ static Box2 NSRectToBox2(NSRect rect)
 		toolMode = SpinTool;
 
 	[self makeCurrentContext];
+
+	if(self->sceneController != nil)
+	{
+		NSPoint pointInWindow = [theEvent locationInWindow];
+		NSPoint pointInView = [self convertPoint:pointInWindow fromView:nil];
+		[self->sceneController mouseDraggedToPoint:V2Make(pointInView.x, pointInView.y)];
+	}
 
 	[self->renderer mouseDragged];
 	[self resetCursor];
@@ -1349,41 +1121,21 @@ static Box2 NSRectToBox2(NSRect rect)
 	}
 	else if(toolMode == RotateSelectTool)
 	{
-		switch(draggingBehavior)
+		LDrawRotateSelectDragAction dragAction =
+			[LDrawViewOps rotateSelectDragActionForBehavior:draggingBehavior
+										canBeginDragAndDrop:self->canBeginDragAndDrop
+										 selectionIsMarquee:selectionIsMarquee
+											  isPerspective:([self->renderer projectionMode] == ProjectionModePerspective)];
+		switch(dragAction)
 		{
-			case MouseDraggingOff:
+			case LDrawRotateSelectDragRotateCamera:
 				[self->renderer rotationDragged:dragDelta];
 				break;
-
-			case MouseDraggingBeginAfterDelay:
-				// If the delay has elapsed, begin drag-and-drop. Otherwise,
-				// just spin the model.
-				if(self->canBeginDragAndDrop == YES)
-					[self directInteractionDragged:theEvent];
-				else
-					[self->renderer rotationDragged:dragDelta];
+			case LDrawRotateSelectDragDirectInteraction:
+				[self directInteractionDragged:theEvent];
 				break;
-
-			case MouseDraggingBeginImmediately:
-				if (selectionIsMarquee)
-				{
-					[self mousePartSelection:theEvent];
-				}
-				else
-					[self directInteractionDragged:theEvent];
-				break;
-
-			case MouseDraggingImmediatelyInOrthoNeverInPerspective:
-				if([self->renderer projectionMode] == ProjectionModePerspective)
-					[self->renderer rotationDragged:dragDelta];
-				else {
-					if (selectionIsMarquee)
-					{
-						[self mousePartSelection:theEvent];
-					}
-					else
-						[self directInteractionDragged:theEvent				];
-				}
+			case LDrawRotateSelectDragMarqueeSelection:
+				[self mousePartSelection:theEvent];
 				break;
 		}
 	}
@@ -1409,14 +1161,28 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
+	// Snapshot editor drag before mouseUpAtPoint, which clears isTrackingDrag.
+	// Renderer tracking stays set until renderer mouseUp so camera tools can
+	// still read it for cursors and fast-draw. The marquee stays until
+	// renderer mouseUp so that method can still see it and request a redraw.
+	BOOL wasEditorTrackingDrag = [self->renderer isTrackingDrag];
+	BOOL didPartSelection      = NO;
+	if(self->sceneController != nil)
+	{
+		wasEditorTrackingDrag = [self->sceneController isTrackingDrag];
+		didPartSelection      = [self->sceneController didPartSelection];
+		NSPoint pointInWindow = [theEvent locationInWindow];
+		NSPoint pointInView = [self convertPoint:pointInWindow fromView:nil];
+		[self->sceneController mouseUpAtPoint:V2Make(pointInView.x, pointInView.y)];
+	}
+
 	[self cancelClickAndHoldTimer];
 
 	if( toolMode == RotateSelectTool )
 	{
 		//We only want to select a part if this was NOT part of a mouseDrag event.
 		// Otherwise, the selection should remain intact.
-		if(		[self->renderer isTrackingDrag] == NO
-		   &&	[self->renderer didPartSelection] == NO )
+		if(wasEditorTrackingDrag == NO && didPartSelection == NO)
 		{
 			[self mousePartSelection:theEvent];
 		}
@@ -1428,6 +1194,12 @@ static Box2 NSRectToBox2(NSRect rect)
 	}
 
 	[self->renderer mouseUp];
+	// Renderer mouseUp zeros its marquee after the redisplay check. Mirror
+	// that onto the scene controller so the two copies cannot drift.
+	if(self->sceneController != nil)
+	{
+		[self->sceneController setSelectionMarquee:ZeroBox2];
+	}
 	[self resetCursor];
 
 	selectionIsMarquee = NO;
@@ -1601,21 +1373,17 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void)scrollWheel:(NSEvent *)theEvent
 {
 	NSEventModifierFlags modifiers = [theEvent modifierFlags];
+	BOOL optionDown = (modifiers & NSEventModifierFlagOption) != 0;
 
-	if((modifiers & NSEventModifierFlagOption) != 0 || USE_ZOOM_WHEEL)
+	if(optionDown || USE_ZOOM_WHEEL)
 	{
 		// Zoom in
 		[self makeCurrentContext];
 
 		NSPoint windowPoint     = [theEvent locationInWindow];
 		NSPoint viewPoint       = [self convertPoint:windowPoint fromView:nil];
-		// Negative means scroll down/zoom out
 		CGFloat scrollDelta		= [theEvent deltaY];
-		// 1 = increase 100%; -1 = decrease 100%
-		// Magnification function has asymptotes at y = -1 and y = 1 so that the
-		// zoomChange will never be a negative number.
-		CGFloat magnification   = scrollDelta / (fabs(scrollDelta) + 17);
-		CGFloat zoomChange      = 1.0 + magnification;
+		CGFloat zoomChange      = [LDrawViewOps zoomChangeFactorFromScrollDeltaY:(float)scrollDelta];
 		CGFloat currentZoom     = [self->renderer zoomPercentage];
 
 		[self->renderer setZoomPercentage:(currentZoom * zoomChange)
@@ -1626,39 +1394,12 @@ static Box2 NSRectToBox2(NSRect rect)
 		// Regular scrolling
 
 		Vector2 scrollDelta = V2Make(theEvent.scrollingDeltaX, theEvent.scrollingDeltaY);
-		if(theEvent.hasPreciseScrollingDeltas == NO)
-		{
-			scrollDelta = V2MulScalar(scrollDelta, 10); // totally arbitrary value
-		}
-		else
-		{
-			// I find default scrolling intolerably touchy. The speed is not so
-			// bad in a webpage, but too much for fine-detail Lego CAD. Apply a
-			// completely arbitrary slowing factor.
-			scrollDelta = V2MulScalar(scrollDelta, 0.5);
-		}
+		scrollDelta = V2MulScalar(scrollDelta,
+			[LDrawViewOps scrollDeltaScaleForPreciseScrolling:theEvent.hasPreciseScrollingDeltas]);
 
-		// Units are viewport points. But direction is very confusing.
-		//
-		// +x means scroll the image rightward
-		//     • expose content to left
-		//     • shift origin -x
-		//
-		// +y means scroll the image downward
-		//    	• expose content above
-		//    	• shift origin -y in flipped coordinate system
-		//    	• shift origin +y in non-flipped coordinate system
-
-		Vector2 scrollDelta_viewport = scrollDelta;
-
-		// For, um, reasons?, the x delta from NSEvent is always backward compared
-		// to how we want to move the origin. See notes above.
-		scrollDelta_viewport.x *= -1;
-
-		if([self isFlipped])
-		{
-			scrollDelta_viewport.y *= -1;
-		}
+		Vector2 scrollDelta_viewport =
+			[LDrawViewOps scrollDeltaViewportFromEventDelta:scrollDelta
+												viewFlipped:[self isFlipped]];
 
 		[self->renderer scrollBy:scrollDelta_viewport];
 	}
@@ -1674,7 +1415,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) directInteractionDragged:(NSEvent *)theEvent
 {
-	if([self->renderer activeDragHandle])
+	if([self->sceneController activeDragHandle])
 	{
 		// move drag handle
 		[self dragHandleDragged:theEvent];
@@ -1703,14 +1444,12 @@ static Box2 NSRectToBox2(NSRect rect)
 	BOOL					 okayToDrag			= NO;
 	NSPoint					 offset				= NSZeroPoint;
 	NSArray					*archivedDirectives	= nil;
-	NSData					*data				= nil;
 	LDrawDrawableElement	*firstDirective		= nil;
 	NSPoint					 viewPoint			= [self convertPoint:[theEvent locationInWindow] fromView:nil];
 	Point3					 modelPoint			= ZeroPoint3;
 	Point3					 firstPosition		= ZeroPoint3;
 	Vector3					 displacement		= ZeroPoint3;
 	NSImage					*dragImage			= nil;
-	NSKeyedUnarchiver 		*unarchiver			= nil;
 
 	if(		self->ldrawDelegate != nil
 	   &&	[self->ldrawDelegate respondsToSelector:@selector(LDrawView:writeDirectivesToPasteboard:asCopy:)] )
@@ -1724,33 +1463,15 @@ static Box2 NSRectToBox2(NSRect rect)
 
 		if(okayToDrag == YES)
 		{
-			//---------- Find drag displacement --------------------------------
-			//
-			// When a drag enters a view, the first part's position is normally
-			// set to the model point under the mouse. But that is incorrect
-			// behavior when entering the originating view. The user almost
-			// certainly did not click the mouse at the exact center of part 0,
-			// but nevertheless he does not expect part 0 of his selection to
-			// suddenly become centered under the mouse after dragging only one
-			// pixel.
-			//
-			// Instead we record the offset of his actual originating
-			// click against the position of part 0. Now when this drag reenters
-			// its originating view, its position will be adjusted by that
-			// offset. Everything will come out looking right.
-			//
 			archivedDirectives	= [pasteboard propertyListForType:LDrawDraggingPboardType];
-			data				= [archivedDirectives objectAtIndex:0];
-			unarchiver 			= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
-			[unarchiver setRequiresSecureCoding:NO];
-			firstDirective		= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
-			[unarchiver finishDecoding];
+			firstDirective		= [LDrawClipboard unarchivedDirectiveFromData:[archivedDirectives objectAtIndex:0]];
 			firstPosition		= [firstDirective position];
 			modelPoint			= [self->renderer modelPointForPoint:V2Make(viewPoint.x, viewPoint.y) depthReferencePoint:firstPosition];
-			displacement		= V3Sub(modelPoint, firstPosition);
+			displacement		= [LDrawClipboard draggingOffsetFromModelPoint:modelPoint
+																firstPosition:firstPosition];
 
 			// write displacement to private pasteboard.
-			[pasteboard addTypes:[NSArray arrayWithObject:LDrawDraggingInitialOffsetPboardType] owner:self];
+			[pasteboard addTypes:[LDrawClipboard viewDragOffsetPasteboardTypes] owner:self];
 			[pasteboard setData:[NSData dataWithBytes:&displacement length:sizeof(Vector3)]
 						forType:LDrawDraggingInitialOffsetPboardType];
 
@@ -1763,7 +1484,7 @@ static Box2 NSRectToBox2(NSRect rect)
                 [directive sendMessageToObservers:MessageObservedChanged];
             }
 
-			[self->renderer setDraggingOffset:displacement];
+			[self->sceneController setDraggingOffset:displacement];
 
 			// reset drop destination flag.
 			[self setDragEndedInOurDocument:NO];
@@ -1832,8 +1553,8 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
-	[self->renderer dragHandleDraggedToPoint:V2Make(viewPoint.x, viewPoint.y)
-						   constrainDragAxis:constrainDragAxis];
+	[self->sceneController dragHandleDraggedToPoint:V2Make(viewPoint.x, viewPoint.y)
+								   constrainDragAxis:constrainDragAxis];
 
 }//end dragHandleDragged:
 
@@ -1865,8 +1586,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	if([theEvent type] == NSEventTypeLeftMouseDragged)
 	{
 
-		[self->renderer mouseSelectionDragToPoint:V2Make(viewPoint.x, viewPoint.y)
-								  selectionMode:marqueeSelectionMode];
+		[self->sceneController mouseSelectionDragToPoint:V2Make(viewPoint.x, viewPoint.y)
+										  selectionMode:marqueeSelectionMode];
 
 		[self setNeedsDisplay:YES];
 	}
@@ -1879,25 +1600,12 @@ static Box2 NSRectToBox2(NSRect rect)
 	// -- We desperately need simple modifiers for rotating the view. Otherwise,
 	// I doubt people would discover it.
 
-	if (([theEvent modifierFlags] & NSEventModifierFlagShift) != 0)
-	{
-		if(([theEvent modifierFlags] & NSEventModifierFlagOption) != 0)
-			selectionMode = SelectionIntersection;
-		else
-			selectionMode = SelectionExtend;
-	}
-	else
-	{
-		if(([theEvent modifierFlags] & NSEventModifierFlagOption) != 0)
-			selectionMode = SelectionSubtract;
-		else
-			selectionMode = SelectionReplace;
-	}
+		selectionMode = [LDrawSelectionOps selectionModeFromModifiers:[theEvent modifierFlags]];
 
 		// This click is a click down to see what we hit - record whether we hit something so
 		// we can then marquee or drag and drop.
-		selectionIsMarquee = ![self->renderer mouseSelectionClick:V2Make(viewPoint.x, viewPoint.y)
-												  selectionMode:selectionMode]
+		selectionIsMarquee = ![self->sceneController mouseSelectionClickAtPoint:V2Make(viewPoint.x, viewPoint.y)
+																  selectionMode:selectionMode]
 						&& [self->ldrawDelegate respondsToSelector:@selector(markPreviousSelection)];
 		if(selectionIsMarquee)
 		{
@@ -1906,7 +1614,7 @@ static Box2 NSRectToBox2(NSRect rect)
 			// scroll zone this will continuously scroll.  I do _not_ know what the correct scrolling interval should be...
 			// auto-scroll seems jerky.
 			self->marqueeSelectionMode = selectionMode;
-			self->autoscrollTimer = [NSTimer scheduledTimerWithTimeInterval:0.2
+			self->autoscrollTimer = [NSTimer scheduledTimerWithTimeInterval:[LDrawViewOps marqueeAutoscrollInterval]
 																		target:self
 																	  selector:@selector(autoscrollTimerFired:)
 																	  userInfo:self
@@ -2072,7 +1780,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	NSPoint windowPoint     = [theEvent locationInWindow];
 	NSPoint viewPoint       = [self convertPoint:windowPoint fromView:nil];
 	CGFloat magnification   = [theEvent magnification]; // 1 = increase 100%; -1 = decrease 100%
-	CGFloat zoomChange      = 1.0 + magnification;
+	CGFloat zoomChange      = [LDrawViewOps zoomChangeFactorFromMagnification:magnification];
 	CGFloat currentZoom     = [self->renderer zoomPercentage];
 
 	//Negative means down
@@ -2097,8 +1805,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Do not allow rotating in orthographic views if we started out doing a
 	// zoom gesture. Rotating will automatically change an orthographic view to
 	// perspective, and we don't want to do that when unexpected.
-	if(		[self->renderer projectionMode] == ProjectionModePerspective
-	   ||	self->startingGestureType == NSEventTypeRotate )
+	if(([self->renderer projectionMode] == ProjectionModePerspective)
+		|| (self->startingGestureType == NSEventTypeRotate))
 	{
 		[self lockContextAndExecute:^
 		{
@@ -2119,24 +1827,20 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) swipeWithEvent:(NSEvent *)theEvent
 {
-	CGFloat horizontalDirection = [theEvent deltaX];
-	
-	if(horizontalDirection == 0)
+	switch([LDrawViewOps stepActionForSwipeDeltaX:[theEvent deltaX]])
 	{
-		// vertical swipe; we don't recognize them.
-	}
-	else if(horizontalDirection < 0)
-	{
-		// forward
-		// On the MacBook Air (1st generation), -1 means forward. That seems 
-		// wrong and contradictory to a certain release note *ahem*; I guess I'm 
-		// going with actual behavior right now. 
-		[NSApp sendAction:self->forwardAction to:self->target from:self];
-	}
-	else
-	{
-		// back
-		[NSApp sendAction:self->backAction to:self->target from:self];
+		case LDrawSwipeStepNone:
+			// vertical swipe; we don't recognize them.
+			break;
+		case LDrawSwipeStepForward:
+			// On the MacBook Air (1st generation), -1 means forward. That seems 
+			// wrong and contradictory to a certain release note *ahem*; I guess I'm 
+			// going with actual behavior right now. 
+			[NSApp sendAction:self->forwardAction to:self->target from:self];
+			break;
+		case LDrawSwipeStepBack:
+			[NSApp sendAction:self->backAction to:self->target from:self];
+			break;
 	}
 	
 }//end swipeWithEvent:
@@ -2162,16 +1866,12 @@ static Box2 NSRectToBox2(NSRect rect)
 	BOOL					setTransform		= NO;
 	NSArray 				*archivedDirectives = nil;
 	NSMutableArray			*directives 		= nil;
-	NSData					*data				= nil;
-	id						currentObject		= nil;
-	NSUInteger				directiveCount		= 0;
-	NSUInteger				counter 			= 0;
 	NSPoint 				dragPointInWindow	= [info draggingLocation];
 	NSPoint 				viewPoint			= [self convertPoint:dragPointInWindow fromView:nil];
-	NSKeyedUnarchiver 		*unarchiver			= nil;
+	BOOL					originatedLocally	= [LDrawClipboard dragOriginatedLocallyFromSource:sourceView
+																					 destination:self];
 
-	// local drag?
-	if(sourceView == self)
+	if([LDrawClipboard viewDragKindFromSource:sourceView destination:self] == LDrawViewDragKindMove)
 		dragOperation = NSDragOperationMove;
 	else
 		dragOperation = NSDragOperationCopy;
@@ -2180,34 +1880,17 @@ static Box2 NSRectToBox2(NSRect rect)
 	//---------- unarchive the directives --------------------------------------
 
 	archivedDirectives	= [pasteboard propertyListForType:LDrawDraggingPboardType];
-	directiveCount		= [archivedDirectives count];
-	directives			= [NSMutableArray arrayWithCapacity:directiveCount];
+	directives			= [[LDrawClipboard unarchivedDirectivesFromDataArray:archivedDirectives] mutableCopy];
+	[LDrawSelectionOps setSelected:YES forDirectives:directives];
 
-	for(counter = 0; counter < directiveCount; counter++)
-	{
-		data			= [archivedDirectives objectAtIndex:counter];
-		unarchiver		= [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:nil];
-		[unarchiver setRequiresSecureCoding:NO];
-		currentObject	= [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
-		[unarchiver finishDecoding];
-
-		// while a part is dragged, it is drawn selected
-		[currentObject setSelected:YES];
-
-		[directives addObject:currentObject];
-	}
-
-	if([[pasteboard propertyListForType:LDrawDraggingIsUninitializedPboardType] boolValue] == YES)
-	{
-		setTransform = YES;
-	}
+	setTransform = [[pasteboard propertyListForType:LDrawDraggingIsUninitializedPboardType] boolValue];
 
 	//---------- Find Location -------------------------------------------------
 
-	[self->renderer draggingEnteredAtPoint:V2Make(viewPoint.x, viewPoint.y)
-								directives:directives
-							  setTransform:setTransform
-						 originatedLocally:(sourceView == self)];
+	[self->sceneController draggingEnteredAtPoint:V2Make(viewPoint.x, viewPoint.y)
+										directives:directives
+									  setTransform:setTransform
+								 originatedLocally:originatedLocally];
 
 	return dragOperation;
 
@@ -2234,7 +1917,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Drag point is always inside view. But if it's close to the edges, we
 	// autoscroll. This matches the out-of-box behavior provided by AppKit for
 	// views within an NSScrollView.
-	NSRect noAutoscrollZone = NSInsetRect(self.bounds, 20, 20); // it's more like 50 in AppKit
+	float autoscrollInset = [LDrawViewOps autoscrollInset];
+	NSRect noAutoscrollZone = NSInsetRect(self.bounds, autoscrollInset, autoscrollInset);
 	BOOL needsAutoscroll = NSPointInRect(viewPoint, noAutoscrollZone) == NO; // implies we are in the margin
 	if(needsAutoscroll)
 	{
@@ -2242,7 +1926,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	}
 	
 	// local drag?
-	if(sourceView == self)
+	if([LDrawClipboard viewDragKindFromSource:sourceView destination:self] == LDrawViewDragKindMove)
 		dragOperation = NSDragOperationMove;
 	else
 		dragOperation = NSDragOperationCopy;
@@ -2252,8 +1936,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	// the event that initiated this call, so we have to hack. 
 	constrainDragAxis = ([[NSApp currentEvent] modifierFlags] & NSEventModifierFlagShift) != 0;
 	
-	[self->renderer updateDragWithPosition:V2Make(viewPoint.x, viewPoint.y)
-							 constrainAxis:constrainDragAxis];
+	[self->sceneController updateDragWithPosition:V2Make(viewPoint.x, viewPoint.y)
+									constrainAxis:constrainDragAxis];
 
     // this doesn't cause a redraw.  Would be nice if it did.
     for (LDrawDirective *directive in [ldrawDelegate selectedObjects]) {
@@ -2330,7 +2014,7 @@ static Box2 NSRectToBox2(NSRect rect)
 {
 	[self makeCurrentContext];
 
-	[self->renderer endDragging];
+	[self->sceneController endDragging];
 
 }//end concludeDragOperation:
 
@@ -2343,7 +2027,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //===============================================================================
 - (NSDragOperation)		  draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
 {
-	if (context == NSDraggingContextWithinApplication)
+	if(context == NSDraggingContextWithinApplication)
 		return NSDragOperationEvery;	// Allow all operations for local drags
 	else
 		return NSDragOperationCopy;		// Only allow copy for external drags
@@ -2636,8 +2320,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	if(self->autosaveName != nil)
 	{
 		NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
-		NSString            *viewingAngleKey    = [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_ANGLE, self->autosaveName];
-		NSString            *projectionModeKey  = [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_PROJECTION, self->autosaveName];
+		NSString            *viewingAngleKey    = [LDrawPreferences viewingAnglePreferenceKeyForAutosaveName:self->autosaveName];
+		NSString            *projectionModeKey  = [LDrawPreferences projectionModePreferenceKeyForAutosaveName:self->autosaveName];
 		ViewOrientationT    orientation         = (ViewOrientationT)[userDefaults integerForKey:viewingAngleKey];
 		ProjectionModeT     projection			= (ProjectionModeT)[userDefaults integerForKey:projectionModeKey];
 		
@@ -2665,8 +2349,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	if(self->autosaveName != nil)
 	{
 		NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
-		NSString		*viewingAngleKey	= [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_ANGLE, self->autosaveName];
-		NSString		*projectionModeKey	= [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_PROJECTION, self->autosaveName];
+		NSString		*viewingAngleKey	= [LDrawPreferences viewingAnglePreferenceKeyForAutosaveName:self->autosaveName];
+		NSString		*projectionModeKey	= [LDrawPreferences projectionModePreferenceKeyForAutosaveName:self->autosaveName];
 
 		[userDefaults setInteger:[self->renderer viewOrientation]	forKey:viewingAngleKey];
 		[userDefaults setInteger:[self->renderer projectionMode]	forKey:projectionModeKey];
@@ -2717,7 +2401,15 @@ static Box2 NSRectToBox2(NSRect rect)
 	NSColor			*newColor		= [userDefaults colorForKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY];
 	
 	if(newColor == nil)
-		newColor = [NSColor controlBackgroundColor];
+	{
+		switch([LDrawPreferences colorFallbackForPreferenceKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY])
+		{
+			case LDrawPreferenceColorFallbackControlBackground:
+			default:
+				newColor = [NSColor controlBackgroundColor];
+				break;
+		}
+	}
 	
 	[self setBackgroundColor:newColor];
 	

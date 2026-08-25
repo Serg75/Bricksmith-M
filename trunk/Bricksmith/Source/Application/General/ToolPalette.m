@@ -25,8 +25,9 @@
 
 #import "LDrawColorPanelController.h"
 #import "LDrawColorWell.h"
-#import "MacLDraw.h"
-#import "StringCategory.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/StringCategory.h>
+#import <LDrawFeatures/LDrawPreferences.h>
 
 ToolPalette *sharedToolPalette = nil;
 
@@ -108,7 +109,7 @@ ToolPalette *sharedToolPalette = nil;
 	
 	NSScreen    *primaryScreen  = [[NSScreen screens] objectAtIndex:0];
 	NSRect      toolRect        = [primaryScreen visibleFrame];
-	BOOL        showTools       = ([[NSUserDefaults standardUserDefaults] boolForKey:TOOL_PALETTE_HIDDEN] == NO);
+	BOOL        showTools       = [[NSUserDefaults standardUserDefaults] boolForKey:TOOL_PALETTE_HIDDEN] == NO;
 	
 	toolRect.size.width = 34;
 	toolRect.size.height = NSHeight([self->paletteContents frame]);
@@ -209,10 +210,8 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (void) hideToolPalette:(id)sender
 {
-	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
-	
 	//record this preference.
-	[userDefaults setBool:YES forKey:TOOL_PALETTE_HIDDEN];
+	[LDrawPreferences setToolPaletteHidden:YES];
 	
 	//open the window.
 	[palettePanel close];
@@ -227,10 +226,8 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (void) showToolPalette:(id)sender
 {
-	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
-	
 	//record this preference.
-	[userDefaults setBool:NO forKey:TOOL_PALETTE_HIDDEN];
+	[LDrawPreferences setToolPaletteHidden:NO];
 	
 	//open the window.
 	[palettePanel orderFront:self];
@@ -408,9 +405,7 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (BOOL) windowShouldClose:(id)sender
 {
-	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
-	
-	[userDefaults setBool:YES forKey:TOOL_PALETTE_HIDDEN];
+	[LDrawPreferences setToolPaletteHidden:YES];
 	
 	return YES;
 	
@@ -429,70 +424,13 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (void) resolveCurrentToolMode
 {
-	ToolModeT   newToolMode;
-	
-	NSString    *baseCharacters         = nil;
-	NSUInteger  baseModifiers           = 0;
-	
-	NSString    *effectiveCharacters    = nil;
-	NSUInteger  effectiveModifiers      = 0;
-	
-	baseCharacters = [ToolPalette keysForToolMode: baseToolMode
-										modifiers:&baseModifiers ];
-	
-	// the "effective keys" are the result of what we *would be pressing* to get 
-	// the currently-selected tool, plus the keys we *actually are pressing*.
-	effectiveCharacters	= [baseCharacters stringByAppendingString:self->currentKeyCharacters];
-	effectiveModifiers	= (baseModifiers) | (self->currentKeyModifiers);
+	ToolModeT newToolMode = LDrawToolModeResolved(baseToolMode,
+												  self->currentKeyCharacters,
+												  self->currentKeyModifiers,
+												  mouseButton3IsDown,
+												  self->tabletPointingDevice == NSPointingDeviceTypeEraser);
 
-	// Zoom out
-	if( [ToolPalette toolMode:ZoomOutTool
-			matchesCharacters:effectiveCharacters
-					modifiers:effectiveModifiers] == YES)
-	{
-		newToolMode = ZoomOutTool;
-	}
-	// Zoom in
-	else if( [ToolPalette toolMode:ZoomInTool
-				 matchesCharacters:effectiveCharacters
-						 modifiers:effectiveModifiers] == YES)
-	{
-		newToolMode = ZoomInTool;
-	}
-	// Smooth Zoom
-	else if( [ToolPalette toolMode:SmoothZoomTool
-				 matchesCharacters:effectiveCharacters
-						 modifiers:effectiveModifiers] == YES)
-	{
-		newToolMode = SmoothZoomTool;
-	}
-	// Panning
-	else if( [ToolPalette toolMode:PanScrollTool
-				 matchesCharacters:effectiveCharacters
-						 modifiers:effectiveModifiers] == YES)
-	{
-		newToolMode = PanScrollTool;
-	}
-	// Spin model
-	else if( [ToolPalette toolMode:SpinTool
-				 matchesCharacters:effectiveCharacters
-						 modifiers:effectiveModifiers] == YES
-			|| mouseButton3IsDown == YES )
-	{
-		newToolMode = SpinTool;
-	}
-	// Eraser tool
-	else if( self->tabletPointingDevice == NSPointingDeviceTypeEraser)
-	{
-		newToolMode = EraserTool;
-	}	
-	//Rotate/select (no hot key; normal behavior)
-	else
-	{
-		newToolMode = RotateSelectTool;
-	}
-	
-	//Update the tool mode!
+	// Update the tool mode!
 	[self setToolMode:newToolMode];
 	
 }//end findCurrentToolMode
@@ -515,51 +453,7 @@ ToolPalette *sharedToolPalette = nil;
 + (NSString *) keysForToolMode:(ToolModeT)toolMode
 					 modifiers:(NSUInteger*)modifiersOut
 {
-	NSString *characters = nil; //characters required with this modifier
-	
-	switch(toolMode)
-	{
-		case RotateSelectTool:
-		case EraserTool:
-			// no keys required for basic mouse tools
-			characters = @"";
-			*modifiersOut = kNilOptions;
-			break;
-			
-		case PanScrollTool:
-			//space
-			characters = @" ";
-			*modifiersOut = kNilOptions;
-			break;
-			
-		case SmoothZoomTool:
-			//command-option
-			characters = @"";
-//			*modifiersOut = (NSEventModifierFlagCommand | NSEventModifierFlagShift);
-			*modifiersOut = (NSEventModifierFlagCommand | NSEventModifierFlagOption);
-			break;
-			
-		case ZoomInTool:
-			//command-space
-			characters = @" ";
-			*modifiersOut = NSEventModifierFlagCommand;
-			break;
-			
-		case ZoomOutTool:
-			//option-space
-			characters = @" ";
-			*modifiersOut = NSEventModifierFlagOption;
-			break;
-			
-		case SpinTool:
-			// command
-			characters = @"";
-			*modifiersOut = (NSEventModifierFlagCommand);
-			break;
-	}
-	
-	return characters;
-	
+	return LDrawToolModeCharacters(toolMode, modifiersOut);
 }//end keysForToolMode:modifiers:
 
 
@@ -573,22 +467,7 @@ ToolPalette *sharedToolPalette = nil;
  matchesCharacters:(NSString *)characters
 		 modifiers:(NSUInteger)modifiers
 {
-	NSString    *testCharacters = nil;
-	NSUInteger  testModifiers   = 0;
-	BOOL        matches         = NO;
-	
-	testCharacters = [ToolPalette keysForToolMode: toolMode
-										modifiers:&testModifiers ];
-	
-	//keys match exactly, modifiers must merely be present.
-	if(		[characters ams_containsString:testCharacters options:0]
-		&&	(modifiers & testModifiers) == testModifiers )
-	{
-		matches = YES;
-	}
-	
-	return matches;
-	
+	return LDrawToolModeMatches(toolMode, characters, modifiers);
 }//end toolMode:matchesCharacters:modifiers:
 
 

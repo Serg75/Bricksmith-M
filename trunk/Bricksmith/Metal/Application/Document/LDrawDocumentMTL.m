@@ -25,16 +25,22 @@
 #import "Inspector.h"
 #import "LDrawApplicationMTL.h"
 #import "LDrawColorPanelController.h"
-#import "LDrawFile.h"
-#import "LDrawLSynth.h"
-#import "LDrawMPDModel.h"
-#import "LDrawPart.h"
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawPart.h>
 #import "SearchPanelController.h"
 
 
 @implementation LDrawDocument (Metal)
 
 
+//========== lockContextAndExecute: ============================================
+//
+// Purpose:		Run an undoable document edit block. Metal has no shared GL
+//				context to lock; the block runs immediately.
+//
+//==============================================================================
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block
 {
     block();

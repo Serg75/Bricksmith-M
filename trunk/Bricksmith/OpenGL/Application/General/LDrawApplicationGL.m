@@ -44,11 +44,23 @@
 	return pixelFormat;
 }
 
+//========== makeCurrentSharedContext ==========================================
+//
+// Purpose:		Activate the application-wide shared OpenGL context so display-
+//				list tags and other GL state are consistent across views.
+//
+//==============================================================================
 + (void) makeCurrentSharedContext
 {
 	[[LDrawApplication shared]->sharedGLContext makeCurrentContext];
 }
 
+//========== makeCurrentSharedContextKeepOriginal: =============================
+//
+// Purpose:		Activate the shared context for outline-driven selection updates.
+//				The original context is restored by the caller when finished.
+//
+//==============================================================================
 + (void) makeCurrentSharedContextKeepOriginal:(NSOpenGLContext *)originalContext
 {
 	[[LDrawApplication shared]->sharedGLContext makeCurrentContext];
@@ -69,6 +81,12 @@
 
 #pragma mark -
 
+//========== makeSharedContext =================================================
+//
+// Purpose:		Create the application-wide shared OpenGL context used to unify
+//				display-list tags across all LDraw views.
+//
+//==============================================================================
 -(void) makeSharedContext
 {
 	NSOpenGLPixelFormat *pixelFormat	= [LDrawApplication openGLPixelFormat];

@@ -19,7 +19,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LDrawView (OpenGL)
 
+/// Activate this view's OpenGL context before renderer calls.
 - (void)makeCurrentContext;
+
+/// Bracket block with CGL lock/unlock on this view's context.
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
 
 - (void) internalInit;

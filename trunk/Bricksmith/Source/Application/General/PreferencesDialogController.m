@@ -50,17 +50,45 @@
 
 #import "LDrawApplication.h"
 #import "LDrawView.h"			//for ViewOrientationT
-#import "LDrawPaths.h"
-#import "MacLDraw.h"
-#import "PartLibrary.h"
+#import <LDrawCore/LDrawPaths.h>
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/PartLibrary.h>
 #import "PartLibraryController.h"
-#import "LSynthConfiguration.h"
+#import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawFeatures/LDrawPreferences.h>
 #import "UserDefaultsCategory.h"
 #import "WindowCategory.h"
-#import "RegexKitLite.h"
+#import <LDrawCore/LDrawRegex.h>
 
 static inline NSData *archivedData(id object) {
     return [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:nil];
+}
+
+/// Maps LDrawPreferences colorFallbackForPreferenceKey: to NSColor.
+static NSColor *FallbackColorForPreferenceKey(NSString *key)
+{
+	switch([LDrawPreferences colorFallbackForPreferenceKey:key])
+	{
+		case LDrawPreferenceColorFallbackControlBackground:
+			return [NSColor controlBackgroundColor];
+		case LDrawPreferenceColorFallbackText:
+			return [NSColor textColor];
+		case LDrawPreferenceColorFallbackSystemBlue:
+			return [NSColor systemBlueColor];
+		case LDrawPreferenceColorFallbackTeal:
+		{
+			float rgba[4];
+			[LDrawPreferences getTealSyntaxColorRGBA:rgba];
+			return [NSColor colorWithDeviceRed:rgba[0] green:rgba[1] blue:rgba[2] alpha:rgba[3]];
+		}
+		case LDrawPreferenceColorFallbackSystemGreen:
+			return [NSColor systemGreenColor];
+		case LDrawPreferenceColorFallbackSystemGray:
+			return [NSColor systemGrayColor];
+		case LDrawPreferenceColorFallbackSystemRed:
+			return [NSColor systemRedColor];
+	}
+	return [NSColor textColor];
 }
 
 @interface PreferencesDialogController ()
@@ -211,7 +239,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	RotateModeT			rBehavior = (RotateModeT)[userDefaults integerForKey:ROTATE_MODE_KEY];
 	[self->rotateModeRadioButtons selectCellWithTag:rBehavior];
 	
-	MouseWheelBeahviorT	wBehavior = (MouseWheelBeahviorT)[userDefaults integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY];
+	MouseWheelBehaviorT	wBehavior = (MouseWheelBehaviorT)[userDefaults integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 	[self->mouseWheelRadioButtons selectCellWithTag:wBehavior];
 	
 	
@@ -229,14 +257,14 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
 	
 	// Get colors from preferences, with fallback defaults if unarchiving fails
-	NSColor			*backgroundColor	= [userDefaults colorForKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY] ?: [NSColor controlBackgroundColor];
-	NSColor			*modelsColor		= [userDefaults colorForKey:SYNTAX_COLOR_MODELS_KEY] ?: [NSColor textColor];
-	NSColor			*stepsColor			= [userDefaults colorForKey:SYNTAX_COLOR_STEPS_KEY] ?: [NSColor textColor];
-	NSColor			*partsColor			= [userDefaults colorForKey:SYNTAX_COLOR_PARTS_KEY] ?: [NSColor textColor];
-	NSColor			*primitivesColor	= [userDefaults colorForKey:SYNTAX_COLOR_PRIMITIVES_KEY] ?: [NSColor systemBlueColor];
-	NSColor			*colorsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COLORS_KEY] ?: [NSColor colorWithDeviceRed:0./255 green:128./255 blue:128./255 alpha:1.0];
-	NSColor			*commentsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COMMENTS_KEY] ?: [NSColor systemGreenColor];
-	NSColor			*unknownColor		= [userDefaults colorForKey:SYNTAX_COLOR_UNKNOWN_KEY] ?: [NSColor systemGrayColor];
+	NSColor			*backgroundColor	= [userDefaults colorForKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY] ?: FallbackColorForPreferenceKey(LDRAW_VIEWER_BACKGROUND_COLOR_KEY);
+	NSColor			*modelsColor		= [userDefaults colorForKey:SYNTAX_COLOR_MODELS_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_MODELS_KEY);
+	NSColor			*stepsColor			= [userDefaults colorForKey:SYNTAX_COLOR_STEPS_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_STEPS_KEY);
+	NSColor			*partsColor			= [userDefaults colorForKey:SYNTAX_COLOR_PARTS_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_PARTS_KEY);
+	NSColor			*primitivesColor	= [userDefaults colorForKey:SYNTAX_COLOR_PRIMITIVES_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_PRIMITIVES_KEY);
+	NSColor			*colorsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COLORS_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_COLORS_KEY);
+	NSColor			*commentsColor		= [userDefaults colorForKey:SYNTAX_COLOR_COMMENTS_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_COMMENTS_KEY);
+	NSColor			*unknownColor		= [userDefaults colorForKey:SYNTAX_COLOR_UNKNOWN_KEY] ?: FallbackColorForPreferenceKey(SYNTAX_COLOR_UNKNOWN_KEY);
 	
 	[backgroundColorWell	setColor:backgroundColor];
 
@@ -282,7 +310,7 @@ PreferencesDialogController *preferencesDialog = nil;
     NSString       *executablePath        = [userDefaults stringForKey:LSYNTH_EXECUTABLE_PATH_KEY];
     NSString       *configurationPath     = [userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY];
 	NSInteger       selectionTransparency = [userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]; // Stored as an int but interpreted as a percentage
-    NSColor        *selectionColor        = [userDefaults colorForKey:LSYNTH_SELECTION_COLOR_KEY] ?: [NSColor systemRedColor];
+    NSColor        *selectionColor        = [userDefaults colorForKey:LSYNTH_SELECTION_COLOR_KEY] ?: FallbackColorForPreferenceKey(LSYNTH_SELECTION_COLOR_KEY);
     BOOL            saveSynthesizedParts  = [userDefaults boolForKey:LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY];
     BOOL            showBasicPartsList    = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
     LSynthSelectionModeT selectionMode    = (LSynthSelectionModeT)[userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
@@ -297,22 +325,11 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthSaveSynthesizedParts setState:saveSynthesizedParts];
     [lsynthShowBasicPartsList   setState:showBasicPartsList];
     
-    // Enable the correct bits of the selection section
-    if (selectionMode == TransparentSelection) {
-        [lsynthTransparencySlider setEnabled:YES];
-        [lsynthTransparencyText setEnabled:YES];
-        [lsynthSelectionColorWell setEnabled:NO];
-    }
-    else if (selectionMode == ColoredSelection) {
-        [lsynthTransparencySlider setEnabled:NO];
-        [lsynthTransparencyText setEnabled:NO];
-        [lsynthSelectionColorWell setEnabled:YES];
-    }
-    else if (selectionMode == TransparentColoredSelection) {
-        [lsynthTransparencySlider setEnabled:YES];
-        [lsynthTransparencyText setEnabled:YES];
-        [lsynthSelectionColorWell setEnabled:YES];
-    }
+    LSynthSelectionControlEnablement enablement =
+		[LSynthConfiguration selectionControlEnablementForMode:selectionMode];
+    [lsynthTransparencySlider setEnabled:enablement.transparencyEnabled];
+    [lsynthTransparencyText setEnabled:enablement.transparencyEnabled];
+    [lsynthSelectionColorWell setEnabled:enablement.colorWellEnabled];
 }
 
 #pragma mark -
@@ -374,6 +391,11 @@ PreferencesDialogController *preferencesDialog = nil;
 	
 }//end mouseDraggingChanged:
 
+//========== rightButtonChanged: ===============================================
+//
+// Purpose:		Right-button behavior in the 3D view was changed.
+//
+//==============================================================================
 - (IBAction) rightButtonChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -382,6 +404,11 @@ PreferencesDialogController *preferencesDialog = nil;
 						forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
 }
 
+//========== rotateModeChanged: ================================================
+//
+// Purpose:		Rotation mode (trackball vs turntable) was changed.
+//
+//==============================================================================
 - (IBAction) rotateModeChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
@@ -390,10 +417,15 @@ PreferencesDialogController *preferencesDialog = nil;
 						forKey:ROTATE_MODE_KEY];
 }
 
+//========== mouseWheelChanged: ================================================
+//
+// Purpose:		Mouse-wheel behavior (scroll vs zoom) was changed.
+//
+//==============================================================================
 - (IBAction) mouseWheelChanged:(id)sender
 {
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
-	MouseWheelBeahviorT		wBehavior 	= (MouseWheelBeahviorT)[self->mouseWheelRadioButtons selectedTag];
+	MouseWheelBehaviorT		wBehavior 	= (MouseWheelBehaviorT)[self->mouseWheelRadioButtons selectedTag];
 	[userDefaults setInteger:wBehavior
 						forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 }
@@ -414,10 +446,10 @@ PreferencesDialogController *preferencesDialog = nil;
 	[folderChooser setCanChooseDirectories:YES];
 	
 	//Tell the poor user what this dialog does!
-	[folderChooser setTitle:NSLocalizedString(@"Choose LDraw Folder", nil)];
-	[folderChooser setMessage:NSLocalizedString(@"LDrawFolderChooserMessage", nil)];
+	[folderChooser setTitle:NSLocalizedString([LDrawPreferences chooseLDrawFolderTitleKey], nil)];
+	[folderChooser setMessage:NSLocalizedString([LDrawPreferences ldrawFolderChooserMessageKey], nil)];
 	[folderChooser setAccessoryView:folderChooserAccessoryView];
-	[folderChooser setPrompt:NSLocalizedString(@"Choose", nil)];
+	[folderChooser setPrompt:NSLocalizedString([LDrawPreferences choosePromptKey], nil)];
 	
 	//Run the dialog.
 	if([folderChooser runModal] == NSModalResponseOK)
@@ -637,10 +669,10 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthExecutableChooser setCanChooseDirectories:NO];
 
     //Tell the poor user what this dialog does!
-    [lsynthExecutableChooser setTitle:NSLocalizedString(@"Choose an LSynth executable", nil)];
-    [lsynthExecutableChooser setMessage:NSLocalizedString(@"lsynthExecutableChooserMessage", nil)];
+    [lsynthExecutableChooser setTitle:NSLocalizedString([LSynthConfiguration chooseLSynthExecutableTitleKey], nil)];
+    [lsynthExecutableChooser setMessage:NSLocalizedString([LSynthConfiguration lsynthExecutableChooserMessageKey], nil)];
     [lsynthExecutableChooser setAccessoryView:lsynthExecutableChooserAccessoryView];
-    [lsynthExecutableChooser setPrompt:NSLocalizedString(@"Choose", nil)];
+    [lsynthExecutableChooser setPrompt:NSLocalizedString([LDrawPreferences choosePromptKey], nil)];
 
     //Run the dialog.
     if([lsynthExecutableChooser runModal] == NSModalResponseOK)
@@ -675,10 +707,10 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthConfigurationChooser setCanChooseDirectories:NO];
     
     //Tell the poor user what this dialog does!
-    [lsynthConfigurationChooser setTitle:NSLocalizedString(@"Choose an LSynth configuration file", nil)];
-    [lsynthConfigurationChooser setMessage:NSLocalizedString(@"lsynthConfigurationChooserMessage", nil)];
+    [lsynthConfigurationChooser setTitle:NSLocalizedString([LSynthConfiguration chooseLSynthConfigurationTitleKey], nil)];
+    [lsynthConfigurationChooser setMessage:NSLocalizedString([LSynthConfiguration lsynthConfigurationChooserMessageKey], nil)];
     [lsynthConfigurationChooser setAccessoryView:lsynthConfigurationChooserAccessoryView];
-    [lsynthConfigurationChooser setPrompt:NSLocalizedString(@"Choose", nil)];
+    [lsynthConfigurationChooser setPrompt:NSLocalizedString([LDrawPreferences choosePromptKey], nil)];
     
     //Run the dialog.
     if([lsynthConfigurationChooser runModal] == NSModalResponseOK)
@@ -738,6 +770,15 @@ PreferencesDialogController *preferencesDialog = nil;
     NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
 
     [userDefaults setColor:newColor forKey:LSYNTH_SELECTION_COLOR_KEY];
+
+    // Mirror into the Foundation-only RGBA key so LDrawCore can read the
+    // current selection color without depending on NSColor.
+    NSColor *rgba = [newColor colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: newColor;
+    [userDefaults setObject:@[ @([rgba redComponent]),
+                               @([rgba greenComponent]),
+                               @([rgba blueComponent]),
+                               @([rgba alphaComponent]) ]
+                     forKey:LSYNTH_SELECTION_COLOR_RGBA_KEY];
     [self lsynthRequiresRedisplay];
 } // end lsynthSelectionColorWellClicked:
 
@@ -933,43 +974,24 @@ PreferencesDialogController *preferencesDialog = nil;
 //------------------------------------------------------------------------------
 + (void) ensureDefaults
 {
+	[[LDrawPreferences sharedPreferences] ensureDefaults];
+
 	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
 	NSMutableDictionary	*initialDefaults	= [NSMutableDictionary dictionary];
 	
-	NSColor				*backgroundColor	= [NSColor controlBackgroundColor];
-	NSColor				*modelsColor		= [NSColor textColor];
-	NSColor				*stepsColor			= [NSColor textColor];
-	NSColor				*partsColor			= [NSColor textColor];
-	NSColor				*primitivesColor	= [NSColor systemBlueColor];
-	// On macOS 10.13 or later this could be systemTealColor, but there is no easy system equivalent currently.
-	NSColor				*colorsColor		= [NSColor colorWithDeviceRed:  0./ 255
-																    green:128./ 255
-																	 blue:128./ 255
-																    alpha:1.0 ];
-	NSColor				*commentsColor		= [NSColor systemGreenColor];
-	NSColor				*removeGroupColor	= [NSColor systemRedColor];
-	NSColor				*unknownColor		= [NSColor systemGrayColor];
-	
-	//
-	// General
-	//
-	[initialDefaults setObject:[NSNumber numberWithInteger:MouseDraggingBeginImmediately]	forKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	NSColor				*backgroundColor	= FallbackColorForPreferenceKey(LDRAW_VIEWER_BACKGROUND_COLOR_KEY);
+	NSColor				*modelsColor		= FallbackColorForPreferenceKey(SYNTAX_COLOR_MODELS_KEY);
+	NSColor				*stepsColor			= FallbackColorForPreferenceKey(SYNTAX_COLOR_STEPS_KEY);
+	NSColor				*partsColor			= FallbackColorForPreferenceKey(SYNTAX_COLOR_PARTS_KEY);
+	NSColor				*primitivesColor	= FallbackColorForPreferenceKey(SYNTAX_COLOR_PRIMITIVES_KEY);
+	NSColor				*colorsColor		= FallbackColorForPreferenceKey(SYNTAX_COLOR_COLORS_KEY);
+	NSColor				*commentsColor		= FallbackColorForPreferenceKey(SYNTAX_COLOR_COMMENTS_KEY);
+	NSColor				*removeGroupColor	= FallbackColorForPreferenceKey(SYNTAX_COLOR_REMOVE_GROUP_KEY);
+	NSColor				*unknownColor		= FallbackColorForPreferenceKey(SYNTAX_COLOR_UNKNOWN_KEY);
 
-	[initialDefaults setObject:[NSNumber numberWithInteger:RightButtonContextual]			forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
-	[initialDefaults setObject:[NSNumber numberWithInteger:RotateModeTrackball]				forKey:ROTATE_MODE_KEY];
-	[initialDefaults setObject:[NSNumber numberWithInteger:MouseWheelScrolls]				forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
-
-
-	[initialDefaults setObject:(id)kCFBooleanTrue								forKey:PART_BROWSER_PANEL_SHOW_AT_LAUNCH];
-	
-	[initialDefaults setObject:(id)kCFBooleanTrue								forKey:VIEWPORTS_EXPAND_TO_AVAILABLE_SIZE];
-	[initialDefaults setObject:(id)kCFBooleanFalse								forKey:COLUMNIZE_OUTPUT_KEY]; // appease LDraw traditionalists
-	
-	//
-	// Syntax Colors
-	//
+	// AppKit-only color defaults. Numeric/string keys are registered by
+	// LDrawPreferences so other hosts can seed them without NSColor.
 	[initialDefaults setObject:archivedData(backgroundColor)	forKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY];
-	
 	[initialDefaults setObject:archivedData(modelsColor)		forKey:SYNTAX_COLOR_MODELS_KEY];
 	[initialDefaults setObject:archivedData(stepsColor)			forKey:SYNTAX_COLOR_STEPS_KEY];
 	[initialDefaults setObject:archivedData(partsColor)			forKey:SYNTAX_COLOR_PARTS_KEY];
@@ -978,132 +1000,18 @@ PreferencesDialogController *preferencesDialog = nil;
 	[initialDefaults setObject:archivedData(removeGroupColor)	forKey:SYNTAX_COLOR_REMOVE_GROUP_KEY];
 	[initialDefaults setObject:archivedData(colorsColor)		forKey:SYNTAX_COLOR_COLORS_KEY];
 	[initialDefaults setObject:archivedData(unknownColor)		forKey:SYNTAX_COLOR_UNKNOWN_KEY];
-	
-	//
-	// Grid Spacing
-	//
-	[initialDefaults setObject:[NSNumber numberWithFloat: 1]	forKey:GRID_SPACING_FINE];
-	[initialDefaults setObject:[NSNumber numberWithFloat:10]	forKey:GRID_SPACING_MEDIUM];
-	[initialDefaults setObject:[NSNumber numberWithFloat:20]	forKey:GRID_SPACING_COARSE];
-	
-	//
-	// Initial Window State
-	//
-	
-	// GPU viewer settings -- see -restoreConfiguration in LDrawView.
-	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientation3D]			forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" fileGraphicView_0"]];
-	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModePerspective]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" fileGraphicView_0"]];
-	
-	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientationFront]		forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" fileGraphicView_1"]];
-	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModeOrthographic]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" fileGraphicView_1"]];
-	
-	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientationLeft]			forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" fileGraphicView_2"]];
-	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModeOrthographic]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" fileGraphicView_2"]];
 
-	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientationTop]			forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" fileGraphicView_3"]];
-	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModeOrthographic]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" fileGraphicView_3"]];
-	
-	//
-	// Part Browser
-	//
-	[initialDefaults setObject:[NSNumber numberWithInteger:SearchModeAllCategories] forKey:PART_BROWSER_SEARCH_MODE];
-	[initialDefaults setObject:NSLocalizedString(@"Brick", nil)						forKey:PART_BROWSER_PREVIOUS_CATEGORY];
-	[initialDefaults setObject:[NSNumber numberWithInteger:0]						forKey:PART_BROWSER_PREVIOUS_SELECTED_ROW];
-	[initialDefaults setObject:[NSArray array]										forKey:FAVORITE_PARTS_KEY];
-	
-	//
-	// Tool Palette
-	//
-	[initialDefaults setObject:[NSNumber numberWithBool:NO]				forKey:TOOL_PALETTE_HIDDEN];
+	NSColor *lsynthSelectionColor = FallbackColorForPreferenceKey(LSYNTH_SELECTION_COLOR_KEY);
+	[initialDefaults setObject:archivedData(lsynthSelectionColor) forKey:LSYNTH_SELECTION_COLOR_KEY];
+	{
+		NSColor *rgbaColor = [lsynthSelectionColor colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: lsynthSelectionColor;
+		[initialDefaults setObject:@[ @([rgbaColor redComponent]),
+									  @([rgbaColor greenComponent]),
+									  @([rgbaColor blueComponent]),
+									  @([rgbaColor alphaComponent]) ]
+							forKey:LSYNTH_SELECTION_COLOR_RGBA_KEY];
+	}
 
-    //
-    // LSynth Palette
-    //
-    NSColor *lsynthSelectionColor = [NSColor systemRedColor];
-    [initialDefaults setObject:@"" forKey:LSYNTH_EXECUTABLE_PATH_KEY];
-    [initialDefaults setObject:@"" forKey:LSYNTH_CONFIGURATION_PATH_KEY];
-    [initialDefaults setObject:[NSNumber numberWithInt:20] forKey:LSYNTH_SELECTION_TRANSPARENCY_KEY];
-    [initialDefaults setObject:[NSNumber numberWithInt:0] forKey:LSYNTH_SELECTION_MODE_KEY];
-    [initialDefaults setObject:archivedData(lsynthSelectionColor) forKey:LSYNTH_SELECTION_COLOR_KEY];
-    [initialDefaults setObject:[NSNumber numberWithBool:YES] forKey:LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY];
-    [initialDefaults setObject:[NSNumber numberWithBool:YES] forKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
-
-	//
-	// Minifigure Generator
-	//
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_HAT];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_HEAD];
-	[initialDefaults setObject:[NSNumber numberWithBool:NO]				forKey:MINIFIGURE_HAS_NECK];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_TORSO];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_ARM_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_ARM_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_HAND_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithBool:NO]				forKey:MINIFIGURE_HAS_HAND_RIGHT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_HAND_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithBool:NO]				forKey:MINIFIGURE_HAS_HAND_LEFT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_HIPS];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_LEG_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithBool:NO]				forKey:MINIFIGURE_HAS_LEG_RIGHT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithBool:YES]			forKey:MINIFIGURE_HAS_LEG_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithBool:NO]				forKey:MINIFIGURE_HAS_LEG_LEFT_ACCESSORY];
-	
-	[initialDefaults setObject:@"4485.dat"								forKey:MINIFIGURE_PARTNAME_HAT];					//Minifig Cap
-	[initialDefaults setObject:@"3626bp01.dat"							forKey:MINIFIGURE_PARTNAME_HEAD];					//Minifig Head with Standard Grin pattern
-	[initialDefaults setObject:@"3838.dat"								forKey:MINIFIGURE_PARTNAME_NECK];					//Minifig Airtanks
-	[initialDefaults setObject:@"973p1b.dat"							forKey:MINIFIGURE_PARTNAME_TORSO];					//Minifig Torso with Blue Dungarees Pattern
-	[initialDefaults setObject:@"982.dat"								forKey:MINIFIGURE_PARTNAME_ARM_RIGHT];				//Minifig Arm Right
-	[initialDefaults setObject:@"981.dat"								forKey:MINIFIGURE_PARTNAME_ARM_LEFT];				//Minifig Arm Left
-	[initialDefaults setObject:@"983.dat"								forKey:MINIFIGURE_PARTNAME_HAND_RIGHT];				//Minifig Hand
-	[initialDefaults setObject:@"3837.dat"								forKey:MINIFIGURE_PARTNAME_HAND_RIGHT_ACCESSORY];	//Minifig Shovel
-	[initialDefaults setObject:@"983.dat"								forKey:MINIFIGURE_PARTNAME_HAND_LEFT];				//Minifig Hand
-	[initialDefaults setObject:@"4006.dat"								forKey:MINIFIGURE_PARTNAME_HAND_LEFT_ACCESSORY];	//Minifig Tool Spanner/Screwdriver
-	[initialDefaults setObject:@"970.dat"								forKey:MINIFIGURE_PARTNAME_HIPS];					//Minifig Hips
-	[initialDefaults setObject:@"971.dat"								forKey:MINIFIGURE_PARTNAME_LEG_RIGHT];				//Minifig Leg Right
-	[initialDefaults setObject:@"6120.dat"								forKey:MINIFIGURE_PARTNAME_LEG_RIGHT_ACCESSORY];	//Minifig Ski
-	[initialDefaults setObject:@"972.dat"								forKey:MINIFIGURE_PARTNAME_LEG_LEFT];				//Minifig Lef Left
-	[initialDefaults setObject:@"6120.dat"								forKey:MINIFIGURE_PARTNAME_LEG_LEFT_ACCESSORY];		//Minifig Ski
-
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HAT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HEAD];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_NECK];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_TORSO];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_ARM_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_ARM_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HAND_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HAND_RIGHT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HAND_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HAND_LEFT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_HIPS];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_LEG_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_LEG_RIGHT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_LEG_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithFloat:0]				forKey:MINIFIGURE_ANGLE_LEG_LEFT_ACCESSORY];
-
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlue]		forKey:MINIFIGURE_COLOR_HAT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawYellow]		forKey:MINIFIGURE_COLOR_HEAD];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlack]		forKey:MINIFIGURE_COLOR_NECK];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawWhite]		forKey:MINIFIGURE_COLOR_TORSO];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawWhite]		forKey:MINIFIGURE_COLOR_ARM_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawWhite]		forKey:MINIFIGURE_COLOR_ARM_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawYellow]		forKey:MINIFIGURE_COLOR_HAND_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlack]		forKey:MINIFIGURE_COLOR_HAND_RIGHT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawYellow]		forKey:MINIFIGURE_COLOR_HAND_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlack]		forKey:MINIFIGURE_COLOR_HAND_LEFT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlue]		forKey:MINIFIGURE_COLOR_HIPS];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlue]		forKey:MINIFIGURE_COLOR_LEG_RIGHT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlack]		forKey:MINIFIGURE_COLOR_LEG_RIGHT_ACCESSORY];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlue]		forKey:MINIFIGURE_COLOR_LEG_LEFT];
-	[initialDefaults setObject:[NSNumber numberWithInt:LDrawBlack]		forKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY];
-	
-	[initialDefaults setObject:[NSNumber numberWithFloat:4.0]			forKey:MINIFIGURE_HEAD_ELEVATION];
-	
-	// GPU viewer settings -- see -restoreConfiguration in LDrawView.
-	[initialDefaults setObject:[NSNumber numberWithInteger:ViewOrientationFront]		forKey:[LDRAW_GL_VIEW_ANGLE			stringByAppendingString:@" MinifigureGeneratorView"]];
-	[initialDefaults setObject:[NSNumber numberWithInteger:ProjectionModeOrthographic]	forKey:[LDRAW_GL_VIEW_PROJECTION	stringByAppendingString:@" MinifigureGeneratorView"]];
-	
-	//
-	// COMMIT!
-	//
 	[userDefaults registerDefaults:initialDefaults];
 	
 }//end ensureDefaults

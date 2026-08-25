@@ -15,20 +15,11 @@
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
-#import "LDrawFile.h"
-#import "LDrawPart.h"
-#import "MacLDraw.h"
-#import PartLibraryGPU_h
-
-// Data Types
-
-typedef enum
-{
-	rotationAbsolute = 0,
-	rotationRelative = 1
-	
-} RotationT;
-
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/PartLibrary.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 @interface InspectionPart ()
 
@@ -108,22 +99,16 @@ typedef enum
 {
 	LDrawPart			*representedObject	= [self object];
 	TransformComponents	 oldComponents		= [representedObject transformComponents];
-	TransformComponents	 components			= IdentityComponents;
 	Point3				 position			= [self coordinateValueFromFields:@[_locationXField, _locationYField, _locationZField]];
 	Vector3				 scaling			= [self coordinateValueFromFields:@[_scaleXField, _scaleYField, _scaleZField]];
 	Tuple3				 shear				= [self coordinateValueFromFields:@[_shearXYField, _shearXZField, _shearYZField]];
 	
 	[representedObject setDisplayName:[_partNameField stringValue]];
 	
-	//Fill the components structure.
- 	components.scale		= V3MulScalar(scaling, 0.01); //convert from percentage
- 	components.shear_XY		= shear.x;
- 	components.shear_XZ		= shear.y;
- 	components.shear_YZ		= shear.z;
- 	components.rotate		= oldComponents.rotate; //rotation is handled by the Apply button.
- 	components.translate	= position;
-	
-	[representedObject setTransformComponents:components];
+	[representedObject setTransformComponents:[LDrawSelectionOps inspectorComponentsFromPosition:position
+																				  scalingPercent:scaling
+																						   shear:shear
+																				   oldComponents:oldComponents]];
 	
 	[super commitChanges:sender];
 	
@@ -142,7 +127,7 @@ typedef enum
 {
 	LDrawPart			*representedObject	= [self object];
 	TransformComponents	 components			= [representedObject transformComponents];
-	NSString			*description		= [[PartLibraryGPU sharedPartLibrary] descriptionForPart:representedObject];
+	NSString			*description		= [[PartLibrary sharedPartLibrary] descriptionForPart:representedObject];
 	Point3				 position			= ZeroPoint3;
 	Vector3				 scaling			= ZeroPoint3;
 	Tuple3				 shear				= ZeroPoint3;
@@ -154,16 +139,10 @@ typedef enum
 	
 	[_colorWell setLDrawColor:[representedObject LDrawColor]];
 
-	position	= components.translate;
-	
-	scaling.x	= components.scale.x * 100.0; //convert to percentage.
-	scaling.y	= components.scale.y * 100.0; //convert to percentage.
-	scaling.z	= components.scale.z * 100.0; //convert to percentage.
-	
-	//stuff the shear into the structure, despite the bad name mismatches.
-	shear.x = components.shear_XY;
-	shear.y = components.shear_XZ;
-	shear.z = components.shear_YZ;
+	[LDrawSelectionOps inspectorFieldsFromComponents:components
+											position:&position
+									  scalingPercent:&scaling
+											   shear:&shear];
 	
 	[self setCoordinateValue:position onFields:@[_locationXField, _locationYField, _locationZField]];
 	[self setCoordinateValue:scaling onFields:@[_scaleXField, _scaleYField, _scaleZField]];
@@ -196,25 +175,15 @@ typedef enum
 //==============================================================================
 - (void) setRotationAngles
 {
-	LDrawPart			*representedObject	= [self object];
-	TransformComponents	 components			= [representedObject transformComponents];
-	RotationT			 rotationType		= (RotationT)[[_rotationTypePopUp selectedItem] tag];
+	LDrawPart					*representedObject	= [self object];
+	TransformComponents			 components			= [representedObject transformComponents];
+	LDrawPartInspectorRotationT	 rotationType		= (LDrawPartInspectorRotationT)[[_rotationTypePopUp selectedItem] tag];
+	Tuple3						 rotation			= [LDrawSelectionOps partInspectorRotationDegreesForComponents:components
+																									  rotationType:rotationType];
 	
-	if(rotationType == rotationRelative)
-	{
-		//Rotations entered will be additive.
-		[_rotationXField setDoubleValue:0.0];
-		[_rotationYField setDoubleValue:0.0];
-		[_rotationZField setDoubleValue:0.0];
-	}
-	else
-	{
-		//Absolute rotation; fill in the real rotation angles.
-		[_rotationXField setDoubleValue:degrees(components.rotate.x)];
-		[_rotationYField setDoubleValue:degrees(components.rotate.y)];
-		[_rotationZField setDoubleValue:degrees(components.rotate.z)];
-		
-	}
+	[_rotationXField setDoubleValue:rotation.x];
+	[_rotationYField setDoubleValue:rotation.y];
+	[_rotationZField setDoubleValue:rotation.z];
 }//end setRotationAngles
 
 
@@ -232,14 +201,14 @@ typedef enum
 //==============================================================================
 - (IBAction) applyRotationClicked:(id)sender
 {
-	LDrawPart       *representedObject  = [self object];
-	LDrawDocument   *currentDocument    = [[NSDocumentController sharedDocumentController] currentDocument];
-	RotationT       rotationType        = (RotationT)[[_rotationTypePopUp selectedItem] tag];
+	LDrawPart					*representedObject  = [self object];
+	LDrawDocument				*currentDocument    = [[NSDocumentController sharedDocumentController] currentDocument];
+	LDrawPartInspectorRotationT	 rotationType       = (LDrawPartInspectorRotationT)[[_rotationTypePopUp selectedItem] tag];
 	
 	//Save out the current state.
 	[currentDocument preserveDirectiveState:representedObject];
 	
-	if(rotationType == rotationRelative)
+	if(rotationType == LDrawPartInspectorRotationRelative)
 	{
 		Tuple3 additiveRotation;
 		
@@ -252,12 +221,13 @@ typedef enum
 	//An absolute rotation.
 	else{
 		TransformComponents components = [[self object] transformComponents];
+		Tuple3 rotationDegrees = ZeroPoint3;
+		rotationDegrees.x = [_rotationXField doubleValue];
+		rotationDegrees.y = [_rotationYField doubleValue];
+		rotationDegrees.z = [_rotationZField doubleValue];
 		
-		components.rotate.x = radians([_rotationXField doubleValue]); //convert from degrees
-		components.rotate.y = radians([_rotationYField doubleValue]);
-		components.rotate.z = radians([_rotationZField doubleValue]);
-		
-		[representedObject setTransformComponents:components];
+		[representedObject setTransformComponents:[LDrawSelectionOps componentsByApplyingAbsoluteRotationDegrees:rotationDegrees
+																									toComponents:components]];
 	}
 	
 	//Note that the part has changed.
@@ -265,12 +235,7 @@ typedef enum
 	
 	//For a relative rotation, prepare for the next additive rotation by 
 	// resetting the rotations values to zero
-	if(rotationType == rotationRelative)
-	{
-		[_rotationXField setDoubleValue:0.0];
-		[_rotationYField setDoubleValue:0.0];
-		[_rotationZField setDoubleValue:0.0];
-	}
+	[self setRotationAngles];
 
     // Someone else might care that the part's orientation has changed
     [representedObject sendMessageToObservers:MessageObservedChanged];
@@ -291,7 +256,7 @@ typedef enum
 	TransformComponents	components		= [[self object] transformComponents];
 	
 	//If the values really did change, then update.
-	if( V3EqualPoints(formContents, components.translate) == NO )
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:components.translate])
 	{
 		[self finishedEditing:sender];
 	}
@@ -346,10 +311,7 @@ typedef enum
 	TransformComponents	components		= [[self object] transformComponents];
 
 	//If the values really did change, then update.
-	if(		formContents.x != components.scale.x * 100.0
-	   ||	formContents.y != components.scale.y * 100.0
-	   ||	formContents.z != components.scale.z * 100.0
-	   )
+	if([LDrawSelectionOps inspectorScalingPercent:formContents differsFromComponents:components])
 	{
 		[self finishedEditing:sender];
 	}
@@ -372,10 +334,7 @@ typedef enum
 	
 	//If the values really did change, then update.
 	// (please disregard the meaningless x, y, and z tags in the formContents.)
-	if(		formContents.x != components.shear_XY
-		||	formContents.y != components.shear_XZ
-		||	formContents.z != components.shear_YZ
-	  )
+	if([LDrawSelectionOps inspectorShear:formContents differsFromComponents:components])
 	{
 		[self finishedEditing:sender];
 	}

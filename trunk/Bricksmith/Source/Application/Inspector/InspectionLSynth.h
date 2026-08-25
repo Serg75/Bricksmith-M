@@ -10,7 +10,7 @@
 #import <Cocoa/Cocoa.h>
 
 #import "ObjectInspectionController.h"
-#import "LSynthConfiguration.h"
+#import <LDrawFeatures/LSynthConfiguration.h>
 #import "LDrawColorWell.h"
 
 @interface InspectionLSynth : ObjectInspectionController <NSTableViewDelegate, NSTableViewDataSource>
@@ -38,8 +38,6 @@
 - (void) populateTypes:(int)lsynthClass;
 - (void) populateDefaultConstraint:(int)class;
 
-// Utilities
-- (NSArray *) typesForLSynthClass:(LSynthClassT)classTag;
 - (void) updateSynthTypeLabel:(LSynthClassT)tag;
 
 @end

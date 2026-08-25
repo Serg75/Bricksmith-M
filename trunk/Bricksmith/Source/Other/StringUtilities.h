@@ -7,7 +7,7 @@
 // Modified:	12/21/2008 Allen Smith. Creation Date.
 //
 //==============================================================================
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 
 
 @interface StringUtilities : NSObject

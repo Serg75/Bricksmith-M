@@ -7,7 +7,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "MatrixMath.h"
+#import <LDrawCore/MatrixMath.h>
 
 @class LDrawView;
 

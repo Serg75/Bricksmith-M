@@ -10,7 +10,8 @@
 #import <Cocoa/Cocoa.h>
 
 #import "LDrawView.h"
-#import "MacLDraw.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawFeatures/LDrawPartBrowserModel.h>
 
 @class LDrawViewerContainer;
 @class PartLibrary;
@@ -43,6 +44,7 @@
 	__weak NSArray 		*categoryList;
 	NSMutableArray  	*tableDataSource;
 	SearchModeT			searchMode;
+	LDrawPartBrowserModel	*browserModel;
 }
 
 //Accessors
@@ -67,7 +69,6 @@
 - (void) sharedPartCatalogDidChange:(NSNotification *)notification;
 
 //Utilities
-- (NSMutableArray *) filterPartRecords:(NSArray *)partRecords bySearchString:(NSString *)searchString excludeParts:(NSSet *)excludedParts;
 - (NSUInteger) indexOfPartNamed:(NSString *)searchName;
 - (void) performSearch;
 - (void) setConstraints;

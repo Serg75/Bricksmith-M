@@ -17,7 +17,8 @@
 //==============================================================================
 #import "BricksmithApplication.h"
 
-#import "MacLDraw.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawFeatures/LDrawToolMode.h>
 
 @implementation BricksmithApplication
 
@@ -91,10 +92,9 @@
 //==============================================================================
 - (BOOL) shouldPropogateEvent:(NSEvent *)theEvent
 {
-	if(		[theEvent type] == NSEventTypeKeyDown
-	   &&	[[theEvent characters] isEqualToString:@" "] == YES
-	   &&	([theEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask) == NSEventModifierFlagCommand
-	   )
+	if([theEvent type] == NSEventTypeKeyDown
+	   && LDrawToolModeShouldSuppressResponderChain([theEvent characters],
+			[theEvent modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask))
 		return NO;
 	else
 		return YES;

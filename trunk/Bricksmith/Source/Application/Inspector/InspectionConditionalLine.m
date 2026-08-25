@@ -12,7 +12,8 @@
 #import "InspectionConditionalLine.h"
 
 #import "LDrawColorWell.h"
-#import "LDrawConditionalLine.h"
+#import <LDrawCore/LDrawConditionalLine.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 @interface InspectionConditionalLine ()
 
@@ -164,7 +165,7 @@
 	Point3 vertex1		= [[self object] vertex1];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex1) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex1])
 	{
 		[self finishedEditing:sender];
 	}
@@ -185,7 +186,7 @@
 	Point3 vertex2		= [[self object] vertex2];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex2) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex2])
 	{
 		[self finishedEditing:sender];
 	}
@@ -206,7 +207,7 @@
 	Point3 conditionalVertex1	= [[self object] conditionalVertex1];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, conditionalVertex1) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:conditionalVertex1])
 	{
 		[self finishedEditing:sender];
 	}
@@ -227,7 +228,7 @@
 	Point3 conditionalVertex2	= [[self object] conditionalVertex2];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, conditionalVertex2) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:conditionalVertex2])
 	{
 		[self finishedEditing:sender];
 	}

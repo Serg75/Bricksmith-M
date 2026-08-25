@@ -11,8 +11,9 @@
 
 #import <AMSProgressBar/AMSProgressBar.h>
 
-#import "LDrawPaths.h"
-#import "MacLDraw.h"
+#import <LDrawCore/LDrawPaths.h>
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawEditing/LDrawDocumentTree.h>
 
 @implementation PartLibraryController
 
@@ -31,7 +32,7 @@
 	self = [super init];
 	
 	// Create the part library
-	PartLibrary *library = [PartLibraryGPU sharedPartLibrary];
+	PartLibrary *library = [PartLibrary sharedPartLibrary];
 	[library setDelegate:self];
 	
 	return self;
@@ -51,7 +52,7 @@
 //==============================================================================
 - (void) loadPartCatalog:(void (^)(BOOL success))completionHandler
 {
-	PartLibrary *library    = [PartLibraryGPU sharedPartLibrary];
+	PartLibrary *library    = [PartLibrary sharedPartLibrary];
 	NSArray     *favorites  = [[NSUserDefaults standardUserDefaults] objectForKey:FAVORITE_PARTS_KEY];
 	BOOL        success     = NO;
 	
@@ -85,7 +86,7 @@
 	[progressPanel setMessage:@"Loading Parts"];
 	[progressPanel showProgressPanel];
 	
-	[[PartLibraryGPU sharedPartLibrary] reloadPartsWithMaxLoadCountHandler:
+	[[PartLibrary sharedPartLibrary] reloadPartsWithMaxLoadCountHandler:
 	 ^(NSUInteger maxPartCount)
 	{
 		dispatch_async(dispatch_get_main_queue(), ^{
@@ -137,11 +138,11 @@
 	{
 		NSAlert *error = [[NSAlert alloc] init];
 		[error setAlertStyle:NSAlertStyleCritical];
-		[error addButtonWithTitle:NSLocalizedString(@"OKButtonName", nil)];
+		[error addButtonWithTitle:NSLocalizedString([LDrawDocumentTree okButtonNameKey], nil)];
 		
 		
-		[error setMessageText:NSLocalizedString(@"LDrawFolderChooserErrorMessage", nil)];
-		[error setInformativeText:NSLocalizedString(@"LDrawFolderChooserErrorInformative", nil)];
+		[error setMessageText:NSLocalizedString([LDrawPaths ldrawFolderChooserErrorMessageKey], nil)];
+		[error setInformativeText:NSLocalizedString([LDrawPaths ldrawFolderChooserErrorInformativeKey], nil)];
 		
 		[error runModal];
 	}

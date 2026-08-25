@@ -24,8 +24,19 @@
 #pragma mark ACCESSORS
 #pragma mark -
 
+//========== makeCurrentSharedContext ==========================================
+//
+// Purpose:		Metal has no shared GL context. This is a no-op so callers can
+//				share code with the OpenGL target.
+//
+//==============================================================================
 + (void) makeCurrentSharedContext { }
 
+//========== makeSharedContext =================================================
+//
+// Purpose:		Metal has no shared GL context to create at launch.
+//
+//==============================================================================
 - (void) makeSharedContext { }
 
 @end

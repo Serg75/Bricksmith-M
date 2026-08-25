@@ -11,11 +11,10 @@
 //==============================================================================
 #import "InspectionLSynth.h"
 
-#import "LDrawLSynth.h"
-#import "LSynthConfiguration.h"
-#import "LDrawApplication.h"
-#import "LDrawPart.h"
-#import "PartLibrary.h"
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/PartLibrary.h>
 #import "LDrawView.h"
 
 @implementation InspectionLSynth
@@ -59,25 +58,14 @@
 
     // Update the object
 	LSynthClassT	classType	= (LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag];
-	NSArray 		*types		= [self typesForLSynthClass:classType];
+	NSArray 		*types		= [[LSynthConfiguration sharedInstance] typesForLSynthClass:classType];
 
     [representedObject setLsynthClass:(LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag]];
-    [representedObject setLsynthType:[[types objectAtIndex:[typePopup indexOfSelectedItem]] valueForKey:@"LSYNTH_TYPE"]];
+    [representedObject setLsynthType:[LSynthConfiguration typeNameAtIndex:[typePopup indexOfSelectedItem]
+																 inTypes:types]];
 
-    // Change all constraints to the default one
-    for (LDrawDirective *directive in [representedObject subdirectives]) {
-        if ([directive isKindOfClass:[LDrawPart class]]) {
-            if ([[sender selectedCell] tag] == LSYNTH_BAND) {
-                [(LDrawPart *)directive setDisplayName:[LSynthConfiguration defaultBandConstraint]];
-            }
-            else if ([[sender selectedCell] tag] == LSYNTH_HOSE) {
-                [(LDrawPart *)directive setDisplayName:[LSynthConfiguration defaultHoseConstraint]];
-            }
-
-            // Maybe update the constraint icons (e.g. if the part class has changed)
-            [directive setIconName:[representedObject determineIconName:directive]];
-        }
-    }
+    [[LSynthConfiguration sharedInstance] applyDefaultConstraintsToLSynth:representedObject
+																classType:(LSynthClassT)[[sender selectedCell] tag]];
 
     // We've made a change so resynthesis is probably required.
     [representedObject invalCache:ContainerInvalid];
@@ -117,7 +105,7 @@
     [lsynthPartLabel setStringValue:[representedObject browsingDescription]];
     
     // Set the synthesized part count
-    [synthesizedPartCount setStringValue:[NSString stringWithFormat:@"(approx. %i pieces)", [representedObject synthesizedPartsCount]]];
+    [synthesizedPartCount setStringValue:[NSString stringWithFormat:NSLocalizedString([LSynthConfiguration approximatePieceCountFormatKey], nil), [representedObject synthesizedPartsCount]]];
     
     // Set the Type label
     [self updateSynthTypeLabel:[representedObject lsynthClass]];
@@ -149,23 +137,26 @@
 //==============================================================================
 - (void) populateTypes:(int)classTag
 {
-    NSArray *types = [self typesForLSynthClass:classTag];
+    NSArray *types = [[LSynthConfiguration sharedInstance] typesForLSynthClass:classTag];
+    NSArray *titles = [LSynthConfiguration typePopupTitlesFromTypes:types];
 
     // Populate the dropdown
     [typePopup removeAllItems];
-    if (types != nil) {
+    if (titles != nil) {
         int index = 0;
-        for (NSDictionary *type in types) {
+        for (NSString *title in titles) {
 
             // Add each entry
-            [typePopup addItemWithTitle:[type valueForKey:@"title"]];
+            [typePopup addItemWithTitle:title];
             [[typePopup itemAtIndex:index] setTag:index];
-
-            // Select our current type
-            if ([[[self object] lsynthType] isEqualToString:[type valueForKey:@"LSYNTH_TYPE"]]) {
-                [typePopup selectItemWithTitle:[type valueForKey:@"title"]];
-            }
             index++;
+        }
+
+        NSUInteger selected = [LSynthConfiguration indexOfTypeNamed:[[self object] lsynthType]
+                                                            inTypes:types];
+        if(selected != NSNotFound)
+        {
+            [typePopup selectItemAtIndex:selected];
         }
     }
 }
@@ -178,51 +169,34 @@
 
 - (void) populateDefaultConstraint:(int)classTag
 {
-    NSMutableArray *constraints = nil;
-    NSString *defaultConstraint;
+    NSDictionary *selectedType = [LSynthConfiguration selectedTypeForClass:(LSynthClassT)classTag
+                                                                   atIndex:[typePopup indexOfSelectedItem]];
 
-    // Get the default constraint, dependent on class
-    if (classTag == LSYNTH_BAND) {
-        constraints = [[LSynthConfiguration sharedInstance] getBandConstraints];
-        defaultConstraint = [LSynthConfiguration defaultBandConstraint];
-    }
-    else if (classTag == LSYNTH_HOSE) {
-        constraints = [[LSynthConfiguration sharedInstance] getHoseConstraints];
-        defaultConstraint = [LSynthConfiguration defaultHoseConstraint];
-    }
-
-    // For a complete Part the constraints depend on the part class.  Handily we worked this
-    // out when we read in the LSynth config.
-    else if (classTag == LSYNTH_PART) {
-        NSArray *types = [self typesForLSynthClass:classTag];
-        LSynthClassT partClass = (LSynthClassT)[[[types objectAtIndex:[typePopup indexOfSelectedItem]] valueForKey:@"LSYNTH_CLASS"] integerValue];
-        if (partClass == LSYNTH_BAND) {
-            constraints = [[LSynthConfiguration sharedInstance] getBandConstraints];
-            defaultConstraint = [LSynthConfiguration defaultBandConstraint];
-        }
-        else if (partClass == LSYNTH_HOSE) {
-            constraints = [[LSynthConfiguration sharedInstance] getHoseConstraints];
-            defaultConstraint = [LSynthConfiguration defaultHoseConstraint];
-        }
-    }
+    LSynthClassT constraintClass = [LSynthConfiguration constraintClassForSynthClass:(LSynthClassT)classTag
+                                                                       selectedType:selectedType];
+    NSArray *constraints = [[LSynthConfiguration sharedInstance] constraintsForClass:constraintClass];
+    NSString *defaultConstraint = [LSynthConfiguration defaultConstraintForClass:constraintClass];
+    NSArray *descriptions = [LSynthConfiguration constraintPopupDescriptionsFromConstraints:constraints];
 
     [constraintDefaultPopup removeAllItems];
 
     if (constraints != nil) {
-        int index = 0;
-        for (NSDictionary *constraint in constraints) {
+        NSUInteger constraintIndex = 0;
+        for (NSString *constraintDescription in descriptions) {
 
             // Add each entry...
-            [constraintDefaultPopup addItemWithTitle:[constraint valueForKey:@"description"]];
+            [constraintDefaultPopup addItemWithTitle:constraintDescription];
             NSMenuItem *menuItem = [constraintDefaultPopup itemAtIndex:([constraintDefaultPopup numberOfItems]-1)];
             // Store the constraint details. Used in makeConstraintsDefaultForClass
-            [menuItem setRepresentedObject:constraint];
+            [menuItem setRepresentedObject:[constraints objectAtIndex:constraintIndex]];
+            constraintIndex++;
+        }
 
-            // ... selecting the default one
-            if ([[[constraint valueForKey:@"partName"] uppercaseString] isEqualToString:[defaultConstraint uppercaseString]]) {
-                [constraintDefaultPopup selectItemAtIndex:index];
-            }
-            index++;
+        NSUInteger defaultIndex = [LSynthConfiguration indexOfConstraintNamed:defaultConstraint
+                                                                inConstraints:constraints];
+        if(defaultIndex != NSNotFound)
+        {
+            [constraintDefaultPopup selectItemAtIndex:defaultIndex];
         }
     }
 }
@@ -262,12 +236,11 @@
         [self populateTypes:(int)[[sender selectedCell] tag]];
 
         // Select the default type for the class
+        NSString *typeName = [LSynthConfiguration defaultTypeNameForClass:(LSynthClassT)[[sender selectedCell] tag]];
         NSDictionary *type = nil;
-        if ([[sender selectedCell] tag] == LSYNTH_BAND) {
-            type = [[LSynthConfiguration sharedInstance] typeForTypeName:[LSynthConfiguration defaultBandType]];
-        }
-        else if ([[sender selectedCell] tag] == LSYNTH_HOSE) {
-            type = [[LSynthConfiguration sharedInstance] typeForTypeName:[LSynthConfiguration defaultHoseType]];
+        if(typeName != nil)
+        {
+            type = [[LSynthConfiguration sharedInstance] typeForTypeName:typeName];
         }
 
         if (type != nil) {
@@ -296,12 +269,9 @@
 //==============================================================================
 - (IBAction)makeConstraintsDefaultForClass:(id)sender {
     LDrawLSynth *representedObject = [self object];
+    NSString *partName = [[[constraintDefaultPopup selectedItem] representedObject] valueForKey:@"partName"];
 
-    for (LDrawDirective *directive in [representedObject subdirectives]) {
-        if ([directive isKindOfClass:[LDrawPart class]]) {
-            [(LDrawPart *)directive setDisplayName:[[[constraintDefaultPopup selectedItem] representedObject] valueForKey:@"partName"]];
-        }
-    }
+    [[LSynthConfiguration sharedInstance] applyConstraintPartName:partName toLSynth:representedObject];
 
     // Finish and invoke redisplay
     [self finishedEditing:sender];
@@ -324,35 +294,6 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== typesForLSynthClass: ==============================================
-//
-// Purpose:		Convenience method to return types for a synth class
-//
-//==============================================================================
-- (NSArray *)typesForLSynthClass:(LSynthClassT)classTag
-{
-    LSynthConfiguration *lsynthConfig = [[LDrawApplication shared] lsynthConfiguration];
-
-    // Parts
-    if (classTag == LSYNTH_PART) {
-        //types = [lsynthConfig getParts];  // TODO: enable this
-        return [lsynthConfig getParts];
-    }
-
-    // Hoses
-    else if (classTag == LSYNTH_HOSE) {
-        return [lsynthConfig getHoseTypes];
-    }
-
-    // Bands
-    else if (classTag == LSYNTH_BAND) {
-        return [lsynthConfig getBandTypes];
-    }
-    
-    return nil;
-}//end typesForLSynthClass:
-
-
 //========== updateSynthTypeLabel: =============================================
 //
 // Purpose:		Show the label type.
@@ -360,15 +301,10 @@
 //==============================================================================
 - (void) updateSynthTypeLabel:(LSynthClassT)tag
 {
-    // Update the type title according to our class of synthesized part
-    if (tag == LSYNTH_PART) {
-        [SynthTypeLabel setStringValue:@"Part Type:"];
-    }
-    else if (tag == LSYNTH_HOSE) {
-        [SynthTypeLabel setStringValue:@"Hose Type:"];
-    }
-    else if (tag == LSYNTH_BAND) {
-        [SynthTypeLabel setStringValue:@"Band Type:"];
+    NSString *label = [LSynthConfiguration typeLabelForClass:tag];
+    if(label != nil)
+    {
+        [SynthTypeLabel setStringValue:label];
     }
 }
 

@@ -13,9 +13,8 @@
 
 #import "LDrawViewerContainer.h"
 #import "LDrawView.h"
+#import <LDrawFeatures/LDrawPreferences.h>
 
-
-const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 
 // provides a way to look up the enclosing view pane
 @interface ViewportArrangerPlacard: NSView
@@ -168,7 +167,8 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 		
 		// Split the current viewport frame in two.
 		newViewFrame                = sourceViewFrame;
-		newViewFrame.size.width     = (NSWidth(sourceViewFrame) - [arrangementView dividerThickness]) / 2;
+		newViewFrame.size.width     = [LDrawPreferences evenSplitPaneSizeFromTotal:NSWidth(sourceViewFrame)
+																  dividerThickness:[arrangementView dividerThickness]];
 		newViewFrame.origin.x       += NSWidth(newViewFrame) + [arrangementView dividerThickness];
 		newViewFrame				= NSIntegralRect(newViewFrame);
 		
@@ -189,7 +189,8 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 		
 		// Split the current viewport frame in two.
 		newViewFrame                = sourceViewFrame;
-		newViewFrame.size.height    = (NSHeight(sourceViewFrame) - [sourceColumn dividerThickness]) / 2;
+		newViewFrame.size.height    = [LDrawPreferences evenSplitPaneSizeFromTotal:NSHeight(sourceViewFrame)
+																  dividerThickness:[sourceColumn dividerThickness]];
 		newViewFrame				= NSIntegralRect(newViewFrame);
 		
 		sourceViewFrame.origin.y    += NSHeight(newViewFrame) + [sourceColumn dividerThickness];
@@ -252,14 +253,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 		// If removing the first column, the column to the right grows leftward 
 		// to fill the empty space. Otherwise, the column to the left grows 
 		// rightward. 
-		if(sourceViewIndex == 0)
-		{
-			preceedingColumn	= [columns objectAtIndex:(sourceViewIndex + 1)];
-		}
-		else
-		{
-			preceedingColumn	= [columns objectAtIndex:(sourceViewIndex - 1)];
-		}
+		preceedingColumn	= [columns objectAtIndex:[LDrawPreferences inheritIndexWhenRemovingAt:sourceViewIndex]];
 
 		newViewFrame            = [preceedingColumn frame];
 		newViewFrame.size.width += [arrangementView dividerThickness] + NSWidth([sourceColumn frame]);
@@ -288,14 +282,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 		
 		// If removing the first row, the row underneath it grows upward to fill 
 		// the empty space. Otherwise, the row above it grows downward. 
-		if(sourceViewIndex == 0)
-		{
-			preceedingRow	= (LDrawViewerContainer*)[rows objectAtIndex:(sourceViewIndex + 1)];
-		}
-		else
-		{
-			preceedingRow	= (LDrawViewerContainer*)[rows objectAtIndex:(sourceViewIndex - 1)];
-		}
+		preceedingRow	= (LDrawViewerContainer*)[rows objectAtIndex:[LDrawPreferences inheritIndexWhenRemovingAt:sourceViewIndex]];
 				
 		newViewFrame                = [preceedingRow frame];
 		newViewFrame.size.height	+= NSHeight([sourceViewport frame]) + [sourceColumn dividerThickness];
@@ -366,7 +353,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 	[closeButton setBordered:NO];
 	[closeButton setImagePosition:NSImageOnly];
 	[closeButton setImage:[NSImage imageNamed:@"PlacardButtonClose"]];
-	[closeButton setToolTip:NSLocalizedString(@"ViewportArrangerCloseButtonTooltip", nil)];
+	[closeButton setToolTip:NSLocalizedString([LDrawPreferences viewportArrangerCloseButtonTooltipKey], nil)];
 	[closeButton setTarget:self];
 	[closeButton setAction:@selector(closeViewportClicked:)];
 	
@@ -390,7 +377,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 	[splitButton setBordered:NO];
 	[splitButton setImagePosition:NSImageOnly];
 	[splitButton setImage:[NSImage imageNamed:@"PlacardButtonSplit"]];
-	[splitButton setToolTip:NSLocalizedString(@"ViewportArrangerSplitButtonTooltip", nil)];
+	[splitButton setToolTip:NSLocalizedString([LDrawPreferences viewportArrangerSplitButtonTooltipKey], nil)];
 	[splitButton setTarget:self];
 	[splitButton setAction:@selector(splitViewportClicked:)];
 	
@@ -548,7 +535,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 - (void) restoreViewportsWithAutosaveName:(NSString *)autosaveNameIn
 {
 	NSUserDefaults			*userDefaults		= [NSUserDefaults standardUserDefaults];
-	NSString				*preferenceKey		= [NSString stringWithFormat:@"%@_%@", autosaveNameIn, VIEWS_PER_COLUMN];
+	NSString				*preferenceKey		= [LDrawPreferences viewsPerColumnPreferenceKeyForAutosaveName:autosaveNameIn];
 	NSArray 				*viewCountPerColumn = [userDefaults objectForKey:preferenceKey];
 	ExtendedSplitView		*columnView 		= nil;
 	LDrawViewerContainer	*rowView			= nil;
@@ -559,10 +546,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 	// Defaults: 1 main viewer; 3 detail views to the right
 	if(viewCountPerColumn == nil || [viewCountPerColumn count] == 0)
 	{
-		viewCountPerColumn = [NSArray arrayWithObjects:
-								  [NSNumber numberWithInt:1],
-								  [NSNumber numberWithInt:3],
-								  nil ];
+		viewCountPerColumn = [LDrawPreferences defaultViewsPerColumnCounts];
 	}
 	
 	// Remove all existing views
@@ -601,8 +585,8 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 		NSRect  firstColumnFrame    = [[[self subviews] objectAtIndex:0] frame];
 		NSRect  secondColumnFrame   = [[[self subviews] objectAtIndex:1] frame];
 		
-		firstColumnFrame.size.width     = NSWidth([self frame]) * 0.66;
-		secondColumnFrame.size.width    = NSWidth([self frame]) * 0.34;
+		firstColumnFrame.size.width     = NSWidth([self frame]) * [LDrawPreferences defaultMainViewportColumnWidthFraction];
+		secondColumnFrame.size.width    = NSWidth([self frame]) * [LDrawPreferences defaultDetailViewportColumnWidthFraction];
 		
 		firstColumnFrame    = NSIntegralRect(firstColumnFrame);
 		secondColumnFrame   = NSIntegralRect(secondColumnFrame);
@@ -642,7 +626,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 	}
 	
 	// Save it
-	preferenceKey = [NSString stringWithFormat:@"%@_%@", [self autosaveName], VIEWS_PER_COLUMN];
+	preferenceKey = [LDrawPreferences viewsPerColumnPreferenceKeyForAutosaveName:[self autosaveName]];
 	[userDefaults setObject:viewCountPerColumn forKey:preferenceKey];
 	
 }//end storeViewports
@@ -665,7 +649,7 @@ const NSString *VIEWS_PER_COLUMN				= @"ViewsPerColumn";
 	for(counter = 0; counter < [columns count]; counter++)
 	{
 		currentColumn       = [columns objectAtIndex:counter];
-		columnAutosaveName  = [NSString stringWithFormat:@"%@_Column%ld", baseAutosaveName, (long)counter];
+		columnAutosaveName  = [LDrawPreferences columnAutosaveNameForBase:baseAutosaveName columnIndex:counter];
 		
 		[currentColumn setAutosaveName:columnAutosaveName];
 	}

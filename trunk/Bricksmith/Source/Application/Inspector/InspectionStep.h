@@ -10,17 +10,7 @@
 #import <Cocoa/Cocoa.h>
 
 #import "ObjectInspectionController.h"
-
-typedef enum
-{
-	InspectorRotationShortcutCustom				= -1, // tag for both relative and absolute
-	InspectorRotationShortcutUpsideDown			= 0,
-	InspectorRotationShortcutClockwise90		= 1,
-	InspectorRotationShortcutCounterClockwise90	= 2,
-	InspectorRotationShortcutBackside			= 3
-	// the rest of the tags match ViewOrientationT
-	
-} StepInspectorRotationShortcutT;
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 
 ////////////////////////////////////////////////////////////////////////////////

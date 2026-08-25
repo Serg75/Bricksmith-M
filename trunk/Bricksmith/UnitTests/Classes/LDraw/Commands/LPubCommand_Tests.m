@@ -5,10 +5,10 @@
 //  Created by Sergey Slobodenyuk on 2023-03-04.
 //
 
-#import "LPubCommand.h"
+#import <LDrawCore/LPubCommand.h>
 
 #import <XCTest/XCTest.h>
-#import "LPubRemoveGroup.h"
+#import <LDrawCore/LPubRemoveGroup.h>
 #import "MockArchiver.h"
 #import "MockScanner.h"
 

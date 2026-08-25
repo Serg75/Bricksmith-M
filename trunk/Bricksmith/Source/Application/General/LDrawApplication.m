@@ -24,16 +24,19 @@
 #import  LDrawApplicationGPU_h
 #import "LDrawColorPanelController.h"
 #import "LDrawDocument.h"
-#import "LDrawPaths.h"
-#import "MacLDraw.h"
+#import <LDrawCore/LDrawPaths.h>
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawPreferences.h>
 #import "PartBrowserPanelController.h"
-#import "PartLibrary.h"
+#import <LDrawCore/PartLibrary.h>
 #import "PartLibraryController.h"
-#import "LSynthConfiguration.h"
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawFeatures/LSynthConfiguration.h>
 #import "PreferencesDialogController.h"
 #import "ToolPalette.h"
 #import "TransformerIntMinus1.h"
-#import "MLCadIni.h"
+#import <LDrawFeatures/MLCadIni.h>
 
 //==============================================================================
 // Define a weak link to the 3DConnexion driver. See link below for more info on weak linking
@@ -375,6 +378,11 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	self->partLibraryController		= [[PartLibraryController alloc] init];
     self->lsynthConfiguration       = [LSynthConfiguration sharedInstance];
 
+    // LDrawCore is AppKit-free, so it cannot reach into LDrawApplication to
+    // resolve the LSynth configuration. Wire the shared LSynthConfiguration
+    // into LDrawLSynth's config-source singleton here.
+    [LDrawLSynth setConfigSource:self->lsynthConfiguration];
+
 	[self makeSharedContext];
 	
 	//Try to define an LDraw path before the application even finishes starting.
@@ -397,7 +405,6 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
     NSString *lsynthConfigPath;
     if ([[userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY] length] == 0) {
         lsynthConfigPath = [[LSynthConfiguration sharedInstance] defaultConfigPath];
-//        lsynthConfigPath = [[NSBundle mainBundle] pathForResource:@"lsynth" ofType:@"mpd"];
     }
     else {
         lsynthConfigPath = [userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY];
@@ -421,16 +428,12 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[self populateLSynthModelMenus];
 	[self buildMainMenu];
 	
-	if(showPartBrowser == YES)
+	if(showPartBrowser)
 	{
 		[[[PartBrowserPanelController sharedPartBrowserPanel] window] makeKeyAndOrderFront:self];
 	}
 	
-	#if DEBUG
-	[[NSDocumentController sharedDocumentController] setAutosavingDelay:30 ];	// Debug build?  Save quick - no need to lose work when an assert() fires.
-	#else
-	[[NSDocumentController sharedDocumentController] setAutosavingDelay:300];
-	#endif
+	[[NSDocumentController sharedDocumentController] setAutosavingDelay:[LDrawPreferences documentAutosavingDelay]];
 	
 }//end applicationDidFinishLaunching:
 
@@ -512,7 +515,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 			break;
 			
 		case hideMouseToolsMenuTag:
-			[menuItem setHidden:([[ToolPalette sharedToolPalette] isVisible] == NO)];
+			[menuItem setHidden:[[ToolPalette sharedToolPalette] isVisible] == NO];
 			enable = YES;
 			break;
 			
@@ -627,50 +630,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
     NSUserDefaults	    *userDefaults   = [NSUserDefaults standardUserDefaults];
 
 	// A declarative encoding of our LSynth menus
-	// We process this, along with associated LSynthConfiguration data to generate our Model LSynth menu
-	NSArray *menus = [NSArray arrayWithObjects:
-					  
-					  [NSDictionary dictionaryWithObjectsAndKeys:
-							   [NSNumber numberWithInt:lsynthPartMenuTag], @"tag",
-							   @"getParts", @"getter",
-							   @"title", @"entry_key",
-							   NSStringFromSelector(@selector(insertSynthesizableDirective:)), @"action",
-                               @YES, @"shouldFilter",
-							   nil],
-					  
-					  [NSDictionary dictionaryWithObjectsAndKeys:
-							   [NSNumber numberWithInt:lsynthHoseMenuTag], @"tag",
-							   @"getHoseTypes", @"getter",
-							   @"title", @"entry_key",
-							   NSStringFromSelector(@selector(insertSynthesizableDirective:)), @"action",
-                               @YES, @"shouldFilter",
-                               nil],
-					  
-					  [NSDictionary dictionaryWithObjectsAndKeys:
-							   [NSNumber numberWithInt:lsynthHoseConstraintMenuTag], @"tag",
-							   @"getHoseConstraints", @"getter",
-							   @"description", @"entry_key",
-							   NSStringFromSelector(@selector(insertLSynthConstraint:)), @"action",
-                               @NO, @"shouldFilter",
-							   nil],
-					  
-					  [NSDictionary dictionaryWithObjectsAndKeys:
-							   [NSNumber numberWithInt:lsynthBandMenuTag], @"tag",
-							   @"getBandTypes", @"getter",
-							   @"title", @"entry_key",
-							   NSStringFromSelector(@selector(insertSynthesizableDirective:)), @"action",
-                               @YES, @"shouldFilter",
-							   nil],
-					  
-					  [NSDictionary dictionaryWithObjectsAndKeys:
-							   [NSNumber numberWithInt:lsynthBandConstraintMenuTag], @"tag",
-							   @"getBandConstraints", @"getter",
-							   @"description", @"entry_key",
-							   NSStringFromSelector(@selector(insertLSynthConstraint:)), @"action",
-                               @NO, @"shouldFilter",
-							   nil],
-					  
-					  nil];
+	NSArray *menus = [LSynthConfiguration applicationMenuSpecs];
 	
 	for (NSDictionary *menuSpec in menus)
 	{
@@ -682,42 +642,16 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		// Retrieve the appropriate data for each menu entry, based on the getter given above
 
         NSArray *lsynthMLCADDefaults = [[MLCadIni iniFile] lsynthVisibleTypes];
-        
-        NSArray *entries = nil;
-        NSString *getter = [menuSpec objectForKey:@"getter"];
-        LSynthConfiguration *config = self->lsynthConfiguration;
-        if ([getter isEqualToString:@"getParts"]) {
-            entries = [config getParts];
-        }
-        else if ([getter isEqualToString:@"getHoseTypes"]) {
-            entries = [config getHoseTypes];
-        }
-        else if ([getter isEqualToString:@"getHoseConstraints"]) {
-            entries = [config getHoseConstraints];
-        }
-        else if ([getter isEqualToString:@"getBandTypes"]) {
-            entries = [config getBandTypes];
-        }
-        else if ([getter isEqualToString:@"getBandConstraints"]) {
-            entries = [config getBandConstraints];
-        }
-        else {
-            entries = @[]; // Fallback, should not happen
-        }
+        BOOL showOnlyOfficial = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
+        NSArray *entries = [self->lsynthConfiguration entriesForMenuGetter:[menuSpec objectForKey:@"getter"]];
+        BOOL shouldFilter = [[menuSpec valueForKey:@"shouldFilter"] boolValue];
         
         for (NSDictionary *entry in entries)
 		{
-			// The MLCad.ini file contains a list of semi-official LSynth types.  The lsynth.mpd file also contains legacy entries
-			// for backward compatibility.  We want to filter out non-semi-official synth parts unless the user has turned this off
-			// in the preferences.  Parts get filtered, constraints don't.
-            if (([[menuSpec valueForKey:@"shouldFilter"] boolValue]
-                    && [lsynthMLCADDefaults indexOfObject:[entry valueForKey:@"LSYNTH_TYPE"]] != NSNotFound)
-                    ||
-                    // This menu should not be filtered
-                    ![[menuSpec valueForKey:@"shouldFilter"] boolValue]
-                    ||
-                    // User has turned off filtering in prefs
-                    ![userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY])
+            if([LSynthConfiguration shouldIncludeMenuEntry:entry
+                                              shouldFilter:shouldFilter
+                                             visibleTypes:lsynthMLCADDefaults
+                                          showOnlyOfficial:showOnlyOfficial])
             {
                 NSMenuItem *entryMenuItem = [[NSMenuItem alloc] init];
                 [entryMenuItem setTitle:[entry objectForKey:[menuSpec objectForKey:@"entry_key"]]];
@@ -753,26 +687,15 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 //  [invertSelectionItem setTag:lsynthInvertINSIDEOUTSIDETag];
 //  [insideOutsideMenu addItem:invertSelectionItem];
 	
-	NSMenuItem *addInsideItem = [[NSMenuItem alloc] init];
-	[addInsideItem setTitle:@"Insert INSIDE"];
-	[addInsideItem setTarget:nil];
-	[addInsideItem setAction:@selector(insertINSIDEOUTSIDELSynthDirective:)];
-	[addInsideItem setTag:lsynthInsertINSIDETag];
-	[insideOutsideMenu addItem:addInsideItem];
-	
-	NSMenuItem *addOutsideItem = [[NSMenuItem alloc] init];
-	[addOutsideItem setTitle:@"Insert OUTSIDE"];
-	[addOutsideItem setTarget:nil];
-	[addOutsideItem setAction:@selector(insertINSIDEOUTSIDELSynthDirective:)];
-	[addOutsideItem setTag:lsynthInsertOUTSIDETag];
-	[insideOutsideMenu addItem:addOutsideItem];
-	
-	NSMenuItem *addCrossItem = [[NSMenuItem alloc] init];
-	[addCrossItem setTitle:@"Insert CROSS"];
-	[addCrossItem setTarget:nil];
-	[addCrossItem setAction:@selector(insertINSIDEOUTSIDELSynthDirective:)];
-	[addCrossItem setTag:lsynthInsertCROSSTag];
-	[insideOutsideMenu addItem:addCrossItem];
+	for(NSDictionary *spec in [LSynthConfiguration insideOutsideInsertMenuSpecs])
+	{
+		NSMenuItem *item = [[NSMenuItem alloc] init];
+		[item setTitle:[spec objectForKey:@"title"]];
+		[item setTarget:nil];
+		[item setAction:NSSelectorFromString([spec objectForKey:@"action"])];
+		[item setTag:[[spec objectForKey:@"tag"] integerValue]];
+		[insideOutsideMenu addItem:item];
+	}
 	
 }//end populateLSynthModelMenus
 
@@ -1015,26 +938,15 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 						// is set to zero. This helps ignore "noise" when you primarily move along one axis,
 						// but the controller still detects minor motion along others.
 						gridSpacingModeT mode = [currentDocument gridSpacingMode];
-						int translationQuantum = (int)[BricksmithUtilities gridSpacingForMode:mode];
+						int translationQuantum = (int)[LDrawGrid spacingForMode:mode];
 						if (!controlDown)
 						{
 							translation.x = ((int)(translation.x / translationQuantum)) * translationQuantum;
 							translation.y = ((int)(translation.y / translationQuantum)) * translationQuantum;
 							translation.z = ((int)(translation.z / translationQuantum)) * translationQuantum;
 							
-							int rotationQuantum = 1;
-							switch(mode)
-							{
-								case gridModeFine:
-									rotationQuantum = GRID_ROTATION_FINE;	//15 degrees
-									break;
-								case gridModeMedium:
-									rotationQuantum = GRID_ROTATION_MEDIUM;	//45 degrees
-									break;
-								case gridModeCoarse:
-									rotationQuantum = GRID_ROTATION_COARSE;	//90 degrees
-									break;
-							}
+							int rotationQuantum = (int)[LDrawGrid rotationDegreesForMode:mode
+																					kind:LDrawGridRotationSnap];
 							rotation.x = ((int)(rotation.x / rotationQuantum)) * rotationQuantum;
 							rotation.y = ((int)(rotation.y / rotationQuantum)) * rotationQuantum;
 							rotation.z = ((int)(rotation.z / rotationQuantum)) * rotationQuantum;

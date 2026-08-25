@@ -12,8 +12,9 @@
 #import "InspectionLine.h"
 
 #import "LDrawColorWell.h"
-#import "LDrawLine.h"
-#import "LDrawModel.h"
+#import <LDrawCore/LDrawLine.h>
+#import <LDrawCore/LDrawModel.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 @interface InspectionLine ()
 
@@ -140,7 +141,7 @@
 	Point3 vertex1		= [[self object] vertex1];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex1) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex1])
 	{
 		[self finishedEditing:sender];
 	}
@@ -161,7 +162,7 @@
 	Point3 vertex2		= [[self object] vertex2];
 	
 	//If the values really did change, then update.
-	if(V3EqualPoints(formContents, vertex2) == NO)
+	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:vertex2])
 	{
 		[self finishedEditing:sender];
 	}

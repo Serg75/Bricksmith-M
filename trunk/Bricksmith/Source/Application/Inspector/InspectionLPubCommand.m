@@ -7,7 +7,7 @@
 
 #import "InspectionLPubCommand.h"
 
-#import "LPubCommand.h"
+#import <LDrawCore/LPubCommand.h>
 
 @interface InspectionLPubCommand ()
 

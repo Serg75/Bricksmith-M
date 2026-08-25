@@ -16,12 +16,10 @@
 #define PREFS_STYLE_TAB_IDENTIFIER		@"PreferencesTabStyles"
 #define PREFS_LSYNTH_TAB_IDENTIFIER     @"PreferencesTabLSynth"
 
-// The different LSynth selection modes
-typedef enum {
-    TransparentSelection        = 0,
-    ColoredSelection		    = 1,
-    TransparentColoredSelection = 2
-} LSynthSelectionModeT;
+// LSynthSelectionModeT moved into LDrawLSynthConfigSource.h (LDrawCore) so
+// the model layer can interpret the preference without pulling in the
+// AppKit preferences pane.
+#import <LDrawCore/LDrawLSynthConfigSource.h>
 
 
 ////////////////////////////////////////////////////////////////////////////////

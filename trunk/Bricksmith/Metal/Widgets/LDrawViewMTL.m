@@ -24,19 +24,33 @@
 
 #import "LDrawViewMTL.h"
 
+#import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
+#import <LDrawEditing/LDrawSceneController.h>
 #import "FocusRingView.h"
 #import "LDrawApplicationMTL.h"
-#import "LDrawRendererMTL.h"
-#import "MetalGPU.h"
+#import <LDrawRenderMetal/LDrawRendererMTL.h>
+#import <LDrawRenderMetal/MetalGPU.h>
 #import "OverlayViewCategory.h"
 
 
 @implementation LDrawView (Metal)
 
+//========== makeCurrentContext ================================================
+//
+// Purpose:		Metal has no per-view GL context. This is a no-op so shared
+//				LDrawView code can call through the GPU category uniformly.
+//
+//==============================================================================
 - (void)makeCurrentContext
 {
 }
 
+//========== lockContextAndExecute: ============================================
+//
+// Purpose:		Run block on the main thread without GL context locking. Metal
+//				rendering is serialized by the renderer instead.
+//
+//==============================================================================
 - (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block
 {
 	block();
@@ -105,6 +119,7 @@
 	renderer = [[LDrawRenderer alloc] initWithBounds:[self bounds].size];
 	[renderer setDelegate:self withScroller:self];
 	[renderer setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
+	sceneController = [[LDrawSceneController alloc] initWithRendererBridge:renderer];
 	[renderer prepareMetal];
 	self.delegate = renderer;
 

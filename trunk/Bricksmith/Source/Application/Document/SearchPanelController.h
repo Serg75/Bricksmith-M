@@ -7,29 +7,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "LDrawColorWell.h"
-
-// UI radio buttons are tagged:
-// Where to search
-typedef enum {
-    ScopeFile  = 1,
-    ScopeModel = 2,
-    ScopeStep  = 3,
-    ScopeSelection = 4
-} ScopeT;
-
-// How to search for colors
-typedef enum {
-    ColorNoFilter = 1,
-    ColorSelectionFilter = 2,
-    ColorFilter = 3
-} ColorFilterT;
-
-// What to search for
-typedef enum {
-    SearchAllParts = 1,
-    SearchSpecificPart = 2,
-    SearchSelectedParts = 3
-} SearchPartCriteriaT;
+#import <LDrawEditing/LDrawSearchOps.h>
 
 @interface SearchPanelController : NSWindowController <NSWindowDelegate, NSDraggingDestination>
 {

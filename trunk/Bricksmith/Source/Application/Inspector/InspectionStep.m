@@ -25,8 +25,9 @@
 #import "LDrawApplication.h"
 #import "LDrawDocument.h"
 #import "LDrawView.h"
-#import "LDrawStep.h"
-#import "LDrawUtilities.h"
+#import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 
 @implementation InspectionStep
@@ -68,36 +69,21 @@
 //==============================================================================
 - (void) updateConstraints
 {
-	LDrawStep			*representedObject		= [self object];
-	BOOL				enableAngleField		= NO;
-	LDrawStepRotationT	stepRotationType		= [representedObject stepRotationType];
-	BOOL				showViewAngleButton		= NO;
+	LDrawStep						*representedObject		= [self object];
+	LDrawStepRotationT				 stepRotationType		= [representedObject stepRotationType];
+	LDrawStepInspectorConstraints	 constraints			=
+		[LDrawSelectionOps stepInspectorConstraintsForRotationType:stepRotationType
+											  relativeShortcutTag:[self->relativeRotationPopUpMenu selectedTag]
+											  absoluteShortcutTag:[self->absoluteRotationPopUpMenu selectedTag]];
 	
-	// Enable manual angle entry?
-	if(		stepRotationType == LDrawStepRotationRelative
-	   &&	[self->relativeRotationPopUpMenu selectedTag] == InspectorRotationShortcutCustom)
-	{
-		enableAngleField	= YES;
-	}
-	else if(	stepRotationType == LDrawStepRotationAbsolute
-			&&	[self->absoluteRotationPopUpMenu selectedTag] == InspectorRotationShortcutCustom)
-	{
-		enableAngleField	= YES;
-		showViewAngleButton	= YES;
-	}
-	else if(stepRotationType == LDrawStepRotationAdditive)
-	{
-		enableAngleField	= YES;
-	}
+	[self->relativeRotationPopUpMenu	setEnabled:constraints.relativePopupEnabled];
+	[self->absoluteRotationPopUpMenu	setEnabled:constraints.absolutePopupEnabled];
 	
-	[self->relativeRotationPopUpMenu	setEnabled:(stepRotationType == LDrawStepRotationRelative)];
-	[self->absoluteRotationPopUpMenu	setEnabled:(stepRotationType == LDrawStepRotationAbsolute)];
+	[self->rotationXField				setEnabled:constraints.angleFieldsEnabled];
+	[self->rotationYField				setEnabled:constraints.angleFieldsEnabled];
+	[self->rotationZField				setEnabled:constraints.angleFieldsEnabled];
 	
-	[self->rotationXField				setEnabled:enableAngleField];
-	[self->rotationYField				setEnabled:enableAngleField];
-	[self->rotationZField				setEnabled:enableAngleField];
-	
-	[self->useCurrentAngleButton		setHidden:(showViewAngleButton == NO)];
+	[self->useCurrentAngleButton		setHidden:(constraints.viewAngleButtonVisible == NO)];
 	
 }//end updateConstraints
 
@@ -144,43 +130,23 @@
 	
 	LDrawStepRotationT	stepRotationType	= [representedObject stepRotationType];
 	Tuple3				rotationAngle		= [representedObject rotationAngle];
-	ViewOrientationT	viewOrientation		= ViewOrientation3D;
 	
 	[self->rotationTypeRadioButtons selectCellWithTag:stepRotationType];
 	[self->rotationXField setDoubleValue:rotationAngle.x];
 	[self->rotationYField setDoubleValue:rotationAngle.y];
 	[self->rotationZField setDoubleValue:rotationAngle.z];
 	
-	// See if we recognize the angles as something we provide a shortcut for.
-	if(		stepRotationType == LDrawStepRotationRelative
-	   &&	[self->relativeRotationPopUpMenu selectedTag] != InspectorRotationShortcutCustom )
+	if(stepRotationType == LDrawStepRotationRelative)
 	{
-		if( V3PointsWithinTolerance(rotationAngle, V3Make(0, 0, 180)) == YES )
-			[self->relativeRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutUpsideDown];
-		
-		else if( V3PointsWithinTolerance(rotationAngle, V3Make(0, 90, 0)) == YES )
-			[self->relativeRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutClockwise90];
-
-		else if( V3PointsWithinTolerance(rotationAngle, V3Make(0, -90, 0)) == YES )
-			[self->relativeRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutCounterClockwise90];
-			
-		else if(	V3PointsWithinTolerance(rotationAngle, V3Make(0, 180, 0)) == YES 
-				||	V3PointsWithinTolerance(rotationAngle, V3Make(180, 0, 180)) == YES ) // an alternate decomposition that comes out of Bricksmith's math
-			[self->relativeRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutBackside];
-			
-		else
-			[self->relativeRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutCustom];
+		NSInteger tag = [LDrawSelectionOps relativeRotationShortcutTagForAngle:rotationAngle
+																	currentTag:[self->relativeRotationPopUpMenu selectedTag]];
+		[self->relativeRotationPopUpMenu selectItemWithTag:tag];
 	}
-	else if(	stepRotationType == LDrawStepRotationAbsolute
-			&&	[self->absoluteRotationPopUpMenu selectedTag] != InspectorRotationShortcutCustom )
+	else if(stepRotationType == LDrawStepRotationAbsolute)
 	{
-		viewOrientation = [LDrawUtilities viewOrientationForAngle:rotationAngle];
-		
-		// If the angle is a known head-on view, select that, otherwise, call it "custom."
-		if( viewOrientation != ViewOrientation3D)
-			[self->absoluteRotationPopUpMenu selectItemWithTag:viewOrientation];
-		else
-			[self->absoluteRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutCustom];
+		NSInteger tag = [LDrawSelectionOps absoluteRotationShortcutTagForAngle:rotationAngle
+																	currentTag:[self->absoluteRotationPopUpMenu selectedTag]];
+		[self->absoluteRotationPopUpMenu selectItemWithTag:tag];
 	}
 	
 	
@@ -202,7 +168,7 @@
 	// Apply current step rotation automatically when absolute rotation is selected
 	LDrawStepRotationT	stepRotationType	= (LDrawStepRotationT)[[self->rotationTypeRadioButtons selectedCell] tag];
 	if (stepRotationType == LDrawStepRotationAbsolute) {
-		[self->absoluteRotationPopUpMenu selectItemWithTag:InspectorRotationShortcutCustom];
+		[self->absoluteRotationPopUpMenu selectItemWithTag:LDrawStepInspectorRotationShortcutCustom];
 		[self useCurrentViewingAngleClicked:sender];
 	}
 
@@ -257,12 +223,7 @@
 - (IBAction) useCurrentViewingAngleClicked:(id)sender
 {
 	LDrawDocument	*currentDocument	= [[NSDocumentController sharedDocumentController] currentDocument];
-	Tuple3			viewingAngle		= [currentDocument viewingAngle];
-	
-	// I seem to be beset by -0. I don't want to display -0!
-	viewingAngle.x = round(viewingAngle.x);
-	viewingAngle.y = round(viewingAngle.y);
-	viewingAngle.z = round(viewingAngle.z);
+	Tuple3			viewingAngle		= [LDrawSelectionOps displayViewingAngleFromAngle:[currentDocument viewingAngle]];
 	
 	// set the values in the UI.
 	[self->rotationXField setDoubleValue:viewingAngle.x];
@@ -304,56 +265,21 @@
 {
 	LDrawStepRotationT  stepRotationType    = (LDrawStepRotationT)[self->rotationTypeRadioButtons selectedTag];
 	NSInteger           shortcut            = 0;
+	Tuple3              customAbsolute      = ZeroPoint3;
 	Tuple3              newAngle            = ZeroPoint3;
 	
-	// Relative rotation?
 	if(stepRotationType == LDrawStepRotationRelative)
-	{
-		shortcut	= [self->relativeRotationPopUpMenu selectedTag];
-		
-		switch(shortcut)
-		{
-			case InspectorRotationShortcutUpsideDown:
-				newAngle = V3Make(0, 0, 180);
-				break;
-				
-			case InspectorRotationShortcutClockwise90:
-				newAngle = V3Make(0, 90, 0);
-				break;
-				
-			case InspectorRotationShortcutCounterClockwise90:
-				newAngle = V3Make(0, -90, 0);
-				break;
-				
-			case InspectorRotationShortcutBackside:
-				newAngle = V3Make(0, 180, 0);
-				break;
-				
-			case InspectorRotationShortcutCustom:
-				newAngle = V3Make(0, 0, 0);
-				break;
-		}
-	}
-	// Absolute Rotation?
+		shortcut = [self->relativeRotationPopUpMenu selectedTag];
 	else if(stepRotationType == LDrawStepRotationAbsolute)
 	{
-		shortcut	= [self->absoluteRotationPopUpMenu selectedTag];
-		
-		switch(shortcut)
-		{
-			case InspectorRotationShortcutCustom:
-			{
-				// Apply current step rotation automatically when absolute rotation is selected
-				LDrawDocument *currentDocument = [[NSDocumentController sharedDocumentController] currentDocument];
-				newAngle = [currentDocument viewingAngle];
-				break;
-			}
-			default:
-				// This is one of the head-on views
-				newAngle = [LDrawUtilities angleForViewOrientation:(ViewOrientationT)shortcut];
-				break;
-		}
+		shortcut = [self->absoluteRotationPopUpMenu selectedTag];
+		LDrawDocument *currentDocument = [[NSDocumentController sharedDocumentController] currentDocument];
+		customAbsolute = [currentDocument viewingAngle];
 	}
+
+	newAngle = [LDrawSelectionOps stepInspectorAngleForRotationType:stepRotationType
+														shortcutTag:shortcut
+											   customAbsoluteAngle:customAbsolute];
 	
 	// set the values in the UI.
 	[self->rotationXField setDoubleValue:newAngle.x];

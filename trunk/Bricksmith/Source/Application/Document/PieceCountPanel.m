@@ -11,16 +11,16 @@
 
 #import "GPU.h"
 #import  LDrawApplicationGPU_h
-#import "LDrawColor.h"
+#import <LDrawCore/LDrawColor.h>
 #import "LDrawColorCell.h"
-#import "LDrawFile.h"
+#import <LDrawCore/LDrawFile.h>
 #import "LDrawView.h"
-#import "LDrawMPDModel.h"
-#import "LDrawPart.h"
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawPart.h>
 #import "LDrawViewerContainer.h"
-#import "MacLDraw.h"
-#import "PartLibrary.h"
-#import "PartReport.h"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/PartReport.h>
 
 @interface PieceCountPanel ()
 
@@ -276,9 +276,9 @@
 	//set up the save panel
 	[savePanel setAllowedFileTypes:[NSArray arrayWithObject:@"txt"]];
 	[savePanel setCanSelectHiddenExtension:YES];
-	[savePanel setTitle:NSLocalizedString(@"PieceCountSaveDialogTitle", nil)];
-	[savePanel setMessage:NSLocalizedString(@"PieceCountSaveDialogMessage", nil)];
-	[savePanel setNameFieldStringValue:NSLocalizedString(@"untitled", nil)];
+	[savePanel setTitle:NSLocalizedString([PartReport pieceCountSaveDialogTitleKey], nil)];
+	[savePanel setMessage:NSLocalizedString([PartReport pieceCountSaveDialogMessageKey], nil)];
+	[savePanel setNameFieldStringValue:NSLocalizedString([PartReport untitledLocalizationKey], nil)];
 	
 	//run it and export the file if needed
 	result = [savePanel runModal];
@@ -389,7 +389,6 @@
 - (void) syncSelectionAndPartDisplayed
 {
 	NSDictionary   *partRecord    = nil;
-	NSString       *partName      = nil;
 	LDrawColor     *partColor     = nil;
 	LDrawPart      *newPart       = nil;
 	NSInteger      rowIndex       = [_pieceCountTable selectedRow];
@@ -397,19 +396,9 @@
 	if(rowIndex >= 0)
 	{
 		partRecord	= [flattenedReport objectAtIndex:rowIndex];
-		partName	= [partRecord objectForKey:PART_REPORT_NUMBER_KEY];
+		newPart		= [PartReport previewPartFromRecord:partRecord];
 		partColor	= [partRecord objectForKey:PART_REPORT_LDRAW_COLOR];
-		
-		newPart		= [[LDrawPart alloc] init];
-		
-		// Not this simple anymore. We have to make sure to draw the optimized 
-		// vertexes. The easiest way to do that is to create a part referencing 
-		// the model. 
-//		modelToView = [partLibrary modelForName:partName];
 
-		//Set up the part attributes
-		[newPart setLDrawColor:partColor];
-		[newPart setDisplayName:partName];
 		[LDrawApplication makeCurrentSharedContext];
 
 		[_partPreview.glView setLDrawDirective:newPart];

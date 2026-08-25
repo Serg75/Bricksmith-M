@@ -5,7 +5,7 @@
 //  Created by Sergey Slobodenyuk on 2023-03-17.
 //
 
-#import "ClassInspector.h"
+#import <LDrawCore/ClassInspector.h>
 
 #import <XCTest/XCTest.h>
 

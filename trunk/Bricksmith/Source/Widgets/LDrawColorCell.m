@@ -9,8 +9,8 @@
 //==============================================================================
 #import "LDrawColorCell.h"
 
-#import "ColorLibrary.h"
-#import "LDrawColor.h"
+#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColor.h>
 
 @implementation LDrawColorCell
 

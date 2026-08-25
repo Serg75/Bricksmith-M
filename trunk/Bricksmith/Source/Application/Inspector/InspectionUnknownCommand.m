@@ -11,7 +11,7 @@
 //==============================================================================
 #import "InspectionUnknownCommand.h"
 
-#import "LDrawMetaCommand.h"
+#import <LDrawCore/LDrawMetaCommand.h>
 
 @implementation InspectionUnknownCommand
 

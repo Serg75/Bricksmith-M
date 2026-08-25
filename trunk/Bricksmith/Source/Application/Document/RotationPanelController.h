@@ -11,15 +11,8 @@
 #import <Cocoa/Cocoa.h>
 
 #import "DialogPanel.h"
-#import "MatrixMath.h"
-
-typedef enum {
-	
-	RotateAroundSelectionCenter	= 0,
-	RotateAroundPartPositions	= 1,
-	RotateAroundFixedPoint		= 2
-	
-} RotationModeT;
+#import <LDrawCore/MatrixMath.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
 
 @interface RotationPanelController : NSWindowController 
 {

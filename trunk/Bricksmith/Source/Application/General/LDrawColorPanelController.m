@@ -11,28 +11,15 @@
 //==============================================================================
 #import "LDrawColorPanelController.h"
 
-#import "ColorLibrary.h"
-#import "LDrawColor.h"
+#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColor.h>
 #import "LDrawColorBar.h"
 #import "LDrawColorCell.h"
 #import "LDrawColorWell.h"
-#import "MacLDraw.h"
-#import "StringCategory.h"
-
-typedef enum
-{
-	MaterialTypeAll			= 0,
-	MaterialTypeSolid		= 1,
-	MaterialTypeTransparent = 2,
-	MaterialTypeChrome		= 3,
-	MaterialTypePearlescent	= 4,
-	MaterialTypeRubber		= 5,
-	MaterialTypeMetal		= 6,
-	MaterialTypeOther		= 7,
-	
-} MaterialPopUpTagT;
-
-#define COLOR_SORT_DESCRIPTORS_KEY @"ColorTable Sort Ordering"
+#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/StringCategory.h>
+#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawFeatures/LDrawPreferences.h>
 
 @implementation LDrawColorPanelController
 
@@ -56,7 +43,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	
 	[colorColumn setDataCell:colorCell];
 	
-	[materialPopUpButton selectItemWithTag:MaterialTypeAll];
+	[materialPopUpButton selectItemWithTag:LDrawColorFilterAll];
 	
 	[(NSPanel*)[self window] setWorksWhenModal:YES];
 	[(NSPanel*)[self window] setLevel:NSStatusWindowLevel];
@@ -134,19 +121,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (LDrawColor *) LDrawColor
 {
 	NSArray		*selection			= [self->colorListController selectedObjects];
-	LDrawColor	*selectedColor		= nil;
-	
-	//It is possible there are no rows selected, if a search has limited the 
-	// color list out of existence.
-	if([selection count] > 0)
-	{
-		selectedColor = [selection objectAtIndex:0];
-	}
-	//Just return whatever was last selected.
-	else
-	{
-		selectedColor = [colorBar LDrawColor];
-	}
+	LDrawColor	*selectedColor		= [ColorLibrary colorFromListSelection:selection
+														  fallbackColor:[colorBar LDrawColor]];
 	
 	return selectedColor;
 	
@@ -165,7 +141,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	//Try to find the color we are after in the current list.
 	NSInteger rowToSelect = [self indexOfColor:newColor]; //will be the row index for the color we want.
 	
-	if(rowToSelect == NSNotFound)
+	if([ColorLibrary shouldClearColorFilterWhenIndexNotFound:rowToSelect])
 	{
 		//It wasn't in the currently-displayed list. Search the master list.
 		[self->colorListController setFilterPredicate:nil];
@@ -173,7 +149,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	}
 	
 	//We'd better have found it by now!
-	if(rowToSelect != NSNotFound)
+	if([ColorLibrary canSelectColorAtRowIndex:rowToSelect])
 	{
 		[self->colorListController setSelectionIndex:rowToSelect];
 		[colorBar setLDrawColor:newColor];
@@ -289,17 +265,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (void) updateSelectionWithObjects:(NSArray *)selectedObjects
 {
-	id          currentObject   = [selectedObjects lastObject];
-	LDrawColor  *objectColor    = [self LDrawColor];
-	
-	//Find the color code of the last object selected. I suppose this is rather 
-	// tacky to do such a simple search, but I would prefer not to write the 
-	// interface required to denote multiple selection.
-	if(currentObject != nil)
-	{
-		if([currentObject conformsToProtocol:@protocol(LDrawColorable)])
-			objectColor = [currentObject LDrawColor];
-	}
+	LDrawColor *objectColor = [LDrawSelectionOps colorOfLastObjectInSelection:selectedObjects
+																 fallingBackTo:[self LDrawColor]];
 	
 	updatingToReflectFile = YES;
 		[self setLDrawColor:objectColor];
@@ -314,33 +281,14 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 //========== indexOfColor: =================================================
 //
-// Purpose:		Returns the row index of colorCodeSought in the panel's table, 
-//				or NSNotFound if colorCodeSought is not displayed. 
+// Purpose:		Row of the sought color in the panel's table. The host still
+//				uses arrangedObjects.
 //
 //==============================================================================
 - (NSInteger) indexOfColor:(LDrawColor *)colorSought
 {
-	NSArray     *visibleColors  = [self->colorListController arrangedObjects];
-	NSInteger   numberColors    = [visibleColors count];
-	LDrawColor  *currentColor   = nil;
-	LDrawColorT currentCode     = LDrawColorBogus;
-	LDrawColorT	colorCodeSought = [colorSought colorCode];
-	NSInteger   rowToSelect     = NSNotFound; //will be the row index for the color we want.
-	NSInteger   counter         = 0;
-	
-	//Search through all the colors in the current color set and see if the 
-	// one we are after is in there. A brute force search.
-	for(counter = 0; counter < numberColors && rowToSelect == NSNotFound; counter++)
-	{
-		currentColor	= [visibleColors objectAtIndex:counter];
-		currentCode		= [currentColor colorCode];
-		
-		if(currentCode == colorCodeSought)
-			rowToSelect = counter;
-	}
-	
-	return rowToSelect;
-	
+	return [ColorLibrary indexOfColor:colorSought
+							 inColors:[self->colorListController arrangedObjects]];
 }//end indexOfColor:
 
 
@@ -364,7 +312,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	NSUserDefaults		*userDefaults			= [NSUserDefaults standardUserDefaults];
 	
 	// Get the object from preferences.
-	savedDescriptorData = [userDefaults objectForKey:COLOR_SORT_DESCRIPTORS_KEY];
+	savedDescriptorData = [userDefaults objectForKey:[LDrawPreferences colorTableSortDescriptorsPreferenceKey]];
 	if(savedDescriptorData != nil) {
 		NSError *unarchiveError = nil;
 		NSSet *allowedClasses = [NSSet setWithObjects:[NSArray class], [NSSortDescriptor class], nil];
@@ -387,134 +335,6 @@ LDrawColorPanelController *sharedColorPanel = nil;
 }//end loadInitialSortDescriptors
 
 
-//========== predicateForSearchString: =========================================
-//
-// Purpose:		Returns a search predicate suitable for finding colors based on 
-//				the given search string. 
-//
-//				If the search string consists entirely of numerals, the 
-//				predicate will search for colors having that exact integer code. 
-//
-//==============================================================================
-- (NSPredicate *) predicateForSearchString:(NSString *)searchString
-								  material:(MaterialPopUpTagT)material
-{
-	NSString		*keywordFormat		= nil;
-	NSArray 		*keywordArguments	= nil;
-	NSString		*materialFormat 	= nil;
-	NSArray 		*materialArguments	= nil;
-	NSMutableString *predicateFormat	= nil;
-	NSMutableArray	*predicateArguments = nil;
-	NSPredicate 	*searchPredicate	= nil;
-	BOOL			searchByCode		= NO; //color name search by default.
-	NSScanner		*digitScanner		= nil;
-	NSInteger		colorCode			= 0;
-	
-	// If there is no string, then clear the search predicate (find all).
-	if([searchString length] == 0)
-		searchPredicate = nil;
-	else
-	{
-		// Find out whether this search is intended to be based on the LDraw 
-		// code. If the search string can be parsed into an integer, we'll 
-		// assume this is a color-code search. Otherwise, it will be a name 
-		// search. 
-		digitScanner	= [NSScanner scannerWithString:searchString];
-		searchByCode	= [digitScanner scanInteger:&colorCode];
-		
-		// If it is an LDraw code search, try to find a color code equal to the 
-		// search number entered. 
-		if(searchByCode == YES)
-		{
-			keywordFormat		= @"%K == %@";
-			keywordArguments	= [NSArray arrayWithObjects:NSStringFromSelector(@selector(colorCode)), @(colorCode), nil];
-		}
-		else
-		{
-			// This is a search based on color names. If we can find the search 
-			// string in any component of the color string, we consider it a 
-			// match. 
-			keywordFormat		= @"%K CONTAINS[cd] %@";
-			keywordArguments	= [NSArray arrayWithObjects:NSStringFromSelector(@selector(localizedName)), searchString, nil];
-		}
-	}
-	
-	switch(material)
-	{
-		case MaterialTypeAll:
-			// nothing
-			break;
-			
-		case MaterialTypeSolid:
-			materialFormat = @"(%K == %@) AND (%K == 1.0)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialNone), NSStringFromSelector(@selector(alpha)), nil];
-			break;
-			
-		case MaterialTypeTransparent:
-			materialFormat = @"(%K == %@) AND (%K < 1.0)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialNone), NSStringFromSelector(@selector(alpha)), nil];
-			break;
-			
-		case MaterialTypeChrome:
-			materialFormat = @"(%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialChrome), nil];
-			break;
-		
-		case MaterialTypePearlescent:
-			materialFormat = @"(%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialPearlescent), nil];
-			break;
-			
-		case MaterialTypeRubber:
-			materialFormat = @"(%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialRubber), nil];
-			break;
-		
-		case MaterialTypeMetal:
-			materialFormat = @"(%K == %@) OR (%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialMetal), NSStringFromSelector(@selector(material)), @(LDrawColorMaterialMatteMetallic), nil];
-			break;
-		
-		case MaterialTypeOther:
-			materialFormat = @"((%K == %@) OR (%K == %@) OR (%K == %@))";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialCustom),
-								 NSStringFromSelector(@selector(colorCode)), @(LDrawCurrentColor),
-								 NSStringFromSelector(@selector(colorCode)), @(LDrawEdgeColor),
-								 nil];
-			break;
-	}
-	
-	if(keywordFormat || materialFormat)
-	{
-		predicateFormat 	= [NSMutableString string];
-		predicateArguments	= [NSMutableArray array];
-	}
-	
-	if(keywordFormat)
-	{
-		[predicateFormat appendString:keywordFormat];
-		[predicateArguments addObjectsFromArray:keywordArguments];
-	}
-	
-	if(materialFormat)
-	{
-		if([predicateFormat length])
-			[predicateFormat appendString:@"AND "];
-		
-		[predicateFormat appendFormat:@"(%@)", materialFormat];
-		[predicateArguments addObjectsFromArray:materialArguments];
-	}
-	
-	if(predicateFormat)
-	{
-		searchPredicate = [NSPredicate predicateWithFormat:predicateFormat argumentArray:predicateArguments];
-	}
-	
-	return searchPredicate;
-	
-}//end predicateForSearchString:
-
-
 //========== updateColorFilter =================================================
 //
 // Purpose:		Searches the global color list for colors matching the selected 
@@ -524,12 +344,12 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (void) updateColorFilter
 {
 	NSString			*searchString				= [searchField stringValue];
-	MaterialPopUpTagT	materialType				= (MaterialPopUpTagT)[[materialPopUpButton selectedItem] tag];
+	LDrawColorFilterT	materialType				= (LDrawColorFilterT)[[materialPopUpButton selectedItem] tag];
 	NSPredicate 		*searchPredicate			= nil;
 	LDrawColor			*currentColor				= [self LDrawColor];
 	NSInteger			indexOfPreviousSelection	= 0;
 	
-	searchPredicate = [self predicateForSearchString:searchString material:materialType];
+	searchPredicate = [ColorLibrary predicateForSearchString:searchString material:materialType];
 	
 	//Update the table with our results.
 	[self->colorListController setFilterPredicate:searchPredicate];
@@ -537,10 +357,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	// The array controller will automatically maintain the selection if it can.
 	// But if it can't, we need to come up a reasonable new answer.
 	indexOfPreviousSelection = [self indexOfColor:currentColor];
-	// If the previous color is no longer in the list, what should we do? I have
-	// chosen to automatically select the first color, since I don't want to
-	// introduce the UI confusion of empty selection.
-	if(indexOfPreviousSelection == NSNotFound)
+	if([ColorLibrary shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
 	{
 		[self->colorListController setSelectionIndex:0];
 	}
@@ -585,7 +402,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 		NSUserDefaults	*userDefaults			= [NSUserDefaults standardUserDefaults];
 		
 		// Set the object in preferences.
-		[userDefaults setObject:savedDescriptorData forKey:COLOR_SORT_DESCRIPTORS_KEY];
+		[userDefaults setObject:savedDescriptorData forKey:[LDrawPreferences colorTableSortDescriptorsPreferenceKey]];
 	}
 	
 }//end observeValueForKeyPath:ofObject:change:context:
