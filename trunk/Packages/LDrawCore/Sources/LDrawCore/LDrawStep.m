@@ -675,18 +675,6 @@
 } // end iconName
 
 
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *)inspectorClassName
-{
-	return @"InspectionStep";
-	
-} // end inspectorClassName
-
-
 #pragma mark -
 #pragma mark ACCESSORS
 #pragma mark -

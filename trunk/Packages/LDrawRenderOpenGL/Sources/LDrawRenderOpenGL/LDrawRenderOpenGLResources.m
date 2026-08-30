@@ -14,7 +14,7 @@
 //
 //==============================================================================
 
-#import <LDrawRenderOpenGL/LDrawRenderOpenGLResources.h>
+#import "LDrawRenderOpenGLResources.h"
 
 @implementation LDrawRenderOpenGLResources
 

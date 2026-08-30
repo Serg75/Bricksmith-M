@@ -8,8 +8,8 @@
 //
 //==============================================================================
 
-#import <LDrawRenderOpenGL/LDrawShaderLoader.h>
-#import <LDrawRenderOpenGL/LDrawRenderOpenGLResources.h>
+#import "LDrawShaderLoader.h"
+#import "LDrawRenderOpenGLResources.h"
 #import <LDrawCore/LDrawUtilities.h>
 
 //========== load_shader ================================================

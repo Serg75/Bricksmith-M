@@ -16,7 +16,6 @@
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import "LDrawViewerContainer.h"
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawFeatures/LDrawMinifigureAssembler.h>
 #import <LDrawFeatures/LDrawMinifigureSnapshot.h>
 #import <LDrawFeatures/MLCadIni.h>

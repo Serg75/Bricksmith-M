@@ -18,7 +18,6 @@
 //==============================================================================
 #import "LDrawDocument.h"
 
-#import "GPU.h"
 #import <AMSProgressBar/AMSProgressBar.h>
 
 #import "DimensionsPanel.h"
@@ -26,14 +25,13 @@
 #import "ExtendedSplitView.h"
 #import "IconTextCell.h"
 #import "Inspector.h"
-#import  LDrawApplicationGPU_h
+#import "LDrawApplication.h"
 #import <LDrawCore/LDrawColor.h>
 #import "LDrawColorPanelController.h"
 #import <LDrawCore/LDrawComment.h>
 #import <LDrawCore/LDrawConditionalLine.h>
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDirective.h>
-#import  LDrawDocumentGPU_h
 #import <LDrawEditing/LDrawClipboard.h>
 #import <LDrawEditing/LDrawEditorStrings.h>
 #import <LDrawEditing/LDrawInsertion.h>
@@ -61,7 +59,6 @@
 #import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import "LDrawViewerContainer.h"
-#import  LDrawViewGPU_h
 #import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/LPubRemoveGroup.h>
 #import <LDrawFeatures/LDrawGrid.h>

@@ -40,9 +40,7 @@
 #import "FocusRingView.h"
 #import "LDrawApplication.h"
 #import "LDrawDocument.h"
-#import  LDrawRendererGPU_h
 #import "LDrawViewerContainer.h"
-#import  LDrawViewGPU_h
 #import "OverlayViewCategory.h"
 #import "UserDefaultsCategory.h"
 

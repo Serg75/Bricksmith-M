@@ -13,7 +13,6 @@
 
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawDragHandle.h>
-#import <LDrawCore/MacLDraw.h>
 
 @implementation LDrawRenderer (SceneControllerBridge)
 

@@ -28,8 +28,6 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawUtilities.h>
-
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/StringCategory.h>
 
 //---------- Section Headers ---------------------------------------------------

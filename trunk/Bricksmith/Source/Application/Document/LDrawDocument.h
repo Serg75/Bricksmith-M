@@ -241,3 +241,9 @@
 - (void) flushDocChangesAndSelect:(NSArray*)directives;
 
 @end
+
+
+@interface LDrawDocument (SharedGPUContext)
+/// Bracket an undoable edit with the shared OpenGL context lock, or run immediately on Metal.
+- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
+@end

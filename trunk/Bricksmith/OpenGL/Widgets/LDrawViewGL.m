@@ -31,7 +31,7 @@
 #import <LDrawRenderOpenGL/LDrawRendererGL.h>
 #import "OverlayViewCategory.h"
 
-#include OPEN_GL_HEADER
+#include <OpenGL/gl.h>
 
 
 @implementation LDrawView (OpenGL)

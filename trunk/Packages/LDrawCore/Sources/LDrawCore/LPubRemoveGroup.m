@@ -149,18 +149,6 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 }//end iconName
 
 
-//========== inspectorClassName ================================================
-///
-/// @abstract	Returns the name of the class used to inspect this one.
-///
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return @"InspectionLPubRemoveGroup";
-	
-}//end inspectorClassName
-
-
 // MARK: - ACCESSORS -
 
 //========== setGroupName: =====================================================

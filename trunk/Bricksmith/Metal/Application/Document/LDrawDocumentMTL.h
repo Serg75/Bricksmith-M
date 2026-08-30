@@ -7,13 +7,8 @@
 //
 //				Opens the document and manages its editor and viewer.
 //
-//				To use elsewhere, do something like:
-//
-//					#import "LDrawDocument.h"
-//					NSDocumentController *documentController = [NSDocumentController sharedDocumentController];
-//					LDrawDocument *currentDocument = [documentController currentDocument];
-//
-//	Info:		This category contains Metal-related code.
+//	Info:		This category contains Metal-related code. lockContextAndExecute:
+//				is declared on LDrawDocument.
 //
 //	Created by Sergey Slobodenyuk on 2023-06-07.
 //
@@ -23,8 +18,4 @@
 
 
 @interface LDrawDocument (Metal)
-
-/// Run block immediately; Metal has no shared GL context to lock.
-- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
-
 @end

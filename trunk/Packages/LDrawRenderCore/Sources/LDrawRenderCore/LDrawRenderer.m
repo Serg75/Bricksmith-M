@@ -33,7 +33,6 @@
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
 
 #define TIME_BOXTEST				0	// output timing data for how long box tests and marquee drags take.
 #define HANDLE_SIZE 3

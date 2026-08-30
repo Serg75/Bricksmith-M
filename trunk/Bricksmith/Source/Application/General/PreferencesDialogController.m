@@ -55,6 +55,7 @@
 #import <LDrawCore/PartLibrary.h>
 #import "PartLibraryController.h"
 #import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import "UserDefaultsCategory.h"
 #import "WindowCategory.h"

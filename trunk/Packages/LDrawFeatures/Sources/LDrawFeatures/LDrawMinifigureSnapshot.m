@@ -14,7 +14,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawFeatures/LDrawHostKeys.h>
 
 
 @interface LDrawMinifigureSnapshot ()

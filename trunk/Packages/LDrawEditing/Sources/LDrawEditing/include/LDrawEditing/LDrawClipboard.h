@@ -20,6 +20,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/MatrixMath.h>
+#import <LDrawEditing/LDrawPasteboard.h>
 
 @class LDrawColor;
 

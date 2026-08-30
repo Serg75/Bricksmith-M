@@ -9,7 +9,7 @@
 //
 //==============================================================================
 
-#import <LDrawRenderMetal/MetalUtilities.h>
+#import "MetalUtilities.h"
 
 //========== simd_matrix4x4_from_array ========================================
 //

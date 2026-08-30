@@ -15,10 +15,16 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/PartLibrary.h>
 
 NS_ASSUME_NONNULL_BEGIN
+
+typedef enum SearchMode
+{
+	SearchModeAllCategories	= 0,
+	SearchModeSelectedCategory = 1
+
+} SearchModeT;
 
 //------------------------------------------------------------------------------
 ///

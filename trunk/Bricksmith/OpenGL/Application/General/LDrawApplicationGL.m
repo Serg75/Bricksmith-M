@@ -18,6 +18,8 @@
 
 #import "LDrawApplicationGL.h"
 
+static NSOpenGLContext *SharedGLContext = nil;
+
 @implementation LDrawApplication (OpenGL)
 
 #pragma mark -
@@ -52,7 +54,7 @@
 //==============================================================================
 + (void) makeCurrentSharedContext
 {
-	[[LDrawApplication shared]->sharedGLContext makeCurrentContext];
+	[SharedGLContext makeCurrentContext];
 }
 
 //========== makeCurrentSharedContextKeepOriginal: =============================
@@ -63,7 +65,7 @@
 //==============================================================================
 + (void) makeCurrentSharedContextKeepOriginal:(NSOpenGLContext *)originalContext
 {
-	[[LDrawApplication shared]->sharedGLContext makeCurrentContext];
+	[SharedGLContext makeCurrentContext];
 }
 
 //---------- sharedOpenGLContext -------------------------------------[static]--
@@ -74,7 +76,7 @@
 //------------------------------------------------------------------------------
 + (NSOpenGLContext *) sharedOpenGLContext
 {
-	return [LDrawApplication shared]->sharedGLContext;
+	return SharedGLContext;
 	
 }//end sharedOpenGLContext
 
@@ -90,9 +92,9 @@
 -(void) makeSharedContext
 {
 	NSOpenGLPixelFormat *pixelFormat	= [LDrawApplication openGLPixelFormat];
-	self->sharedGLContext				= [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
+	SharedGLContext						= [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
 	
-	[sharedGLContext makeCurrentContext];
+	[SharedGLContext makeCurrentContext];
 }
 
 @end

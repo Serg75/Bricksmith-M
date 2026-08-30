@@ -11,7 +11,7 @@
 
 #import <LDrawCore/LDrawLSynth.h>
 
-#import <LDrawCore/ComputationalGeometry.h>
+#import "ComputationalGeometry.h"
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawLSynthDirective.h>
 #import <LDrawCore/LDrawPart.h>
@@ -46,6 +46,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 {
     return config_source;
 }
+
 
 //---------- setConfigSource: ---------------------------------------[static]--
 //
@@ -92,9 +93,11 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
 }
 
+
 #pragma mark -
 #pragma mark INITIALIZATION
 #pragma mark -
+
 
 //========== init ==============================================================
 //
@@ -128,7 +131,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
                                                object:nil];
 
     return self;
+    
 } // end init
+
 
 //========== initWithLines:inRange:parentGroup: ================================
 //
@@ -298,11 +303,10 @@ static id<LDrawLSynthConfigSource> config_source = nil;
             postNotificationName:LDrawDirectiveDidChangeNotification
                           object:self];
 
-
-
     return self;
 
 } // end initWithLines:inRange:
+
 
 //========== lineIsLSynthBeginning: ===========================================
 //
@@ -317,6 +321,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return NO;
 } //end lineIsLSynthBeginning:
 
+
 //========== lineIsLSynthTerminator: ==========================================
 //
 // Purpose:		Returns if line is a 0 SYNTH END or 0 SYNTH PART (which are single
@@ -330,6 +335,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
     return NO;
 } //end lineIsLSynthTerminator:
+
 
 //---------- rangeOfDirectiveBeginningAtIndex:inLines:maxIndex: ------[static]--
 //
@@ -369,6 +375,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
     return synthRange;
 } // end rangeOfDirectiveBeginningAtIndex:inLines:maxIndex:
+
 
 //========== initWithCoder: ====================================================
 //
@@ -424,23 +431,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 
 #pragma mark -
-#pragma mark DISPLAY
-#pragma mark -
-
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *)inspectorClassName
-{
-    return @"InspectionLSynth";
-
-} // end inspectorClassName
-
-#pragma mark -
 #pragma mark DIRECTIVES
 #pragma mark -
+
 
 //========== insertDirective:atIndex: ==========================================
 //
@@ -458,6 +451,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     [self invalCache:CacheFlagBounds|DisplayList|ContainerInvalid];
 
 } // end insertDirective:atIndex:
+
 
 //========== removeDirective: ==================================================
 //
@@ -478,6 +472,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
             postNotificationName:LDrawDirectiveDidChangeNotification
                           object:self];
 }
+
 
 //========== drawSelf: =========================================================
 //
@@ -521,6 +516,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } // end drawSelf:
 
+
 //========== hitTest:transform:viewScale:boundsOnly:creditObject:hits: =======
 //
 // Purpose:		Hit-test the geometry.
@@ -563,6 +559,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
         }
     }
 } // end hitTest:transform:viewScale:boundsOnly:creditObject:hits:
+
 
 //========== boxTest:transform:viewScale:boundsOnly:creditObject:hits: =======
 //
@@ -611,6 +608,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return FALSE;
 } // end boxTest:transform:viewScale:boundsOnly:creditObject:hits:
 
+
 //========== depthTest:inBox:transform:creditObject:bestObject:bestDepth:=======
 //
 // Purpose:		depthTest finds the closest primitive (in screen space)
@@ -651,6 +649,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
 
 } // end depthTest:inBox:transform:creditObject:bestObject:bestDepth:
+
 
 //========== write =============================================================
 //
@@ -716,9 +715,11 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return written;
 } // end write
 
+
 #pragma mark -
 #pragma mark DISPLAY
 #pragma mark -
+
 
 //========== browsingDescription ===============================================
 //
@@ -750,6 +751,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } // end browsingDescription
 
+
 //========== iconName ==========================================================
 //
 // Purpose:		Returns the name of image file used to display this kind of
@@ -762,9 +764,11 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } // end iconName
 
+
 #pragma mark -
 #pragma mark ACCESSORS
 #pragma mark -
+
 
 //========== boundingBox3 ======================================================
 //
@@ -780,6 +784,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return cachedBounds;
 }
 
+
 //========== setLsynthClass: ====================================================
 //
 //  Purpose:		Sets the class of the Synthesized part, Pneumatic tube, or Technic
@@ -791,16 +796,17 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     self->lsynthClass = class;
 } // end setLsynthClass:
 
+
 //========== lsynthClass: ====================================================
 //
 //  Purpose:		Return the class of the Synthesized part.
 //
 //==============================================================================
-
 - (int)lsynthClass
 {
     return self->lsynthClass;
 } // end lsynthClass:
+
 
 //========== setLsynthType: ====================================================
 //
@@ -813,6 +819,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } // end setLsynthType:
 
+
 //========== lsynthClass: ====================================================
 //
 //  Purpose:		Return the type of the Synthesized part.
@@ -822,6 +829,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 {
     return self->synthType;
 } // end
+
 
 //========== setHidden: ========================================================
 //
@@ -841,6 +849,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } // end setHidden:
 
+
 //========== isHidden ==========================================================
 //
 // Purpose:		Returns whether this element will be drawn or not.
@@ -851,6 +860,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return self->hidden;
 
 } // end isHidden
+
 
 //========== transformComponents ===============================================
 //
@@ -871,6 +881,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } // end transformComponents
 
+
 //========== setSelected: ======================================================
 //
 // Purpose:		Custom (de)selection action.  We want to make our part transparent
@@ -884,6 +895,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     [self colorSelectedSynthesizedParts:flag];
 } // end setSelected:
 
+
 //========== setSubdirectiveSelected: =========================================
 //
 // Purpose:		Set the flag denoting whether a subdirective is selected
@@ -896,7 +908,11 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     [self colorSelectedSynthesizedParts:flag];
 }
 
+
+#pragma mark -
 #pragma mark <LDrawColorable> protocol methods
+#pragma mark -
+
 
 //========== setLDrawColor: ====================================================
 //
@@ -912,6 +928,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     [self colorSelectedSynthesizedParts:[self isSelected]];
 } // end setLDrawColor:
 
+
 //========== LDrawColor ========================================================
 //
 // Purpose:		Returns the LDraw color code of the receiver.
@@ -922,9 +939,11 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return color;
 } // end LDrawColor
 
+
 #pragma mark -
 #pragma mark <LDrawMovableElement> protocol methods
 #pragma mark -
+
 
 //========== displacementForNudge: =============================================
 //
@@ -945,6 +964,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return v;
 
 }
+
 
 //========== moveBy: ===========================================================
 //
@@ -967,6 +987,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 #pragma mark -
 #pragma mark UTILITY FUNCTIONS
 #pragma mark -
+
 
 //========== synthesize ========================================================
 //
@@ -1124,6 +1145,8 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
 #endif
 }
+
+
 //========== doAutoHullOnBand ==================================================
 //
 // Purpose:	Calculate the INSIDE/OUTSIDE directives automatically.
@@ -1216,6 +1239,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     [[self subdirectives] removeAllObjects];
     [[self subdirectives] addObjectsFromArray:newConstraints];
 }
+
 
 //========== prepareAutoHullData ===============================================
 //
@@ -1315,7 +1339,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
     // NSLog(@"Prepared Data: %@", preparedData);
     return preparedData;
+    
 } // end prepareAutoHullData
+
 
 //========== determineIconName: ================================================
 //
@@ -1323,7 +1349,6 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 //              of synthesized part.
 //
 //==============================================================================
-
 - (NSString *)determineIconName:(LDrawDirective *)directive
 {
     // Hose
@@ -1348,7 +1373,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
     // Other?
     return @"Brick";
+    
 } // end determineIconName:
+
 
 //========== colorSelectedSynthesizedParts: ====================================
 //
@@ -1410,6 +1437,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
 } //end colorSelectedSynthesizedParts:
 
+
 //========== transformationMatrix ==============================================
 //
 // Purpose:		Returns a two-dimensional (row matrix) representation of the
@@ -1430,6 +1458,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     return Matrix4CreateFromGLMatrix4(glTransformation);
 
 } // end transformationMatrix
+
 
 //========== acceptsDroppedDirective: ==========================================
 //
@@ -1469,6 +1498,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
 } //end cleanupAfterDrop
 
+
 //========== synthesizedPartsCount =============================================
 //
 // Purpose:		Returns the number of parts synthesized to create the shape.
@@ -1478,6 +1508,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 {
     return (int)[synthesizedParts count];
 }
+
 
 //========== partClass =========================================================
 //
@@ -1516,6 +1547,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 #pragma mark NOTIFICATIONS
 #pragma mark -
 
+
 //========== receiveMessage:who: ===============================================
 //
 // Purpose:		The things we observe call this when something one-time and
@@ -1530,6 +1562,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     }
 } //end receiveMessage:who:
 
+
 //========== selectionDisplayOptionsDidChange: =================================
 //
 // Purpose:		The selection style has changed, so we may need to redraw.
@@ -1541,7 +1574,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 {
     [self colorSelectedSynthesizedParts:([self isSelected] || self->subdirectiveSelected)];
     [self noteNeedsDisplay];
+    
 } // end selectionDisplayOptionsDidChange:
+
 
 //========== requiresResynthesis: ==============================================
 //
@@ -1556,6 +1591,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     [self synthesize];
     [self colorSelectedSynthesizedParts:([self isSelected] || self->subdirectiveSelected)];
     [self noteNeedsDisplay];
+    
 } // end requiresResynthesis:
 
 @end

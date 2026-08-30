@@ -209,18 +209,6 @@ static NSArray<Class>		*subclasses;
 }//end iconName
 
 
-//========== inspectorClassName ================================================
-///
-/// @abstract	Returns the name of the class used to inspect this one.
-///
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return @"InspectionLPubCommand";
-	
-}//end inspectorClassName
-
-
 // MARK: - ACCESSORS -
 
 

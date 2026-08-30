@@ -14,11 +14,7 @@ let package = Package(
         .target(
             name: "LDrawCore",
             path: "Sources/LDrawCore",
-            publicHeadersPath: "include",
-            cSettings: [
-                .define("WANT_RELATED_PARTS", to: "1"),
-                .define("USE_AUTOMATIC_WIREFRAMES", to: "1"),
-            ]
+            publicHeadersPath: "include"
         ),
     ]
 )

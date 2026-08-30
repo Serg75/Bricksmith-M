@@ -12,7 +12,6 @@
 
 #import <LDrawFeatures/LSynthConfiguration.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawLSynth.h>
 #import <LDrawCore/LDrawPart.h>

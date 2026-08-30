@@ -10,7 +10,6 @@
 #import <Cocoa/Cocoa.h>
 
 #import "LDrawView.h"
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
 
 @class LDrawViewerContainer;

@@ -28,11 +28,11 @@
 #import <TargetConditionals.h>
 #include <LDrawRenderMetal/MetalCommonDefinitions.h>
 
-#import <LDrawRenderMetal/LDrawRenderMetalResources.h>
+#import "LDrawRenderMetalResources.h"
 #import <LDrawRenderMetal/LDrawShaderRendererMTL.h>
 #import <LDrawRenderMetal/MetalGPU.h>
-#import <LDrawRenderMetal/MetalUtilities.h>
-#import <LDrawRenderMetal/SIMDConversions.h>
+#import "MetalUtilities.h"
+#import "SIMDConversions.h"
 
 
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.

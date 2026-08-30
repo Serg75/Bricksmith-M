@@ -487,18 +487,6 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 }//end iconName
 
 
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return nil;
-	
-}//end inspectorClassName
-
-
 #pragma mark -
 #pragma mark ACCESSORS
 #pragma mark -
@@ -558,7 +546,6 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	return self->edgeColorCode;
 	
 }//end edgeColorCode
-
 
 
 //========== getColorRGBA: =====================================================

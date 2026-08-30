@@ -303,18 +303,6 @@ static NSArray<Class>	*subclasses;
 }//end iconName
 
 
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return @"InspectionUnknownCommand";
-	
-}//end inspectorClassName
-
-
 // MARK: - ACCESSORS -
 
 

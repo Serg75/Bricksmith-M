@@ -18,6 +18,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import <LDrawFeatures/LDrawHostKeys.h>
+
 NS_ASSUME_NONNULL_BEGIN
 
 /// Fallback when user-defaults color unarchiving fails for the Styles tab /

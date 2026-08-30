@@ -580,17 +580,6 @@ int floatNearGrid(float v, float grid, float epsi)
 
 }//end browsingDescription
 
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return @"InspectionPart";
-	
-}//end inspectorClassName
-
 
 #pragma mark -
 #pragma mark ACCESSORS
@@ -1392,7 +1381,6 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 }
 
 
-
 #pragma mark -
 #pragma mark UTILITIES
 #pragma mark -
@@ -1657,7 +1645,6 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		cacheModel = nil;
 	}
 }//end unresolvePart
-
 
 
 //========== unresolvePartIfPartLibrary ========================================

@@ -17,7 +17,7 @@
 //
 //==============================================================================
 
-#import <LDrawCore/ComputationalGeometry.h>
+#import "ComputationalGeometry.h"
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/MatrixMath.h>

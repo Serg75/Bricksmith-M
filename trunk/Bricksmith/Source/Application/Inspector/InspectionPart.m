@@ -11,13 +11,11 @@
 //==============================================================================
 #import "InspectionPart.h"
 
-#import "GPU.h"
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/PartLibrary.h>
 #import <LDrawEditing/LDrawInspection.h>
 

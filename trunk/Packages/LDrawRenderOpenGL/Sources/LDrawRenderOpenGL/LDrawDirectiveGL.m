@@ -12,9 +12,8 @@
 //==============================================================================
 
 #import <LDrawRenderOpenGL/LDrawDirectiveGL.h>
-#import <LDrawRenderOpenGL/GL.h>
 
-#include OPEN_GL_HEADER
+#include <OpenGL/gl.h>
 
 @implementation LDrawDirective (OpenGL)
 

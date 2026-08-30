@@ -14,7 +14,7 @@
 //
 //==============================================================================
 
-#import <LDrawRenderMetal/LDrawRenderMetalResources.h>
+#import "LDrawRenderMetalResources.h"
 
 @implementation LDrawRenderMetalResources
 

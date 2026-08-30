@@ -7,7 +7,7 @@
  *
  */
 
-#include <LDrawRenderOpenGL/OpenGLUtilities.h>
+#include "OpenGLUtilities.h"
 #include <stdio.h>
 
 #if DEBUG

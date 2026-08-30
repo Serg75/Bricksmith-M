@@ -310,18 +310,6 @@
 	
 }//end browsingDescription
 
-
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return @"InspectionMPDModel";
-	
-}//end inspectorClassName
-
 //========== setEnclosingDirective: ===========================================
 //
 // Purpose:		Set the enclosing container, then tell observers the model's

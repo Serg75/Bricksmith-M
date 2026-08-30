@@ -385,9 +385,6 @@
 		}
 
 
-
-
-
 	}
 	return FALSE;
 }//end boxTest:transform:boundsOnly:creditObject:hits:
@@ -518,18 +515,6 @@
 	return @"QuadPrimitive";
 	
 }//end iconName
-
-
-//========== inspectorClassName ================================================
-//
-// Purpose:		Returns the name of the class used to inspect this one.
-//
-//==============================================================================
-- (NSString *) inspectorClassName
-{
-	return @"InspectionQuadrilateral";
-	
-}//end inspectorClassName
 
 
 #pragma mark -

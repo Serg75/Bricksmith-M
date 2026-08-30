@@ -7,7 +7,7 @@
 //
 //==============================================================================
 
-#import <LDrawCore/PartCatalogBuilder.h>
+#import "PartCatalogBuilder.h"
 
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawPathNames.h>

@@ -18,7 +18,6 @@
 
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDirective.h>
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/MatrixMath.h>
 
 

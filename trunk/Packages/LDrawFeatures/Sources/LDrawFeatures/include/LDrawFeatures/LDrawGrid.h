@@ -7,14 +7,24 @@
 //
 //  Info:       Reads GRID_SPACING_* keys from NSUserDefaults (seeded by
 //              LDrawPreferences). Rotation step sizes are the compile-time
-//              GRID_ROTATION_* constants in MacLDraw.h. Hosts use this instead
-//              of duplicating the fine/medium/coarse switches.
+//              GRID_ROTATION_* constants below. Hosts use this instead of
+//              duplicating the fine/medium/coarse switches.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //
 //==============================================================================
 
 #import <Foundation/Foundation.h>
+
+#define GRID_SPACING_COARSE				@"Grid Spacing: Coarse"
+#define GRID_SPACING_FINE				@"Grid Spacing: Fine"
+#define GRID_SPACING_MEDIUM				@"Grid Spacing: Medium"
+
+// Number of degrees to rotate in each grid mode.
+#define GRID_ROTATION_SUPERFINE			1
+#define GRID_ROTATION_FINE				15
+#define GRID_ROTATION_MEDIUM			45
+#define GRID_ROTATION_COARSE			90
 
 NS_ASSUME_NONNULL_BEGIN
 

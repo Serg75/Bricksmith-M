@@ -24,10 +24,10 @@
 
 #import <LDrawRenderCore/LDrawBDPAllocator.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
-#import <LDrawRenderMetal/LDrawRenderMetalResources.h>
+#import "LDrawRenderMetalResources.h"
 #import <LDrawCore/ColorLibrary.h>
 #import <LDrawRenderMetal/MetalGPU.h>
-#import <LDrawRenderMetal/MetalUtilities.h>
+#import "MetalUtilities.h"
 #import <LDrawRenderMetal/MetalCommonDefinitions.h>
 
 

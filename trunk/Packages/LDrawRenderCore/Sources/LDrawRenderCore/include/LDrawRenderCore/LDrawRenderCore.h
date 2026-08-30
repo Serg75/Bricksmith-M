@@ -3,10 +3,12 @@
 //  File:       LDrawRenderCore.h
 //  Package:    LDrawRenderCore
 //
-//  Purpose:    Umbrella header for the LDrawRenderCore Swift Package.
+//  Purpose:    Host-facing umbrella for the LDrawRenderCore Swift Package.
 //
 //  Info:       GPU-agnostic renderer protocols, shader renderer, camera, and
 //              display-list API shared by the Metal and OpenGL renderers.
+//              MeshSmooth, the BDP allocator, and backend GPU categories remain
+//              public because other packages import them as modular headers.
 //
 //  Created by Sergey Slobodenyuk on 2026-05-26.
 //

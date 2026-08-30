@@ -12,7 +12,6 @@
 #import "LDrawColorPanelController.h"
 #import "LDrawFileOutlineView.h"
 #import "PartBrowserTableView.h"
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawEditing/LDrawClipboard.h>
 
 @implementation SearchPanelController

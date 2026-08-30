@@ -14,7 +14,6 @@
 
 #import <LDrawCore/LDrawDirective.h>
 #import "LDrawDocument.h"
-#import <LDrawCore/MacLDraw.h>
 
 
 @implementation ObjectInspectionController

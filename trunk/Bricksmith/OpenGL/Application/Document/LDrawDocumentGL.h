@@ -7,13 +7,8 @@
 //
 //				Opens the document and manages its editor and viewer.
 //
-//				To use elsewhere, do something like:
-//
-//					#import "LDrawDocument.h"
-//					NSDocumentController *documentController = [NSDocumentController sharedDocumentController];
-//					LDrawDocument *currentDocument = [documentController currentDocument];
-//
-//	Info:		This category contains OpenGL-related code.
+//	Info:		This category contains OpenGL-related code. lockContextAndExecute:
+//				is declared on LDrawDocument.
 //
 //	Created by Sergey Slobodenyuk on 2023-05-29.
 //
@@ -23,8 +18,4 @@
 
 
 @interface LDrawDocument (OpenGL)
-
-/// Bracket an undoable edit with the shared OpenGL context lock.
-- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
-
 @end

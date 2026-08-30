@@ -129,7 +129,8 @@ typedef struct {
 /// I seem to be beset by −0. I don't want to display −0!
 + (Tuple3)displayViewingAngleFromAngle:(Tuple3)angle;
 
-/// Inspectable objects report an inspectorClassName. Nil when absent.
+/// AppKit inspector class name for this directive. Nil when the object has no
+/// inspector (for example LDrawColor). Empty string for unmapped directives.
 + (nullable NSString *)inspectorClassNameForObject:(id)object;
 
 /// YES when edited coordinates differ from the object’s stored value.

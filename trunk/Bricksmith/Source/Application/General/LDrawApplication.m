@@ -18,10 +18,8 @@
 #import <mach/mach_time.h>
 #import <Sparkle/Sparkle.h>
 
-#import "GPU.h"
 #import "DonationDialogController.h"
 #import "Inspector.h"
-#import  LDrawApplicationGPU_h
 #import "LDrawColorPanelController.h"
 #import "LDrawDocument.h"
 #import <LDrawCore/LDrawPaths.h>

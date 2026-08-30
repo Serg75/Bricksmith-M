@@ -63,3 +63,11 @@
 void connexionMessageHandler(io_connect_t connection, natural_t messageType, void *messageArgument);
 
 @end
+
+
+@interface LDrawApplication (SharedGPUContext)
+/// Activate the application-wide shared OpenGL context, or no-op on Metal.
++ (void)makeCurrentSharedContext;
+/// Create the shared OpenGL context at launch, or no-op on Metal.
+- (void)makeSharedContext;
+@end

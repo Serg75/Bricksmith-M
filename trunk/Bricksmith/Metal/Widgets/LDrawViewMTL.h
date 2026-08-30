@@ -7,7 +7,9 @@
 //				and view hierarchy) and the LDrawRenderer (responsible for all
 //				platform-independent drawing logic).
 //
-//	Info:		This category contains Metal-related code.
+//	Info:		This category contains Metal-related code. Shared GPU methods
+//				(makeCurrentContext, lockContextAndExecute:, setBackgroundColor:,
+//				setViewingAngle:) are declared on LDrawView.
 //
 //	Created by Sergey Slobodenyuk on 2023-06-07.
 //
@@ -18,19 +20,7 @@
 
 @interface LDrawView (Metal)
 
-/// No-op on Metal; keeps shared LDrawView code uniform with OpenGL.
-- (void)makeCurrentContext;
-
-/// Run block immediately; Metal has no GL context lock.
-- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
-
-- (void) internalInit;
-
-// Accessors
-- (void) setBackgroundColor:(NSColor *)newColor;
-- (void) setViewingAngle:(Tuple3)newAngle;
-
-// Utilities
-- (void) saveImageToPath:(NSString *)path;
+- (void)internalInit;
+- (void)saveImageToPath:(NSString *)path;
 
 @end

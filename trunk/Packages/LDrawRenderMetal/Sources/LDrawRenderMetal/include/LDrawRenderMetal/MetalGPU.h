@@ -12,7 +12,6 @@
 @import MetalKit;
 
 #import <Foundation/Foundation.h>
-#include "MetalCommonDefinitions.h"
 
 extern const int MSAASampleCount;
 

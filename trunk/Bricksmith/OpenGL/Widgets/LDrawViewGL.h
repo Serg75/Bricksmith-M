@@ -7,7 +7,9 @@
 //				and view hierarchy) and the LDrawRenderer (responsible for all
 //				platform-independent drawing logic).
 //
-//	Info:		This category contains OpenGL-related code.
+//	Info:		This category contains OpenGL-related code. Shared GPU methods
+//				(makeCurrentContext, lockContextAndExecute:, setBackgroundColor:,
+//				setViewingAngle:) are declared on LDrawView.
 //
 //	Created by Sergey Slobodenyuk on 2023-05-31.
 //
@@ -19,23 +21,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LDrawView (OpenGL)
 
-/// Activate this view's OpenGL context before renderer calls.
-- (void)makeCurrentContext;
-
-/// Bracket block with CGL lock/unlock on this view's context.
-- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
-
-- (void) internalInit;
-
-// Drawing
-- (void) draw;
-
-// Accessors
-- (void) setBackgroundColor:(NSColor *)newColor;
-- (void) setViewingAngle:(Tuple3)newAngle;
-
-// Utilities
-- (void) saveImageToPath:(NSString *)path;
+- (void)internalInit;
+- (void)draw;
+- (void)saveImageToPath:(NSString *)path;
 
 @end
 

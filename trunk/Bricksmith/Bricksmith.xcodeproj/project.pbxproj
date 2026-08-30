@@ -349,8 +349,6 @@
 		95D893AC165532B100AA055B /* lsynthcp in Copy LSynth */ = {isa = PBXBuildFile; fileRef = 95D893A71655325100AA055B /* lsynthcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		95DFF98E298F165300E7BF76 /* InspectionLPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */; };
 		95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
-		95E108322A4254370091D579 /* GPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108312A4254370091D579 /* GPU.h */; };
-		95E108332A4254370091D579 /* GPU.h in Headers */ = {isa = PBXBuildFile; fileRef = 95E108312A4254370091D579 /* GPU.h */; };
 		95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
 		95FBD68129C4A5A900E84D2F /* ClassInspector_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */; };
 		BB0300000000000000000001 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000001 /* LDrawCore */; };
@@ -660,7 +658,6 @@
 		95D893AD1655334500AA055B /* lsynth.mpd */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = lsynth.mpd; path = ../../ThirdParty/LSynth/LSynth/lsynth.mpd; sourceTree = "<group>"; };
 		95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubRemoveGroup.h; sourceTree = "<group>"; };
 		95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubRemoveGroup.m; sourceTree = "<group>"; };
-		95E108312A4254370091D579 /* GPU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GPU.h; sourceTree = "<group>"; };
 		95FBD67C29C46BC100E84D2F /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorRemoveGroup.xib; sourceTree = "<group>"; };
 		95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClassInspector_Tests.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
@@ -1005,7 +1002,6 @@
 				0BA24BE90EFF2A6500BF9915 /* StringUtilities.m */,
 				2BF2E3130AB0FCAB0026D5DB /* TransformerIntMinus1.h */,
 				2BF2E3140AB0FCAB0026D5DB /* TransformerIntMinus1.m */,
-				95E108312A4254370091D579 /* GPU.h */,
 			);
 			name = Other;
 			path = Source/Other;
@@ -1354,7 +1350,6 @@
 				0BF729B808AD849300E3DA53 /* DocumentToolbarController.h in Headers */,
 				0BF729BA08AD849300E3DA53 /* LDrawDocument.h in Headers */,
 				0BF729BC08AD849300E3DA53 /* LDrawApplication.h in Headers */,
-				95E108322A4254370091D579 /* GPU.h in Headers */,
 				0BF729BE08AD849300E3DA53 /* LDrawColorPanelController.h in Headers */,
 				0BF729C008AD849300E3DA53 /* PartBrowserDataSource.h in Headers */,
 				0BF729C608AD849300E3DA53 /* PreferencesDialogController.h in Headers */,
@@ -1455,7 +1450,6 @@
 				956D9BBE2A30768000FA956B /* MovePanel.h in Headers */,
 				956D9BC02A30768000FA956B /* RotationPanelController.h in Headers */,
 				956D9BC12A30768000FA956B /* MinifigureDialogController.h in Headers */,
-				95E108332A4254370091D579 /* GPU.h in Headers */,
 				956D9BC32A30768000FA956B /* TransformerIntMinus1.h in Headers */,
 				956D9BC52A30768000FA956B /* PartBrowserPanelController.h in Headers */,
 				956D9BC62A30768000FA956B /* PartBrowserTableView.h in Headers */,

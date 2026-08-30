@@ -9,14 +9,13 @@
 //==============================================================================
 
 #import <LDrawRenderCore/LDrawDisplayList.h>
-#import <LDrawRenderOpenGL/GL.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawRenderCore/LDrawBDPAllocator.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 #import <LDrawCore/MatrixMathEx.h>
 #import <LDrawRenderCore/MeshSmooth.h>
 
-#include OPEN_GL_HEADER
+#include <OpenGL/gl.h>
 
 
 // This forces quads to be subdivided into tris at creation.

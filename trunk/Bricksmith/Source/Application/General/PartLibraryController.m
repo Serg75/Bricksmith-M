@@ -12,8 +12,8 @@
 #import <AMSProgressBar/AMSProgressBar.h>
 
 #import <LDrawCore/LDrawPaths.h>
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawEditing/LDrawEditorStrings.h>
+#import <LDrawFeatures/LDrawHostKeys.h>
 
 @implementation PartLibraryController
 

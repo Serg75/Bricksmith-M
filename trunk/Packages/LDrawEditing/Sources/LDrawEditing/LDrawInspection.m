@@ -12,8 +12,21 @@
 
 #import <LDrawEditing/LDrawInspection.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColor.h>
+#import <LDrawCore/LDrawComment.h>
+#import <LDrawCore/LDrawConditionalLine.h>
+#import <LDrawCore/LDrawDirective.h>
+#import <LDrawCore/LDrawLine.h>
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawMetaCommand.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawQuadrilateral.h>
+#import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubRemoveGroup.h>
 #import <LDrawCore/MatrixMath.h>
 
 #import <math.h>
@@ -367,14 +380,41 @@
 
 //---------- inspectorClassNameForObject: ----------------------------[static]--
 //
-// Purpose:		Inspectable objects will tell us what class to use to inspect
-//				with. The host still instantiates the AppKit inspector.
+// Purpose:		AppKit inspector class name for this directive. Most-specific
+//				class wins. Nil when the object has no inspector (LDrawColor).
+//				Empty string for unmapped LDrawDirective subclasses.
 //
 //------------------------------------------------------------------------------
 + (NSString *)inspectorClassNameForObject:(id)object
 {
-	if ([object respondsToSelector:@selector(inspectorClassName)])
-		return [object inspectorClassName];
+	if ([object isKindOfClass:[LDrawColor class]])
+		return nil;
+	if ([object isKindOfClass:[LDrawLSynth class]])
+		return @"InspectionLSynth";
+	if ([object isKindOfClass:[LDrawPart class]])
+		return @"InspectionPart";
+	if ([object isKindOfClass:[LPubRemoveGroup class]])
+		return @"InspectionLPubRemoveGroup";
+	if ([object isKindOfClass:[LPubCommand class]])
+		return @"InspectionLPubCommand";
+	if ([object isKindOfClass:[LDrawComment class]])
+		return @"InspectionComment";
+	if ([object isKindOfClass:[LDrawMetaCommand class]])
+		return @"InspectionUnknownCommand";
+	if ([object isKindOfClass:[LDrawConditionalLine class]])
+		return @"InspectionConditionalLine";
+	if ([object isKindOfClass:[LDrawLine class]])
+		return @"InspectionLine";
+	if ([object isKindOfClass:[LDrawTriangle class]])
+		return @"InspectionTriangle";
+	if ([object isKindOfClass:[LDrawQuadrilateral class]])
+		return @"InspectionQuadrilateral";
+	if ([object isKindOfClass:[LDrawStep class]])
+		return @"InspectionStep";
+	if ([object isKindOfClass:[LDrawMPDModel class]])
+		return @"InspectionMPDModel";
+	if ([object isKindOfClass:[LDrawDirective class]])
+		return @"";
 	return nil;
 }
 

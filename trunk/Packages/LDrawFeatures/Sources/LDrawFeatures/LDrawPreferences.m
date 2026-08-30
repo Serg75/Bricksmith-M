@@ -14,6 +14,8 @@
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MacLDraw.h>
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawPartBrowserModel.h>
 
 
 @interface LDrawPreferences ()

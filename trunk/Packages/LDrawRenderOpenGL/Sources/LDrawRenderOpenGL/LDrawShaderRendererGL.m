@@ -17,14 +17,13 @@
 //==============================================================================
 
 #import <LDrawRenderOpenGL/LDrawShaderRendererGL.h>
-#import <LDrawRenderOpenGL/GL.h>
 
-#include OPEN_GL_HEADER
+#include <OpenGL/gl.h>
 
 #import <LDrawCore/ColorLibrary.h>
 #import <LDrawRenderCore/LDrawBDPAllocator.h>
 #import <LDrawRenderCore/LDrawShaderRendererGPU.h>
-#import <LDrawRenderOpenGL/LDrawShaderLoader.h>
+#import "LDrawShaderLoader.h"
 #import <LDrawRenderCore/LDrawDisplayList.h>
 #import <LDrawCore/MatrixMathEx.h>
 

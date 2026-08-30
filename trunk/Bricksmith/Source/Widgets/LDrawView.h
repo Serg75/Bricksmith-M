@@ -11,9 +11,12 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
+#ifdef METAL
+@import MetalKit;
+#endif
+
 #import <LDrawCore/ColorLibrary.h>
 #import <LDrawFeatures/LDrawGrid.h>
-#import "GPU.h"
 #import <LDrawRenderCore/LDrawRenderer.h>
 #import <LDrawRenderCore/LDrawCamera.h>
 #import <LDrawCore/LDrawUtilities.h>
@@ -33,7 +36,11 @@
 //		LDrawView
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawView : GPUView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller, NSDraggingSource, NSMenuItemValidation>
+#ifdef METAL
+@interface LDrawView : MTKView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller, NSDraggingSource, NSMenuItemValidation>
+#else
+@interface LDrawView : NSOpenGLView <LDrawColorable, LDrawRendererDelegate, LDrawCameraScroller, NSDraggingSource, NSMenuItemValidation>
+#endif
 {
 	// The renderer is responsible for viewport math and OpenGL calls. Because
 	// of the latter, there is NO PUBLIC ACCESS, since each OpenGL call must be 
@@ -120,6 +127,16 @@
 - (void) scrollCenterToModelPoint:(Point3)modelPoint;
 - (void) takeBackgroundColorFromUserDefaults;
 
+@end
+
+
+@interface LDrawView (SharedGPUContext)
+- (void)setBackgroundColor:(NSColor *)newColor;
+- (void)setViewingAngle:(Tuple3)newAngle;
+/// Activate this view's OpenGL context, or no-op on Metal.
+- (void)makeCurrentContext;
+/// Bracket block with the OpenGL context lock, or run immediately on Metal.
+- (void)lockContextAndExecute:(void (NS_NOESCAPE ^)(void))block;
 @end
 
 

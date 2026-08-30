@@ -7,7 +7,9 @@
 //				wide instance variables and actions, as well as application
 //				delegate code for startup and shutdown.
 //
-//	Info:		This category contains Metal-related code.
+//	Info:		This category contains Metal-related code. Shared GPU methods
+//				(makeCurrentSharedContext, makeSharedContext) are declared on
+//				LDrawApplication.
 //
 //	Created by Sergey Slobodenyuk on 2023-06-07.
 //
@@ -17,12 +19,4 @@
 
 
 @interface LDrawApplication (Metal)
-
-//Accessors
-/// No-op on Metal; keeps callers shared with the OpenGL target.
-+ (void) makeCurrentSharedContext;
-
-/// No-op on Metal; there is no shared GL context to create.
-- (void) makeSharedContext;
-
 @end

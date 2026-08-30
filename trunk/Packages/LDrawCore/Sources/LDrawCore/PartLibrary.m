@@ -29,7 +29,7 @@
 #import <LDrawCore/LDrawTexture.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MacLDraw.h>
-#import <LDrawCore/PartCatalogBuilder.h>
+#import "PartCatalogBuilder.h"
 #import <LDrawCore/StringCategory.h>
 
 

@@ -27,7 +27,7 @@
  with more than one objects.
  */
 
-#import <LDrawCore/FastSet.h>
+#import "FastSet.h"
 
 @interface FastSet () {
     id  data;

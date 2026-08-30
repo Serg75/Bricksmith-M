@@ -19,7 +19,6 @@
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
-#import <LDrawCore/MacLDraw.h>
 
 @interface LDrawSearch (Private)
 + (NSArray *)partsInContainer:(LDrawContainer *)container

@@ -23,15 +23,14 @@
 //==============================================================================
 #import "PartBrowserDataSource.h"
 
-#import "GPU.h"
 #import "IconTextCell.h"
-#import  LDrawApplicationGPU_h
+#import "LDrawApplication.h"
 #import "LDrawColorPanelController.h"
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import "LDrawViewerContainer.h"
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawEditing/LDrawClipboard.h>
+#import <LDrawFeatures/LDrawHostKeys.h>
 #import <LDrawEditing/LDrawInsertion.h>
 #import <LDrawCore/PartLibrary.h>
 #import <LDrawCore/StringCategory.h>

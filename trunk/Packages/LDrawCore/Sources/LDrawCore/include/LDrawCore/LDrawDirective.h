@@ -14,11 +14,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawCore/FastSet.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
-
-// This uses the hacky C wrapper around NSSet to improve performance.
-#define NEW_SET 1
 
 @class LDrawColor;
 @class LDrawContainer;
@@ -191,11 +187,6 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 {
 	@private
 	__weak LDrawContainer  *enclosingDirective; //LDraw files are a hierarchy.
-	#if NEW_SET
-		FastSet			   *observers;
-	#else
-		NSMutableSet	   *observers;			//Any observers watching us.  This is an array of NSValues of pointers to create WEAK references.
-	#endif
 	CacheFlagsT				invalFlags;
 	BOOL					isSelected;
 	NSString			   *iconName;
@@ -228,10 +219,9 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 
 - (NSString *)write;
 
-// Display
+// Display (outline / part-browser labels; inspector class names live in LDrawEditing)
 - (NSString *)browsingDescription;
 - (NSString *)iconName;
-- (NSString *)inspectorClassName;
 
 // Accessors
 - (NSArray *)ancestors;

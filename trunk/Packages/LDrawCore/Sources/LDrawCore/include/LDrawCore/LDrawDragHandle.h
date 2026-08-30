@@ -6,6 +6,9 @@
 //  Purpose:    In-scene widget to manipulate a vertex.
 //
 //  Info:       Sub-classes LDrawDrawableElement to get some dragging behavior.
+//              Stays in LDrawCore because Core primitives (line, triangle,
+//              quad, conditional line, texture) allocate handles. Moving the
+//              class to LDrawEditing would make Core depend on Editing.
 //
 //  Modified:   02/25/2011 Allen Smith. Creation Date.
 //

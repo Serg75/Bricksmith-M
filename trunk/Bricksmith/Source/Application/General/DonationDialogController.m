@@ -10,13 +10,11 @@
 //==============================================================================
 #import "DonationDialogController.h"
 
-#import "GPU.h"
 #import "BackgroundColorView.h"
 #import "LDrawApplication.h"
 #import <LDrawCore/LDrawFile.h>
+#import "LDrawView.h"
 #import "LDrawViewerContainer.h"
-#import  LDrawViewGPU_h
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 
 @interface DonationDialogController ()

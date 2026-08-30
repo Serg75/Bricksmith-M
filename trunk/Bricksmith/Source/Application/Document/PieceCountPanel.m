@@ -9,8 +9,7 @@
 //==============================================================================
 #import "PieceCountPanel.h"
 
-#import "GPU.h"
-#import  LDrawApplicationGPU_h
+#import "LDrawApplication.h"
 #import <LDrawCore/LDrawColor.h>
 #import "LDrawColorCell.h"
 #import <LDrawCore/LDrawFile.h>
@@ -18,7 +17,6 @@
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import "LDrawViewerContainer.h"
-#import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/PartLibrary.h>
 #import <LDrawCore/PartReport.h>
 

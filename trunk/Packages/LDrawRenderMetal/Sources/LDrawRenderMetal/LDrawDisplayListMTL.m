@@ -19,9 +19,9 @@
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 #import <LDrawRenderCore/MeshSmooth.h>
 #import <LDrawRenderMetal/MetalGPU.h>
-#import <LDrawRenderMetal/MetalUtilities.h>
+#import "MetalUtilities.h"
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawRenderMetal/SIMDConversions.h>
+#import "SIMDConversions.h"
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
