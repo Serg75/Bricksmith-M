@@ -12,7 +12,7 @@
 
 #import "DialogPanel.h"
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawSelection.h>
 
 @interface RotationPanelController : NSWindowController 
 {

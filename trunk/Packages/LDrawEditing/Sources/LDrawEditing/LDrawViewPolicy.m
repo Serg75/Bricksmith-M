@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:       LDrawViewOps.m
+//  File:       LDrawViewPolicy.m
 //  Package:    LDrawEditing
 //
 //  Purpose:    Foundation-only zoom and scroll policies for the 3D view.
@@ -9,9 +9,9 @@
 //
 //==============================================================================
 
-#import <LDrawEditing/LDrawViewOps.h>
+#import <LDrawEditing/LDrawViewPolicy.h>
 
-@implementation LDrawViewOps
+@implementation LDrawViewPolicy
 
 
 //---------- zoomChangeFactorFromScrollDeltaY: -----------------------[static]--

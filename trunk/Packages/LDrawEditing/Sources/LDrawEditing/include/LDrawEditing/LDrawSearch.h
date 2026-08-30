@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:       LDrawSearchOps.h
+//  File:       LDrawSearch.h
 //  Package:    LDrawEditing
 //
 //  Purpose:    Foundation-only helpers for finding parts by scope, color, and
@@ -48,13 +48,13 @@ typedef enum {
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawSearchOps
+/// @class      LDrawSearch
 ///
 /// @abstract   Foundation-only helpers for finding parts by scope, color, and
 ///             name. The host still owns the search panel and selection.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawSearchOps : NSObject
+@interface LDrawSearch : NSObject
 
 /// When the selection is empty, Step/Selection become File, color-from-selection
 /// becomes no filter, and selected-parts becomes all parts.

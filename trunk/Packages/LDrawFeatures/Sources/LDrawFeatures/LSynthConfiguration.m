@@ -119,17 +119,17 @@ static LSynthConfiguration* instance = nil;
 //==============================================================================
 - (void)initializeArrays
 {
-    parts                   = [[NSMutableArray alloc] init];
-    hose_constraints        = [[NSMutableArray alloc] init];
-    hose_types              = [[NSMutableArray alloc] init];
-    band_constraints        = [[NSMutableArray alloc] init];
-    band_types              = [[NSMutableArray alloc] init];
-    
-    quickRefBands           = [[NSMutableArray alloc] init];
-    quickRefHoses           = [[NSMutableArray alloc] init];
-    quickRefParts           = [[NSMutableArray alloc] init];
-    quickRefBandConstraints = [[NSMutableArray alloc] init];
-    quickRefHoseConstraints = [[NSMutableArray alloc] init];
+    parts                   = [NSMutableArray array];
+    hose_constraints        = [NSMutableArray array];
+    hose_types              = [NSMutableArray array];
+    band_constraints        = [NSMutableArray array];
+    band_types              = [NSMutableArray array];
+
+    quickRefBands           = [NSMutableArray array];
+    quickRefHoses           = [NSMutableArray array];
+    quickRefParts           = [NSMutableArray array];
+    quickRefBandConstraints = [NSMutableArray array];
+    quickRefHoseConstraints = [NSMutableArray array];
 } // end initializeArrays
 
 //========== defaultConfigPath =================================================
@@ -179,7 +179,7 @@ static LSynthConfiguration* instance = nil;
     float       t,             // twist
                 scale,
                 thresh;
-    NSMutableArray *tmp_parts = [[NSMutableArray alloc] init];
+    NSMutableArray *tmp_parts = [NSMutableArray array];
 
     while (lineIndex < NSMaxRange(range)) {
         currentLine = [lines objectAtIndex:lineIndex];
@@ -213,54 +213,21 @@ static LSynthConfiguration* instance = nil;
                         // TODO: harden
                         NSString *desc = [[previousLine componentsSeparatedByString:@"- Type "] objectAtIndex:1];
                         
-                        NSMutableDictionary *hose_constraint = [NSMutableDictionary dictionaryWithObjects:[NSArray arrayWithObjects:
-
-                                // flip
-                                [NSNumber numberWithInt:flip],
-
-                                // offset
-                                [NSArray arrayWithObjects:
-                                    [NSNumber numberWithFloat:offset[0]],
-                                    [NSNumber numberWithFloat:offset[1]],
-                                    [NSNumber numberWithFloat:offset[2]],
-                                    nil],
-
-                                // orient
-                                [NSArray arrayWithObjects:
-                                    [NSArray arrayWithObjects:
-                                        [NSNumber numberWithFloat:orient[0][0]],
-                                        [NSNumber numberWithFloat:orient[0][1]],
-                                        [NSNumber numberWithFloat:orient[0][2]],
-                                        nil],
-                                    [NSArray arrayWithObjects:
-                                        [NSNumber numberWithFloat:orient[1][0]],
-                                        [NSNumber numberWithFloat:orient[1][1]],
-                                        [NSNumber numberWithFloat:orient[1][2]],
-                                        nil],
-                                    [NSArray arrayWithObjects:
-                                        [NSNumber numberWithFloat:orient[2][0]],
-                                        [NSNumber numberWithFloat:orient[2][1]],
-                                        [NSNumber numberWithFloat:orient[2][2]],
-                                        nil],
-                                     nil],
-
-                                // partName
-                                [NSString stringWithUTF8String:type],
-                                                                                             
-                                // description
-                                desc,
-
-                                // LSYNTH_CONSTRAINT_CLASS
-                                [NSNumber numberWithInt:LSYNTH_HOSE],
-
-                                nil
-                            ]
-
-                            forKeys:[NSArray arrayWithObjects:@"flip", @"offset", @"orient", @"partName", @"description", @"LSYNTH_CONSTRAINT_CLASS", nil]
-                        ]; // end hose_constraint
+                        NSMutableDictionary *hose_constraint = [@{
+                            @"flip": @(flip),
+                            @"offset": @[@(offset[0]), @(offset[1]), @(offset[2])],
+                            @"orient": @[
+                                @[@(orient[0][0]), @(orient[0][1]), @(orient[0][2])],
+                                @[@(orient[1][0]), @(orient[1][1]), @(orient[1][2])],
+                                @[@(orient[2][0]), @(orient[2][1]), @(orient[2][2])],
+                            ],
+                            @"partName": @(type),
+                            @"description": desc,
+                            @"LSYNTH_CONSTRAINT_CLASS": @(LSYNTH_HOSE),
+                        } mutableCopy];
 
                         // A little post-processing
-                        NSString *description = [hose_constraint valueForKey:@"description"];
+                        NSString *description = hose_constraint[@"description"];
                         description = [description stringByReplacingOccurrencesOfString:@"\"" withString:@""];
                         NSArray *descriptionParts = [description componentsSeparatedByString:@"-"];
 
@@ -272,11 +239,11 @@ static LSynthConfiguration* instance = nil;
                         }
                         
                         // Use our processed description
-                        [hose_constraint setValue:description forKey:@"description"];
+                        hose_constraint[@"description"] = description;
                         
                         
                         [hose_constraints addObject:hose_constraint];
-                        [quickRefHoseConstraints addObject:[[NSString stringWithCString:type encoding:NSUTF8StringEncoding] lowercaseString]];
+                        [quickRefHoseConstraints addObject:[@(type) lowercaseString]];
                     }
                     
                     // The description precedes the constraint definition so save it for the next time round
@@ -317,54 +284,21 @@ static LSynthConfiguration* instance = nil;
                         // TODO: harden
                         NSString *desc = [[previousLine componentsSeparatedByString:@"// "] objectAtIndex:1];
                         
-                        NSDictionary *band_constraint = [NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:
-
-                                // radius
-                                [NSNumber numberWithInt:radius],
-
-                                // offset
-                                [NSArray arrayWithObjects:
-                                    [NSNumber numberWithFloat:offset[0]],
-                                    [NSNumber numberWithFloat:offset[1]],
-                                    [NSNumber numberWithFloat:offset[2]],
-                                    nil],
-
-                                // orient
-                                [NSArray arrayWithObjects:
-                                    [NSArray arrayWithObjects:
-                                        [NSNumber numberWithFloat:orient[0][0]],
-                                        [NSNumber numberWithFloat:orient[0][1]],
-                                        [NSNumber numberWithFloat:orient[0][2]],
-                                        nil],
-                                    [NSArray arrayWithObjects:
-                                        [NSNumber numberWithFloat:orient[1][0]],
-                                        [NSNumber numberWithFloat:orient[1][1]],
-                                        [NSNumber numberWithFloat:orient[1][2]],
-                                        nil],
-                                    [NSArray arrayWithObjects:
-                                        [NSNumber numberWithFloat:orient[2][0]],
-                                        [NSNumber numberWithFloat:orient[2][1]],
-                                        [NSNumber numberWithFloat:orient[2][2]],
-                                        nil],
-                                    nil],
-
-                                // partName
-                                [NSString stringWithUTF8String:type],
-
-                                // description
-                                desc,
-
-                                // LSYNTH_CONSTRAINT_CLASS
-                                [NSNumber numberWithInt:LSYNTH_BAND],
-
-                                nil
-                        ]
-
-                        forKeys:[NSArray arrayWithObjects:@"radius", @"offset", @"orient", @"partName", @"description", @"LSYNTH_CONSTRAINT_CLASS", nil]
-                        ]; // end band_constraint
+                        NSDictionary *band_constraint = @{
+                            @"radius": @(radius),
+                            @"offset": @[@(offset[0]), @(offset[1]), @(offset[2])],
+                            @"orient": @[
+                                @[@(orient[0][0]), @(orient[0][1]), @(orient[0][2])],
+                                @[@(orient[1][0]), @(orient[1][1]), @(orient[1][2])],
+                                @[@(orient[2][0]), @(orient[2][1]), @(orient[2][2])],
+                            ],
+                            @"partName": @(type),
+                            @"description": desc,
+                            @"LSYNTH_CONSTRAINT_CLASS": @(LSYNTH_BAND),
+                        };
 
                         [band_constraints addObject:band_constraint];
-                        [quickRefBandConstraints addObject:[[NSString stringWithCString:type encoding:NSUTF8StringEncoding] lowercaseString]];
+                        [quickRefBandConstraints addObject:[@(type) lowercaseString]];
                     }
                     
                     // The description precedes the constraint definition so save it for the next time round
@@ -381,20 +315,18 @@ static LSynthConfiguration* instance = nil;
             // 0 SYNTH PART 4297187.dat PLI_ELECTRIC_NXT_CABLE_20CM   ELECTRIC_NXT_CABLE
 
             else if (sscanf([currentLine UTF8String],"0 SYNTH PART %s %s %s\n", product, title, type) == 3) {
-                NSMutableDictionary *part = [NSMutableDictionary
-                        dictionaryWithObjects:[NSArray arrayWithObjects:[NSString stringWithCString:product encoding:NSUTF8StringEncoding],
-                                        [[[NSString stringWithCString:title encoding:NSUTF8StringEncoding]
-                                                stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
-                                                                        [NSString stringWithCString:type encoding:NSUTF8StringEncoding],
-                                                                        [NSString stringWithCString:title encoding:NSUTF8StringEncoding],
-                                                                        @"",
-                                                                        nil]
-                                      forKeys:[NSArray arrayWithObjects:@"product", @"title", @"method", @"LSYNTH_TYPE", @"LSYNTH_CLASS", nil]];
-
+                NSString *titleString = @(title);
+                NSMutableDictionary *part = [@{
+                    @"product": @(product),
+                    @"title": [[titleString stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
+                    @"method": @(type),
+                    @"LSYNTH_TYPE": titleString,
+                    @"LSYNTH_CLASS": @"",
+                } mutableCopy];
 
                 [tmp_parts addObject:part];
                 // This (& the two below) feel a little hacky.  Better to have them as class methods on the config.
-                [quickRefParts addObject:[NSString stringWithCString:title encoding:NSUTF8StringEncoding]];
+                [quickRefParts addObject:titleString];
 
             } // END PART
 
@@ -405,17 +337,15 @@ static LSynthConfiguration* instance = nil;
             // We don't care about the rest of the definition (LSynth does)
             
             else if (sscanf([[lines objectAtIndex:lineIndex] UTF8String], "0 SYNTH BEGIN DEFINE %s HOSE %s %d %d %f", type, stretch, &d, &st, &t) == 5) {
-                NSDictionary *hose_def = [NSDictionary
-                    dictionaryWithObjects:[NSArray arrayWithObjects:
-                        [[[NSString stringWithCString:type encoding:NSUTF8StringEncoding]
-                            stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
-                        [NSString stringWithCString:type encoding:NSUTF8StringEncoding],
-                        [NSNumber numberWithInt:LSYNTH_HOSE],
-                        nil]
-                    forKeys:[NSArray arrayWithObjects:@"title", @"LSYNTH_TYPE", @"LSYNTH_CLASS", nil]];
+                NSString *typeString = @(type);
+                NSDictionary *hose_def = @{
+                    @"title": [[typeString stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
+                    @"LSYNTH_TYPE": typeString,
+                    @"LSYNTH_CLASS": @(LSYNTH_HOSE),
+                };
 
                 [hose_types addObject:hose_def];
-                [quickRefHoses addObject:[NSString stringWithCString:type encoding:NSUTF8StringEncoding]];
+                [quickRefHoses addObject:typeString];
             }
             
             // BAND DEFINITIONS, e.g.
@@ -425,17 +355,15 @@ static LSynthConfiguration* instance = nil;
             // We don't care about the rest of the definition (LSynth does)
             
             else if (sscanf([[lines objectAtIndex:lineIndex] UTF8String], "0 SYNTH BEGIN DEFINE %s BAND %s %f %f", type, fill, &scale, &thresh) == 4) {
-                NSDictionary *band_def = [NSDictionary
-                    dictionaryWithObjects:[NSArray arrayWithObjects:
-                        [[[NSString stringWithCString:type encoding:NSUTF8StringEncoding]
-                            stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
-                        [NSString stringWithCString:type encoding:NSUTF8StringEncoding],
-                        [NSNumber numberWithInt:LSYNTH_BAND],
-                        nil]
-                    forKeys:[NSArray arrayWithObjects:@"title", @"LSYNTH_TYPE", @"LSYNTH_CLASS", nil]];
+                NSString *typeString = @(type);
+                NSDictionary *band_def = @{
+                    @"title": [[typeString stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
+                    @"LSYNTH_TYPE": typeString,
+                    @"LSYNTH_CLASS": @(LSYNTH_BAND),
+                };
 
                 [band_types addObject:band_def];
-                [quickRefBands addObject:[NSString stringWithCString:type encoding:NSUTF8StringEncoding]];
+                [quickRefBands addObject:typeString];
             }
         }
         lineIndex++;
@@ -445,11 +373,11 @@ static LSynthConfiguration* instance = nil;
     // based on a matching band or hose type.  Not performant, but run only once at startup.
 
     for (NSMutableDictionary *part in tmp_parts) {
-        if ([[self getQuickRefBands] containsObject:[part objectForKey:@"method"]]) {
-            [part setValue:[NSNumber numberWithInt:LSYNTH_BAND] forKey:@"LSYNTH_CLASS"];
+        if ([[self getQuickRefBands] containsObject:part[@"method"]]) {
+            part[@"LSYNTH_CLASS"] = @(LSYNTH_BAND);
         }
-        else if ([[self getQuickRefHoses] containsObject:[part objectForKey:@"method"]]) {
-            [part setValue:[NSNumber numberWithInt:LSYNTH_HOSE] forKey:@"LSYNTH_CLASS"];
+        else if ([[self getQuickRefHoses] containsObject:part[@"method"]]) {
+            part[@"LSYNTH_CLASS"] = @(LSYNTH_HOSE);
         }
         [parts addObject:part];
     }
@@ -673,7 +601,7 @@ static LSynthConfiguration* instance = nil;
 	if ([getter isEqualToString:@"getHoseConstraints"]) return [self getHoseConstraints];
 	if ([getter isEqualToString:@"getBandTypes"]) return [self getBandTypes];
 	if ([getter isEqualToString:@"getBandConstraints"]) return [self getBandConstraints];
-	return [NSArray array];
+	return @[];
 }
 
 

@@ -153,7 +153,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 //==============================================================================
 - (LDrawColor *)colorForCode:(LDrawColorT)colorCode
 {
-	NSNumber	*key	= [NSNumber numberWithInteger:colorCode];
+	NSNumber	*key	= @(colorCode);
 	LDrawColor	*color	= [self->colors objectForKey:key];
 	
 	// Try searching the private colors.
@@ -232,7 +232,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 - (void)addColor:(LDrawColor *)newColor
 {
 	LDrawColorT	 colorCode	= [newColor colorCode];
-	NSNumber	*key		= [NSNumber numberWithInteger:colorCode];
+	NSNumber	*key		= @(colorCode);
 
 	[self->colors setObject:newColor forKey:key];
 	
@@ -254,7 +254,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 - (void)addPrivateColor:(LDrawColor *)newColor
 {
 	LDrawColorT	 colorCode	= [newColor colorCode];
-	NSNumber	*key		= [NSNumber numberWithInteger:colorCode];
+	NSNumber	*key		= @(colorCode);
 	
 	// Allocate if it doesn't exist. 
 	if (self->privateColors == nil)
@@ -400,7 +400,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 		if (searchByCode == YES)
 		{
 			keywordFormat     = @"%K == %@";
-			keywordArguments  = [NSArray arrayWithObjects:NSStringFromSelector(@selector(colorCode)), @(colorCode), nil];
+			keywordArguments  = @[NSStringFromSelector(@selector(colorCode)), @(colorCode)];
 		}
 		else
 		{
@@ -408,7 +408,7 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 			// string in any component of the color string, we consider it a
 			// match.
 			keywordFormat     = @"%K CONTAINS[cd] %@";
-			keywordArguments  = [NSArray arrayWithObjects:NSStringFromSelector(@selector(localizedName)), searchString, nil];
+			keywordArguments  = @[NSStringFromSelector(@selector(localizedName)), searchString];
 		}
 	}
 
@@ -418,34 +418,33 @@ static ColorLibrary	*sharedColorLibrary	= nil;
 			break;
 		case LDrawColorFilterSolid:
 			materialFormat    = @"(%K == %@) AND (%K == 1.0)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialNone), NSStringFromSelector(@selector(alpha)), nil];
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialNone), NSStringFromSelector(@selector(alpha))];
 			break;
 		case LDrawColorFilterTransparent:
 			materialFormat    = @"(%K == %@) AND (%K < 1.0)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialNone), NSStringFromSelector(@selector(alpha)), nil];
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialNone), NSStringFromSelector(@selector(alpha))];
 			break;
 		case LDrawColorFilterChrome:
 			materialFormat    = @"(%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialChrome), nil];
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialChrome)];
 			break;
 		case LDrawColorFilterPearlescent:
 			materialFormat    = @"(%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialPearlescent), nil];
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialPearlescent)];
 			break;
 		case LDrawColorFilterRubber:
 			materialFormat    = @"(%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialRubber), nil];
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialRubber)];
 			break;
 		case LDrawColorFilterMetal:
 			materialFormat    = @"(%K == %@) OR (%K == %@)";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialMetal), NSStringFromSelector(@selector(material)), @(LDrawColorMaterialMatteMetallic), nil];
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialMetal), NSStringFromSelector(@selector(material)), @(LDrawColorMaterialMatteMetallic)];
 			break;
 		case LDrawColorFilterOther:
 			materialFormat    = @"((%K == %@) OR (%K == %@) OR (%K == %@))";
-			materialArguments = [NSArray arrayWithObjects:NSStringFromSelector(@selector(material)), @(LDrawColorMaterialCustom),
+			materialArguments = @[NSStringFromSelector(@selector(material)), @(LDrawColorMaterialCustom),
 								 NSStringFromSelector(@selector(colorCode)), @(LDrawCurrentColor),
-								 NSStringFromSelector(@selector(colorCode)), @(LDrawEdgeColor),
-								 nil];
+								 NSStringFromSelector(@selector(colorCode)), @(LDrawEdgeColor)];
 			break;
 	}
 

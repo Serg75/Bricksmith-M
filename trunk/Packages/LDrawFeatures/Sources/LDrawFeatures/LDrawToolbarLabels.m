@@ -118,7 +118,7 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)documentToolbarAllowedItemIdentifiers
 {
-	return [NSArray arrayWithObjects:
+	return @[
 			@"GridSpacing",
 			@"GridOrientation",
 			@"NudgeX",
@@ -136,8 +136,7 @@
 			@"Snap To Grid",
 			@"Specify Zoom",
 			@"NSToolbarSpaceItem",
-			@"NSToolbarFlexibleSpaceItem",
-			nil];
+			@"NSToolbarFlexibleSpaceItem"];
 }
 
 
@@ -149,7 +148,7 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)documentToolbarDefaultItemIdentifiers
 {
-	return [NSArray arrayWithObjects:
+	return @[
 			@"Specify Zoom",
 			@"NSToolbarSpaceItem",
 			@"Snap To Grid",
@@ -163,8 +162,7 @@
 			@"Rotate-Z",
 			@"NSToolbarFlexibleSpaceItem",
 			@"ShowInspector",
-			@"PartBrowser",
-			nil];
+			@"PartBrowser"];
 }
 
 @end

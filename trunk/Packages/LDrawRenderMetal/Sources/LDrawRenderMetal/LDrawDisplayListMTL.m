@@ -1463,7 +1463,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 												   indexType:MTLIndexTypeUInt32
 												 indexBuffer:dl->indexBuffer
 										   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
-										   instanceCount:1];
+											   instanceCount:1];
 					#else
 					if (tptr->line_count)
 						[renderEncoder drawPrimitives:MTLPrimitiveTypeLine

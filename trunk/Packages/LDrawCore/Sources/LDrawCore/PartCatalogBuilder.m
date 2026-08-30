@@ -87,92 +87,92 @@
 	dispatch_async(catalogAccessQueue, ^{
 		
 		// Parts
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths partsPathForDomain:LDrawUserOfficial],				@"path",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths partsPathForDomain:LDrawUserOfficial],
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths partsPathForDomain:LDrawUserUnofficial],				@"path",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths partsPathForDomain:LDrawUserUnofficial],
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths partsPathForDomain:LDrawInternalOfficial],			@"path",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths partsPathForDomain:LDrawInternalOfficial],
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths partsPathForDomain:LDrawInternalUnofficial],			@"path",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths partsPathForDomain:LDrawInternalUnofficial],
+		}];
 
 		// Primitives
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitivesPathForDomain:LDrawUserOfficial],			@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitivesPathForDomain:LDrawUserOfficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+		}];
 									
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitivesPathForDomain:LDrawUserUnofficial],		@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitivesPathForDomain:LDrawUserUnofficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+		}];
 		
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitivesPathForDomain:LDrawInternalOfficial],		@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitivesPathForDomain:LDrawInternalOfficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+		}];
 									
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitivesPathForDomain:LDrawInternalUnofficial],	@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitivesPathForDomain:LDrawInternalUnofficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+		}];
 		
 		// Primitives 48
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitives48PathForDomain:LDrawUserOfficial],		@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									prefix_primitives48,										@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitives48PathForDomain:LDrawUserOfficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"prefix": prefix_primitives48,
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitives48PathForDomain:LDrawUserUnofficial],		@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									prefix_primitives48,										@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitives48PathForDomain:LDrawUserUnofficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"prefix": prefix_primitives48,
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitives48PathForDomain:LDrawInternalOfficial],	@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									prefix_primitives48,										@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitives48PathForDomain:LDrawInternalOfficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"prefix": prefix_primitives48,
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths primitives48PathForDomain:LDrawInternalUnofficial],	@"path",
-									NSLocalizedString(Category_Primitives, nil),				@"category",
-									prefix_primitives48,										@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths primitives48PathForDomain:LDrawInternalUnofficial],
+			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"prefix": prefix_primitives48,
+		}];
 
 		// Subparts
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths subpartsPathForDomain:LDrawUserOfficial],			@"path",
-									NSLocalizedString(Category_Subparts, nil),					@"category",
-									prefix_subparts,											@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths subpartsPathForDomain:LDrawUserOfficial],
+			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"prefix": prefix_subparts,
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths subpartsPathForDomain:LDrawUserUnofficial],			@"path",
-									NSLocalizedString(Category_Subparts, nil),					@"category",
-									prefix_subparts,											@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths subpartsPathForDomain:LDrawUserUnofficial],
+			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"prefix": prefix_subparts,
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths subpartsPathForDomain:LDrawInternalOfficial],		@"path",
-									NSLocalizedString(Category_Subparts, nil),					@"category",
-									prefix_subparts,											@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths subpartsPathForDomain:LDrawInternalOfficial],
+			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"prefix": prefix_subparts,
+		}];
 
-		[searchPaths addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									[paths subpartsPathForDomain:LDrawInternalUnofficial],		@"path",
-									NSLocalizedString(Category_Subparts, nil),					@"category",
-									prefix_subparts,											@"prefix",
-									nil]];
+		[searchPaths addObject:@{
+			@"path": [paths subpartsPathForDomain:LDrawInternalUnofficial],
+			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"prefix": prefix_subparts,
+		}];
 
 		NSString							*partCatalogPath	= [paths partCatalogPath];
 		NSMutableDictionary<NSString*, id>	*newPartCatalog 	= [NSMutableDictionary dictionary];
@@ -254,7 +254,7 @@
 // Not working for some reason. Why?
 //	NSArray 			*readableFileTypes = [NSDocument readableTypes];
 //	NSLog(@"readable types: %@", readableFileTypes);
-	NSArray 			*readableFileTypes		= [NSArray arrayWithObjects:@"dat", @"ldr", nil];
+	NSArray 			*readableFileTypes		= @[@"dat", @"ldr"];
 	
 	NSArray 			*partNames				= [fileManager contentsOfDirectoryAtPath:folderPath error:NULL];
 	NSUInteger			numberOfParts			= [partNames count];
@@ -329,8 +329,7 @@
 						// dictionary with part info. This was a database design
 						// mistake; it should have been an array of part reference
 						// numbers, if not just built up at runtime.
-						NSDictionary *categoryEntry = [NSDictionary dictionaryWithObject:partNumber
-																			  forKey:PART_NUMBER_KEY];
+						NSDictionary *categoryEntry = @{ PART_NUMBER_KEY: partNumber };
 																			  
 						[catalog_category addObject:categoryEntry];
 						

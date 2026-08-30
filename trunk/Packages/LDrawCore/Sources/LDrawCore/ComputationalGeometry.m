@@ -236,10 +236,10 @@
             double nx = (vx * c) - sign2 * h * vy;
             double ny = (vy * c) - sign2 * h * vx;
             NSMutableArray *a = [NSMutableArray arrayWithCapacity:4];
-            [a insertObject:[NSNumber numberWithDouble:([c1 x] + ([c1 r] * nx))] atIndex:0];
-            [a insertObject:[NSNumber numberWithDouble:([c1 y] + ([c1 r] * ny))] atIndex:1];
-            [a insertObject:[NSNumber numberWithDouble:([c2 x] + (sign1 * [c2 r] * nx))] atIndex:2];
-            [a insertObject:[NSNumber numberWithDouble:([c2 y] + (sign1 * [c2 r] * ny))] atIndex:3];
+            [a insertObject:@([c1 x] + ([c1 r] * nx)) atIndex:0];
+            [a insertObject:@([c1 y] + ([c1 r] * ny)) atIndex:1];
+            [a insertObject:@([c2 x] + (sign1 * [c2 r] * nx)) atIndex:2];
+            [a insertObject:@([c2 y] + (sign1 * [c2 r] * ny)) atIndex:3];
             [results insertObject:a atIndex:i];
             i++;
         }
@@ -275,7 +275,7 @@
         // NSLog(@"PreparedData in doJarvisMarch: %@", preparedData);
         leftmost = [ComputationalGeometry leftmost:preparedData];
         // NSLog(@"LEFTMOST: %i %@", leftmost, [preparedData objectAtIndex:leftmost]);
-        [[preparedData objectAtIndex:leftmost] setValue:[NSNumber numberWithBool:(BOOL)true] forKey:@"inHull"];
+        [[preparedData objectAtIndex:leftmost] setValue:@YES forKey:@"inHull"];
 
 
         // main loop - keep finding the next point until it's the starting one
@@ -284,7 +284,7 @@
         while (!stopIterating) {
             int qIndex = [ComputationalGeometry nextHullPointWithPoints:preparedData andPointIndex:pIndex];
             if (qIndex != leftmost) {
-                [[preparedData objectAtIndex:qIndex] setValue:[NSNumber numberWithBool:(BOOL)true] forKey:@"inHull"];
+                [[preparedData objectAtIndex:qIndex] setValue:@YES forKey:@"inHull"];
                 pIndex = qIndex;
             } else {
                 stopIterating = YES;

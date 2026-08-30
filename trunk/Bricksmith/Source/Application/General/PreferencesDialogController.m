@@ -401,7 +401,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
 	RightButtonBehaviorT rbBehavior 	= (RightButtonBehaviorT)[self->rightButtonRadioButtons selectedTag];
 	[userDefaults setInteger:rbBehavior
-						forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
+					  forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
 }
 
 //========== rotateModeChanged: ================================================
@@ -414,7 +414,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
 	RotateModeT			rBehavior 		= (RotateModeT)[self->rotateModeRadioButtons selectedTag];
 	[userDefaults setInteger:rBehavior
-						forKey:ROTATE_MODE_KEY];
+					  forKey:ROTATE_MODE_KEY];
 }
 
 //========== mouseWheelChanged: ================================================
@@ -427,7 +427,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSUserDefaults		*userDefaults	= [NSUserDefaults standardUserDefaults];
 	MouseWheelBehaviorT		wBehavior 	= (MouseWheelBehaviorT)[self->mouseWheelRadioButtons selectedTag];
 	[userDefaults setInteger:wBehavior
-						forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
+					  forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 }
 
 #pragma mark -

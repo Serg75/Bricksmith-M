@@ -785,7 +785,7 @@
 {
 	if ([self hasRotationByAxis:axis forPrimitives:directives] == NO)
 	{
-		return [NSArray array];
+		return @[];
 	}
 
 	NSMutableArray<LDrawHighResReplacement *> *replacements = [NSMutableArray array];
@@ -829,7 +829,7 @@
 	{
 		for (LDrawHighResReplacement *replacement in replacements)
 		{
-			NSMutableArray     *newLines          = [NSMutableArray arrayWithObject:[line copy]];
+			NSMutableArray     *newLines          = [NSMutableArray arrayWithArray:@[[line copy]]];
 			LDrawDirective     *originalDirective = replacement.original;
 			RotationParameters  rotation          = replacement.highRes.rotation;
 			Matrix4             forwardMatrix     = rotation.rotationMatrix;

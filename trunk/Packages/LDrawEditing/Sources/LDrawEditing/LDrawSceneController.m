@@ -258,8 +258,8 @@
 	   &&	[bridge allowsEditing] == YES)
 	{
 		NSArray *fineDrawParts = [bridge getDirectivesUnderRect:self.selectionMarquee
-												 amongDirectives:[NSArray arrayWithObject:[bridge LDrawDirective]]
-														fastDraw:NO];
+												amongDirectives:@[[bridge LDrawDirective]]
+													   fastDraw:NO];
 		[bridge wantsToSelectDirectives:fineDrawParts selectionMode:selectionMode];
 	}
 
@@ -291,7 +291,7 @@
 		[bridge willBeginDraggingHandle:self.activeDragHandle];
 	}
 
-	BOOL moved = [self updateDirectives:[NSArray arrayWithObject:self.activeDragHandle]
+	BOOL moved = [self updateDirectives:@[self.activeDragHandle]
 					   withDragPosition:point_view
 					depthReferencePoint:modelReferencePoint
 						  constrainAxis:constrainDragAxis];

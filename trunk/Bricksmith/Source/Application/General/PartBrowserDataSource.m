@@ -32,7 +32,7 @@
 #import "LDrawViewerContainer.h"
 #import <LDrawCore/MacLDraw.h>
 #import <LDrawEditing/LDrawClipboard.h>
-#import <LDrawEditing/LDrawInsertOps.h>
+#import <LDrawEditing/LDrawInsertion.h>
 #import <LDrawCore/PartLibrary.h>
 #import <LDrawCore/StringCategory.h>
 #import "TableViewCategory.h"
@@ -817,7 +817,7 @@
 	NSArray     *favorites          = [self->partLibrary favoritePartNames];
 	BOOL        partIsInFavorites   = [LDrawPartBrowserModel partNamed:selectedPart isInFavorites:favorites];
 	BOOL		showSearchScopeButtons	= [LDrawPartBrowserModel shouldShowSearchScopeButtonsForSearchString:[searchField stringValue]
-																								   category:self->selectedCategory];
+																									category:self->selectedCategory];
 	BOOL		partActionsEnabled	= (selectedPart != nil);
 	BOOL		showAddFavorite		= (partIsInFavorites == NO);
 	BOOL		showRemoveFavorite	= (partIsInFavorites == YES);
@@ -879,7 +879,7 @@
 - (void) syncSelectionAndCategoryDisplayed
 {
 	id			categoryItem	= [LDrawPartBrowserModel categoryItemNamed:self->selectedCategory
-															 inHierarchy:self->categoryList];
+															   inHierarchy:self->categoryList];
 	NSInteger	categoryRow 	= [categoryTable rowForItem:categoryItem];
 	[categoryTable selectRowIndexes:[NSIndexSet indexSetWithIndex:categoryRow] byExtendingSelection:NO];
 }
@@ -903,7 +903,7 @@
 		// the model.
 //		modelToView = [self->partLibrary modelForName:selectedPartName];
 
-		newPart = [LDrawInsertOps partNamed:selectedPartName
+		newPart = [LDrawInsertion partNamed:selectedPartName
 									  color:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
 					   copyingTransformFrom:nil];
 		[LDrawApplication makeCurrentSharedContext];

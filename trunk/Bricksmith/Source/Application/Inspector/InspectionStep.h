@@ -10,7 +10,7 @@
 #import <Cocoa/Cocoa.h>
 
 #import "ObjectInspectionController.h"
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawInspection.h>
 
 
 ////////////////////////////////////////////////////////////////////////////////

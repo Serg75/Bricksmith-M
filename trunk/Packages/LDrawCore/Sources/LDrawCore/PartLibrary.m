@@ -129,7 +129,7 @@ static PartLibrary *PartLibrary_sharedInstance = nil;
 #endif
 	parsingGroups               = [[NSMutableDictionary alloc] init];
 	
-	[self setPartCatalog:[NSDictionary dictionary]];
+	[self setPartCatalog:@{}];
 	
 	return self;
 	
@@ -181,21 +181,21 @@ static PartLibrary *PartLibrary_sharedInstance = nil;
 	NSMutableArray	*otherItems			= [NSMutableArray array];
 	
 	// Library group
-	[libraryItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-							 Category_All,										CategoryNameKey,
-							 [self displayNameForCategory:Category_All],		CategoryDisplayNameKey,
-							 nil]];
+	[libraryItems addObject:@{
+		CategoryNameKey: Category_All,
+		CategoryDisplayNameKey: [self displayNameForCategory:Category_All],
+	}];
 	
-	[libraryItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-							 Category_Favorites,								CategoryNameKey,
-							 [self displayNameForCategory:Category_Favorites],	CategoryDisplayNameKey,
-							 nil]];
+	[libraryItems addObject:@{
+		CategoryNameKey: Category_Favorites,
+		CategoryDisplayNameKey: [self displayNameForCategory:Category_Favorites],
+	}];
 							 
-	[fullCategoryList addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-								 @"Library",										CategoryNameKey,
-								 NSLocalizedString(@"CategoryGroup_Library",nil),	CategoryDisplayNameKey,
-								 libraryItems,										CategoryChildrenKey,
-								 nil]];
+	[fullCategoryList addObject:@{
+		CategoryNameKey: @"Library",
+		CategoryDisplayNameKey: NSLocalizedString(@"CategoryGroup_Library",nil),
+		CategoryChildrenKey: libraryItems,
+	}];
 	
 	// Main categories
 	NSArray *categories = [[self categories] sortedArrayUsingSelector:@selector(compare:)];
@@ -206,45 +206,45 @@ static PartLibrary *PartLibrary_sharedInstance = nil;
 		   &&	[name isEqualToString:Category_Primitives] == NO
 		   &&	[name isEqualToString:Category_Subparts] == NO )
 		{
-			[categoryItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-									  name,									CategoryNameKey,
-									  [self displayNameForCategory:name],	CategoryDisplayNameKey,
-									  nil]];
+			[categoryItems addObject:@{
+				CategoryNameKey: name,
+				CategoryDisplayNameKey: [self displayNameForCategory:name],
+			}];
 		}
 	}
-	[fullCategoryList addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-								 @"Part Categories",										CategoryNameKey,
-								 NSLocalizedString(@"CategoryGroup_PartCategories",nil),	CategoryDisplayNameKey,
-								 categoryItems,												CategoryChildrenKey,
-								 nil]];
+	[fullCategoryList addObject:@{
+		CategoryNameKey: @"Part Categories",
+		CategoryDisplayNameKey: NSLocalizedString(@"CategoryGroup_PartCategories",nil),
+		CategoryChildrenKey: categoryItems,
+	}];
 	
 	// Other categories
 	
-	[otherItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-							 Category_Alias,									CategoryNameKey,
-							 [self displayNameForCategory:Category_Alias],		CategoryDisplayNameKey,
-							 nil]];
+	[otherItems addObject:@{
+		CategoryNameKey: Category_Alias,
+		CategoryDisplayNameKey: [self displayNameForCategory:Category_Alias],
+	}];
 	
-	[otherItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-							 Category_Moved,									CategoryNameKey,
-							 [self displayNameForCategory:Category_Moved],		CategoryDisplayNameKey,
-							 nil]];
+	[otherItems addObject:@{
+		CategoryNameKey: Category_Moved,
+		CategoryDisplayNameKey: [self displayNameForCategory:Category_Moved],
+	}];
 	
-	[otherItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-							 Category_Primitives,								CategoryNameKey,
-							 [self displayNameForCategory:Category_Primitives],	CategoryDisplayNameKey,
-							 nil]];
+	[otherItems addObject:@{
+		CategoryNameKey: Category_Primitives,
+		CategoryDisplayNameKey: [self displayNameForCategory:Category_Primitives],
+	}];
 	
-	[otherItems addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-							 Category_Subparts,									CategoryNameKey,
-							 [self displayNameForCategory:Category_Subparts],	CategoryDisplayNameKey,
-							 nil]];
+	[otherItems addObject:@{
+		CategoryNameKey: Category_Subparts,
+		CategoryDisplayNameKey: [self displayNameForCategory:Category_Subparts],
+	}];
 	
-	[fullCategoryList addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-								 @"Other",										CategoryNameKey,
-								 NSLocalizedString(@"CategoryGroup_Other",nil),	CategoryDisplayNameKey,
-								 otherItems,									CategoryChildrenKey,
-								 nil]];
+	[fullCategoryList addObject:@{
+		CategoryNameKey: @"Other",
+		CategoryDisplayNameKey: NSLocalizedString(@"CategoryGroup_Other",nil),
+		CategoryChildrenKey: otherItems,
+	}];
 								 
 	return fullCategoryList;
 	

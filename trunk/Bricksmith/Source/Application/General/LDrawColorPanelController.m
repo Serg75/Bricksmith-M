@@ -18,7 +18,7 @@
 #import "LDrawColorWell.h"
 #import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/StringCategory.h>
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawInspection.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 
 @implementation LDrawColorPanelController
@@ -122,7 +122,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 {
 	NSArray		*selection			= [self->colorListController selectedObjects];
 	LDrawColor	*selectedColor		= [ColorLibrary colorFromListSelection:selection
-														  fallbackColor:[colorBar LDrawColor]];
+															 fallbackColor:[colorBar LDrawColor]];
 	
 	return selectedColor;
 	
@@ -265,8 +265,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (void) updateSelectionWithObjects:(NSArray *)selectedObjects
 {
-	LDrawColor *objectColor = [LDrawSelectionOps colorOfLastObjectInSelection:selectedObjects
-																 fallingBackTo:[self LDrawColor]];
+	LDrawColor *objectColor = [LDrawInspection colorOfLastObjectInSelection:selectedObjects
+															  fallingBackTo:[self LDrawColor]];
 	
 	updatingToReflectFile = YES;
 		[self setLDrawColor:objectColor];

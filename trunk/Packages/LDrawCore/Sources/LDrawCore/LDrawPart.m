@@ -1161,7 +1161,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //
 //==============================================================================
 - (TransformComponents) componentsSnappedToGrid:(float) gridSpacing
-								   byAxis:(Vector3)axis
+										 byAxis:(Vector3)axis
 {
 	TransformComponents	components = [self transformComponents];
 	

@@ -18,7 +18,7 @@
 
 #import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawSelection.h>
 #import <LDrawFeatures/LDrawToolbarLabels.h>
 
 
@@ -257,9 +257,9 @@
 	LDrawQuickRotationAxis  axis      = LDrawQuickRotationAxisX;
 	BOOL                    positive  = YES;
 
-	if([LDrawSelectionOps quickRotationAxis:&axis
-								 positive:&positive
-				   forToolbarIdentifier:itemIdentifier] == NO)
+	if([LDrawSelection quickRotationAxis:&axis
+								positive:&positive
+					forToolbarIdentifier:itemIdentifier] == NO)
 	{
 		return NO;
 	}
@@ -289,8 +289,8 @@
 
 	[newItem setTarget:self->document];
 	[newItem setAction:@selector(quickRotateClicked:)];
-	[newItem setTag:[LDrawSelectionOps quickRotationMenuTagForAxis:axis
-														  positive:positive]];
+	[newItem setTag:[LDrawSelection quickRotationMenuTagForAxis:axis
+													   positive:positive]];
 
 	return newItem;
 }
@@ -486,8 +486,8 @@
 //==============================================================================
 - (IBAction) nudgeXClicked:(id)sender
 {
-	Vector3	nudgeVector = [LDrawSelectionOps nudgeUnitVectorForAxis:LDrawNudgeAxisX
-															   sign:[[sender selectedCell] tag]];
+	Vector3	nudgeVector = [LDrawSelection nudgeUnitVectorForAxis:LDrawNudgeAxisX
+															sign:[[sender selectedCell] tag]];
 	
 	[document nudgeSelectionBy:nudgeVector];
 	
@@ -504,8 +504,8 @@
 //==============================================================================
 - (IBAction) nudgeYClicked:(id)sender
 {
-	Vector3	nudgeVector = [LDrawSelectionOps nudgeUnitVectorForAxis:LDrawNudgeAxisY
-															   sign:[[sender selectedCell] tag]];
+	Vector3	nudgeVector = [LDrawSelection nudgeUnitVectorForAxis:LDrawNudgeAxisY
+															sign:[[sender selectedCell] tag]];
 	
 	[document nudgeSelectionBy:nudgeVector];
 	
@@ -522,8 +522,8 @@
 //==============================================================================
 - (IBAction) nudgeZClicked:(id)sender
 {
-	Vector3	nudgeVector = [LDrawSelectionOps nudgeUnitVectorForAxis:LDrawNudgeAxisZ
-															   sign:[[sender selectedCell] tag]];
+	Vector3	nudgeVector = [LDrawSelection nudgeUnitVectorForAxis:LDrawNudgeAxisZ
+															sign:[[sender selectedCell] tag]];
 	
 	[document nudgeSelectionBy:nudgeVector];
 	

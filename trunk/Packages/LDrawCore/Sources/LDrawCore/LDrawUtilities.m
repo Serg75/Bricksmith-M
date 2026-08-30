@@ -574,7 +574,7 @@ static NSString				*defaultAuthor		= @"anonymous";
 	// Found a shallower intersection point? Record the hit.
 	if (hitDepth < existingDepth)
 	{
-		[hits setObject:[NSNumber numberWithFloat:hitDepth] forKey:key];
+		[hits setObject:@(hitDepth) forKey:key];
 	}
 }
 
@@ -1121,11 +1121,11 @@ static NSString				*defaultAuthor		= @"anonymous";
 	switch (unit)
 	{
 		case LDrawDimensionUnitStuds:
-			return [studFormatter stringForObjectValue:[NSNumber numberWithDouble:value]];
+			return [studFormatter stringForObjectValue:@(value)];
 
 		case LDrawDimensionUnitInches:
 		case LDrawDimensionUnitCentimeters:
-			return [floatFormatter stringForObjectValue:[NSNumber numberWithDouble:value]];
+			return [floatFormatter stringForObjectValue:@(value)];
 
 		case LDrawDimensionUnitLegonianFeet:
 		{

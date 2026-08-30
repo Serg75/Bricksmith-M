@@ -412,23 +412,23 @@ static MLCadIni *sharedIniFile = nil;
 
 					//this array associates the key for each section with the list 
 					// into which its parts should be stored.
-	listsForSections = [NSDictionary dictionaryWithObjectsAndKeys:
-						minifigureHats,						MLCAD_SECTION_MINIFIGURE_HATS,
-						minifigureHeads,					MLCAD_SECTION_MINIFIGURE_HEAD,
-						minifigureTorsos,					MLCAD_SECTION_MINIFIGURE_TORSO,
-						minifigureHips,						MLCAD_SECTION_MINIFIGURE_PELVIS,
-						minifigureNecks,					MLCAD_SECTION_MINIFIGURE_NECK,
-						minifigureArmsLeft,					MLCAD_SECTION_MINIFIGURE_ARM_LEFT,
-						minifigureArmsRight,				MLCAD_SECTION_MINIFIGURE_ARM_RIGHT,
-						minifigureHandsLeft,				MLCAD_SECTION_MINIFIGURE_HAND_LEFT,
-						minifigureHandsLeftAccessories,		MLCAD_SECTION_MINIFIGURE_HAND_LEFT_ACCESSORY,
-						minifigureHandsRight,				MLCAD_SECTION_MINIFIGURE_HAND_RIGHT,
-						minifigureHandsRightAccessories,	MLCAD_SECTION_MINIFIGURE_HAND_RIGHT_ACCESSORY,
-						minifigureLegsLeft,					MLCAD_SECTION_MINIFIGURE_LEG_LEFT,
-						minifigureLegsLeftAcessories,		MLCAD_SECTION_MINIFIGURE_LEG_LEFT_ACCESSORY,
-						minifigureLegsRight,				MLCAD_SECTION_MINIFIGURE_LEG_RIGHT,
-						minifigureLegsRightAccessories,		MLCAD_SECTION_MINIFIGURE_LEG_RIGHT_ACCESSORY,
-						nil	];
+	listsForSections = @{
+		MLCAD_SECTION_MINIFIGURE_HATS:                  minifigureHats,
+		MLCAD_SECTION_MINIFIGURE_HEAD:                  minifigureHeads,
+		MLCAD_SECTION_MINIFIGURE_TORSO:                 minifigureTorsos,
+		MLCAD_SECTION_MINIFIGURE_PELVIS:                minifigureHips,
+		MLCAD_SECTION_MINIFIGURE_NECK:                  minifigureNecks,
+		MLCAD_SECTION_MINIFIGURE_ARM_LEFT:              minifigureArmsLeft,
+		MLCAD_SECTION_MINIFIGURE_ARM_RIGHT:             minifigureArmsRight,
+		MLCAD_SECTION_MINIFIGURE_HAND_LEFT:             minifigureHandsLeft,
+		MLCAD_SECTION_MINIFIGURE_HAND_LEFT_ACCESSORY:   minifigureHandsLeftAccessories,
+		MLCAD_SECTION_MINIFIGURE_HAND_RIGHT:            minifigureHandsRight,
+		MLCAD_SECTION_MINIFIGURE_HAND_RIGHT_ACCESSORY:  minifigureHandsRightAccessories,
+		MLCAD_SECTION_MINIFIGURE_LEG_LEFT:              minifigureLegsLeft,
+		MLCAD_SECTION_MINIFIGURE_LEG_LEFT_ACCESSORY:    minifigureLegsLeftAcessories,
+		MLCAD_SECTION_MINIFIGURE_LEG_RIGHT:             minifigureLegsRight,
+		MLCAD_SECTION_MINIFIGURE_LEG_RIGHT_ACCESSORY:   minifigureLegsRightAccessories,
+	};
 	sectionKeys		= [listsForSections allKeys];
 	
 	for(currentSectionKey in sectionKeys)
@@ -659,7 +659,7 @@ static MLCadIni *sharedIniFile = nil;
 	//---------- Sort list by part name ----------------------------------------
 	
 	NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"browsingDescription" ascending:YES];
-	[parts sortUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]];
+	[parts sortUsingDescriptors:@[sortDescriptor]];
 	
 	return parts;
 	

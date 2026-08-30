@@ -172,9 +172,9 @@
 											   |	NSTrackingInVisibleRect
 											  );
 	NSTrackingArea			*trackingArea	= [[NSTrackingArea alloc] initWithRect:NSZeroRect
-																  options:options
-																	owner:self
-																 userInfo:nil];
+																		   options:options
+																			 owner:self
+																		  userInfo:nil];
 	[self addTrackingArea:trackingArea];
 
 }//end internalInit

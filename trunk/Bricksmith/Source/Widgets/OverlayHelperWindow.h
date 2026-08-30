@@ -24,8 +24,8 @@
 
 // Initialization
 - (id) initWithContentRect:(NSRect)contentRect styleMask:(unsigned int)aStyle
-	backing:(NSBackingStoreType)bufferingType defer:(BOOL)flag
-	ordered:(NSWindowOrderingMode)place;
+				   backing:(NSBackingStoreType)bufferingType defer:(BOOL)flag
+				   ordered:(NSWindowOrderingMode)place;
 
 // Accessors
 - (NSView *) parentView;

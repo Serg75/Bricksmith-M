@@ -21,7 +21,7 @@
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawSelection.h>
 #import "ViewportArranger.h"
 
 @class DocumentToolbarController;

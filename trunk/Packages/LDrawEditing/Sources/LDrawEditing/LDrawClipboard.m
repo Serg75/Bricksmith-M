@@ -13,8 +13,8 @@
 #import <LDrawEditing/LDrawClipboard.h>
 
 #import <objc/message.h>
-#import <LDrawEditing/LDrawDocumentTree.h>
-#import <LDrawEditing/LDrawInsertOps.h>
+#import <LDrawEditing/LDrawInsertion.h>
+#import <LDrawEditing/LDrawViewDrop.h>
 
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDirective.h>
@@ -176,7 +176,7 @@
 + (NSArray<NSData *> *)archivedDraggingDataFromSelection:(NSArray *)selection
 									   drawableOriginals:(NSArray * _Nullable * _Nullable)outDrawables
 {
-	NSArray *drawables = [LDrawDocumentTree drawableDirectivesInSelection:selection];
+	NSArray *drawables = [LDrawViewDrop drawableDirectivesInSelection:selection];
 	if (outDrawables != NULL)
 	{
 		*outDrawables = drawables;
@@ -204,13 +204,13 @@
 		return nil;
 	}
 
-	LDrawPart *newPart  = [LDrawInsertOps partNamed:partName color:color copyingTransformFrom:nil];
+	LDrawPart *newPart  = [LDrawInsertion partNamed:partName color:color copyingTransformFrom:nil];
 	NSData    *partData = [self archivedDataForDirective:newPart];
 	if (partData == nil)
 	{
-		return [NSArray array];
+		return @[];
 	}
-	return [NSArray arrayWithObject:partData];
+	return @[partData];
 }
 
 
@@ -285,10 +285,10 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)copyPasteboardTypesIncludingStringType:(NSString *)stringType
 {
-	return [NSArray arrayWithObjects:
-			LDrawDirectivePboardType, //Bricksmith's preferred type.
-			stringType, //representation for other applications.
-			nil];
+	return @[
+			LDrawDirectivePboardType, // Bricksmith's preferred type.
+			stringType,               // representation for other applications.
+	];
 }
 
 
@@ -299,7 +299,7 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)outlineRegisteredDragTypes
 {
-	return [NSArray arrayWithObject:LDrawDirectivePboardType];
+	return @[LDrawDirectivePboardType];
 }
 
 
@@ -312,10 +312,9 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)outlineDragSourcePasteboardTypes
 {
-	return [NSArray arrayWithObjects:
+	return @[
 			LDrawDragSourceRowsPboardType,
-			LDrawDisallowDragToSourcePboardType,
-			nil];
+			LDrawDisallowDragToSourcePboardType];
 }
 
 
@@ -364,7 +363,7 @@
 		NSInteger row = ((NSInteger (*)(id, SEL, id))objc_msgSend)(rowForItemTarget,
 																   @selector(rowForItem:),
 																   item);
-		[rowIndexes addObject:[NSNumber numberWithInteger:row]];
+		[rowIndexes addObject:@(row)];
 	}
 	return rowIndexes;
 }
@@ -450,7 +449,7 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)viewRegisteredDragTypes
 {
-	return [NSArray arrayWithObject:LDrawDraggingPboardType];
+	return @[LDrawDraggingPboardType];
 }
 
 
@@ -462,7 +461,7 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)viewDragOffsetPasteboardTypes
 {
-	return [NSArray arrayWithObject:LDrawDraggingInitialOffsetPboardType];
+	return @[LDrawDraggingInitialOffsetPboardType];
 }
 
 
@@ -474,10 +473,9 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)partBrowserDeclaredDragTypes
 {
-	return [NSArray arrayWithObjects:
+	return @[
 			LDrawDraggingPboardType,
-			LDrawDraggingIsUninitializedPboardType,
-			nil];
+			LDrawDraggingIsUninitializedPboardType];
 }
 
 
@@ -489,10 +487,9 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *)searchPanelRegisteredDragTypes
 {
-	return [NSArray arrayWithObjects:
+	return @[
 			LDrawDirectivePboardType,
-			LDrawDraggingPboardType,
-			nil];
+			LDrawDraggingPboardType];
 }
 
 

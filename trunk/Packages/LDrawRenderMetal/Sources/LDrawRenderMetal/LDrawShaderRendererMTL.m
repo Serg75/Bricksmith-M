@@ -154,13 +154,13 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 		// Create staging buffer (shared) for initial data
 		id<MTLDevice> device = MetalGPU.device;
 		id<MTLBuffer> stagingBuffer = [device newBufferWithBytes:vertexData.bytes
-														   length:vertexData.length
-														  options:MTLResourceStorageModeShared];
+														  length:vertexData.length
+														 options:MTLResourceStorageModeShared];
 		stagingBuffer.label = @"Staging drag handle vertex buffer";
 		
 		// Create GPU buffer (private) for optimal GPU access
 		_dragHandleVertexBuffer = [device newBufferWithLength:vertexData.length
-													   options:MTLResourceStorageModePrivate];
+													  options:MTLResourceStorageModePrivate];
 		_dragHandleVertexBuffer.label = @"Drag handle vertex buffer";
 		
 		// Copy from staging to GPU buffer using blit encoder
@@ -172,10 +172,10 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 		blitEncoder.label = @"Drag Handle Buffer Blit";
 		
 		[blitEncoder copyFromBuffer:stagingBuffer
-						sourceOffset:0
-							toBuffer:_dragHandleVertexBuffer
-				   destinationOffset:0
-								size:vertexData.length];
+					   sourceOffset:0
+						   toBuffer:_dragHandleVertexBuffer
+				  destinationOffset:0
+							   size:vertexData.length];
 		
 		[blitEncoder endEncoding];
 		[copyCommandBuffer commit];

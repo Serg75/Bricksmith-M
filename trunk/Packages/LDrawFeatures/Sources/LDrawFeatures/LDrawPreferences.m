@@ -412,10 +412,9 @@
 //------------------------------------------------------------------------------
 + (NSArray<NSNumber *> *)defaultViewsPerColumnCounts
 {
-	return [NSArray arrayWithObjects:
-			[NSNumber numberWithInt:1],
-			[NSNumber numberWithInt:3],
-			nil];
+	return @[
+			@(1),
+			@(3)];
 }
 
 

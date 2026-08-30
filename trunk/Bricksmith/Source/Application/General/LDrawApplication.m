@@ -650,7 +650,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		{
             if([LSynthConfiguration shouldIncludeMenuEntry:entry
                                               shouldFilter:shouldFilter
-                                             visibleTypes:lsynthMLCADDefaults
+                                              visibleTypes:lsynthMLCADDefaults
                                           showOnlyOfficial:showOnlyOfficial])
             {
                 NSMenuItem *entryMenuItem = [[NSMenuItem alloc] init];

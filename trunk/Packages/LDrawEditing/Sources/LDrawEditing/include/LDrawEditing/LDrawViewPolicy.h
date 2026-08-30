@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:       LDrawViewOps.h
+//  File:       LDrawViewPolicy.h
 //  Package:    LDrawEditing
 //
 //  Purpose:    Foundation-only zoom, scroll, and mouse-drag policies for the 3D
@@ -35,13 +35,13 @@ typedef NS_ENUM(NSInteger, LDrawSwipeStepAction) {
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawViewOps
+/// @class      LDrawViewPolicy
 ///
 /// @abstract   Foundation-only zoom, scroll, and mouse-drag policies for the 3D
 ///             view. The host still reads NSEvent and drives the renderer.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawViewOps : NSObject
+@interface LDrawViewPolicy : NSObject
 
 /// Magnification asymptote: delta / (|delta| + 17). Zoom change is 1 + that.
 /// Preserves the Purpose comment from LDrawView scrollWheel:.

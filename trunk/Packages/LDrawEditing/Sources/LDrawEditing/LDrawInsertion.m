@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:       LDrawInsertOps.m
+//  File:       LDrawInsertion.m
 //  Package:    LDrawEditing
 //
 //  Purpose:    Default geometry for new primitives, named-part placement, and
@@ -10,7 +10,7 @@
 //
 //==============================================================================
 
-#import <LDrawEditing/LDrawInsertOps.h>
+#import <LDrawEditing/LDrawInsertion.h>
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawComment.h>
@@ -30,7 +30,7 @@
 /// Default extent of a newly inserted primitive, in LDraw units.
 static const float kDefaultPrimitiveExtent = 80.0f;
 
-@implementation LDrawInsertOps
+@implementation LDrawInsertion
 
 //---------- anchorPositionForPart: ----------------------------------[static]--
 //

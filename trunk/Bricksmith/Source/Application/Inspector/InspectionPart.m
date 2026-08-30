@@ -19,7 +19,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/PartLibrary.h>
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawInspection.h>
 
 @interface InspectionPart ()
 
@@ -105,10 +105,10 @@
 	
 	[representedObject setDisplayName:[_partNameField stringValue]];
 	
-	[representedObject setTransformComponents:[LDrawSelectionOps inspectorComponentsFromPosition:position
-																				  scalingPercent:scaling
-																						   shear:shear
-																				   oldComponents:oldComponents]];
+	[representedObject setTransformComponents:[LDrawInspection inspectorComponentsFromPosition:position
+																				scalingPercent:scaling
+																						 shear:shear
+																				 oldComponents:oldComponents]];
 	
 	[super commitChanges:sender];
 	
@@ -139,10 +139,10 @@
 	
 	[_colorWell setLDrawColor:[representedObject LDrawColor]];
 
-	[LDrawSelectionOps inspectorFieldsFromComponents:components
-											position:&position
-									  scalingPercent:&scaling
-											   shear:&shear];
+	[LDrawInspection inspectorFieldsFromComponents:components
+										  position:&position
+									scalingPercent:&scaling
+											 shear:&shear];
 	
 	[self setCoordinateValue:position onFields:@[_locationXField, _locationYField, _locationZField]];
 	[self setCoordinateValue:scaling onFields:@[_scaleXField, _scaleYField, _scaleZField]];
@@ -178,8 +178,8 @@
 	LDrawPart					*representedObject	= [self object];
 	TransformComponents			 components			= [representedObject transformComponents];
 	LDrawPartInspectorRotationT	 rotationType		= (LDrawPartInspectorRotationT)[[_rotationTypePopUp selectedItem] tag];
-	Tuple3						 rotation			= [LDrawSelectionOps partInspectorRotationDegreesForComponents:components
-																									  rotationType:rotationType];
+	Tuple3						 rotation			= [LDrawInspection partInspectorRotationDegreesForComponents:components
+																									rotationType:rotationType];
 	
 	[_rotationXField setDoubleValue:rotation.x];
 	[_rotationYField setDoubleValue:rotation.y];
@@ -226,8 +226,8 @@
 		rotationDegrees.y = [_rotationYField doubleValue];
 		rotationDegrees.z = [_rotationZField doubleValue];
 		
-		[representedObject setTransformComponents:[LDrawSelectionOps componentsByApplyingAbsoluteRotationDegrees:rotationDegrees
-																									toComponents:components]];
+		[representedObject setTransformComponents:[LDrawInspection componentsByApplyingAbsoluteRotationDegrees:rotationDegrees
+																								  toComponents:components]];
 	}
 	
 	//Note that the part has changed.
@@ -256,7 +256,7 @@
 	TransformComponents	components		= [[self object] transformComponents];
 	
 	//If the values really did change, then update.
-	if([LDrawSelectionOps inspectorPoint:formContents differsFromPoint:components.translate])
+	if([LDrawInspection inspectorPoint:formContents differsFromPoint:components.translate])
 	{
 		[self finishedEditing:sender];
 	}
@@ -311,7 +311,7 @@
 	TransformComponents	components		= [[self object] transformComponents];
 
 	//If the values really did change, then update.
-	if([LDrawSelectionOps inspectorScalingPercent:formContents differsFromComponents:components])
+	if([LDrawInspection inspectorScalingPercent:formContents differsFromComponents:components])
 	{
 		[self finishedEditing:sender];
 	}
@@ -334,7 +334,7 @@
 	
 	//If the values really did change, then update.
 	// (please disregard the meaningless x, y, and z tags in the formContents.)
-	if([LDrawSelectionOps inspectorShear:formContents differsFromComponents:components])
+	if([LDrawInspection inspectorShear:formContents differsFromComponents:components])
 	{
 		[self finishedEditing:sender];
 	}

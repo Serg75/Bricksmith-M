@@ -410,7 +410,7 @@ static void RotateParts(Tuple3 degrees, LDrawPart *firstPart, ...)
 	// counter to the behavior of the rest of MLCad.ini, where the parts' origins
 	// are the rotation centerpoint of the part.
 	[leftLegAccessory rotateByDegrees:V3Make(0, spec.angleOfLeftLegAccessory, 0)
-						   centerPoint:V3Make(10, 28, -1) ]; //center of the foot.;
+						  centerPoint:V3Make(10, 28, -1) ]; //center of the foot.;
 
 	// * position the left leg on the hips
 	RotateParts(V3Make(-spec.angleOfLeftLeg, 0, 0),	leftLegAccessory, leftLeg, nil);

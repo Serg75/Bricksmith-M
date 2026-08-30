@@ -7,7 +7,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "LDrawColorWell.h"
-#import <LDrawEditing/LDrawSearchOps.h>
+#import <LDrawEditing/LDrawSearch.h>
 
 @interface SearchPanelController : NSWindowController <NSWindowDelegate, NSDraggingDestination>
 {

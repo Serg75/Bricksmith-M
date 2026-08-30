@@ -62,7 +62,7 @@
 
     [representedObject setLsynthClass:(LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag]];
     [representedObject setLsynthType:[LSynthConfiguration typeNameAtIndex:[typePopup indexOfSelectedItem]
-																 inTypes:types]];
+																  inTypes:types]];
 
     [[LSynthConfiguration sharedInstance] applyDefaultConstraintsToLSynth:representedObject
 																classType:(LSynthClassT)[[sender selectedCell] tag]];
@@ -173,7 +173,7 @@
                                                                    atIndex:[typePopup indexOfSelectedItem]];
 
     LSynthClassT constraintClass = [LSynthConfiguration constraintClassForSynthClass:(LSynthClassT)classTag
-                                                                       selectedType:selectedType];
+                                                                        selectedType:selectedType];
     NSArray *constraints = [[LSynthConfiguration sharedInstance] constraintsForClass:constraintClass];
     NSString *defaultConstraint = [LSynthConfiguration defaultConstraintForClass:constraintClass];
     NSArray *descriptions = [LSynthConfiguration constraintPopupDescriptionsFromConstraints:constraints];

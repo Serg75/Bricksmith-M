@@ -7,7 +7,7 @@
 
 #import "InspectionLPubRemoveGroup.h"
 
-#import <LDrawEditing/LDrawDocumentTree.h>
+#import <LDrawEditing/LDrawMLCadGroup.h>
 #import <LDrawCore/LPubRemoveGroup.h>
 
 @interface InspectionLPubRemoveGroup ()
@@ -58,7 +58,7 @@
 - (void) setObject:(id)newObject
 {
 	LPubRemoveGroup *command = newObject;
-	_groupNames = [LDrawDocumentTree groupsBeforeStep:command.enclosingStep];
+	_groupNames = [LDrawMLCadGroup groupsBeforeStep:command.enclosingStep];
 
 	[super setObject:newObject];
 	

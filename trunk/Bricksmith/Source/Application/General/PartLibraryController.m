@@ -13,7 +13,7 @@
 
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/MacLDraw.h>
-#import <LDrawEditing/LDrawDocumentTree.h>
+#import <LDrawEditing/LDrawEditorStrings.h>
 
 @implementation PartLibraryController
 
@@ -138,7 +138,7 @@
 	{
 		NSAlert *error = [[NSAlert alloc] init];
 		[error setAlertStyle:NSAlertStyleCritical];
-		[error addButtonWithTitle:NSLocalizedString([LDrawDocumentTree okButtonNameKey], nil)];
+		[error addButtonWithTitle:NSLocalizedString([LDrawEditorStrings okButtonNameKey], nil)];
 		
 		
 		[error setMessageText:NSLocalizedString([LDrawPaths ldrawFolderChooserErrorMessageKey], nil)];

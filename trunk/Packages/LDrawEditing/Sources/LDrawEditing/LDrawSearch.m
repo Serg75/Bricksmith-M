@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:       LDrawSearchOps.m
+//  File:       LDrawSearch.m
 //  Package:    LDrawEditing
 //
 //  Purpose:    Scope, color, and name matching for the find-parts command.
@@ -9,7 +9,7 @@
 //
 //==============================================================================
 
-#import <LDrawEditing/LDrawSearchOps.h>
+#import <LDrawEditing/LDrawSearch.h>
 
 #import <LDrawEditing/LDrawClipboard.h>
 #import <LDrawCore/ColorLibrary.h>
@@ -21,18 +21,18 @@
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/MacLDraw.h>
 
-@interface LDrawSearchOps (Private)
+@interface LDrawSearch (Private)
 + (NSArray *)partsInContainer:(LDrawContainer *)container
 		includeLSynthContents:(BOOL)includeLSynthContents;
 @end
 
 
-@interface LDrawSearchOps ()
+@interface LDrawSearch ()
 /// Unique LDrawPart reference names, comma-joined. Empty string if none.
 + (NSString *)commaSeparatedReferenceNamesFromDirectives:(NSArray *)directives;
 @end
 
-@implementation LDrawSearchOps
+@implementation LDrawSearch
 
 //========== doSearchAndSelect: ================================================
 //
@@ -232,7 +232,7 @@
 		{
 			return nil;
 		}
-		return [NSArray arrayWithObject:wellColor];
+		return @[wellColor];
 	}
 	if (colorCriterion == ColorSelectionFilter)
 	{

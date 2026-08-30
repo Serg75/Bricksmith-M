@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  File:       LDrawInsertOps.h
+//  File:       LDrawInsertion.h
 //  Package:    LDrawEditing
 //
 //  Purpose:    Foundation-only helpers for placing new primitives, parts,
@@ -60,14 +60,14 @@ typedef NS_ENUM(NSInteger, LDrawInsertUndoKind) {
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawInsertOps
+/// @class      LDrawInsertion
 ///
 /// @abstract   Foundation-only helpers for placing new primitives, parts,
 ///             comments, meta/LPub commands, and steps, and for deciding
 ///             whether a submodel reference is legal.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawInsertOps : NSObject
+@interface LDrawInsertion : NSObject
 
 /// Last-selected part position, or the origin if there is no part.
 + (Point3)anchorPositionForPart:(nullable LDrawPart *)part;

@@ -332,14 +332,15 @@
 	userApplicationSupport  = [userApplicationSupport	stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
 	
 	// Tries user defaults first, then others
-	NSArray *potentialPaths = [NSArray arrayWithObjects:preferencePath,
-														applicationFolder,
-														siblingFolder,
-														applicationSupport,
-														userApplicationSupport,
-														library,
-														userLibrary,
-														nil ];
+	NSArray *potentialPaths = @[
+		preferencePath,
+		applicationFolder,
+		siblingFolder,
+		applicationSupport,
+		userApplicationSupport,
+		library,
+		userLibrary,
+	];
 	for (counter = 0; counter < [potentialPaths count] && foundAPath == NO; counter++)
 	{
 		ldrawPath   = [potentialPaths objectAtIndex:counter];

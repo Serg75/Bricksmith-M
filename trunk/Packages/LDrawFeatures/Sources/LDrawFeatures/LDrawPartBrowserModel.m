@@ -60,7 +60,7 @@
 	{
 		allParts = [self.partLibrary partCatalogRecordsInCategory:Category_All];
 		excluded = [NSSet setWithArray:[[self.partLibrary partCatalogRecordsInCategory:Category_Alias]
-										valueForKey:PART_NUMBER_KEY]];
+						   valueForKey:PART_NUMBER_KEY]];
 	}
 
 	self.filteredParts = [self filterPartRecords:allParts
@@ -194,7 +194,7 @@
 		for (NSString *keyword in [record objectForKey:PART_KEYWORDS_KEY])
 		{
 			if ([[keyword ams_stringByRemovingWhitespace] ams_containsString:searchSansWhitespace
-																	options:NSCaseInsensitiveSearch])
+																	 options:NSCaseInsensitiveSearch])
 			{
 				[matchingParts addObject:record];
 				break;

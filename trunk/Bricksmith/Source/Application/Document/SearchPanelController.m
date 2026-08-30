@@ -111,31 +111,31 @@ SearchPanelController *sharedSearchPanel = nil;
     ColorFilterT          colorCriterion     = (ColorFilterT)[[colorMatrix selectedCell] tag];
 
     if ([selectedObjects count] == 0) {
-        [LDrawSearchOps normalizeEmptySelectionScope:&scope
-                                         colorFilter:&colorCriterion
-                                       partCriterion:&criterion];
+        [LDrawSearch normalizeEmptySelectionScope:&scope
+                                      colorFilter:&colorCriterion
+                                    partCriterion:&criterion];
     }
 
-    NSArray *searchableObjects = [LDrawSearchOps searchableObjectsForScope:scope
-                                                                selection:selectedObjects
-                                                              activeModel:[[currentDocument documentContents] activeModel]
-                                                                     file:[currentDocument documentContents]];
+    NSArray *searchableObjects = [LDrawSearch searchableObjectsForScope:scope
+                                                              selection:selectedObjects
+                                                            activeModel:[[currentDocument documentContents] activeModel]
+                                                                   file:[currentDocument documentContents]];
 
-    NSArray *colorFilter = [LDrawSearchOps colorFilterForCriterion:colorCriterion
-                                                         wellColor:[colorWell LDrawColor]
-                                                        selection:selectedObjects];
-
-    NSArray *partFilter = [LDrawSearchOps partFilterForCriterion:criterion
-                                                   specificNames:[partName stringValue]
+    NSArray *colorFilter = [LDrawSearch colorFilterForCriterion:colorCriterion
+                                                      wellColor:[colorWell LDrawColor]
                                                       selection:selectedObjects];
 
-    NSArray *matchables = [LDrawSearchOps matchablesInSearchableObjects:searchableObjects
-                                                 includeLSynthContents:([searchInsideLSynthContainers state] == NSControlStateValueOn)];
+    NSArray *partFilter = [LDrawSearch partFilterForCriterion:criterion
+                                                specificNames:[partName stringValue]
+                                                    selection:selectedObjects];
 
-    matchables = [LDrawSearchOps filterMatchables:matchables
-                                      colorFilter:colorFilter
-                                       partFilter:partFilter
-                               excludeHiddenParts:([searchHiddenParts state] == NSControlStateValueOn)];
+    NSArray *matchables = [LDrawSearch matchablesInSearchableObjects:searchableObjects
+                                               includeLSynthContents:([searchInsideLSynthContainers state] == NSControlStateValueOn)];
+
+    matchables = [LDrawSearch filterMatchables:matchables
+                                   colorFilter:colorFilter
+                                    partFilter:partFilter
+                            excludeHiddenParts:([searchHiddenParts state] == NSControlStateValueOn)];
 
     [currentDocument selectDirectives:matchables];
 } // end doSearchAndSelect:
@@ -213,10 +213,10 @@ SearchPanelController *sharedSearchPanel = nil;
     // The selection's changed which means we shouldn't be the active color well anymore
     [LDrawColorWell setActiveColorWell:nil];
 
-    NSArray *keys = [LDrawSearchOps emptySelectionWarningKeysWithCount:[selectedObjects count]
-                                                                scope:(ScopeT)[scopeMatrix selectedTag]
-                                                          colorFilter:(ColorFilterT)[colorMatrix selectedTag]
-                                                        partCriterion:(SearchPartCriteriaT)[findTypeMatrix selectedTag]];
+    NSArray *keys = [LDrawSearch emptySelectionWarningKeysWithCount:[selectedObjects count]
+                                                              scope:(ScopeT)[scopeMatrix selectedTag]
+                                                        colorFilter:(ColorFilterT)[colorMatrix selectedTag]
+                                                      partCriterion:(SearchPartCriteriaT)[findTypeMatrix selectedTag]];
     if(keys != nil)
     {
         NSMutableArray *localized = [NSMutableArray array];
@@ -224,7 +224,7 @@ SearchPanelController *sharedSearchPanel = nil;
         {
             [localized addObject:NSLocalizedString(key, @"")];
         }
-        [warningText setStringValue:[LDrawSearchOps emptySelectionWarningFromLocalizedParts:localized]];
+        [warningText setStringValue:[LDrawSearch emptySelectionWarningFromLocalizedParts:localized]];
         [warningText setHidden:NO];
     }
     else
@@ -286,15 +286,15 @@ SearchPanelController *sharedSearchPanel = nil;
     NSString *partNames = nil;
     BOOL fromOutline     = [[sender draggingSource] isKindOfClass:[LDrawFileOutlineView class]];
     BOOL fromPartBrowser = [[sender draggingSource] isKindOfClass:[PartBrowserTableView class]];
-    NSString *pasteboardType = [LDrawSearchOps searchDropPasteboardTypeFromOutline:fromOutline
-                                                                    fromPartBrowser:fromPartBrowser];
+    NSString *pasteboardType = [LDrawSearch searchDropPasteboardTypeFromOutline:fromOutline
+                                                                fromPartBrowser:fromPartBrowser];
 
     if(pasteboardType != nil)
     {
         NSPasteboard *pasteboard = [sender draggingPasteboard];
         NSArray *archivedDirectives = [pasteboard propertyListForType:pasteboardType];
 
-        partNames = [LDrawSearchOps commaSeparatedPartNamesFromArchivedDirectivesData:archivedDirectives];
+        partNames = [LDrawSearch commaSeparatedPartNamesFromArchivedDirectivesData:archivedDirectives];
     }
 
     [partName setStringValue:partNames];

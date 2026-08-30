@@ -1112,7 +1112,7 @@
 	
 	self->rotationCenter = newPoint;
 	
-	NSDictionary *info = [NSDictionary dictionaryWithObject:[NSValue valueWithBytes:&oldPoint objCType:@encode(Point3)] forKey:@"oldRotationCenter"];
+	NSDictionary *info = @{ @"oldRotationCenter": [NSValue valueWithBytes:&oldPoint objCType:@encode(Point3)] };
 	[[NSNotificationCenter defaultCenter] postNotificationName:LDrawModelRotationCenterDidChangeNotification object:[self enclosingFile] userInfo:info];
 }
 

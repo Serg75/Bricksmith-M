@@ -188,7 +188,7 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 	self->totalNumberOfParts += 1;
 	numberColoredParts += 1;
 	
-	[partRecord setObject:[NSNumber numberWithUnsignedInteger:numberColoredParts]
+	[partRecord setObject:@(numberColoredParts)
 				   forKey:partColor];
 				   
 } // end registerPart:
@@ -273,13 +273,13 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 			
 			// Now we have all the information we need. Flatten it into a single
 			// record.
-			currentPartRecord = [NSDictionary dictionaryWithObjectsAndKeys:
-						currentPartNumber,		PART_REPORT_NUMBER_KEY,
-						currentPartName,		PART_REPORT_NAME_KEY,
-						currentPartColor,		PART_REPORT_LDRAW_COLOR,
-						currentColorName,		PART_REPORT_COLOR_NAME,
-						currentPartQuantity,	PART_REPORT_PART_QUANTITY,
-						nil ];
+			currentPartRecord = @{
+				PART_REPORT_NUMBER_KEY: currentPartNumber,
+				PART_REPORT_NAME_KEY: currentPartName,
+				PART_REPORT_LDRAW_COLOR: currentPartColor,
+				PART_REPORT_COLOR_NAME: currentColorName,
+				PART_REPORT_PART_QUANTITY: currentPartQuantity,
+			};
 			[flattenedReport addObject:currentPartRecord];
 		} // end loop for color/quantity pairs within each part
 	} // end part loop

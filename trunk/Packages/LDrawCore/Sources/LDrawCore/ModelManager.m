@@ -163,8 +163,8 @@
 #endif
 	
 	LDrawFile * parsedFile = [[LDrawFile alloc] initWithLines:lines
-												   inRange:NSMakeRange(0, [lines count])
-											   parentGroup:group];
+													  inRange:NSMakeRange(0, [lines count])
+												  parentGroup:group];
 	
 #if USE_BLOCKS
 	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);

@@ -27,7 +27,7 @@
 #import "LDrawView.h"
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawEditing/LDrawSelectionOps.h>
+#import <LDrawEditing/LDrawInspection.h>
 
 
 @implementation InspectionStep
@@ -72,9 +72,9 @@
 	LDrawStep						*representedObject		= [self object];
 	LDrawStepRotationT				 stepRotationType		= [representedObject stepRotationType];
 	LDrawStepInspectorConstraints	 constraints			=
-		[LDrawSelectionOps stepInspectorConstraintsForRotationType:stepRotationType
-											  relativeShortcutTag:[self->relativeRotationPopUpMenu selectedTag]
-											  absoluteShortcutTag:[self->absoluteRotationPopUpMenu selectedTag]];
+		[LDrawInspection stepInspectorConstraintsForRotationType:stepRotationType
+											 relativeShortcutTag:[self->relativeRotationPopUpMenu selectedTag]
+											 absoluteShortcutTag:[self->absoluteRotationPopUpMenu selectedTag]];
 	
 	[self->relativeRotationPopUpMenu	setEnabled:constraints.relativePopupEnabled];
 	[self->absoluteRotationPopUpMenu	setEnabled:constraints.absolutePopupEnabled];
@@ -138,14 +138,14 @@
 	
 	if(stepRotationType == LDrawStepRotationRelative)
 	{
-		NSInteger tag = [LDrawSelectionOps relativeRotationShortcutTagForAngle:rotationAngle
-																	currentTag:[self->relativeRotationPopUpMenu selectedTag]];
+		NSInteger tag = [LDrawInspection relativeRotationShortcutTagForAngle:rotationAngle
+																  currentTag:[self->relativeRotationPopUpMenu selectedTag]];
 		[self->relativeRotationPopUpMenu selectItemWithTag:tag];
 	}
 	else if(stepRotationType == LDrawStepRotationAbsolute)
 	{
-		NSInteger tag = [LDrawSelectionOps absoluteRotationShortcutTagForAngle:rotationAngle
-																	currentTag:[self->absoluteRotationPopUpMenu selectedTag]];
+		NSInteger tag = [LDrawInspection absoluteRotationShortcutTagForAngle:rotationAngle
+																  currentTag:[self->absoluteRotationPopUpMenu selectedTag]];
 		[self->absoluteRotationPopUpMenu selectItemWithTag:tag];
 	}
 	
@@ -223,7 +223,7 @@
 - (IBAction) useCurrentViewingAngleClicked:(id)sender
 {
 	LDrawDocument	*currentDocument	= [[NSDocumentController sharedDocumentController] currentDocument];
-	Tuple3			viewingAngle		= [LDrawSelectionOps displayViewingAngleFromAngle:[currentDocument viewingAngle]];
+	Tuple3			viewingAngle		= [LDrawInspection displayViewingAngleFromAngle:[currentDocument viewingAngle]];
 	
 	// set the values in the UI.
 	[self->rotationXField setDoubleValue:viewingAngle.x];
@@ -277,9 +277,9 @@
 		customAbsolute = [currentDocument viewingAngle];
 	}
 
-	newAngle = [LDrawSelectionOps stepInspectorAngleForRotationType:stepRotationType
-														shortcutTag:shortcut
-											   customAbsoluteAngle:customAbsolute];
+	newAngle = [LDrawInspection stepInspectorAngleForRotationType:stepRotationType
+													  shortcutTag:shortcut
+											  customAbsoluteAngle:customAbsolute];
 	
 	// set the values in the UI.
 	[self->rotationXField setDoubleValue:newAngle.x];

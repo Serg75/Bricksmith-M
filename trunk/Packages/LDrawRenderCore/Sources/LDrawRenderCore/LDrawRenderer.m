@@ -1177,7 +1177,7 @@
 	if ([directives count] == 0)
 	{
 		// If there's nothing to test in, there's no work to do!
-		clickedDirectives = [NSArray array];
+		clickedDirectives = @[];
 	}
 	else
 	{
@@ -1253,7 +1253,7 @@
 	if ([directives count] == 0)
 	{
 		// If there's nothing to test in, there's no work to do!
-		clickedDirectives = [NSArray array];
+		clickedDirectives = @[];
 	}
 	else
 	{
