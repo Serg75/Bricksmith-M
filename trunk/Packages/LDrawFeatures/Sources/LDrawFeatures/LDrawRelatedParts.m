@@ -8,8 +8,6 @@
 //
 //==============================================================================
 
-#if WANT_RELATED_PARTS
-
 #import <LDrawFeatures/LDrawRelatedParts.h>
 
 #import <LDrawCore/LDrawColorLibrary.h>
@@ -715,4 +713,3 @@ static LDrawRelatedParts * SharedRelatedParts = nil;
 
 @end
 
-#endif /* WANT_RELATED_PARTS */

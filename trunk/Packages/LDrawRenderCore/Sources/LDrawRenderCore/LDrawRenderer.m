@@ -57,7 +57,7 @@
 	detailMode					= LDrawDetailNormal;
 	gridSpacing 				= 20.0;
 		
-	[self setViewOrientation:ViewOrientation3D];
+	[self setViewOrientation:LDrawViewOrientation3D];
 	
 	return self;
 	
@@ -198,7 +198,7 @@
 // Purpose:		Returns the current camera orientation for this view.
 //
 //==============================================================================
-- (ViewOrientationT)viewOrientation
+- (LDrawViewOrientation)viewOrientation
 {
 	return self->viewOrientation;
 	
@@ -492,10 +492,10 @@
 //========== setViewOrientation: ===============================================
 //
 // Purpose:		Changes the camera position from which we view the model. 
-//				i.e., ViewOrientationFront means we see the model head-on.
+//				i.e., LDrawViewOrientationFront means we see the model head-on.
 //
 //==============================================================================
-- (void)setViewOrientation:(ViewOrientationT)newOrientation
+- (void)setViewOrientation:(LDrawViewOrientation)newOrientation
 {
 	Tuple3	newAngle	= [LDrawUtilities angleForViewOrientation:newOrientation];
 

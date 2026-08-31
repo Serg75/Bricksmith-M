@@ -17,10 +17,6 @@
 
 #import <LDrawCore/LDrawFile.h>
 
-#if USE_BLOCKS
-#import <dispatch/dispatch.h>
-#endif
-
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
@@ -158,14 +154,6 @@
 		// Creation a C array of retained pointers under ARC
 		// (see Transitioning to ARC Release Notes for details)
 		submodels = (__strong LDrawMPDModel **)calloc(range.length, sizeof(LDrawMPDModel *));
-		dispatch_group_t    dispatchGroup = NULL;
-#if USE_BLOCKS		
-		dispatch_queue_t    queue           = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);	
-							dispatchGroup   = dispatch_group_create();
-
-		if(parentGroup != NULL)
-			dispatch_group_enter(parentGroup);
-#endif
 														
 		// Search through all the lines in the file, and separate them out into 
 		// submodels.
@@ -175,54 +163,37 @@
 																  inLines:lines
 																 maxIndex:NSMaxRange(range) - 1];
 			// Parse
-#if USE_BLOCKS			
-			dispatch_group_async(dispatchGroup, queue,
-			^{
-#endif			
-				LDrawMPDModel *newModel    = [[LDrawMPDModel alloc] initWithLines:lines inRange:modelRange parentGroup:dispatchGroup];
-				
-				// Store non-retaining, but *thread-safe* container 
-				// (NSMutableArray is NOT). Since it doesn't retain, we mustn't 
-				// autorelease newDirective. 
-				submodels[insertIndex] = newModel;
-#if USE_BLOCKS
-			});
-#endif			
+			LDrawMPDModel *newModel    = [[LDrawMPDModel alloc] initWithLines:lines inRange:modelRange parentGroup:NULL];
+			
+			// Store non-retaining, but *thread-safe* container 
+			// (NSMutableArray is NOT). Since it doesn't retain, we mustn't 
+			// autorelease newDirective. 
+			submodels[insertIndex] = newModel;
 			
 			modelStartIndex = NSMaxRange(modelRange);
 			insertIndex     += 1;
 		}
 		while(modelStartIndex < NSMaxRange(range));
 
-#if USE_BLOCKS		
-		dispatch_group_notify(dispatchGroup,queue,
-		^{
-#endif		
-				NSUInteger      counter         = 0;
-				LDrawMPDModel   *currentModel   = nil;
+		NSUInteger      counter         = 0;
+		LDrawMPDModel   *currentModel   = nil;
 		
-			// Add all the models in order
-			for(counter = 0; counter < insertIndex; counter++)
-			{
-				currentModel = submodels[counter];
-				
-				[self addSubmodel:currentModel];
-				
-				// Tell ARC to release the object
-				submodels[counter] = nil;
-			}
+		// Add all the models in order
+		for(counter = 0; counter < insertIndex; counter++)
+		{
+			currentModel = submodels[counter];
 			
-			if([[self submodels] count] > 0)
-				[self setActiveModel:[[self submodels] objectAtIndex:0]];
-
-			free(submodels);
-
-#if USE_BLOCKS			
-			if(parentGroup != NULL)
-				dispatch_group_leave(parentGroup);
+			[self addSubmodel:currentModel];
 			
-		});
-#endif		
+			// Tell ARC to release the object
+			submodels[counter] = nil;
+		}
+		
+		if([[self submodels] count] > 0)
+			[self setActiveModel:[[self submodels] objectAtIndex:0]];
+
+		free(submodels);
+
 	}
 	
 	
@@ -854,9 +825,9 @@
 //				But since renames are rare it's probably not worth it.
 //
 //==============================================================================
-- (void) receiveMessage:(MessageT) msg who:(id<LDrawObservable>) observable
+- (void) receiveMessage:(LDrawObserverMessage) msg who:(id<LDrawObservable>) observable
 {
-	if (msg == MessageNameChanged)
+	if (msg == LDrawObserverNameChanged)
 		[self updateModelLookupTable];
 		
 	[super receiveMessage:msg who:observable];

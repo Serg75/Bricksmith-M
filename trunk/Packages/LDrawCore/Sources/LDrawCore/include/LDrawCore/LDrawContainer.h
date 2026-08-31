@@ -18,6 +18,7 @@
 
 @class LDrawPartReport;
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -58,3 +59,5 @@
 - (BOOL) acceptsDroppedDirective:(LDrawDirective *)directive;
 
 @end
+
+NS_ASSUME_NONNULL_END

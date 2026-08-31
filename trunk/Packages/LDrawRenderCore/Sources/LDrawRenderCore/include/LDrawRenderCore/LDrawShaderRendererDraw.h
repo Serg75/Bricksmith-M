@@ -16,6 +16,8 @@
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawShaderRenderer
@@ -26,9 +28,11 @@
 //------------------------------------------------------------------------------
 @interface LDrawShaderRenderer (Draw)
 
-- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+- (nullable struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
 - (void)finishDraw;
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif /* LDrawRenderCore_LDrawShaderRendererDraw_h */

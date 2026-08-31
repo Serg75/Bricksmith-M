@@ -13,6 +13,7 @@
 
 #import <LDrawCore/LDrawDirective.h>
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -28,3 +29,5 @@
 // class; this category supplies the OpenGL implementation.
 
 @end
+
+NS_ASSUME_NONNULL_END

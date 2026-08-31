@@ -1538,7 +1538,7 @@ Gw
                 <string>iniFile.minifigureLegsRight</string>
                 <string>iniFile.minifigureLegsRightAccessories</string>
                 <string>iniFile.minifigureLegsLeft</string>
-                <string>iniFile.minifigureLegsLeftAcessories</string>
+                <string>iniFile.minifigureLegsLeftAccessories</string>
                 <string>minifigureName</string>
                 <string>headElevation</string>
                 <string>hasHips</string>
@@ -1584,7 +1584,7 @@ Gw
         </arrayController>
         <arrayController objectClassName="LDrawPart" clearsFilterPredicateOnInsertion="NO" id="503" userLabel="Right Arms">
             <declaredKeys>
-                <string>minifigureLegsLeftAcessories</string>
+                <string>minifigureLegsLeftAccessories</string>
                 <string>browsingDescription</string>
             </declaredKeys>
             <connections>
@@ -1671,7 +1671,7 @@ Gw
                 <string>browsingDescription</string>
             </declaredKeys>
             <connections>
-                <binding destination="326" name="contentArray" keyPath="selection.iniFile.minifigureLegsLeftAcessories" id="539"/>
+                <binding destination="326" name="contentArray" keyPath="selection.iniFile.minifigureLegsLeftAccessories" id="539"/>
             </connections>
         </arrayController>
     </objects>

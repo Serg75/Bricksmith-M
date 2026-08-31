@@ -38,7 +38,7 @@ static const char * attribs[] = {
 	"transform_z",
 	"transform_w",
 	"color_current",
-	"color_compliment",
+	"color_complement",
 	"texture_mix", NULL };
 
 
@@ -82,7 +82,7 @@ static const char * attribs[] = {
 	
 	[[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
 	glVertexAttrib1f(attr_texture_mix,0.0f);
-	complimentColor(color_now, compl_now);
+	complementColor(color_now, compl_now);
 	
 	// Set up the basic transform to be identity - our transform is on top of the MVP matrix.
 	memset(transform_now,0,sizeof(transform_now));

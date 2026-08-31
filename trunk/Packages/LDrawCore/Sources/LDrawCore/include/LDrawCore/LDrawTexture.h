@@ -14,6 +14,8 @@
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawTexture
@@ -45,23 +47,25 @@
 + (void)registerTextureClass:(Class)cls;
 
 // Accessors
-- (NSString *)glossmapName;
+- (nullable NSString *)glossmapName;
 - (NSString *)imageDisplayName;
 - (NSString *)imageReferenceName;
 
-- (void)setGlossmapName:(NSString *)newName;
+- (void)setGlossmapName:(nullable NSString *)newName;
 - (void)setImageDisplayName:(NSString *)newName;
-- (void)setImageDisplayName:(NSString *)newName parse:(BOOL)shouldParse inGroup:(dispatch_group_t)parentGroup;
+- (void)setImageDisplayName:(NSString *)newName parse:(BOOL)shouldParse inGroup:(nullable dispatch_group_t)parentGroup;
 
 // Utilities
 + (BOOL)lineIsTextureBeginning:(NSString*)line;
 + (BOOL)lineIsTextureFallback:(NSString*)line;
 + (BOOL)lineIsTextureTerminator:(NSString*)line;
-- (BOOL)parsePlanarTextureFromLine:(NSString *)line parentGroup:(dispatch_group_t)parentGroup;
+- (BOOL)parsePlanarTextureFromLine:(NSString *)line parentGroup:(nullable dispatch_group_t)parentGroup;
 
 // Builds the projection the renderer needs to stamp this texture onto the
 // enclosed geometry. The renderer subclasses differ only in the kind of
 // texture handle they hold, so they pass it in as the opaque `tex_obj` value.
-- (struct LDrawTextureSpec)textureSpecWithHandle:(void *)textureHandle;
+- (struct LDrawTextureSpec)textureSpecWithHandle:(void * _Nullable)textureHandle;
 
 @end
+
+NS_ASSUME_NONNULL_END

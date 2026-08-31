@@ -60,10 +60,10 @@
 	//
 	// General
 	//
-	[initialDefaults setObject:@(MouseDraggingBeginImmediately)	forKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
-	[initialDefaults setObject:@(RightButtonContextual)			forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
-	[initialDefaults setObject:@(RotateModeTrackball)			forKey:ROTATE_MODE_KEY];
-	[initialDefaults setObject:@(MouseWheelScrolls)				forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
+	[initialDefaults setObject:@(LDrawMouseDraggingBeginImmediately)	forKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	[initialDefaults setObject:@(LDrawRightButtonContextual)	forKey:RIGHT_BUTTON_BEHAVIOR_KEY];
+	[initialDefaults setObject:@(LDrawRotateStyleTrackball)		forKey:ROTATE_MODE_KEY];
+	[initialDefaults setObject:@(LDrawMouseWheelScrolls)		forKey:MOUSE_WHEEL_BEHAVIOR_KEY];
 
 	[initialDefaults setObject:@YES								forKey:PART_BROWSER_PANEL_SHOW_AT_LAUNCH];
 	[initialDefaults setObject:@YES								forKey:VIEWPORTS_EXPAND_TO_AVAILABLE_SIZE];
@@ -82,19 +82,19 @@
 
 	// GPU viewer settings -- see -restoreConfiguration in LDrawView.
 	// LDrawProjectionMode lives in LDrawRenderCore; values are 0=perspective, 1=orthographic.
-	[initialDefaults setObject:@(ViewOrientation3D)				forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_0"]];
+	[initialDefaults setObject:@(LDrawViewOrientation3D)		forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_0"]];
 	[initialDefaults setObject:@0								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_0"]];
-	[initialDefaults setObject:@(ViewOrientationFront)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_1"]];
+	[initialDefaults setObject:@(LDrawViewOrientationFront)		forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_1"]];
 	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_1"]];
-	[initialDefaults setObject:@(ViewOrientationLeft)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_2"]];
+	[initialDefaults setObject:@(LDrawViewOrientationLeft)		forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_2"]];
 	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_2"]];
-	[initialDefaults setObject:@(ViewOrientationTop)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_3"]];
+	[initialDefaults setObject:@(LDrawViewOrientationTop)		forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_3"]];
 	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_3"]];
 
 	//
 	// Part Browser
 	//
-	[initialDefaults setObject:@(SearchModeAllCategories)		forKey:PART_BROWSER_SEARCH_MODE];
+	[initialDefaults setObject:@(LDrawPartBrowserSearchAllCategories)	forKey:PART_BROWSER_SEARCH_MODE];
 	[initialDefaults setObject:NSLocalizedString(@"Brick", nil)	forKey:PART_BROWSER_PREVIOUS_CATEGORY];
 	[initialDefaults setObject:@0								forKey:PART_BROWSER_PREVIOUS_SELECTED_ROW];
 	[initialDefaults setObject:@[]								forKey:FAVORITE_PARTS_KEY];
@@ -180,7 +180,7 @@
 	[initialDefaults setObject:@(LDrawBlack)					forKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY];
 	[initialDefaults setObject:@4.0f							forKey:MINIFIGURE_HEAD_ELEVATION];
 
-	[initialDefaults setObject:@(ViewOrientationFront)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" MinifigureGeneratorView"]];
+	[initialDefaults setObject:@(LDrawViewOrientationFront)		forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" MinifigureGeneratorView"]];
 	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" MinifigureGeneratorView"]];
 
 	[[NSUserDefaults standardUserDefaults] registerDefaults:initialDefaults];

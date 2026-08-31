@@ -17,47 +17,47 @@
 // The following state diagram illustrates the order that directives could occur.
 // The initWithLines: parser in this class implements this state machine.
 
-// TODO: need a transition between PARSER_PARSING_BEGUN and PARSER_FINISHED on 0 SYNTH END
+// TODO: need a transition between begun and finished on 0 SYNTH END
 
 //
-//     State                                         Transitions
-//     ---------------------------------------------------------------------------------------
+//     State              Transitions
+//     -----------------------------------------------
 //
-//     PARSER_READY_TO_PARSE                         o
-//                                                   |
-//                                                   |    0 SYNTH BEGIN X X
-//                                                   V
-//     PARSER_PARSING_BEGUN                          o
-//                                                   |    0 SYNTH SHOW or
-//                                                   |    1 X X X ...
-//                                                   V
-//     PARSER_PARSING_CONSTRAINTS                  /\o
-//                                    1 X X X ... |_/|
-//                                                   |    0 SYNTH SYNTHESIZED BEGIN
-//                                                   V
-//     PARSER_PARSING_SYNTHESIZED                  /\o
-//                                    1 X X X ... |_/|
-//                                                   |    0 SYNTH SYNTHESIZED END
-//                                                   V
-//     PARSER_SYNTHESIZED_FINISHED                   o
-//                                                   |    0 SYNTH END
-//                                                   |
-//                                                   V
-//     PARSER_FINISHED                               o
+//     ready              o
+//                        |    0 SYNTH BEGIN X X
+//                        V
+//     begun              o
+//                        |    0 SYNTH SHOW or
+//                        |    1 X X X ...
+//                        V
+//     constraints      /\o
+//        1 X X X ... |_/|
+//                        |    0 SYNTH SYNTHESIZED BEGIN
+//                        V
+//     synthesized      /\o
+//        1 X X X ... |_/|
+//                        |    0 SYNTH SYNTHESIZED END
+//                        V
+//     synth finished     o
+//                        |    0 SYNTH END
+//                        V
+//     finished           o
 //
 
 // Lsynth block parser states
-typedef enum
+typedef NS_ENUM(NSInteger, LDrawLSynthParserState)
 {
-    PARSER_READY_TO_PARSE       = 1, // Idle state - we've not found a SYNTH BEGIN <TYPE> <COLOR> line
-    PARSER_PARSING_BEGUN        = 2, // SYNTH BEGIN has been found
-    PARSER_PARSING_CONSTRAINTS  = 3, // Parsing constraints
-    PARSER_PARSING_SYNTHESIZED  = 4, // Parsing synthesized parts
-    PARSER_SYNTHESIZED_FINISHED = 5, // Looking for SYNTH END
-    PARSER_FINISHED             = 6, // All finished.
-    PARSER_STATE_COUNT
-} LSynthParserStateT;
+    LDrawLSynthParserReadyToParse        = 1, // Idle state - we've not found a SYNTH BEGIN <TYPE> <COLOR> line
+    LDrawLSynthParserParsingBegun        = 2, // SYNTH BEGIN has been found
+    LDrawLSynthParserParsingConstraints  = 3, // Parsing constraints
+    LDrawLSynthParserParsingSynthesized  = 4, // Parsing synthesized parts
+    LDrawLSynthParserSynthesizedFinished = 5, // Looking for SYNTH END
+    LDrawLSynthParserFinished            = 6, // All finished.
+    LDrawLSynthParserStateCount
+};
 
+
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -79,7 +79,7 @@ typedef enum
     Box3			 cachedBounds;			// cached bounds of the enclosed directives
 }
 
-@property (strong) NSString * group;		// MLCAD group name or nil
+@property (strong, nullable) NSString * group;		// MLCAD group name or nil
 
 // Accessors
 - (void)setLsynthClass:(int)lsynthClass;
@@ -107,8 +107,8 @@ typedef enum
 // around LSynthConfiguration (in LDrawFeatures); LDrawCore itself does not
 // know about LSynthConfiguration. Must be set before LSynth directives are
 // parsed.
-+ (id<LDrawLSynthConfigSource>)configSource;
-+ (void)setConfigSource:(id<LDrawLSynthConfigSource>)source;
++ (nullable id<LDrawLSynthConfigSource>)configSource;
++ (void)setConfigSource:(nullable id<LDrawLSynthConfigSource>)source;
 
 // Foundation-only selection color lookup; reads
 // LSYNTH_SELECTION_COLOR_RGBA_KEY from standard user defaults. Falls back
@@ -116,3 +116,5 @@ typedef enum
 + (void)getSelectionColorRGBA:(float *)outRGBA;
 
 @end
+
+NS_ASSUME_NONNULL_END

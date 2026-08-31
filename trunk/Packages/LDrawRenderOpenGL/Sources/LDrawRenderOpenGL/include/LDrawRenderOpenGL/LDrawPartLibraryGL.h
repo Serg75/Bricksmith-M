@@ -6,7 +6,7 @@
 //  Purpose:    This is the centralized repository for obtaining information
 //              about the contents of the LDraw folder.
 //
-//  Info:       This category contains OpenGL-related code.
+//  Info:       OpenGL-backed subclass of LDrawPartLibrary.
 //
 //  Created by Sergey Slobodenyuk on 2023-05-31.
 //
@@ -17,6 +17,7 @@
 
 #import <LDrawRenderOpenGL/LDrawTextureGL.h>
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -34,3 +35,5 @@
 - (GLuint)textureTagForTexture:(LDrawTextureGL *)texture;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -23,8 +23,8 @@
 //			the shader wants.
 //
 // Notes:	The shader, when it sees alpha = 0, mixes between the attribute-set
-//			current and compliment by blending with the red channel: red = 0 is
-//			current, red = 1 is compliment.
+//			current and complement by blending with the red channel: red = 0 is
+//			current, red = 1 is complement.
 //
 //================================================================================
 static void set_color4fv(float * c, float storage[4])
@@ -36,7 +36,7 @@ static void set_color4fv(float * c, float storage[4])
 		storage[2] = 0;
 		storage[3] = 0;
 	}
-	else if (c == LDrawRenderComplimentColor)
+	else if (c == LDrawRenderComplementColor)
 	{
 		storage[0] = 1;
 		storage[1] = 1;
@@ -243,7 +243,7 @@ static void set_color4fv(float * c, float storage[4])
 //========== pushColor: ==========================================================
 //
 // Purpose: push a color change onto the stack.  This sets the RGBA for the 
-//			current and compliment color for DLs that use the current color.
+//			current and complement color for DLs that use the current color.
 //
 //================================================================================
 - (void)pushColor:(float *)color
@@ -257,13 +257,13 @@ static void set_color4fv(float * c, float storage[4])
 	++color_stack_top;
 	if (color != LDrawRenderCurrentColor)
 	{
-		if (color == LDrawRenderComplimentColor)
+		if (color == LDrawRenderComplementColor)
 			color = compl_now;
 		color_now[0] = color[0];
 		color_now[1] = color[1];
 		color_now[2] = color[2];
 		color_now[3] = color[3];
-		complimentColor(color_now, compl_now);
+		complementColor(color_now, compl_now);
 	}
 } // end pushColor:
 
@@ -282,7 +282,7 @@ static void set_color4fv(float * c, float storage[4])
 	color_now[1] = top[1];
 	color_now[2] = top[2];
 	color_now[3] = top[3];
-	complimentColor(color_now, compl_now);
+	complementColor(color_now, compl_now);
 } // end popColor:
 
 

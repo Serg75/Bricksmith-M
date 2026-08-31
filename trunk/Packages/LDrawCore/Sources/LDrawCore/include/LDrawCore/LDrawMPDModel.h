@@ -16,6 +16,8 @@
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawModel.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawMPDModel
@@ -46,7 +48,9 @@
 
 // Utilities
 + (NSString *) ldrawCompliantNameForName:(NSString *)newDisplayName;
-+ (BOOL) lineIsMPDModelStart:(NSString*)line modelName:(NSString**)modelNamePtr;
++ (BOOL) lineIsMPDModelStart:(NSString*)line modelName:(NSString * _Nullable * _Nullable)modelNamePtr;
 + (BOOL) lineIsMPDModelEnd:(NSString*)line;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -23,6 +23,7 @@
 @protocol LDrawRendererDelegate;
 @protocol LDrawCameraScroller;
 
+NS_ASSUME_NONNULL_BEGIN
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -34,12 +35,11 @@
 // Level of geometric detail while the user is interactively moving the camera
 // or dragging parts. When full-detail frames are too slow, the renderer drops
 // to bounds-only until interaction ends.
-typedef enum
+typedef NS_ENUM(NSInteger, LDrawDetailMode)
 {
 	LDrawDetailNormal			= 0,	// full draw
 	LDrawDetailFast				= 1		// bounds only
-
-} LDrawDetailMode;
+};
 
 
 //------------------------------------------------------------------------------
@@ -51,9 +51,9 @@ typedef enum
 //------------------------------------------------------------------------------
 @interface LDrawRenderer : NSObject <LDrawColorable>
 {
-	id<LDrawRendererDelegate>	delegate;
+	id<LDrawRendererDelegate>	_Nullable delegate;
 
-	LDrawDirective		*fileBeingDrawn;		// Should only be an LDrawFile or LDrawModel.
+	LDrawDirective	* _Nullable fileBeingDrawn;	// Should only be an LDrawFile or LDrawModel.
 												// if you want to do anything else, you must
 												// tweak the selection code in LDrawDrawableElement
 												// and here in -mouseUp: to handle such cases.
@@ -63,7 +63,7 @@ typedef enum
 	float				backgroundColor[4];
 	Box2				selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
 	LDrawDetailMode		detailMode;				// full geometry vs bounds-only during interaction
-	ViewOrientationT	viewOrientation;		// our orientation
+	LDrawViewOrientation viewOrientation;		// our orientation
 	NSInteger			framesSinceStartTime;
 	NSTimeInterval		fpsStartTime;
 
@@ -78,36 +78,36 @@ typedef enum
 // Accessors
 - (BOOL)isTrackingDrag;
 - (Matrix4)getMatrix;
-- (LDrawDirective *)LDrawDirective;
+- (nullable LDrawDirective *)LDrawDirective;
 - (LDrawProjectionMode)projectionMode;
 - (LDrawLocationMode)locationMode;
 - (Box2)selectionMarquee;
 - (Tuple3)viewingAngle;
-- (ViewOrientationT)viewOrientation;
+- (LDrawViewOrientation)viewOrientation;
 - (Box2)viewport;
 - (CGFloat)zoomPercentage;
 - (CGFloat)zoomPercentageForViewport;
 
 - (void)setAllowsEditing:(BOOL)flag;
 - (BOOL)allowsEditing;
-- (void)setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawCameraScroller>)scroller;
+- (void)setDelegate:(nullable id<LDrawRendererDelegate>)object withScroller:(nullable id<LDrawCameraScroller>)scroller;
 - (void)setGridSpacing:(float)newValue;
 - (float)gridSpacing;
-- (void)setLDrawDirective:(LDrawDirective *) newFile;
+- (void)setLDrawDirective:(nullable LDrawDirective *) newFile;
 - (void)setGraphicsSurfaceSize:(Size2)size;						// This is how we find out that the visible frame of our window is bigger or smaller
 - (void)setProjectionMode:(LDrawProjectionMode) newProjectionMode;
 - (void)setLocationMode:(LDrawLocationMode) newLocationMode;
 - (void)setSelectionMarquee:(Box2)newBox;
-- (void)setTarget:(id)target;
+- (void)setTarget:(nullable id)target;
 - (void)setViewingAngle:(Tuple3)newAngle;
-- (void)setViewOrientation:(ViewOrientationT) newAngle;
+- (void)setViewOrientation:(LDrawViewOrientation) newAngle;
 - (void)setZoomPercentage:(CGFloat) newPercentage;
 - (void)moveCamera:(Vector3)delta;
 
 // Actions
-- (IBAction)zoomIn:(id)sender;
-- (IBAction)zoomOut:(id)sender;
-- (IBAction)zoomToFit:(id)sender;
+- (IBAction)zoomIn:(nullable id)sender;
+- (IBAction)zoomOut:(nullable id)sender;
+- (IBAction)zoomToFit:(nullable id)sender;
 
 // Events
 - (void)mouseMoved:(Point2)point_view;
@@ -143,7 +143,7 @@ typedef enum
 // - Geometry
 - (Point2)convertPointFromViewport:(Point2)viewportPoint;
 - (Point2)convertPointToViewport:(Point2)point_view;
-- (void)getModelAxesForViewX:(Vector3 *)outModelX Y:(Vector3 *)outModelY Z:(Vector3 *)outModelZ;
+- (void)getModelAxesForViewX:(Vector3 * _Nullable)outModelX Y:(Vector3 * _Nullable)outModelY Z:(Vector3 * _Nullable)outModelZ;
 - (Point3)modelPointForPoint:(Point2)viewPoint;
 - (Point3)modelPointForPoint:(Point2)viewPoint depthReferencePoint:(Point3)depthPoint;
 
@@ -171,7 +171,7 @@ typedef enum
 
 - (TransformComponents)LDrawRendererPreferredPartTransform:(LDrawRenderer*)renderer;
 
-- (void)LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
+- (void)LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirective:(nullable LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
 - (void)LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(LDrawSelectionMode) selectionMode;
 - (void)LDrawRenderer:(LDrawRenderer*)renderer willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
 - (void)LDrawRenderer:(LDrawRenderer*)renderer dragHandleDidMove:(LDrawDragHandle *)dragHandle;
@@ -181,3 +181,5 @@ typedef enum
 
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -18,6 +18,8 @@
 @class LDrawFile;
 @class LDrawStep;
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawModel
@@ -55,8 +57,8 @@
 //Accessors
 - (NSString *) category;
 - (LDrawColorLibrary *) colorLibrary;
-- (NSArray *) draggingDirectives;
-- (LDrawFile *)enclosingFile;
+- (nullable NSArray *) draggingDirectives;
+- (nullable LDrawFile *)enclosingFile;
 - (NSString *)modelDescription;
 - (NSString *)fileName;
 - (NSString *)author;
@@ -65,9 +67,9 @@
 - (Point3) rotationCenter;
 - (BOOL) stepDisplay;
 - (NSArray *) steps;
-- (LDrawStep *) visibleStep;
+- (nullable LDrawStep *) visibleStep;
 
-- (void) setDraggingDirectives:(NSArray *)directives;
+- (void) setDraggingDirectives:(nullable NSArray *)directives;
 - (void) setModelDescription:(NSString *)newDescription;
 - (void) setFileName:(NSString *)newName;
 - (void) setAuthor:(NSString *)newAuthor;
@@ -85,6 +87,8 @@
 - (NSUInteger) numberElements;
 - (void) optimizeStructure;
 - (NSUInteger) parseHeaderFromLines:(NSArray *)lines beginningAtIndex:(NSUInteger)index;
-- (BOOL) line:(NSString *)line isValidForHeader:(NSString *)headerKey info:(NSString**)infoPtr;
+- (BOOL) line:(NSString *)line isValidForHeader:(NSString *)headerKey info:(NSString * _Nullable * _Nullable)infoPtr;
 
 @end
+
+NS_ASSUME_NONNULL_END

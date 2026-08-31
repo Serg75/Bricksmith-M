@@ -8,13 +8,13 @@
 //
 //==============================================================================
 
-#if WANT_RELATED_PARTS
-
 #import <Foundation/Foundation.h>
 #import <LDrawCore/MatrixMath.h>
 
 @class LDrawColor;
 @class LDrawPart;
+
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -84,8 +84,8 @@ typedef NS_ENUM(NSInteger, LDrawRelatedPartsMenuStyle) {
 //------------------------------------------------------------------------------
 @interface LDrawRelatedPartsMenuPlan : NSObject
 
-@property (nonatomic, strong) NSArray<LDrawRelatedPartsMenuGroup *> *childGroups;
-@property (nonatomic, strong) NSArray<LDrawRelatedPartsMenuGroup *> *roleGroups;
+@property (nonatomic, strong, nullable) NSArray<LDrawRelatedPartsMenuGroup *> *childGroups;
+@property (nonatomic, strong, nullable) NSArray<LDrawRelatedPartsMenuGroup *> *roleGroups;
 
 
 @end
@@ -110,7 +110,7 @@ typedef NS_ENUM(NSInteger, LDrawRelatedPartsMenuStyle) {
 // menus — there's no need. roleGroups is then empty (no separator / second
 // section). Nil when the parent has no related parts. The host still builds
 // NSMenu items.
-- (LDrawRelatedPartsMenuPlan *)menuPlanForParentName:(NSString *)parentName;
+- (nullable LDrawRelatedPartsMenuPlan *)menuPlanForParentName:(NSString *)parentName;
 
 
 /// Titles used when the host builds NSMenu items (not localized).
@@ -119,4 +119,5 @@ typedef NS_ENUM(NSInteger, LDrawRelatedPartsMenuStyle) {
 
 @end
 
-#endif /* WANT_RELATED_PARTS */
+NS_ASSUME_NONNULL_END
+

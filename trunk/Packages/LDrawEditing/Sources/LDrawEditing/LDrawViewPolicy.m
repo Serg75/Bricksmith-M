@@ -90,17 +90,17 @@
 //				Perspective selects only when orthographic.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)shouldSelectPartsOnMouseDownForDraggingBehavior:(MouseDragBehaviorT)behavior
++ (BOOL)shouldSelectPartsOnMouseDownForDraggingBehavior:(LDrawMouseDragBehavior)behavior
 										 isOrthographic:(BOOL)orthographic
 {
 	switch (behavior)
 	{
-		case MouseDraggingBeginImmediately:
+		case LDrawMouseDraggingBeginImmediately:
 			return YES;
-		case MouseDraggingImmediatelyInOrthoNeverInPerspective:
+		case LDrawMouseDraggingImmediatelyInOrthoNeverInPerspective:
 			return orthographic;
-		case MouseDraggingOff:
-		case MouseDraggingBeginAfterDelay:
+		case LDrawMouseDraggingOff:
+		case LDrawMouseDraggingBeginAfterDelay:
 			return NO;
 	}
 	return NO;
@@ -125,29 +125,29 @@
 //				directInteraction.
 //
 //------------------------------------------------------------------------------
-+ (LDrawRotateSelectDragAction)rotateSelectDragActionForBehavior:(MouseDragBehaviorT)behavior
++ (LDrawRotateSelectDragAction)rotateSelectDragActionForBehavior:(LDrawMouseDragBehavior)behavior
 											 canBeginDragAndDrop:(BOOL)canBeginDragAndDrop
 											  selectionIsMarquee:(BOOL)selectionIsMarquee
 												   isPerspective:(BOOL)isPerspective
 {
 	switch (behavior)
 	{
-		case MouseDraggingOff:
+		case LDrawMouseDraggingOff:
 			return LDrawRotateSelectDragRotateCamera;
 
-		case MouseDraggingBeginAfterDelay:
+		case LDrawMouseDraggingBeginAfterDelay:
 			// If the delay has elapsed, begin drag-and-drop. Otherwise, just
 			// spin the model.
 			return canBeginDragAndDrop
 				? LDrawRotateSelectDragDirectInteraction
 				: LDrawRotateSelectDragRotateCamera;
 
-		case MouseDraggingBeginImmediately:
+		case LDrawMouseDraggingBeginImmediately:
 			return selectionIsMarquee
 				? LDrawRotateSelectDragMarqueeSelection
 				: LDrawRotateSelectDragDirectInteraction;
 
-		case MouseDraggingImmediatelyInOrthoNeverInPerspective:
+		case LDrawMouseDraggingImmediatelyInOrthoNeverInPerspective:
 			if (isPerspective)
 				return LDrawRotateSelectDragRotateCamera;
 			return selectionIsMarquee
@@ -249,9 +249,9 @@
 //				WalkThrough is also perspective.
 //
 //------------------------------------------------------------------------------
-+ (LDrawProjectionMode)projectionModeForViewOrientation:(ViewOrientationT)orientation
++ (LDrawProjectionMode)projectionModeForViewOrientation:(LDrawViewOrientation)orientation
 {
-	if (orientation == ViewOrientation3D || orientation == ViewOrientationWalkThrough)
+	if (orientation == LDrawViewOrientation3D || orientation == LDrawViewOrientationWalkThrough)
 		return LDrawProjectionModePerspective;
 	return LDrawProjectionModeOrthographic;
 }
@@ -263,9 +263,9 @@
 //				model.
 //
 //------------------------------------------------------------------------------
-+ (LDrawLocationMode)locationModeForViewOrientation:(ViewOrientationT)orientation
++ (LDrawLocationMode)locationModeForViewOrientation:(LDrawViewOrientation)orientation
 {
-	if (orientation == ViewOrientationWalkThrough)
+	if (orientation == LDrawViewOrientationWalkThrough)
 		return LDrawLocationModeWalkthrough;
 	return LDrawLocationModeModel;
 }
@@ -276,7 +276,7 @@
 // Purpose:		Numpad-style viewing-angle hotkeys.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)viewOrientation:(ViewOrientationT *)outOrientation
++ (BOOL)viewOrientation:(LDrawViewOrientation *)outOrientation
 	fromHotkeyCharacter:(unichar)character
 {
 	if (outOrientation == NULL)
@@ -285,26 +285,26 @@
 	switch (character)
 	{
 		case '4':
-			*outOrientation = ViewOrientationLeft;
+			*outOrientation = LDrawViewOrientationLeft;
 			return YES;
 		case '6':
-			*outOrientation = ViewOrientationRight;
+			*outOrientation = LDrawViewOrientationRight;
 			return YES;
 		case '2':
-			*outOrientation = ViewOrientationBottom;
+			*outOrientation = LDrawViewOrientationBottom;
 			return YES;
 		case '8':
-			*outOrientation = ViewOrientationTop;
+			*outOrientation = LDrawViewOrientationTop;
 			return YES;
 		case '5':
-			*outOrientation = ViewOrientationFront;
+			*outOrientation = LDrawViewOrientationFront;
 			return YES;
 		case '7':
 		case '9':
-			*outOrientation = ViewOrientationBack;
+			*outOrientation = LDrawViewOrientationBack;
 			return YES;
 		case '0':
-			*outOrientation = ViewOrientation3D;
+			*outOrientation = LDrawViewOrientation3D;
 			return YES;
 	}
 	return NO;

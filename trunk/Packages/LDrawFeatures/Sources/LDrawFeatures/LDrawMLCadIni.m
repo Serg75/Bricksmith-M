@@ -112,7 +112,7 @@ static LDrawMLCadIni *sharedIniFile = nil;
 	minifigureHandsRight			= [[NSMutableArray alloc] init];
 	minifigureHandsRightAccessories	= [[NSMutableArray alloc] init];
 	minifigureLegsLeft				= [[NSMutableArray alloc] init];
-	minifigureLegsLeftAcessories	= [[NSMutableArray alloc] init];
+	minifigureLegsLeftAccessories	= [[NSMutableArray alloc] init];
 	minifigureLegsRight				= [[NSMutableArray alloc] init];
 	minifigureLegsRightAccessories	= [[NSMutableArray alloc] init];
 
@@ -293,17 +293,17 @@ static LDrawMLCadIni *sharedIniFile = nil;
 }//end minifigureLegsLeft
 
 
-//========== minifigureLegsLeftAcessories ======================================
+//========== minifigureLegsLeftAccessories =====================================
 //
 // Purpose:		Returns the specified list of parts for the minifigure 
 //				generator.
 //
 //==============================================================================
-- (NSArray *) minifigureLegsLeftAcessories
+- (NSArray *) minifigureLegsLeftAccessories
 {
-	return minifigureLegsLeftAcessories;
+	return minifigureLegsLeftAccessories;
 	
-}//end minifigureLegsLeftAcessories
+}//end minifigureLegsLeftAccessories
 
 
 //========== minifigureLegsRight ===============================================
@@ -423,7 +423,7 @@ static LDrawMLCadIni *sharedIniFile = nil;
 		MLCAD_SECTION_MINIFIGURE_HAND_RIGHT:            minifigureHandsRight,
 		MLCAD_SECTION_MINIFIGURE_HAND_RIGHT_ACCESSORY:  minifigureHandsRightAccessories,
 		MLCAD_SECTION_MINIFIGURE_LEG_LEFT:              minifigureLegsLeft,
-		MLCAD_SECTION_MINIFIGURE_LEG_LEFT_ACCESSORY:    minifigureLegsLeftAcessories,
+		MLCAD_SECTION_MINIFIGURE_LEG_LEFT_ACCESSORY:    minifigureLegsLeftAccessories,
 		MLCAD_SECTION_MINIFIGURE_LEG_RIGHT:             minifigureLegsRight,
 		MLCAD_SECTION_MINIFIGURE_LEG_RIGHT_ACCESSORY:   minifigureLegsRightAccessories,
 	};

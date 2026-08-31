@@ -59,6 +59,7 @@
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LDrawRelatedParts.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
 #import "DimensionsPanel.h"
@@ -83,12 +84,7 @@
 #import "ViewportArranger.h"
 #import "WindowCategory.h"
 
-#if WANT_RELATED_PARTS
-#import <LDrawFeatures/LDrawRelatedParts.h>
-#endif
 
-
-#if WANT_RELATED_PARTS
 //---------- AppendChoicesToNewItem --------------------------------------------
 //
 // Purpose:		Appends related-part choices to a parent menu. The host still
@@ -127,7 +123,6 @@ void AppendChoicesToNewItem(
 	}
 	
 }//end AppendChoicesToNewItem
-#endif
 
 
 @implementation LDrawDocument
@@ -144,7 +139,7 @@ void AppendChoicesToNewItem(
     if (self)
 	{
 		[self setDocumentContents:[LDrawFile file]];
-		[self setGridSpacingMode:gridModeMedium];
+		[self setGridSpacingMode:LDrawGridModeMedium];
     }
 	markedSelection = NULL;
     return self;
@@ -551,7 +546,7 @@ void AppendChoicesToNewItem(
 //				used in this document.
 //
 //==============================================================================
-- (gridSpacingModeT) gridSpacingMode
+- (LDrawGridSpacingMode) gridSpacingMode
 {
 	return gridMode;
 	
@@ -564,7 +559,7 @@ void AppendChoicesToNewItem(
 //				being used in this document.
 //
 //==============================================================================
-- (gridOrientationModeT) gridOrientationMode
+- (LDrawGridOrientationMode) gridOrientationMode
 {
 	return gridOrientation;
 	
@@ -692,7 +687,7 @@ void AppendChoicesToNewItem(
 //				in this document. 
 //
 //==============================================================================
-- (void) setGridSpacingMode:(gridSpacingModeT)newMode
+- (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode
 {
 	NSArray<LDrawView*>*	graphicViews	= [self all3DViewports];
 	NSUInteger				counter 		= 0;
@@ -716,7 +711,7 @@ void AppendChoicesToNewItem(
 //				used in this document.
 //
 //==============================================================================
-- (void) setGridOrientationMode:(gridOrientationModeT)newMode
+- (void) setGridOrientationMode:(LDrawGridOrientationMode)newMode
 {
 	self->gridOrientation = newMode;
 	[self->toolbarController setGridOrientationMode:newMode];
@@ -871,7 +866,7 @@ void AppendChoicesToNewItem(
 
 	rotation = [LDrawSelection partRelativeRotation:rotation
 									   forSelection:selectedObjects
-									   partRelative:(self->gridOrientation == gridOrientationPart)];
+									   partRelative:(self->gridOrientation == LDrawGridOrientationPart)];
 
 	LDrawRotationMode rotationMode = [LDrawSelection rotationModeForSelectionCount:[selectedObjects count]
 																  aroundOrigin:aroundOrigin];
@@ -1156,7 +1151,7 @@ void AppendChoicesToNewItem(
 {
 	LDrawView *glView     = sender;
 	Matrix4 xform = [LDrawSelection nudgeOrientationMatrixForSelection:[self selectedObjects]
-														  partRelative:(self->gridOrientation == gridOrientationPart)];
+														  partRelative:(self->gridOrientation == LDrawGridOrientationPart)];
 	Vector3     nudgeVector = [glView nudgeVectorForMatrix:xform];
 
 	[self nudgeSelectionBy:nudgeVector];
@@ -2010,7 +2005,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) gridGranularityMenuChanged:(id)sender
 {
-	gridSpacingModeT    newGridMode = gridModeFine;
+	LDrawGridSpacingMode newGridMode = LDrawGridModeFine;
 
 	if([LDrawGrid gridSpacingMode:&newGridMode forMenuTag:[sender tag]] == NO)
 		return;
@@ -2033,7 +2028,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) gridOrientationModeChanged:(id)sender
 {
-	gridOrientationModeT	newMode		= gridOrientationModel;
+	LDrawGridOrientationMode newMode = LDrawGridOrientationModel;
 
 	if([LDrawGrid gridOrientationMode:&newMode forMenuTag:[sender tag]] == NO)
 		return;
@@ -2756,7 +2751,6 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) addRelatedPartClicked:(id)sender
 {
-#if WANT_RELATED_PARTS
 	LDrawRelatedPart   *relatedPart		= [sender representedObject];
 	NSUndoManager      *undoManager		= [self undoManager];
 	LDrawColor         *selectedColor	= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
@@ -2772,7 +2766,6 @@ void AppendChoicesToNewItem(
 
 	[self flushDocChangesAndSelect:newParts];
 	[undoManager setActionName:NSLocalizedString([LDrawInsertion undoActionKeyForInsertKind:LDrawInsertUndoRelatedPart], nil)];
-#endif	
 }//end addRelatedPartClicked
 
 
@@ -3599,7 +3592,7 @@ void AppendChoicesToNewItem(
 //**** LDrawView ****
 //========== LDrawView:acceptDrop: =============================================
 //
-// Purpose:		The user has deposited some drag-anddrop parts into an 
+// Purpose:		The user has deposited some drag-and-drop parts into an 
 //			    LDrawView. Now they need to be imported into the model.
 //
 // Notes:		Just like in -duplicate: and 
@@ -3692,7 +3685,7 @@ void AppendChoicesToNewItem(
 // Purpose:		The parts which originated the most recent drag operation have 
 //				apparently been dragged clear out of the document. Maybe they 
 //				went into another document. Maybe they got dragged into empty 
-//				space. Whereever they went, they are gone now. 
+//				space. Wherever they went, they are gone now. 
 //
 //				The trouble is that when we started dragging them, we just *hid* 
 //				them, in anticipation of their landing back within the document. 
@@ -4310,7 +4303,7 @@ void AppendChoicesToNewItem(
         //
         ////////////////////////////////////////
 
-        case revealInFinderTag:
+        case LDrawRevealInFinderTag:
             enable = ([self fileURL] != nil);
             break;
 
@@ -4320,43 +4313,43 @@ void AppendChoicesToNewItem(
 		//
 		////////////////////////////////////////
 
-		case cutMenuTag:
-		case copyMenuTag:
-		case deleteMenuTag:
-		case duplicateMenuTag:
-		case rotatePositiveXTag:
-		case rotateNegativeXTag:
-		case rotatePositiveYTag:
-		case rotateNegativeYTag:
-		case rotatePositiveZTag:
-		case rotateNegativeZTag:
+		case LDrawCutMenuTag:
+		case LDrawCopyMenuTag:
+		case LDrawDeleteMenuTag:
+		case LDrawDuplicateMenuTag:
+		case LDrawRotatePositiveXTag:
+		case LDrawRotateNegativeXTag:
+		case LDrawRotatePositiveYTag:
+		case LDrawRotateNegativeYTag:
+		case LDrawRotatePositiveZTag:
+		case LDrawRotateNegativeZTag:
 			enable = [selectedItems count] > 0;
 			break;
 		
-		case changeOriginMenuTag:
-		case axesByPartRotationMenuTag:
+		case LDrawChangeOriginMenuTag:
+		case LDrawAxesByPartRotationMenuTag:
 			enable = [LDrawStructure selectionCanChangeOrigin:selectedItems];
 			break;
 		
-		case changeOriginByRotationMenuTag:
+		case LDrawChangeOriginByRotationMenuTag:
 			enable = [LDrawStructure selectionCanChangeOriginByRotation:selectedItems];
 			break;
 		
-		case splitModelMenuTag:
+		case LDrawSplitModelMenuTag:
 			enable = [LDrawStructure selectionCanSplitModel:selectedItems];
 			break;
 			
-		case moveToParentMenuTag:
+		case LDrawMoveToParentMenuTag:
 			enable = [LDrawStructure selectionCanMoveToParentModel:selectedItems];
 			break;
 		
-		case splitStepMenuTag:
+		case LDrawSplitStepMenuTag:
 			// Direct children of steps, all from the same model.
 			enable = [LDrawStructure selectionCanSplitStep:selectedItems];
 			break;
 			
 		
-		case pasteMenuTag:
+		case LDrawPasteMenuTag:
 			enable = [[pasteboard types] containsObject:LDrawDirectivePboardType];
 			break;
 		
@@ -4369,16 +4362,16 @@ void AppendChoicesToNewItem(
 		
 		//The grid menus are always enabled, but this is a fine place to keep 
 		// track of their state.
-		case gridFineMenuTag:
-		case gridMediumMenuTag:
-		case gridCoarseMenuTag:
+		case LDrawGridFineMenuTag:
+		case LDrawGridMediumMenuTag:
+		case LDrawGridCoarseMenuTag:
 			[menuItem setState:[LDrawGrid menuItemShouldBeSelectedForGridModeTag:tag
 																	 currentMode:self->gridMode]];
 			enable = YES;
 			break;
 		
-		case coordModelMenuTag:
-		case coordPartMenuTag:
+		case LDrawCoordModelMenuTag:
+		case LDrawCoordPartMenuTag:
 			[menuItem setState:[LDrawGrid menuItemShouldBeSelectedForGridOrientationTag:tag
 																	 currentOrientation:self->gridOrientation]];
 			enable = YES;
@@ -4390,21 +4383,21 @@ void AppendChoicesToNewItem(
 		//
 		////////////////////////////////////////
 		
-		case useSelectionForSpinCenterMenuTag:
+		case LDrawUseSelectionForSpinCenterMenuTag:
 			enable = [selectedItems count] > 0;
 			break;
 		
-		case resetSpinCenterMenuTag:
+		case LDrawResetSpinCenterMenuTag:
 			enable = (V3EqualPoints(ZeroPoint3, [[self->documentContents activeModel] rotationCenter]) == NO);
 			break;
 
-		case stepDisplayMenuTag:
+		case LDrawStepDisplayMenuTag:
 			[menuItem setState:([activeModel stepDisplay])];
 			enable = YES;
 			break;
 			
-		case nextStepMenuTag:
-		case previousStepMenuTag:
+		case LDrawNextStepMenuTag:
+		case LDrawPreviousStepMenuTag:
 			enable = [activeModel stepDisplay];
 			break;
 		
@@ -4415,23 +4408,23 @@ void AppendChoicesToNewItem(
 		//
 		////////////////////////////////////////
 			
-		case hidePieceMenuTag:
+		case LDrawHidePieceMenuTag:
 			enable = [LDrawSelection selection:selectedItems containsVisibility:YES];
 			break;
 			
-		case showPieceMenuTag:
+		case LDrawShowPieceMenuTag:
 			enable = [LDrawSelection selection:selectedItems containsVisibility:NO];
 			break;
 			
-		case snapToGridMenuTag:
+		case LDrawSnapToGridMenuTag:
 			enable = (selectedPart != nil);
 			break;
 		
-		case gotoModelMenuTag:
+		case LDrawGotoModelMenuTag:
 			enable = (selectedPart != nil && [selectedItems count] == 1);
 			break;		
 			
-		case setGroupMenuTag:
+		case LDrawSetGroupMenuTag:
 			enable = [LDrawMLCadGroup selectionCanSetGroup:selectedItems];
 			break;
 
@@ -4441,36 +4434,36 @@ void AppendChoicesToNewItem(
 		//
 		////////////////////////////////////////
 		
-		case addModelSelectionMenuTag:
+		case LDrawAddModelSelectionMenuTag:
 			enable = [LDrawStructure selectionCanSplitModel:selectedItems];
 			break;
 		
-		case submodelReferenceMenuTag:
+		case LDrawSubmodelReferenceMenuTag:
 			//we can't insert a reference to the active model into itself.
 			// That would be an inifinite loop.
 			enable = [LDrawInsertion canInsertSubmodel:[menuItem representedObject]
 									   intoActiveModel:activeModel];
 			break;
 
-		case relatedPartMenuTag:
+		case LDrawRelatedPartMenuTag:
 			enable = [menuItem submenu] != nil;
 			break;
 
-		case lsynthHoseMenuTag:
-		case lsynthBandMenuTag:
+		case LDrawLSynthHoseMenuTag:
+		case LDrawLSynthBandMenuTag:
             // This is just like inserting a part
 			enable = YES;
             break;
 
-        case lsynthHoseConstraintMenuTag:
-		case lsynthBandConstraintMenuTag:
+        case LDrawLSynthHoseConstraintMenuTag:
+		case LDrawLSynthBandConstraintMenuTag:
             // We can only insert a constraint into an LDrawLSynth part.
             // Ensure it (or a constraint) is selected
             enable = [LDrawInsertion canInsertLSynthConstraintForPart:selectedPart];
             break;
 
 // TODO: add these in later
-//        case lsynthSurroundINSIDEOUTSIDETag:
+//        case LDrawLSynthSurroundInsideOutsideTag:
 //            // INSIDE/OUTSIDE pairs can only surround constraints under a single LSynth part
 //            // Valid selections are therefore an LSynth part, a single constraint or multiple
 //            // contiguous constraints.
@@ -4495,15 +4488,15 @@ void AppendChoicesToNewItem(
 //
 //            break;
 //
-//        case lsynthInvertINSIDEOUTSIDETag:
+//        case LDrawLSynthInvertInsideOutsideTag:
 //            enable = YES;
 //            break;
 
-        case lsynthInsertINSIDETag:
+        case LDrawLSynthInsertInsideTag:
             enable = YES;
             break;
 
-        case lsynthInsertOUTSIDETag:
+        case LDrawLSynthInsertOutsideTag:
             enable = YES;
             break;
 
@@ -4573,9 +4566,9 @@ void AppendChoicesToNewItem(
 - (void) addModelsToMenus
 {
 	NSMenu          *mainMenu           = [NSApp mainMenu];
-	NSMenu          *modelMenu          = [[mainMenu itemWithTag:modelsMenuTag] submenu];
-	NSMenu          *referenceMenu      = [[modelMenu itemWithTag:insertReferenceMenuTag] submenu];
-	NSInteger       separatorIndex      = [modelMenu indexOfItemWithTag:modelsSeparatorMenuTag];
+	NSMenu          *modelMenu          = [[mainMenu itemWithTag:LDrawModelsMenuTag] submenu];
+	NSMenu          *referenceMenu      = [[modelMenu itemWithTag:LDrawInsertReferenceMenuTag] submenu];
+	NSInteger       separatorIndex      = [modelMenu indexOfItemWithTag:LDrawModelsSeparatorMenuTag];
 	NSMenuItem      *modelItem          = nil;
 	NSMenuItem      *referenceItem      = nil;
 	NSArray         *models             = [[self documentContents] submodels];
@@ -4608,7 +4601,7 @@ void AppendChoicesToNewItem(
 		[referenceItem setRepresentedObject:currentModel];
 		//We set the same tag for all items in the reference menu.
 		// Validation will distinguish them with their represented objects.
-		[referenceItem setTag:submodelReferenceMenuTag];
+		[referenceItem setTag:LDrawSubmodelReferenceMenuTag];
 		[referenceItem setTarget:self];
 		[referenceItem setAction:@selector(addSubmodelReferenceClicked:)];
 		
@@ -4644,9 +4637,9 @@ void AppendChoicesToNewItem(
 - (void) clearModelMenus
 {
 	NSMenu      *mainMenu       = [NSApp mainMenu];
-	NSMenu      *modelMenu      = [[mainMenu itemWithTag:modelsMenuTag] submenu];
-	NSMenu      *referenceMenu  = [[modelMenu itemWithTag:insertReferenceMenuTag] submenu];
-	NSInteger   separatorIndex  = [modelMenu indexOfItemWithTag:modelsSeparatorMenuTag];
+	NSMenu      *modelMenu      = [[mainMenu itemWithTag:LDrawModelsMenuTag] submenu];
+	NSMenu      *referenceMenu  = [[modelMenu itemWithTag:LDrawInsertReferenceMenuTag] submenu];
+	NSInteger   separatorIndex  = [modelMenu indexOfItemWithTag:LDrawModelsSeparatorMenuTag];
 	NSInteger   counter         = 0;
 	
 	//Kill all model menu items.
@@ -4672,10 +4665,9 @@ void AppendChoicesToNewItem(
 - (void) buildRelatedPartsMenus
 {
 	NSMenu      *mainMenu       = [NSApp mainMenu];
-	NSMenu      *modelMenu      = [[mainMenu itemWithTag:modelsMenuTag] submenu];
-	NSMenuItem	*relatedItem	= [modelMenu itemWithTag:relatedPartMenuTag];
+	NSMenu      *modelMenu      = [[mainMenu itemWithTag:LDrawModelsMenuTag] submenu];
+	NSMenuItem	*relatedItem	= [modelMenu itemWithTag:LDrawRelatedPartMenuTag];
 
-#if WANT_RELATED_PARTS
 
 	if ([relatedItem hasSubmenu])
 	{
@@ -4713,17 +4705,6 @@ void AppendChoicesToNewItem(
 		}
 	}
 	
-#else /* WANT_RELATED_PARTS */
-
-	// We can't (as faras I know) use macros to remove UI.  So instead we simply delete our menu item the first time we find
-	// it if the related parts UI is disabled.
-
-	if(relatedItem != nil)
-	{
-		[modelMenu removeItem:relatedItem];
-	}
-
-#endif	/* WANT_RELATED_PARTS */
 	
 }//end buildRelatedPartsMenus
 
@@ -5417,11 +5398,11 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) updateViewingAngleToMatchStep
 {
-	LDrawMPDModel       *activeModel        = [[self documentContents] activeModel];
-	NSInteger           requestedStep       = [activeModel maximumStepIndexForStepDisplay];
-	Tuple3              viewingAngle        = [activeModel rotationAngleForStepAtIndex:requestedStep];
-	ViewOrientationT    viewOrientation     = [LDrawUtilities viewOrientationForAngle:viewingAngle];
-	LDrawView           *affectedViewport   = [self main3DViewport];
+	LDrawMPDModel        *activeModel        = [[self documentContents] activeModel];
+	NSInteger            requestedStep       = [activeModel maximumStepIndexForStepDisplay];
+	Tuple3               viewingAngle        = [activeModel rotationAngleForStepAtIndex:requestedStep];
+	LDrawViewOrientation viewOrientation     = [LDrawUtilities viewOrientationForAngle:viewingAngle];
+	LDrawView            *affectedViewport   = [self main3DViewport];
 	
 	// Set the Viewing angle
 	[affectedViewport setProjectionMode:[LDrawViewPolicy projectionModeForViewOrientation:viewOrientation]];

@@ -79,10 +79,10 @@ typedef struct {
 
 
 /// Default constraint part name for a hose or band class; nil otherwise.
-+ (nullable NSString *)defaultConstraintForClass:(LSynthClassT)classType;
++ (nullable NSString *)defaultConstraintForClass:(LDrawLSynthClass)classType;
 
 /// Default type name for a hose or band class; nil otherwise.
-+ (nullable NSString *)defaultTypeNameForClass:(LSynthClassT)classType;
++ (nullable NSString *)defaultTypeNameForClass:(LDrawLSynthClass)classType;
 
 #pragma mark -
 #pragma mark ACCESSORS
@@ -99,15 +99,15 @@ typedef struct {
 - (nullable NSDictionary *)typeForTypeName:(NSString *)typeName;
 
 /// Parts, hose types, or band types for the class; nil if unrelated.
-- (nullable NSArray *)typesForLSynthClass:(LSynthClassT)classTag;
+- (nullable NSArray *)typesForLSynthClass:(LDrawLSynthClass)classTag;
 
 /// Inspector type-popup caption: "Part Type:", "Hose Type:", or "Band Type:".
 /// Nil if the class is unrecognized.
-+ (nullable NSString *)typeLabelForClass:(LSynthClassT)classType;
++ (nullable NSString *)typeLabelForClass:(LDrawLSynthClass)classType;
 
 /// Transparency slider/text vs color well. Transparent = slider only,
 /// Colored = well only, both = both. The host still sets NSControl enabled.
-+ (LSynthSelectionControlEnablement)selectionControlEnablementForMode:(LSynthSelectionModeT)mode;
++ (LSynthSelectionControlEnablement)selectionControlEnablementForMode:(LDrawLSynthSelectionMode)mode;
 
 /// Parts / hose / band types or constraints for an application-menu getter
 /// name (`getParts`, `getHoseTypes`, …). Empty array if unrecognized.
@@ -132,11 +132,11 @@ typedef struct {
 
 /// For a complete Part the constraints depend on the part’s LSYNTH_CLASS.
 /// Hose/band classes pass through. The host still reads the type popup.
-+ (LSynthClassT)constraintClassForSynthClass:(LSynthClassT)classTag
-								selectedType:(nullable NSDictionary *)selectedType;
++ (LDrawLSynthClass)constraintClassForSynthClass:(LDrawLSynthClass)classTag
+                                    selectedType:(nullable NSDictionary *)selectedType;
 
 /// Band or hose constraint dictionaries; nil if the class has none.
-- (nullable NSArray *)constraintsForClass:(LSynthClassT)classType;
+- (nullable NSArray *)constraintsForClass:(LDrawLSynthClass)classType;
 
 /// Case-insensitive match on `partName`. NSNotFound if none.
 + (NSUInteger)indexOfConstraintNamed:(NSString *)name inConstraints:(NSArray *)constraints;
@@ -159,7 +159,7 @@ typedef struct {
 /// For a complete Part, the type at the popup index. Hose/band classes return
 /// nil (constraints do not depend on the type popup). The host still reads
 /// the popup index.
-+ (nullable NSDictionary *)selectedTypeForClass:(LSynthClassT)classTag
++ (nullable NSDictionary *)selectedTypeForClass:(LDrawLSynthClass)classTag
 										atIndex:(NSInteger)index;
 
 /// Sets each constraint part’s display name. Hoses only work with hose
@@ -168,13 +168,13 @@ typedef struct {
 
 /// Sets each constraint part to the class default and refreshes its icon.
 - (void)applyDefaultConstraintsToLSynth:(LDrawLSynth *)lsynth
-							  classType:(LSynthClassT)classType;
+							  classType:(LDrawLSynthClass)classType;
 
 /// Set the class of an LSynthDirective based on the part type name.
 - (void)setLSynthClassForDirective:(LDrawLSynth *)directive withType:(NSString *)type;
 
 /// Hose, band, or part class for a type name; 0 if unknown.
-- (LSynthClassT)classForType:(NSString *)type;
+- (LDrawLSynthClass)classForType:(NSString *)type;
 
 /// New LDrawLSynth with type, class, and color set. The host still inserts it.
 - (LDrawLSynth *)synthesizableDirectiveWithType:(NSString *)type color:(LDrawColor *)color;

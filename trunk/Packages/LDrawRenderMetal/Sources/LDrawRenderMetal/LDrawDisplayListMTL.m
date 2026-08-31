@@ -22,7 +22,6 @@
 #import <LDrawRenderMetal/MetalGPU.h>
 #import "MetalUtilities.h"
 #import <LDrawCore/MatrixMath.h>
-#import "SIMDConversions.h"
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
@@ -42,7 +41,7 @@ const int MSAASampleCount = 4;
 	because we draw the same bricks over and over and over again.
 	
 	When we instance, we identify the 'per instance' data - that is, data that is different for every instance.  In the case of
-	BrickSmith, the current/compliment color and transform are per instance data; the mesh and non-meta colors of the mesh are invariant.
+	BrickSmith, the current/complement color and transform are per instance data; the mesh and non-meta colors of the mesh are invariant.
 	
 	(As an example, when drawing the plate with red wheels, the red color of the wheels and the shape of the part are invariant;
 	the current color used for the plate and the location of the whole part are per-instance data.)
@@ -110,7 +109,7 @@ struct LDrawDLPerTex {
 };
 
 // DL draw instance: this stores one request to draw an un-textured DL for instancing.
-// current color/compliment color, transform, and a next ptr to build a linked list.
+// current color/complement color, transform, and a next ptr to build a linked list.
 struct LDrawDLInstance {
 	struct LDrawDLInstance *next;
 	float					color[4];
@@ -440,7 +439,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	instData.transform_z = simd_make_float4(transform[2], transform[6], transform[10], transform[14]);
 	instData.transform_w = simd_make_float4(transform[3], transform[7], transform[11], transform[15]);
 	copy_vec4((float *)&instData.color_current, cur_color);
-	copy_vec4((float *)&instData.color_compliment, cmp_color);
+	copy_vec4((float *)&instData.color_complement, cmp_color);
 
 	[renderEncoder setVertexBytes:&instData
 						   length:sizeof(instData)
@@ -1173,7 +1172,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					instData.transform_z = simd_make_float4(inst->transform[2], inst->transform[6], inst->transform[10], inst->transform[14]);
 					instData.transform_w = simd_make_float4(inst->transform[3], inst->transform[7], inst->transform[11], inst->transform[15]);
 					copy_vec4((float *)&instData.color_current, inst->color);
-					copy_vec4((float *)&instData.color_compliment, inst->comp);
+					copy_vec4((float *)&instData.color_complement, inst->comp);
 
 					[renderEncoder setVertexBytes:&instData
 										   length:sizeof(instData)
@@ -1357,7 +1356,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			instData.transform_z = simd_make_float4(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
 			instData.transform_w = simd_make_float4(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
 			copy_vec4((float *)&instData.color_current, l->color);
-			copy_vec4((float *)&instData.color_compliment, l->comp);
+			copy_vec4((float *)&instData.color_complement, l->comp);
 
 			[renderEncoder setVertexBytes:&instData
 								   length:sizeof(instData)

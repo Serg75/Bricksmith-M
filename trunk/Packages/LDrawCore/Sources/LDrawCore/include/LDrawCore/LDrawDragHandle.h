@@ -18,6 +18,8 @@
 
 #import <LDrawCore/LDrawDrawableElement.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 static const float HandleDiameter	= 7.0;
 
 
@@ -44,10 +46,12 @@ static const float HandleDiameter	= 7.0;
 - (Point3) initialPosition;
 - (Point3) position;
 - (NSInteger) tag;
-- (id) target;
+- (nullable id) target;
 
 - (void) setAction:(SEL)action;
 - (void) setPosition:(Point3)positionIn updateTarget:(BOOL)update;
-- (void) setTarget:(id)sender;
+- (void) setTarget:(nullable id)sender;
 
 @end
+
+NS_ASSUME_NONNULL_END

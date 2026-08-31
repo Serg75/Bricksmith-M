@@ -26,24 +26,24 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef enum {
+typedef NS_ENUM(NSInteger, LDrawSearchScope) {
 	LDrawSearchScopeFile      = 1,
 	LDrawSearchScopeModel     = 2,
 	LDrawSearchScopeStep      = 3,
 	LDrawSearchScopeSelection = 4
-} LDrawSearchScope;
+};
 
-typedef enum {
+typedef NS_ENUM(NSInteger, LDrawSearchColorFilter) {
 	LDrawSearchColorNone          = 1,
 	LDrawSearchColorFromSelection = 2,
 	LDrawSearchColorSpecified     = 3
-} LDrawSearchColorFilter;
+};
 
-typedef enum {
+typedef NS_ENUM(NSInteger, LDrawSearchPartCriteria) {
 	LDrawSearchAllParts      = 1,
 	LDrawSearchSpecificPart  = 2,
 	LDrawSearchSelectedParts = 3
-} LDrawSearchPartCriteria;
+};
 
 
 //------------------------------------------------------------------------------

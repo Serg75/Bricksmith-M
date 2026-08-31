@@ -38,15 +38,15 @@ enum {					// Culling codes from renderer culling checks.
 // LDrawTextureSpec.tex_obj is an opaque, renderer-defined texture handle. On
 // Metal-backed builds this stores an id<MTLTexture> bridged as void* (the
 // texture object is kept alive by the owning LDrawTexture; the DL never
-// outlives the model it caches). On OpenGL-backed builds this stores a
-// GLuint widened to uintptr_t and re-narrowed when binding. Using a plain
-// void* keeps the struct POD so the renderer is free to memcpy / memcmp /
-// memset it the way the existing display-list code does.
+// outlives the model it caches). On OpenGL-backed builds this stores a GLuint
+// widened to uintptr_t and re-narrowed when binding. NULL means untextured.
+// Using a plain void* keeps the struct POD so the renderer is free to memcpy /
+// memcmp / memset it the way the existing display-list code does.
 struct	LDrawTextureSpec {
-	int		projection;
-	void *	tex_obj;
-	float	plane_s[4];
-	float	plane_t[4];
+	int					projection;
+	void * _Nullable	tex_obj;
+	float				plane_s[4];
+	float				plane_t[4];
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ struct	LDrawTextureSpec {
 
 // These "fake" ptrs can be used in place of a float[4] RGBA color for the meta-colors.
 #define LDrawRenderCurrentColor    ((float *) 0)
-#define LDrawRenderComplimentColor ((float *) -1)
+#define LDrawRenderComplementColor ((float *) -1)
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,9 +70,10 @@ struct	LDrawTextureSpec {
 // The cleanup function defines a function ptr used to dispose of the display list that a directive
 // might be retaining.
 
-typedef void *  LDrawMeshHandle;							// Opaque handle to some kind of cached drawing representation.
-typedef void (* LDrawMeshCleanup_f)(LDrawMeshHandle  who);	// Cleanup function associated with a given DL.
+typedef void * _Nullable LDrawMeshHandle;							// Opaque handle; NULL if the display list is empty.
+typedef void (* _Nullable LDrawMeshCleanup_f)(LDrawMeshHandle who);	// Cleanup function associated with a given DL.
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -92,10 +93,10 @@ typedef void (* LDrawMeshCleanup_f)(LDrawMeshHandle  who);	// Cleanup function a
 // Raw drawing APIs to push one quad/tri/line/cond_line.
 // Vertices are consecutive float verts, e.g. 12 for quad/cond_line, 9 for tri, 6 for line
 // Color can be null to use the current color.  Normal is a float[3] normal ptr.
-- (void)drawQuad:(float *) vertices normal:(float *) normal color:(float *)color;
-- (void)drawTri:(float *) vertices normal:(float *) normal color:(float *)color;
-- (void)drawLine:(float *) vertices normal:(float *) normal color:(float *)color;
-- (void)drawConditionalLine:(float *) vertices normal:(float *) normal color:(float *)color;
+- (void)drawQuad:(float *) vertices normal:(float *) normal color:(nullable float *)color;
+- (void)drawTri:(float *) vertices normal:(float *) normal color:(nullable float *)color;
+- (void)drawLine:(float *) vertices normal:(float *) normal color:(nullable float *)color;
+- (void)drawConditionalLine:(float *) vertices normal:(float *) normal color:(nullable float *)color;
 
 @end
 
@@ -127,7 +128,7 @@ typedef void (* LDrawMeshCleanup_f)(LDrawMeshHandle  who);	// Cleanup function a
 
 // Color stack.  Pushing a color overrides the current color.  If no one ever sets the current color we get
 // that generic beige that is the RGBA of color 16.
-- (void)pushColor:(float *)color;
+- (void)pushColor:(nullable float *)color;
 - (void)popColor;
 
 // Wire frame count - if a non-zero number of wire frame requests are outstanding, we render in wireframe.
@@ -147,10 +148,12 @@ typedef void (* LDrawMeshCleanup_f)(LDrawMeshHandle  who);	// Cleanup function a
 // display list can be accumulated into at one time.  (This is a bit of a defect of the API that we
 // should consider some day fixing.)
 - (id<LDrawCollector>)beginDL;
-- (void)endDL:(LDrawMeshHandle *) outHandle cleanupFunc:(LDrawMeshCleanup_f *)func;     // Returns NULL if the display list is empty (e.g. no calls between begin/end)
+- (void)endDL:(LDrawMeshHandle * _Nonnull)outHandle cleanupFunc:(LDrawMeshCleanup_f * _Nonnull)func;	// *outHandle is NULL if the display list is empty
 
 - (void)drawDL:(LDrawMeshHandle)dl;
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif /* LDrawCoreRenderer_h */

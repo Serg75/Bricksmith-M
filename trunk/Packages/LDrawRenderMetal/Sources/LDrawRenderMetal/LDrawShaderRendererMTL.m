@@ -57,7 +57,7 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	boundsOnlyDrawing = NO;
 
 	[[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
-	complimentColor(color_now, compl_now);
+	complementColor(color_now, compl_now);
 
 	// Set up the basic transform to be identity - our transform is on top of the MVP matrix.
 	memset(transform_now,0,sizeof(transform_now));

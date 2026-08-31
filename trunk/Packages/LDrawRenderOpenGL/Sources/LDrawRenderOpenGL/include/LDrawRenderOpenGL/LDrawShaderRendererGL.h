@@ -18,6 +18,7 @@
 #import <OpenGL/gl.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -34,8 +35,10 @@
 
 - (id)initWithScale:(float)scale modelView:(GLfloat *)mv_matrix projection:(GLfloat *)proj_matrix;
 
-- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+- (nullable struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
 
 - (void)drawDragHandleImm:(GLfloat*)xyz withSize:(GLfloat)size;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -151,7 +151,7 @@
 //				We need to update our indicator to this new state.
 //
 //==============================================================================
-- (void) setGridSpacingMode:(gridSpacingModeT)newMode
+- (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode
 {
 	[self->gridSegmentedControl selectSegmentWithTag:newMode];
 	
@@ -164,7 +164,7 @@
 //				We need to update our indicator to this new state.
 //
 //==============================================================================
-- (void) setGridOrientationMode:(gridOrientationModeT)newMode
+- (void) setGridOrientationMode:(LDrawGridOrientationMode)newMode
 {
 	[self->orientationSegmentedControl selectSegmentWithTag:newMode];
 
@@ -184,8 +184,8 @@
 //==============================================================================
 - (NSToolbarItem *) makeGridSpacingItem
 {
-	NSToolbarItem		*newItem		= [[NSToolbarItem alloc] initWithItemIdentifier:TOOLBAR_GRID_SPACING_IDENTIFIER];
-	gridSpacingModeT	gridMode		= [self->document gridSpacingMode];
+	NSToolbarItem			*newItem	= [[NSToolbarItem alloc] initWithItemIdentifier:TOOLBAR_GRID_SPACING_IDENTIFIER];
+	LDrawGridSpacingMode	gridMode	= [self->document gridSpacingMode];
 	
 	[self->gridSegmentedControl selectSegmentWithTag:gridMode];
 	
@@ -207,8 +207,8 @@
 //==============================================================================
 - (NSToolbarItem *) makeGridOrientationItem
 {
-	NSToolbarItem		*newItem		= [[NSToolbarItem alloc] initWithItemIdentifier:TOOLBAR_GRID_ORIENTATION_IDENTIFIER];
-	gridOrientationModeT	gridMode		= [self->document gridOrientationMode];
+	NSToolbarItem			*newItem		= [[NSToolbarItem alloc] initWithItemIdentifier:TOOLBAR_GRID_ORIENTATION_IDENTIFIER];
+	LDrawGridOrientationMode	gridMode	= [self->document gridOrientationMode];
 	
 	[self->orientationSegmentedControl selectSegmentWithTag:gridMode];
 	
@@ -452,8 +452,8 @@
 - (void) gridSpacingSegmentedControlClicked:(id)sender
 {
 	NSInteger           selectedSegment = [sender selectedSegment];
-	gridSpacingModeT    newGridMode     = (gridSpacingModeT)[[sender cell] tagForSegment:selectedSegment];
-//	gridSpacingModeT	newGridMode		= [sender selectedTag]; // WHY does this not work!? Sheesh!
+	LDrawGridSpacingMode    newGridMode = (LDrawGridSpacingMode)[[sender cell] tagForSegment:selectedSegment];
+//	LDrawGridSpacingMode	newGridMode = [sender selectedTag]; // WHY does this not work!? Sheesh!
 	
 	[self->document setGridSpacingMode:newGridMode];
 	
@@ -468,8 +468,8 @@
 //==============================================================================
 - (IBAction) gridOrientationSegmentedControlClicked:(id)sender
 {
-	NSInteger               selectedSegment = [sender selectedSegment];
-	gridOrientationModeT    newGridMode     = (gridOrientationModeT)[[sender cell] tagForSegment:selectedSegment];
+	NSInteger                   selectedSegment = [sender selectedSegment];
+	LDrawGridOrientationMode    newGridMode     = (LDrawGridOrientationMode)[[sender cell] tagForSegment:selectedSegment];
 	
 	[self->document setGridOrientationMode:newGridMode];	
 	

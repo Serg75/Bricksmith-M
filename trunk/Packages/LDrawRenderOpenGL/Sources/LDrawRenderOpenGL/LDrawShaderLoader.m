@@ -68,7 +68,7 @@ static GLuint	load_shader(NSString * file_path, GLenum shader_type, const char *
 //				link.
 //
 //=======================================================================
-GLuint	LDrawLoadShaderFromFile(NSString * file_path, const char * attrib_list[])
+GLuint	LDrawLoadShaderFromFile(NSString * file_path, const char * _Nullable const * _Nullable attrib_list)
 {
 	GLuint vshader = load_shader(file_path,GL_VERTEX_SHADER,"#version 120\n#define VSHADER 1\n#define FSHADER 0\n");
 	GLuint fshader = load_shader(file_path,GL_FRAGMENT_SHADER,"#version 120\n#define VSHADER 0\n#define FSHADER 1\n");
@@ -117,7 +117,7 @@ GLuint	LDrawLoadShaderFromFile(NSString * file_path, const char * attrib_list[])
 //				way to use our shaders.
 //
 //=======================================================================
-GLuint	LDrawLoadShaderFromResource(NSString * name, const char * attrib_list[])
+GLuint	LDrawLoadShaderFromResource(NSString * name, const char * _Nullable const * _Nullable attrib_list)
 {
 	NSBundle *resourceBundle = [LDrawRenderOpenGLResources bundle];
 	NSString *path = [resourceBundle pathForResource:name ofType:nil];

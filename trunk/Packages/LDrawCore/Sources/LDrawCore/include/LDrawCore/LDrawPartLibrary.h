@@ -16,11 +16,12 @@
 
 #import <LDrawCore/LDrawColorLibrary.h>
 
-@class LDrawDirective;
 @class LDrawModel;
 @class LDrawPart;
 @class LDrawTexture;
 @protocol LDrawPartLibraryDelegate;
+
+NS_ASSUME_NONNULL_BEGIN
 
 // The part catalog was regenerated from disk.
 // Object is the new catalog. No userInfo.
@@ -60,13 +61,11 @@ extern NSString	*Category_Subparts;
 {
 	id<LDrawPartLibraryDelegate> delegate;
 	NSDictionary            *partCatalog;
-	NSMutableArray          *favorites;					// parts names in the "Favorites" pseduocategory
+	NSMutableArray          *favorites;					// parts names in the "Favorites" pseudocategory
 	NSMutableDictionary     *loadedFiles;				// list of LDrawFiles which have been read off disk.
 	NSMutableDictionary		*loadedImages;
 	NSMutableDictionary		*optimizedTextures;
 	NSMutableDictionary     *optimizedRepresentations;	// access stored vertex objects by part name, then color.
-	dispatch_queue_t        catalogAccessQueue;			// serial queue to mutex changes to the part catalog
-	NSMutableDictionary     *parsingGroups;				// arrays of dispatch_group_t's which have requested each file currently being parsed
 }
 
 // Shared renderer instance. Renderer packages (LDrawRenderMetal,
@@ -84,17 +83,17 @@ extern NSString	*Category_Subparts;
 - (NSArray *)favoritePartNames;
 - (NSArray *)favoritePartCatalogRecords;
 - (NSArray *)partCatalogRecordsInCategory:(NSString *)category;
-- (NSString *)categoryForPartName:(NSString *)partName;
+- (nullable NSString *)categoryForPartName:(NSString *)partName;
 
-- (void)setDelegate:(id<LDrawPartLibraryDelegate>)delegateIn;
+- (void)setDelegate:(nullable id<LDrawPartLibraryDelegate>)delegateIn;
 - (void)setFavorites:(NSArray *)favoritesIn;
 - (void)setPartCatalog:(NSDictionary *)newCatalog;
 
 // Actions
 - (BOOL)load;
-- (void)reloadPartsWithMaxLoadCountHandler:(void (^)(NSUInteger maxPartCount))maxLoadCountHandler
-				  progressIncrementHandler:(void (^)(void))progressIncrementHandler
-						 completionHandler:(void (^)(BOOL success))completionHandler;
+- (void)reloadPartsWithMaxLoadCountHandler:(nullable void (^)(NSUInteger maxPartCount))maxLoadCountHandler
+				  progressIncrementHandler:(nullable void (^)(void))progressIncrementHandler
+						 completionHandler:(nullable void (^)(BOOL success))completionHandler;
 
 // Favorites
 - (void)addPartNameToFavorites:(NSString *)partName;
@@ -102,15 +101,13 @@ extern NSString	*Category_Subparts;
 - (void)saveFavoritesToUserDefaults;
 
 // Finding Parts
-- (void)loadImageForName:(NSString *)imageName inGroup:(dispatch_group_t)parentGroup;
-- (void)loadModelForName:(NSString *)name inGroup:(dispatch_group_t)parentGroup;
-- (CGImageRef)imageForTextureName:(NSString *)imageName;
-- (CGImageRef)imageForTexture:(LDrawTexture *)texture;
-- (CGImageRef)imageFromNeighboringFileForTexture:(LDrawTexture *)texture;
-- (LDrawModel *)modelForName:(NSString *) partName;
-- (LDrawModel *)modelForNameThreadSafe:(NSString *) partName;
-
-- (LDrawDirective *)optimizedDrawableForPart:(LDrawPart *) part color:(LDrawColor *)color;
+- (void)loadImageForName:(NSString *)imageName inGroup:(nullable dispatch_group_t)parentGroup;
+- (void)loadModelForName:(NSString *)name inGroup:(nullable dispatch_group_t)parentGroup;
+- (nullable CGImageRef)imageForTextureName:(NSString *)imageName;
+- (nullable CGImageRef)imageForTexture:(LDrawTexture *)texture;
+- (nullable CGImageRef)imageFromNeighboringFileForTexture:(LDrawTexture *)texture;
+- (nullable LDrawModel *)modelForName:(NSString *) partName;
+- (nullable LDrawModel *)modelForNameThreadSafe:(NSString *) partName;
 
 // Utilites
 // Redraws a texture image into a power-of-two pixel buffer in the one format
@@ -119,12 +116,12 @@ extern NSString	*Category_Subparts;
 
 - (NSString *)descriptionForPart:(LDrawPart *)part;
 - (NSString *)descriptionForPartName:(NSString *)name;
-- (CGImageRef)readImageAtPath:(NSString *)imagePath
+- (nullable CGImageRef)readImageAtPath:(nullable NSString *)imagePath
 			   asynchronously:(BOOL)asynchronous
-			completionHandler:(void (^)(CGImageRef))completionBlock;
-- (LDrawModel *)readModelAtPath:(NSString *)partPath
+			completionHandler:(nullable void (^)(CGImageRef _Nullable))completionBlock;
+- (nullable LDrawModel *)readModelAtPath:(nullable NSString *)partPath
 				 asynchronously:(BOOL)asynchronous
-			  completionHandler:(void (^)(LDrawModel *))completionBlock;
+			  completionHandler:(nullable void (^)(LDrawModel * _Nullable))completionBlock;
 
 @end
 
@@ -142,3 +139,5 @@ extern NSString	*Category_Subparts;
 - (void)partLibrary:(LDrawPartLibrary *)partLibrary didChangeFavorites:(NSArray *)newFavorites;
 
 @end
+
+NS_ASSUME_NONNULL_END

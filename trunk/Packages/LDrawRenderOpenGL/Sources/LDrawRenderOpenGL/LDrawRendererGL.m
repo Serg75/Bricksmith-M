@@ -28,7 +28,7 @@
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawRenderOpenGL/LDrawShaderRendererGL.h>
 #import <LDrawRenderCore/LDrawShaderRendererDraw.h>
-#include "OpenGLUtilities.h"
+#include "OpenGLDebugState.h"
 
 
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.

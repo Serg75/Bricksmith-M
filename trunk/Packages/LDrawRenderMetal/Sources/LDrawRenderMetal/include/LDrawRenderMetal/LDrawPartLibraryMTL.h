@@ -6,7 +6,7 @@
 //  Purpose:    This is the centralized repository for obtaining information
 //              about the contents of the LDraw folder.
 //
-//  Info:       This category contains Metal-related code.
+//  Info:       Metal-backed subclass of LDrawPartLibrary.
 //
 //  Created by Sergey Slobodenyuk on 2023-06-07.
 //
@@ -16,6 +16,7 @@
 
 #import <LDrawRenderMetal/LDrawTextureMTL.h>
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -30,6 +31,8 @@
 // Initialization
 + (LDrawPartLibraryMTL *) sharedPartLibrary;
 
-- (id<MTLTexture>)metalTextureForTexture:(LDrawTextureMTL *)texture;
+- (nullable id<MTLTexture>)metalTextureForTexture:(LDrawTextureMTL *)texture;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -25,9 +25,6 @@ let package = Package(
                 .process("Shaders"),
             ],
             publicHeadersPath: "include",
-            cSettings: [
-                .define("USE_AUTOMATIC_WIREFRAMES", to: "1"),
-            ],
             linkerSettings: [
                 .linkedFramework("OpenGL"),
             ]

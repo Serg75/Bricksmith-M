@@ -51,10 +51,10 @@ static NSString *DEFAULT_BAND_TYPE = @"TECHNIC_CHAIN_LINK";
 //				class, or nil for other classes.
 //
 //------------------------------------------------------------------------------
-+ (NSString *)defaultConstraintForClass:(LSynthClassT)classType
++ (NSString *)defaultConstraintForClass:(LDrawLSynthClass)classType
 {
-	if (classType == LSYNTH_BAND) return DEFAULT_BAND_CONSTRAINT;
-	if (classType == LSYNTH_HOSE) return DEFAULT_HOSE_CONSTRAINT;
+	if (classType == LDrawLSynthClassBand) return DEFAULT_BAND_CONSTRAINT;
+	if (classType == LDrawLSynthClassHose) return DEFAULT_HOSE_CONSTRAINT;
 	return nil;
 }
 
@@ -65,10 +65,10 @@ static NSString *DEFAULT_BAND_TYPE = @"TECHNIC_CHAIN_LINK";
 //				or nil for other classes.
 //
 //------------------------------------------------------------------------------
-+ (NSString *)defaultTypeNameForClass:(LSynthClassT)classType
++ (NSString *)defaultTypeNameForClass:(LDrawLSynthClass)classType
 {
-	if (classType == LSYNTH_BAND) return DEFAULT_BAND_TYPE;
-	if (classType == LSYNTH_HOSE) return DEFAULT_HOSE_TYPE;
+	if (classType == LDrawLSynthClassBand) return DEFAULT_BAND_TYPE;
+	if (classType == LDrawLSynthClassHose) return DEFAULT_HOSE_TYPE;
 	return nil;
 }
 
@@ -222,7 +222,7 @@ static LSynthConfiguration* instance = nil;
                             ],
                             @"partName": @(type),
                             @"description": desc,
-                            @"LSYNTH_CONSTRAINT_CLASS": @(LSYNTH_HOSE),
+                            @"LSYNTH_CONSTRAINT_CLASS": @(LDrawLSynthClassHose),
                         } mutableCopy];
 
                         // A little post-processing
@@ -293,7 +293,7 @@ static LSynthConfiguration* instance = nil;
                             ],
                             @"partName": @(type),
                             @"description": desc,
-                            @"LSYNTH_CONSTRAINT_CLASS": @(LSYNTH_BAND),
+                            @"LSYNTH_CONSTRAINT_CLASS": @(LDrawLSynthClassBand),
                         };
 
                         [band_constraints addObject:band_constraint];
@@ -340,7 +340,7 @@ static LSynthConfiguration* instance = nil;
                 NSDictionary *hose_def = @{
                     @"title": [[typeString stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
                     @"LSYNTH_TYPE": typeString,
-                    @"LSYNTH_CLASS": @(LSYNTH_HOSE),
+                    @"LSYNTH_CLASS": @(LDrawLSynthClassHose),
                 };
 
                 [hose_types addObject:hose_def];
@@ -358,7 +358,7 @@ static LSynthConfiguration* instance = nil;
                 NSDictionary *band_def = @{
                     @"title": [[typeString stringByReplacingOccurrencesOfString:@"_" withString:@" "] capitalizedString],
                     @"LSYNTH_TYPE": typeString,
-                    @"LSYNTH_CLASS": @(LSYNTH_BAND),
+                    @"LSYNTH_CLASS": @(LDrawLSynthClassBand),
                 };
 
                 [band_types addObject:band_def];
@@ -373,10 +373,10 @@ static LSynthConfiguration* instance = nil;
 
     for (NSMutableDictionary *part in tmp_parts) {
         if ([[self getQuickRefBands] containsObject:part[@"method"]]) {
-            part[@"LSYNTH_CLASS"] = @(LSYNTH_BAND);
+            part[@"LSYNTH_CLASS"] = @(LDrawLSynthClassBand);
         }
         else if ([[self getQuickRefHoses] containsObject:part[@"method"]]) {
-            part[@"LSYNTH_CLASS"] = @(LSYNTH_HOSE);
+            part[@"LSYNTH_CLASS"] = @(LDrawLSynthClassHose);
         }
         [parts addObject:part];
     }
@@ -535,11 +535,11 @@ static LSynthConfiguration* instance = nil;
 // Purpose:		Return configured type dictionaries for the given LSynth class.
 //
 //==============================================================================
-- (NSArray *)typesForLSynthClass:(LSynthClassT)classTag
+- (NSArray *)typesForLSynthClass:(LDrawLSynthClass)classTag
 {
-	if (classTag == LSYNTH_PART) return [self getParts];
-	if (classTag == LSYNTH_HOSE) return [self getHoseTypes];
-	if (classTag == LSYNTH_BAND) return [self getBandTypes];
+	if (classTag == LDrawLSynthClassPart) return [self getParts];
+	if (classTag == LDrawLSynthClassHose) return [self getHoseTypes];
+	if (classTag == LDrawLSynthClassBand) return [self getBandTypes];
 	return nil;
 }
 
@@ -549,12 +549,12 @@ static LSynthConfiguration* instance = nil;
 // Purpose:		Show the label type.
 //
 //==============================================================================
-+ (NSString *)typeLabelForClass:(LSynthClassT)classType
++ (NSString *)typeLabelForClass:(LDrawLSynthClass)classType
 {
 	// Update the type title according to our class of synthesized part
-	if (classType == LSYNTH_PART) return @"Part Type:";
-	if (classType == LSYNTH_HOSE) return @"Hose Type:";
-	if (classType == LSYNTH_BAND) return @"Band Type:";
+	if (classType == LDrawLSynthClassPart) return @"Part Type:";
+	if (classType == LDrawLSynthClassHose) return @"Hose Type:";
+	if (classType == LDrawLSynthClassBand) return @"Band Type:";
 	return nil;
 }
 
@@ -565,21 +565,21 @@ static LSynthConfiguration* instance = nil;
 //				enabled for the current LSynth selection-tint mode.
 //
 //------------------------------------------------------------------------------
-+ (LSynthSelectionControlEnablement)selectionControlEnablementForMode:(LSynthSelectionModeT)mode
++ (LSynthSelectionControlEnablement)selectionControlEnablementForMode:(LDrawLSynthSelectionMode)mode
 {
 	// Enable the correct bits of the selection section
 	LSynthSelectionControlEnablement enablement = { NO, NO };
-	if (mode == TransparentSelection)
+	if (mode == LDrawLSynthSelectionTransparent)
 	{
 		enablement.transparencyEnabled = YES;
 		enablement.colorWellEnabled    = NO;
 	}
-	else if (mode == ColoredSelection)
+	else if (mode == LDrawLSynthSelectionColored)
 	{
 		enablement.transparencyEnabled = NO;
 		enablement.colorWellEnabled    = YES;
 	}
-	else if (mode == TransparentColoredSelection)
+	else if (mode == LDrawLSynthSelectionTransparentColored)
 	{
 		enablement.transparencyEnabled = YES;
 		enablement.colorWellEnabled    = YES;
@@ -616,35 +616,35 @@ static LSynthConfiguration* instance = nil;
 	// We process this, along with associated LSynthConfiguration data to generate our Model LSynth menu
 	return @[
 		@{
-			@"tag": @(lsynthPartMenuTag),
+			@"tag": @(LDrawLSynthPartMenuTag),
 			@"getter": @"getParts",
 			@"entry_key": @"title",
 			@"action": NSStringFromSelector(@selector(insertSynthesizableDirective:)),
 			@"shouldFilter": @YES,
 		},
 		@{
-			@"tag": @(lsynthHoseMenuTag),
+			@"tag": @(LDrawLSynthHoseMenuTag),
 			@"getter": @"getHoseTypes",
 			@"entry_key": @"title",
 			@"action": NSStringFromSelector(@selector(insertSynthesizableDirective:)),
 			@"shouldFilter": @YES,
 		},
 		@{
-			@"tag": @(lsynthHoseConstraintMenuTag),
+			@"tag": @(LDrawLSynthHoseConstraintMenuTag),
 			@"getter": @"getHoseConstraints",
 			@"entry_key": @"description",
 			@"action": NSStringFromSelector(@selector(insertLSynthConstraint:)),
 			@"shouldFilter": @NO,
 		},
 		@{
-			@"tag": @(lsynthBandMenuTag),
+			@"tag": @(LDrawLSynthBandMenuTag),
 			@"getter": @"getBandTypes",
 			@"entry_key": @"title",
 			@"action": NSStringFromSelector(@selector(insertSynthesizableDirective:)),
 			@"shouldFilter": @YES,
 		},
 		@{
-			@"tag": @(lsynthBandConstraintMenuTag),
+			@"tag": @(LDrawLSynthBandConstraintMenuTag),
 			@"getter": @"getBandConstraints",
 			@"entry_key": @"description",
 			@"action": NSStringFromSelector(@selector(insertLSynthConstraint:)),
@@ -666,17 +666,17 @@ static LSynthConfiguration* instance = nil;
 		@{
 			@"title": @"Insert INSIDE",
 			@"action": action,
-			@"tag": @(lsynthInsertINSIDETag),
+			@"tag": @(LDrawLSynthInsertInsideTag),
 		},
 		@{
 			@"title": @"Insert OUTSIDE",
 			@"action": action,
-			@"tag": @(lsynthInsertOUTSIDETag),
+			@"tag": @(LDrawLSynthInsertOutsideTag),
 		},
 		@{
 			@"title": @"Insert CROSS",
 			@"action": action,
-			@"tag": @(lsynthInsertCROSSTag),
+			@"tag": @(LDrawLSynthInsertCrossTag),
 		},
 	];
 }
@@ -714,14 +714,14 @@ static LSynthConfiguration* instance = nil;
 // Purpose:		Map a synth class (hose/band) to its constraint class.
 //
 //------------------------------------------------------------------------------
-+ (LSynthClassT)constraintClassForSynthClass:(LSynthClassT)classTag
++ (LDrawLSynthClass)constraintClassForSynthClass:(LDrawLSynthClass)classTag
 								selectedType:(NSDictionary *)selectedType
 {
 	// For a complete Part the constraints depend on the part class.  Handily
 	// we worked this out when we read in the LSynth config.
-	if (classTag == LSYNTH_PART && selectedType != nil)
+	if (classTag == LDrawLSynthClassPart && selectedType != nil)
 	{
-		return (LSynthClassT)[[selectedType valueForKey:@"LSYNTH_CLASS"] integerValue];
+		return (LDrawLSynthClass)[[selectedType valueForKey:@"LSYNTH_CLASS"] integerValue];
 	}
 	return classTag;
 }
@@ -732,10 +732,10 @@ static LSynthConfiguration* instance = nil;
 // Purpose:		Return constraint definitions for the given LSynth class.
 //
 //==============================================================================
-- (NSArray *)constraintsForClass:(LSynthClassT)classType
+- (NSArray *)constraintsForClass:(LDrawLSynthClass)classType
 {
-	if (classType == LSYNTH_BAND) return [self getBandConstraints];
-	if (classType == LSYNTH_HOSE) return [self getHoseConstraints];
+	if (classType == LDrawLSynthClassBand) return [self getBandConstraints];
+	if (classType == LDrawLSynthClassHose) return [self getHoseConstraints];
 	return nil;
 }
 
@@ -833,10 +833,10 @@ static LSynthConfiguration* instance = nil;
 //				fallback name's dictionary when index is out of range.
 //
 //------------------------------------------------------------------------------
-+ (NSDictionary *)selectedTypeForClass:(LSynthClassT)classTag
++ (NSDictionary *)selectedTypeForClass:(LDrawLSynthClass)classTag
 							   atIndex:(NSInteger)index
 {
-	if (classTag != LSYNTH_PART) return nil;
+	if (classTag != LDrawLSynthClassPart) return nil;
 	return [self entryAtIndex:index
 					inEntries:[[self sharedInstance] typesForLSynthClass:classTag]];
 }
@@ -870,7 +870,7 @@ static LSynthConfiguration* instance = nil;
 //
 //------------------------------------------------------------------------------
 - (void)applyDefaultConstraintsToLSynth:(LDrawLSynth *)lsynth
-							  classType:(LSynthClassT)classType
+							  classType:(LDrawLSynthClass)classType
 {
 	NSString *constraintName = [LSynthConfiguration defaultConstraintForClass:classType];
 	if (constraintName == nil) return;
@@ -890,7 +890,7 @@ static LSynthConfiguration* instance = nil;
 //==============================================================================
 - (void)setLSynthClassForDirective:(LDrawLSynth *)directive withType:(NSString *)type
 {
-	LSynthClassT classType = [self classForType:type];
+	LDrawLSynthClass classType = [self classForType:type];
 	if (classType != 0)
 	{
 		[directive setLsynthClass:classType];
@@ -907,21 +907,21 @@ static LSynthConfiguration* instance = nil;
 // Purpose:		Look up the LSynth class (hose / band / part) for a type name.
 //
 //==============================================================================
-- (LSynthClassT)classForType:(NSString *)type
+- (LDrawLSynthClass)classForType:(NSString *)type
 {
 	if ([[self getQuickRefHoses] containsObject:type])
 	{
-		return LSYNTH_HOSE;
+		return LDrawLSynthClassHose;
 	}
 	if ([[self getQuickRefBands] containsObject:type])
 	{
-		return LSYNTH_BAND;
+		return LDrawLSynthClassBand;
 	}
 	if ([[self getQuickRefParts] containsObject:type])
 	{
-		return LSYNTH_PART;
+		return LDrawLSynthClassPart;
 	}
-	return (LSynthClassT)0;
+	return (LDrawLSynthClass)0;
 }
 
 

@@ -152,7 +152,7 @@
 	[renderer prepareOpenGL];
 
 	[self takeBackgroundColorFromUserDefaults];
-	[self setViewOrientation:ViewOrientation3D];
+	[self setViewOrientation:LDrawViewOrientation3D];
 
 
 	//---------- Register notifications ----------------------------------------

@@ -17,13 +17,13 @@
 #import <LDrawCore/MatrixMathEx.h>
 
 // Normally the doc size is rounded so that it doesn't jump per frame as we nudge; we can turn this OFF to debug editing.
-#define NO_ROUNDING_DOC_SIZE		0
+#define NO_ROUNDING_DOC_SIZE	0
 
 // controls perspective; cameraLocation = modelSize * CAMERA_DISTANCE_FACTOR
-#define CAMERA_DISTANCE_FACTOR		6.5	
+#define CAMERA_DISTANCE_FACTOR	6.5
 
 // Turn-table view changes how rotations work 
-#define USE_TURNTABLE				([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == RotateModeTurntable)
+#define USE_TURNTABLE			([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == LDrawRotateStyleTurntable)
 
 
 #define WALKTHROUGH_NEAR	20.0

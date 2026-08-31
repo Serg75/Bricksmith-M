@@ -15,21 +15,21 @@
 #import <LDrawCore/MatrixMath.h>
 
 // Projection Mode
-typedef enum
+typedef NS_ENUM(NSInteger, LDrawProjectionMode)
 {
 	LDrawProjectionModePerspective	= 0,
 	LDrawProjectionModeOrthographic	= 1
+};
 
-} LDrawProjectionMode;
-
-typedef enum
+typedef NS_ENUM(NSInteger, LDrawLocationMode)
 {
 	LDrawLocationModeModel       = 0,
 	LDrawLocationModeWalkthrough = 1
-} LDrawLocationMode;
+};
 
 @protocol LDrawCameraScroller;
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -69,7 +69,7 @@ typedef enum
 @property (nonatomic, assign) Size2 graphicsSurfaceSize;
 @property (nonatomic, assign) BOOL usesZeroToOneDepth;
 
-- (void)	setScroller:(id<LDrawCameraScroller>)newScroller;
+- (void)	setScroller:(nullable id<LDrawCameraScroller>)newScroller;
 
 // Output - the official OpenGL transform.
 - (float*)projection;
@@ -141,3 +141,5 @@ typedef enum
 - (void) reflectScaleFactor:(CGFloat)newScaleFactor;
 
 @end
+
+NS_ASSUME_NONNULL_END

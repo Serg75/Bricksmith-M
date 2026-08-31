@@ -31,11 +31,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef enum {
+typedef NS_ENUM(NSInteger, LDrawRotationMode) {
 	LDrawRotateAroundSelectionCenter = 0,
 	LDrawRotateAroundPartPositions   = 1,
 	LDrawRotateAroundFixedPoint      = 2
-} LDrawRotationMode;
+};
 
 typedef NS_ENUM(NSInteger, LDrawArrowNudge) {
 	LDrawArrowNudgeNone  = 0,
@@ -185,7 +185,7 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 /// unrecognized tags; outAxis is unchanged in that case.
 + (BOOL)quickRotationAxis:(Vector3 *)outAxis forMenuTag:(NSInteger)tag;
 
-/// Menu tag for toolbar quick-rotate buttons (rotatePositiveXTag, etc.).
+/// Menu tag for toolbar quick-rotate buttons (LDrawRotatePositiveXTag, etc.).
 + (NSInteger)quickRotationMenuTagForAxis:(LDrawQuickRotationAxis)axis
 								positive:(BOOL)positive;
 

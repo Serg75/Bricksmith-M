@@ -463,11 +463,11 @@ static NSString				*defaultAuthor		= @"anonymous";
 	{
 		if (ColumnizesOutput == YES)
 		{
-			outputString = [NSString stringWithFormat:@"%3d", colorCode];
+			outputString = [NSString stringWithFormat:@"%3d", (int)colorCode];
 		}
 		else
 		{
-			outputString = [NSString stringWithFormat:@"%d", colorCode];
+			outputString = [NSString stringWithFormat:@"%d", (int)colorCode];
 		}
 
 	}
@@ -649,43 +649,43 @@ static NSString				*defaultAuthor		= @"anonymous";
 // Purpose:		Returns the viewing angle in degrees for the given orientation.
 //
 //------------------------------------------------------------------------------
-+ (Tuple3)angleForViewOrientation:(ViewOrientationT)orientation
++ (Tuple3)angleForViewOrientation:(LDrawViewOrientation)orientation
 {
 	Tuple3 angle	= ZeroPoint3;
 	
 	switch (orientation)
 	{
-		case ViewOrientationWalkThrough:
+		case LDrawViewOrientationWalkThrough:
 			angle = V3Make(0,0,0);
 			break;
 	
-		case ViewOrientation3D:
+		case LDrawViewOrientation3D:
 			// This is MLCad's default 3-D viewing angle, which is arrived at by 
 			// applying these rotations in order: z=0, y=45, x=23. 
 			angle = V3Make(16.707, 42.63, 16.039);
 			break;
 			
-		case ViewOrientationFront:
+		case LDrawViewOrientationFront:
 			angle = V3Make(0, 0, 0);
 			break;
 			
-		case ViewOrientationBack:
+		case LDrawViewOrientationBack:
 			angle = V3Make(0, 180, 0);
 			break;
 			
-		case ViewOrientationLeft:
+		case LDrawViewOrientationLeft:
 			angle = V3Make(0, -90, 0);
 			break;
 			
-		case ViewOrientationRight:
+		case LDrawViewOrientationRight:
 			angle = V3Make(0, 90, 0);
 			break;
 			
-		case ViewOrientationTop:
+		case LDrawViewOrientationTop:
 			angle = V3Make(90, 0, 0);
 			break;
 			
-		case ViewOrientationBottom:
+		case LDrawViewOrientationBottom:
 			angle = V3Make(-90, 0, 0);
 			break;
 	}
@@ -803,28 +803,28 @@ static NSString				*defaultAuthor		= @"anonymous";
 //---------- viewOrientationForAngle: --------------------------------[static]--
 //
 // Purpose:		Returns the viewing orientation for the given angle. If the 
-//				angle is not a recognized head-on view, ViewOrientation3D will 
+//				angle is not a recognized head-on view, LDrawViewOrientation3D will 
 //				be returned. 
 //
 //------------------------------------------------------------------------------
-+ (ViewOrientationT)viewOrientationForAngle:(Tuple3)rotationAngle
++ (LDrawViewOrientation)viewOrientationForAngle:(Tuple3)rotationAngle
 {
-	ViewOrientationT    viewOrientation     = ViewOrientation3D;
+	LDrawViewOrientation    viewOrientation = LDrawViewOrientation3D;
 	NSUInteger          counter             = 0;
 	Tuple3              testAngle           = ZeroPoint3;
-	ViewOrientationT    testOrientation     = ViewOrientation3D;
+	LDrawViewOrientation    testOrientation = LDrawViewOrientation3D;
 	
-	ViewOrientationT    orientations[]      = {	ViewOrientationFront,
-		ViewOrientationBack,
-		ViewOrientationLeft,
-		ViewOrientationRight,
-		ViewOrientationTop,
-		ViewOrientationBottom
+	LDrawViewOrientation    orientations[]  = {	LDrawViewOrientationFront,
+		LDrawViewOrientationBack,
+		LDrawViewOrientationLeft,
+		LDrawViewOrientationRight,
+		LDrawViewOrientationTop,
+		LDrawViewOrientationBottom
 	};
-	NSUInteger          orientationCount    = sizeof(orientations)/sizeof(ViewOrientationT);
+	NSUInteger          orientationCount    = sizeof(orientations)/sizeof(LDrawViewOrientation);
 	
 	// See if the angle matches any of the head-on orientations.
-	for (counter = 0; viewOrientation == ViewOrientation3D && counter < orientationCount; counter++)
+	for (counter = 0; viewOrientation == LDrawViewOrientation3D && counter < orientationCount; counter++)
 	{
 		testOrientation	= orientations[counter];
 		testAngle		= [LDrawUtilities angleForViewOrientation:testOrientation];

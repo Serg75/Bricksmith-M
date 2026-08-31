@@ -65,7 +65,7 @@ typedef struct InstanceInput {
 	vector_float4	transform_z;
 	vector_float4	transform_w;
 	vector_float4	color_current;
-	vector_float4	color_compliment;
+	vector_float4	color_complement;
 } InstanceInput;
 
 // Texture plane generation data for automatic texture coordinate generation

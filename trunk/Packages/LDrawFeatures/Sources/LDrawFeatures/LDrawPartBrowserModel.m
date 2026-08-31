@@ -34,7 +34,7 @@
 		_partLibrary     = library;
 		_currentCategory = Category_All;
 		_searchString    = @"";
-		_searchMode      = SearchModeAllCategories;
+		_searchMode      = LDrawPartBrowserSearchAllCategories;
 		_filteredParts   = @[];
 	}
 	return self;
@@ -52,7 +52,7 @@
 	NSArray  *allParts = nil;
 	NSSet    *excluded = nil;
 
-	if ([search length] == 0 || self.searchMode == SearchModeSelectedCategory)
+	if ([search length] == 0 || self.searchMode == LDrawPartBrowserSearchSelectedCategory)
 	{
 		allParts = [self.partLibrary partCatalogRecordsInCategory:self.currentCategory];
 	}

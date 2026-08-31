@@ -28,7 +28,6 @@ let package = Package(
             publicHeadersPath: "include",
             cSettings: [
                 .define("METAL"),
-                .define("USE_AUTOMATIC_WIREFRAMES", to: "1"),
             ],
             linkerSettings: [
                 .linkedFramework("MetalKit"),

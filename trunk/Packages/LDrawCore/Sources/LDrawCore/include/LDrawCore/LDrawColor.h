@@ -14,6 +14,8 @@
 
 #import <LDrawCore/LDrawMetaCommand.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 extern void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 extern void HSVtoRGB( float h, float s, float v, float *r, float *g, float *b );
 
@@ -37,7 +39,8 @@ extern void HSVtoRGB( float h, float s, float v, float *r, float *g, float *b );
 //              Bricksmithism used for uninitialized or error colors. 
 //
 //------------------------------------------------------------------------------
-typedef enum
+// File-format codes: NSScanner scanInt: and NSCoder encodeInt: require int.
+typedef NS_ENUM(int, LDrawColorT)
 {	
 	LDrawColorBogus				= -1, //used for uninitialized colors.
 	LDrawColorCustomRGB			= -2,
@@ -109,10 +112,10 @@ typedef enum
 	LDrawLightGray				= 503,
 	LDrawRubberWhite			= 511
 
-} LDrawColorT;
+};
 
 
-typedef enum LDrawColorMaterial
+typedef NS_ENUM(int, LDrawColorMaterialT)
 {
 	LDrawColorMaterialNone			= 0,
 	LDrawColorMaterialChrome		= 1,
@@ -122,7 +125,7 @@ typedef enum LDrawColorMaterial
 	LDrawColorMaterialMetal			= 5,
 	LDrawColorMaterialCustom		= 6,
 
-} LDrawColorMaterialT;
+};
 
 
 //------------------------------------------------------------------------------
@@ -146,7 +149,7 @@ typedef enum LDrawColorMaterial
 	NSString			*materialParameters;
 	NSString			*name;
 
-	LDrawColor			*fakeComplimentColor;	// synthesized, not according to !COLOUR rules
+	LDrawColor			*fakeComplementColor;	// synthesized, not according to !COLOUR rules
 }
 
 // Initialization
@@ -156,14 +159,14 @@ typedef enum LDrawColorMaterial
 
 - (float)				alpha;
 - (LDrawColorT)			colorCode;
-- (LDrawColor *)		complimentColor;
+- (LDrawColor *)		complementColor;
 - (LDrawColorT)			edgeColorCode;
 - (void)				getColorRGBA:(float *)inComponents;
 - (void)				getEdgeColorRGBA:(float *)inComponents;
 - (NSString *)			localizedName;
 - (uint8_t)				luminance;
 - (LDrawColorMaterialT)	material;
-- (NSString *)			materialParameters;
+- (nullable NSString *)	materialParameters;
 - (NSString *)			name;
 
 - (void) setColorCode:(LDrawColorT)newCode;
@@ -172,13 +175,15 @@ typedef enum LDrawColorMaterial
 - (void) setEdgeColorRGBA:(float *)newComponents;
 - (void) setLuminance:(uint8_t)newValue;
 - (void) setMaterial:(LDrawColorMaterialT)newValue;
-- (void) setMaterialParameters:(NSString *)newValue;
+- (void) setMaterialParameters:(nullable NSString *)newValue;
 - (void) setName:(NSString *)newName;
 
 // Utilities
 - (NSComparisonResult) HSVACompare:(LDrawColor *)otherColor;
 - (NSString *) hexStringForRGB:(float *)components;
 - (BOOL) scanHexString:(NSScanner *)hexScanner intoRGB:(float *)components;
-- (id)fullCopyWithZone:(NSZone *)zone;
+- (id)fullCopyWithZone:(nullable NSZone *)zone;
 
 @end
+
+NS_ASSUME_NONNULL_END

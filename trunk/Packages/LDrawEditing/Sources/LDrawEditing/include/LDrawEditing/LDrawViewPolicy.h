@@ -18,7 +18,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// What RotateSelectTool does during mouseDragged for the current drag prefs.
+/// What LDrawToolModeRotateSelect does during mouseDragged for the current drag prefs.
 typedef NS_ENUM(NSInteger, LDrawRotateSelectDragAction) {
 	LDrawRotateSelectDragRotateCamera       = 0,
 	LDrawRotateSelectDragDirectInteraction  = 1,
@@ -58,14 +58,14 @@ typedef NS_ENUM(NSInteger, LDrawSwipeStepAction) {
 + (float)autoscrollInset;
 
 /// BeginImmediately, or ImmediatelyInOrtho when orthographic → select now.
-+ (BOOL)shouldSelectPartsOnMouseDownForDraggingBehavior:(MouseDragBehaviorT)behavior
++ (BOOL)shouldSelectPartsOnMouseDownForDraggingBehavior:(LDrawMouseDragBehavior)behavior
 										 isOrthographic:(BOOL)orthographic;
 
 /// Delay before click-and-hold becomes drag-and-drop (0.25 s).
 + (NSTimeInterval)clickAndHoldDelayInterval;
 
 /// Rotate-select mouseDragged action from drag prefs and tracking state.
-+ (LDrawRotateSelectDragAction)rotateSelectDragActionForBehavior:(MouseDragBehaviorT)behavior
++ (LDrawRotateSelectDragAction)rotateSelectDragActionForBehavior:(LDrawMouseDragBehavior)behavior
 											 canBeginDragAndDrop:(BOOL)canBeginDragAndDrop
 											  selectionIsMarquee:(BOOL)selectionIsMarquee
 												   isPerspective:(BOOL)isPerspective;
@@ -88,13 +88,13 @@ typedef NS_ENUM(NSInteger, LDrawSwipeStepAction) {
 
 
 /// We treat 3D / WalkThrough as perspective; straight-on views are orthographic.
-+ (LDrawProjectionMode)projectionModeForViewOrientation:(ViewOrientationT)orientation;
++ (LDrawProjectionMode)projectionModeForViewOrientation:(LDrawViewOrientation)orientation;
 
 /// WalkThrough → walkthrough location; otherwise model.
-+ (LDrawLocationMode)locationModeForViewOrientation:(ViewOrientationT)orientation;
++ (LDrawLocationMode)locationModeForViewOrientation:(LDrawViewOrientation)orientation;
 
 /// Numpad-style viewing-angle hotkeys: 4/6/2/8/5/7|9/0.
-+ (BOOL)viewOrientation:(ViewOrientationT *)outOrientation
++ (BOOL)viewOrientation:(LDrawViewOrientation *)outOrientation
 	fromHotkeyCharacter:(unichar)character;
 
 /// Marquee parked in the autoscroll zone: repeating timer interval.

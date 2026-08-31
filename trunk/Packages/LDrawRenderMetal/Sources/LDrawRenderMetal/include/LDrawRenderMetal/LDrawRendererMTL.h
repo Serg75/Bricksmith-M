@@ -15,6 +15,7 @@
 
 @import MetalKit;
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -35,3 +36,5 @@
 - (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
 
 @end
+
+NS_ASSUME_NONNULL_END

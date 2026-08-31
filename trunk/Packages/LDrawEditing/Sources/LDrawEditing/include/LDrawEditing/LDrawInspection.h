@@ -38,7 +38,7 @@ typedef NS_ENUM(NSInteger, LDrawPartInspectorRotationT) {
 };
 
 /// Step-inspector shortcut tags. Custom is −1 for both popups; relative
-/// shortcuts are 0–3; absolute head-on views match ViewOrientationT.
+/// shortcuts are 0–3; absolute head-on views match LDrawViewOrientation.
 typedef NS_ENUM(NSInteger, LDrawStepInspectorRotationShortcutT) {
 	LDrawStepInspectorRotationShortcutCustom              = -1,
 	LDrawStepInspectorRotationShortcutUpsideDown          = 0,

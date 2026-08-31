@@ -278,8 +278,8 @@
 {
 	if (currentTag == LDrawStepInspectorRotationShortcutCustom)
 		return currentTag;
-	ViewOrientationT viewOrientation = [LDrawUtilities viewOrientationForAngle:angle];
-	if (viewOrientation != ViewOrientation3D)
+	LDrawViewOrientation viewOrientation = [LDrawUtilities viewOrientationForAngle:angle];
+	if (viewOrientation != LDrawViewOrientation3D)
 		return viewOrientation;
 	return LDrawStepInspectorRotationShortcutCustom;
 }
@@ -319,7 +319,7 @@
 	{
 		if (shortcutTag == LDrawStepInspectorRotationShortcutCustom)
 			return customAbsoluteAngle;
-		return [LDrawUtilities angleForViewOrientation:(ViewOrientationT)shortcutTag];
+		return [LDrawUtilities angleForViewOrientation:(LDrawViewOrientation)shortcutTag];
 	}
 	return ZeroPoint3;
 }

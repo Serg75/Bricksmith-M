@@ -157,7 +157,7 @@
 	[super revert:sender];
 
     // Someone else might care that the part's changed
-    [representedObject sendMessageToObservers:MessageObservedChanged];
+    [representedObject sendMessageToObservers:LDrawObserverObservedChanged];
 	
 }//end revert:
 
@@ -238,7 +238,7 @@
 	[self setRotationAngles];
 
     // Someone else might care that the part's orientation has changed
-    [representedObject sendMessageToObservers:MessageObservedChanged];
+    [representedObject sendMessageToObservers:LDrawObserverObservedChanged];
 	
 }//end applyRotationClicked:
 

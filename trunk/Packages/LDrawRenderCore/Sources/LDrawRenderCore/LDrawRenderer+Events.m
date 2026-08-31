@@ -232,7 +232,7 @@
 	if ([self projectionMode] != LDrawProjectionModePerspective)
 	{
 		[self setProjectionMode:LDrawProjectionModePerspective];
-		self->viewOrientation = ViewOrientation3D;
+		self->viewOrientation = LDrawViewOrientation3D;
 	}
 
 	[camera rotationDragged:viewDirection];
@@ -311,7 +311,7 @@
 	if ([self projectionMode] != LDrawProjectionModePerspective)
 	{
 		[self setProjectionMode:LDrawProjectionModePerspective];
-		self->viewOrientation = ViewOrientation3D;
+		self->viewOrientation = LDrawViewOrientation3D;
 	}
 
 	[camera rotateByDegrees:angle];

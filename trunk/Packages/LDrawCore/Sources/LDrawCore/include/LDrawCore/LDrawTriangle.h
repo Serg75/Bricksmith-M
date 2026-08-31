@@ -14,6 +14,8 @@
 
 #import <LDrawCore/LDrawDrawableElement.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawTriangle
@@ -44,3 +46,5 @@
 - (void) recomputeNormal;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -17,6 +17,7 @@
 @class LDrawPart;
 @class LDrawContainer;
 
+NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *PART_REPORT_NUMBER_KEY;
 extern NSString *PART_REPORT_NAME_KEY;
@@ -61,7 +62,7 @@ extern NSString *PART_REPORT_PART_QUANTITY;	// NSNumber of how many of this part
 
 /// Preview part from a flattened-report row (number + color). Nil if the
 /// record has no part number. The host still draws it.
-+ (LDrawPart *)previewPartFromRecord:(NSDictionary *)record;
++ (nullable LDrawPart *)previewPartFromRecord:(nullable NSDictionary *)record;
 
 /// Piece-count export save-panel localization keys. The host still localizes.
 + (NSString *)pieceCountSaveDialogTitleKey;
@@ -69,3 +70,5 @@ extern NSString *PART_REPORT_PART_QUANTITY;	// NSNumber of how many of this part
 + (NSString *)untitledLocalizationKey;
 
 @end
+
+NS_ASSUME_NONNULL_END

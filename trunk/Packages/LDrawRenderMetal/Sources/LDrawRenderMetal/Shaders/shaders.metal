@@ -57,7 +57,7 @@ vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
 
 	float4 col = in.color;
 	if (in.color.a == 0.0) {
-		col = mix(inst[iid].color_current, inst[iid].color_compliment, in.color.r);
+		col = mix(inst[iid].color_current, inst[iid].color_complement, in.color.r);
 	};
 	out.color.a = col.a;
 	out.color.rgb = col.rgb;

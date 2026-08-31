@@ -186,22 +186,22 @@
 
 	switch (tag)
 	{
-		case rotatePositiveXTag:
+		case LDrawRotatePositiveXTag:
 			axis = V3Make( 1,  0,  0);
 			break;
-		case rotateNegativeXTag:
+		case LDrawRotateNegativeXTag:
 			axis = V3Make(-1,  0,  0);
 			break;
-		case rotatePositiveYTag:
+		case LDrawRotatePositiveYTag:
 			axis = V3Make( 0,  1,  0);
 			break;
-		case rotateNegativeYTag:
+		case LDrawRotateNegativeYTag:
 			axis = V3Make( 0, -1,  0);
 			break;
-		case rotatePositiveZTag:
+		case LDrawRotatePositiveZTag:
 			axis = V3Make( 0,  0,  1);
 			break;
-		case rotateNegativeZTag:
+		case LDrawRotateNegativeZTag:
 			axis = V3Make( 0,  0, -1);
 			break;
 		default:
@@ -224,13 +224,13 @@
 	switch (axis)
 	{
 		case LDrawQuickRotationAxisX:
-			return positive ? rotatePositiveXTag : rotateNegativeXTag;
+			return positive ? LDrawRotatePositiveXTag : LDrawRotateNegativeXTag;
 		case LDrawQuickRotationAxisY:
-			return positive ? rotatePositiveYTag : rotateNegativeYTag;
+			return positive ? LDrawRotatePositiveYTag : LDrawRotateNegativeYTag;
 		case LDrawQuickRotationAxisZ:
-			return positive ? rotatePositiveZTag : rotateNegativeZTag;
+			return positive ? LDrawRotatePositiveZTag : LDrawRotateNegativeZTag;
 	}
-	return rotatePositiveXTag;
+	return LDrawRotatePositiveXTag;
 }
 
 

@@ -13,6 +13,8 @@
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawGroupedObject
@@ -29,3 +31,5 @@
 - (instancetype)initWithObject:(id)object value:(NSString *)value;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -12,7 +12,7 @@
 //              other objects query the part library to draw and display
 //              information about parts.
 //
-//  Info:       This category contains Metal-related code.
+//  Info:       Metal-backed subclass of LDrawPartLibrary.
 //
 //  Created by Sergey Slobodenyuk on 2023-06-07.
 //

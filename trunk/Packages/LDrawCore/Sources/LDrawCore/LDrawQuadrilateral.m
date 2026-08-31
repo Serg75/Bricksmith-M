@@ -273,7 +273,7 @@
 		if([self->color colorCode] == LDrawCurrentColor)	
 			[renderer drawQuad:v normal:n color:LDrawRenderCurrentColor];
 		else if([self->color colorCode] == LDrawEdgeColor)	
-			[renderer drawQuad:v normal:n color:LDrawRenderComplimentColor];
+			[renderer drawQuad:v normal:n color:LDrawRenderComplementColor];
 		else
 		{
 			float rgba[4];

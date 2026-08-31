@@ -21,14 +21,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// The class of a synthesis object. Mirrors the legacy `LSynthClassT` enum
-// that previously lived in LSynthConfiguration; defined here so LDrawCore
-// can use it without depending on LDrawFeatures.
-typedef NS_ENUM(NSInteger, LSynthClassT) {
-    LSYNTH_PART = 1,
-    LSYNTH_HOSE = 2,
-    LSYNTH_BAND = 3,
-    LSYNTH_CLASSES_COUNT
+// Hose, band, or part class for a synthesis directive. Defined here so
+// LDrawCore can use it without depending on LDrawFeatures.
+typedef NS_ENUM(NSInteger, LDrawLSynthClass) {
+    LDrawLSynthClassPart = 1,
+    LDrawLSynthClassHose = 2,
+    LDrawLSynthClassBand = 3,
+    LDrawLSynthClassCount
 };
 
 // LSynth "selection mode" — how synthesized parts are tinted when the
@@ -36,10 +35,10 @@ typedef NS_ENUM(NSInteger, LSynthClassT) {
 // PreferencesDialogController.h so LDrawCore can read the user's choice
 // directly from NSUserDefaults under LSYNTH_SELECTION_MODE_KEY without
 // pulling in the AppKit preferences UI.
-typedef NS_ENUM(NSInteger, LSynthSelectionModeT) {
-    TransparentSelection         = 0,
-    ColoredSelection             = 1,
-    TransparentColoredSelection  = 2
+typedef NS_ENUM(NSInteger, LDrawLSynthSelectionMode) {
+    LDrawLSynthSelectionTransparent         = 0,
+    LDrawLSynthSelectionColored             = 1,
+    LDrawLSynthSelectionTransparentColored  = 2
 };
 
 
@@ -69,7 +68,7 @@ typedef NS_ENUM(NSInteger, LSynthSelectionModeT) {
 
 // Returns all configured "PART"-class LSynth definitions. Each element is a
 // dictionary describing one part; the LSYNTH_CLASS key holds an
-// integer-valued NSNumber compatible with LSynthClassT.
+// integer-valued NSNumber compatible with LDrawLSynthClass.
 - (NSArray *)getParts;
 
 // Look up the constraint definition (radius / orientation) for a given

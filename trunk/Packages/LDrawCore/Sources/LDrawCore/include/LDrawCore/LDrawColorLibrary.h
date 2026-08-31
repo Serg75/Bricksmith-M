@@ -20,7 +20,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /// Color-panel material popup tags (1-based filter kinds after All = 0).
-typedef enum {
+typedef NS_ENUM(NSInteger, LDrawColorFilter) {
     LDrawColorFilterAll           = 0,
     LDrawColorFilterSolid         = 1,
     LDrawColorFilterTransparent   = 2,
@@ -29,7 +29,7 @@ typedef enum {
     LDrawColorFilterRubber        = 5,
     LDrawColorFilterMetal         = 6,
     LDrawColorFilterOther         = 7
-} LDrawColorFilter;
+};
 
 
 //------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ typedef enum {
 // Accessors
 - (NSArray *)colors;
 - (LDrawColor *)colorForCode:(LDrawColorT)colorCode;
-- (void)getComplimentRGBA:(float * _Nonnull)complimentRGBA forCode:(LDrawColorT)colorCode;
+- (void)getComplementRGBA:(float * _Nonnull)complementRGBA forCode:(LDrawColorT)colorCode;
 
 // Registering Colors
 - (void)addColor:(LDrawColor *)newColor;
@@ -106,7 +106,7 @@ typedef enum {
 					localizedName:(NSString *)localizedName;
 
 // Utilities
-void complimentColor(const float * _Nonnull originalColor, float * _Nonnull complimentColor);
+void complementColor(const float * _Nonnull originalColor, float * _Nonnull complementRGBA);
 
 @end
 

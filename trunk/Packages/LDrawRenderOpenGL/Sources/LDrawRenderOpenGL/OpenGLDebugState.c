@@ -1,13 +1,15 @@
-/*
- *  OpenGLUtilities.c
- *  Bricksmith
- *
- *  Created by bsupnik on 7/5/12.
- *  Copyright 2012 __MyCompanyName__. All rights reserved.
- *
- */
+//==============================================================================
+//
+//  File:		OpenGLDebugState.c
+//  Package:	LDrawRenderOpenGL
+//
+//  Purpose:	Debug helpers for querying OpenGL enable bits and integer state.
+//
+//  Created by bsupnik on 7/5/12.
+//
+//==============================================================================
 
-#include "OpenGLUtilities.h"
+#include "OpenGLDebugState.h"
 #include <stdio.h>
 
 #if DEBUG

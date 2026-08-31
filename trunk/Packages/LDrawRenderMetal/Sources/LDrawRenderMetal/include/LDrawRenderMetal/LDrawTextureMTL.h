@@ -11,6 +11,8 @@
 
 #import <LDrawCore/LDrawTexture.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawTextureMTL
@@ -21,7 +23,9 @@
 //------------------------------------------------------------------------------
 @interface LDrawTextureMTL : LDrawTexture
 {
-	__strong id<MTLTexture> metalTexture;
+	__strong id<MTLTexture> _Nullable metalTexture;
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

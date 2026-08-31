@@ -20,10 +20,7 @@ let package = Package(
                 .product(name: "LDrawCore", package: "LDrawCore"),
             ],
             path: "Sources/LDrawRenderCore",
-            publicHeadersPath: "include",
-            cSettings: [
-                .define("USE_AUTOMATIC_WIREFRAMES", to: "1"),
-            ]
+            publicHeadersPath: "include"
         ),
     ]
 )

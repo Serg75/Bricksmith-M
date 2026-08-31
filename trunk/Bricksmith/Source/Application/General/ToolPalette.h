@@ -15,31 +15,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-//		Types and Constants
-//
-////////////////////////////////////////////////////////////////////////////////
-
-typedef LDrawToolMode ToolModeT;
-
-#define RotateSelectTool	LDrawToolModeRotateSelect
-#define PanScrollTool		LDrawToolModePanScroll
-#define SmoothZoomTool		LDrawToolModeSmoothZoom
-#define ZoomInTool			LDrawToolModeZoomIn
-#define ZoomOutTool			LDrawToolModeZoomOut
-#define SpinTool			LDrawToolModeSpin
-#define EraserTool			LDrawToolModeEraser
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-//
 //		ToolPalette
 //
 ////////////////////////////////////////////////////////////////////////////////
 @interface ToolPalette : NSObject
 {
-	ToolModeT				 baseToolMode;			//as selected in the palette
-	ToolModeT				 effectiveToolMode;		//accounting for modifiers.
+	LDrawToolMode			 baseToolMode;			//as selected in the palette
+	LDrawToolMode			 effectiveToolMode;		//accounting for modifiers.
 
 	NSArray					*topLevelObjects;		// holds NIB objects
 
@@ -62,10 +44,10 @@ typedef LDrawToolMode ToolModeT;
 + (ToolPalette *) sharedToolPalette;
 
 //Accessors
-+ (ToolModeT) toolMode;
++ (LDrawToolMode) toolMode;
 - (BOOL) isVisible;
-- (ToolModeT) toolMode;
-- (void) setToolMode:(ToolModeT)newToolMode;
+- (LDrawToolMode) toolMode;
+- (void) setToolMode:(LDrawToolMode)newToolMode;
 
 //Actions
 - (void) hideToolPalette:(id)sender;
@@ -77,7 +59,7 @@ typedef LDrawToolMode ToolModeT;
 
 //Utilities
 - (void) resolveCurrentToolMode;
-+ (NSString *) keysForToolMode:(ToolModeT)toolMode modifiers:(NSUInteger*)modifiersOut;
-+ (BOOL) toolMode:(ToolModeT)toolMode matchesCharacters:(NSString *)characters modifiers:(NSUInteger)modifiers;
++ (NSString *) keysForToolMode:(LDrawToolMode)toolMode modifiers:(NSUInteger*)modifiersOut;
++ (BOOL) toolMode:(LDrawToolMode)toolMode matchesCharacters:(NSString *)characters modifiers:(NSUInteger)modifiers;
 
 @end

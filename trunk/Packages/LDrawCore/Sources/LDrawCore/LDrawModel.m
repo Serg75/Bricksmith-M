@@ -139,27 +139,13 @@
 	contentStartIndex   = [self parseHeaderFromLines:lines beginningAtIndex:range.location];
 	maxLineIndex        = NSMaxRange(range) - 1;
 
-	dispatch_group_t	modelDispatchGroup = NULL;
-#if USE_BLOCKS
-	modelDispatchGroup = dispatch_group_create();
-	dispatch_queue_t	queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-	if(parentGroup != NULL)
-		dispatch_group_enter(parentGroup);
-#endif
 	// Parse out steps. Each time we run into a new 0 STEP command, we finish 
 	// the current step. 
 	do
 	{
 		stepRange   = [LDrawStep rangeOfDirectiveBeginningAtIndex:contentStartIndex inLines:lines maxIndex:maxLineIndex];
-#if USE_BLOCKS
-		dispatch_group_async(modelDispatchGroup,queue,
-		^{
-#endif
-			LDrawStep * newStep     = [[LDrawStep alloc] initWithLines:lines inRange:stepRange parentGroup:modelDispatchGroup];
-			substeps[insertIndex] = newStep;
-#if USE_BLOCKS
-		});
-#endif
+		LDrawStep * newStep   = [[LDrawStep alloc] initWithLines:lines inRange:stepRange parentGroup:NULL];
+		substeps[insertIndex] = newStep;
 		++insertIndex;
 
 		contentStartIndex = NSMaxRange(stepRange);
@@ -167,34 +153,25 @@
 	}
 	while(contentStartIndex < NSMaxRange(range));
 		
-#if USE_BLOCKS
-	dispatch_group_notify(modelDispatchGroup,queue,
-	^{
-#endif
-		NSUInteger      counter				= 0;
-		for(counter = 0; counter < insertIndex; counter++)
-		{
-			LDrawStep * step = substeps[counter];
-			
-			[self addStep:step];
-			
-			// Tell ARC to release the object
-			substeps[counter] = nil;
-		}
+	NSUInteger      counter				= 0;
+	for(counter = 0; counter < insertIndex; counter++)
+	{
+		LDrawStep * step = substeps[counter];
+		
+		[self addStep:step];
+		
+		// Tell ARC to release the object
+		substeps[counter] = nil;
+	}
 
-		free(substeps);
-			
-		// Degenerate case: utterly empty file. Create one empty step, because it is 
-		// illegal to have a 0-step model in Bricksmith. 
-		if([[self steps] count] == 0)
-		{
-			[self addStep];
-		}
-#if USE_BLOCKS
-		if(parentGroup != NULL)
-			dispatch_group_leave(parentGroup);
-	});
-#endif	
+	free(substeps);
+		
+	// Degenerate case: utterly empty file. Create one empty step, because it is 
+	// illegal to have a 0-step model in Bricksmith. 
+	if([[self steps] count] == 0)
+	{
+		[self addStep];
+	}
 	return self;
 	
 }//end initWithLines:inRange:
@@ -826,7 +803,7 @@
 	
 	// Start with the default 3D angle onto the stack. If no rotation is ever 
 	// specified, that is the one we use. 
-	newRotation		= [LDrawUtilities angleForViewOrientation:ViewOrientation3D];
+	newRotation		= [LDrawUtilities angleForViewOrientation:LDrawViewOrientation3D];
 	totalRotation	= newRotation;
 	
 	// Build the rotation stack
@@ -847,7 +824,7 @@
 			case LDrawStepRotationRelative:
 				
 				// Start with the default 3D rotation
-				previousRotation	= [LDrawUtilities angleForViewOrientation:ViewOrientation3D];
+				previousRotation	= [LDrawUtilities angleForViewOrientation:LDrawViewOrientation3D];
 
 				// Add the new value to it.
 				rotationMatrix	= Matrix4Rotate(IdentityMatrix4, stepRotationAngle);
@@ -886,7 +863,7 @@
 			
 				// This means end all rotations and restore the default angle. 
 				// It's not a stack. Bizarre. 
-				newRotation		= [LDrawUtilities angleForViewOrientation:ViewOrientation3D];
+				newRotation		= [LDrawUtilities angleForViewOrientation:LDrawViewOrientation3D];
 				break;
 		}
 		

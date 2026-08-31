@@ -12,6 +12,8 @@
 
 #import <LDrawCore/LDrawLine.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawConditionalLine
@@ -32,3 +34,5 @@
 -(void) setConditionalVertex2:(Point3)newVertex;
 
 @end
+
+NS_ASSUME_NONNULL_END

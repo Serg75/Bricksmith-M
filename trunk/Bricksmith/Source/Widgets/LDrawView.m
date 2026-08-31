@@ -48,9 +48,9 @@
 #import "UserDefaultsCategory.h"
 
 // Macros for pref-based UI tricks.
-#define USE_TURNTABLE	([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == RotateModeTurntable)
-#define USE_RIGHT_SPIN	([[NSUserDefaults standardUserDefaults] integerForKey:RIGHT_BUTTON_BEHAVIOR_KEY] == RightButtonRotates)
-#define USE_ZOOM_WHEEL	([[NSUserDefaults standardUserDefaults] integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY] == MouseWheelZooms)
+#define USE_TURNTABLE	([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == LDrawRotateStyleTurntable)
+#define USE_RIGHT_SPIN	([[NSUserDefaults standardUserDefaults] integerForKey:RIGHT_BUTTON_BEHAVIOR_KEY] == LDrawRightButtonRotates)
+#define USE_ZOOM_WHEEL	([[NSUserDefaults standardUserDefaults] integerForKey:MOUSE_WHEEL_BEHAVIOR_KEY] == LDrawMouseWheelZooms)
 
 
 //========== NSRectToBox2 ======================================================
@@ -197,7 +197,7 @@ static Box2 NSRectToBox2(NSRect rect)
 // Purpose:		Returns the current camera orientation for this view.
 //
 //==============================================================================
-- (ViewOrientationT) viewOrientation
+- (LDrawViewOrientation) viewOrientation
 {
 	[self makeCurrentContext];
 	return [self->renderer viewOrientation];
@@ -357,7 +357,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //				in this document.
 //
 //==============================================================================
-- (void) setGridSpacingMode:(gridSpacingModeT)newMode
+- (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode
 {
 	[self makeCurrentContext];
 	[self->renderer setGridSpacing:[LDrawGrid spacingForMode:newMode]];
@@ -493,10 +493,10 @@ static Box2 NSRectToBox2(NSRect rect)
 //========== setViewOrientation: ===============================================
 //
 // Purpose:		Changes the camera position from which we view the model.
-//				i.e., ViewOrientationFront means we see the model head-on.
+//				i.e., LDrawViewOrientationFront means we see the model head-on.
 //
 //==============================================================================
-- (void) setViewOrientation:(ViewOrientationT)newOrientation
+- (void) setViewOrientation:(LDrawViewOrientation)newOrientation
 {
 	[self makeCurrentContext];
 	[self->renderer setViewOrientation:newOrientation];
@@ -559,7 +559,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (IBAction) viewOrientationSelected:(id)sender
 {
-	ViewOrientationT newAngle = (ViewOrientationT)[sender tag];
+	LDrawViewOrientation newAngle = (LDrawViewOrientation)[sender tag];
 
 	[self makeCurrentContext];
 
@@ -705,11 +705,11 @@ static Box2 NSRectToBox2(NSRect rect)
 	BOOL		 isClicked		= NO; /*[[NSApp currentEvent] type] == NSLeftMouseDown;*/ //not enough; overwhelmed by repeating key events
 	NSCursor	*cursor			= nil;
 	NSImage		*cursorImage	= nil;
-	ToolModeT	 toolMode		= [ToolPalette toolMode];
+	LDrawToolMode toolMode		= [ToolPalette toolMode];
 	
 	switch(toolMode)
 	{
-		case RotateSelectTool:
+		case LDrawToolModeRotateSelect:
 			//just use the standard arrow cursor.
 			if(self->selectionIsMarquee)
 			{
@@ -734,14 +734,14 @@ static Box2 NSRectToBox2(NSRect rect)
 				cursor = [NSCursor arrowCursor];
 			break;
 		
-		case PanScrollTool:
+		case LDrawToolModePanScroll:
 			if([self->renderer isTrackingDrag] == YES || isClicked == YES)
 				cursor = [NSCursor closedHandCursor];
 			else
 				cursor = [NSCursor openHandCursor];
 			break;
 			
-		case SmoothZoomTool:
+		case LDrawToolModeSmoothZoom:
 			if([self->renderer isTrackingDrag] == YES)
 			{
 				cursorImage = [NSImage imageNamed:@"ZoomCursor"];
@@ -752,25 +752,25 @@ static Box2 NSRectToBox2(NSRect rect)
 				cursor = [NSCursor crosshairCursor];
 			break;
 			
-		case ZoomInTool:
+		case LDrawToolModeZoomIn:
 			cursorImage = [NSImage imageNamed:@"ZoomInCursor"];
 			cursor = [[NSCursor alloc] initWithImage:cursorImage
 											 hotSpot:NSMakePoint(7, 10)];
 			break;
 			
-		case ZoomOutTool:
+		case LDrawToolModeZoomOut:
 			cursorImage = [NSImage imageNamed:@"ZoomOutCursor"];
 			cursor = [[NSCursor alloc] initWithImage:cursorImage
 											 hotSpot:NSMakePoint(7, 10)];
 			break;
 		
-		case SpinTool:
+		case LDrawToolModeSpin:
 			cursorImage = [NSImage imageNamed:@"Spin"];
 			cursor = [[NSCursor alloc] initWithImage:cursorImage
 											 hotSpot:NSMakePoint(7, 10)];
 			break;
 			
-		case EraserTool:
+		case LDrawToolModeEraser:
 			//just use the standard arrow cursor.
 			cursor = [NSCursor arrowCursor];
 			break;
@@ -891,7 +891,7 @@ static Box2 NSRectToBox2(NSRect rect)
 			case '9':
 			case '0':
 			{
-				ViewOrientationT orientation = ViewOrientation3D;
+				LDrawViewOrientation orientation = LDrawViewOrientation3D;
 				if([LDrawViewPolicy viewOrientation:&orientation fromHotkeyCharacter:firstCharacter])
 				{
 					[self setProjectionMode:[LDrawViewPolicy projectionModeForViewOrientation:orientation]];
@@ -1008,12 +1008,12 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) mouseDown:(NSEvent *)theEvent
 {
-	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
-	MouseDragBehaviorT	 draggingBehavior	= (MouseDragBehaviorT)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
-	ToolModeT			 toolMode			= [ToolPalette toolMode];
+	NSUserDefaults			*userDefaults		= [NSUserDefaults standardUserDefaults];
+	LDrawMouseDragBehavior	draggingBehavior	= (LDrawMouseDragBehavior)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	LDrawToolMode			toolMode			= [ToolPalette toolMode];
 
 	if([theEvent buttonNumber] == 1)
-		toolMode = SpinTool;
+		toolMode = LDrawToolModeSpin;
 
 	[self makeCurrentContext];
 
@@ -1034,14 +1034,14 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self resetCursor];
 
-	if(toolMode == SmoothZoomTool)
+	if(toolMode == LDrawToolModeSmoothZoom)
 	{
 		NSPoint windowClickedPoint  = [theEvent locationInWindow]; //window coordinates
 		NSPoint	viewClickedPoint	= [self convertPoint:windowClickedPoint fromView:nil ];
 
 		[self->renderer mouseCenterClick:V2Make(viewClickedPoint.x, viewClickedPoint.y)];
 	}
-	else if( toolMode == EraserTool )
+	else if( toolMode == LDrawToolModeEraser )
 	{
 		[self mousePartSelection:theEvent];
 
@@ -1051,9 +1051,9 @@ static Box2 NSRectToBox2(NSRect rect)
 					   to:nil
 					 from:self];
 	}
-	else if(toolMode == RotateSelectTool)
+	else if(toolMode == LDrawToolModeRotateSelect)
 	{
-		if(draggingBehavior == MouseDraggingBeginAfterDelay)
+		if(draggingBehavior == LDrawMouseDraggingBeginAfterDelay)
 		{
 			[self cancelClickAndHoldTimer]; // just in case
 
@@ -1070,7 +1070,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		{
 			[self mousePartSelection:theEvent];
 		}
-		// MouseDraggingOff: no-op. During a drag we'll actually start the marquee.
+		// LDrawMouseDraggingOff: no-op. During a drag we'll actually start the marquee.
 	}
 
 }//end mouseDown:
@@ -1083,13 +1083,13 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) mouseDragged:(NSEvent *)theEvent
 {
-	NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
-	MouseDragBehaviorT  draggingBehavior    = (MouseDragBehaviorT)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
-	ToolModeT           toolMode            = [ToolPalette toolMode];
-	Vector2             dragDelta           = V2Make([theEvent deltaX], [theEvent deltaY]);
+	NSUserDefaults         *userDefaults       = [NSUserDefaults standardUserDefaults];
+	LDrawMouseDragBehavior draggingBehavior    = (LDrawMouseDragBehavior)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
+	LDrawToolMode          toolMode            = [ToolPalette toolMode];
+	Vector2                dragDelta           = V2Make([theEvent deltaX], [theEvent deltaY]);
 
 	if([theEvent buttonNumber] == 1)
-		toolMode = SpinTool;
+		toolMode = LDrawToolModeSpin;
 
 	[self makeCurrentContext];
 
@@ -1105,22 +1105,22 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	//What to do?
 
-	if(toolMode == PanScrollTool)
+	if(toolMode == LDrawToolModePanScroll)
 	{
 		NSPoint point_window	= [theEvent locationInWindow];
 		NSPoint point_view		= [self convertPoint:point_window fromView:nil ];
 
 		[self->renderer panDragged:dragDelta location:V2Make(point_view.x, point_view.y)];
 	}
-	else if(toolMode == SpinTool)
+	else if(toolMode == LDrawToolModeSpin)
 	{
 		[self->renderer rotationDragged:dragDelta];
 	}
-	else if(toolMode == SmoothZoomTool)
+	else if(toolMode == LDrawToolModeSmoothZoom)
 	{
 		[self->renderer zoomDragged:dragDelta];
 	}
-	else if(toolMode == RotateSelectTool)
+	else if(toolMode == LDrawToolModeRotateSelect)
 	{
 		LDrawRotateSelectDragAction dragAction =
 			[LDrawViewPolicy rotateSelectDragActionForBehavior:draggingBehavior
@@ -1156,9 +1156,9 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) mouseUp:(NSEvent *)theEvent
 {
-	ToolModeT			 toolMode			= [ToolPalette toolMode];
+	LDrawToolMode	toolMode = [ToolPalette toolMode];
 	if([theEvent buttonNumber] == 1)
-		toolMode = SpinTool;
+		toolMode = LDrawToolModeSpin;
 
 	[self makeCurrentContext];
 
@@ -1179,7 +1179,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self cancelClickAndHoldTimer];
 
-	if( toolMode == RotateSelectTool )
+	if( toolMode == LDrawToolModeRotateSelect )
 	{
 		//We only want to select a part if this was NOT part of a mouseDrag event.
 		// Otherwise, the selection should remain intact.
@@ -1188,8 +1188,8 @@ static Box2 NSRectToBox2(NSRect rect)
 			[self mousePartSelection:theEvent];
 		}
 	}
-	else if(	toolMode == ZoomInTool
-			||	toolMode == ZoomOutTool )
+	else if(	toolMode == LDrawToolModeZoomIn
+			||	toolMode == LDrawToolModeZoomOut )
 	{
 		[self mouseZoomClick:theEvent];
 	}
@@ -1355,7 +1355,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// button 3
 	if([theEvent buttonNumber] == 2)
 	{
-		// reset normal state while the tool mode is still SpinTool
+		// reset normal state while the tool mode is still LDrawToolModeSpin
 		[self mouseUp:theEvent];
 		
 		// The Tool Palette is responsible for assessing the current mode based on 
@@ -1482,7 +1482,7 @@ static Box2 NSRectToBox2(NSRect rect)
             //NSLog(@"DO UPDATE IN dragAndDropDragged");
             for (LDrawDirective *directive in [ldrawDelegate selectedObjects]) {
                 //NSLog(@"directive: %@", directive);
-                [directive sendMessageToObservers:MessageObservedChanged];
+                [directive sendMessageToObservers:LDrawObserverObservedChanged];
             }
 
 			[self->sceneController setDraggingOffset:displacement];
@@ -1633,7 +1633,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) mouseZoomClick:(NSEvent*)theEvent
 {
-	ToolModeT   toolMode            = [ToolPalette toolMode];
+	LDrawToolMode toolMode          = [ToolPalette toolMode];
 	NSPoint     windowClickedPoint  = [theEvent locationInWindow];
 	NSPoint     viewClickedPoint    = [self convertPoint:windowClickedPoint fromView:nil ];
 	Point2      view_point          = V2Make(viewClickedPoint.x, viewClickedPoint.y);
@@ -1641,11 +1641,11 @@ static Box2 NSRectToBox2(NSRect rect)
 	[self makeCurrentContext];
 
 	// New zoom percentage
-	if(	toolMode == ZoomInTool )
+	if(	toolMode == LDrawToolModeZoomIn )
 	{
 		[self->renderer mouseZoomInClick:view_point];
 	}
-	else if( toolMode == ZoomOutTool )
+	else if( toolMode == LDrawToolModeZoomOut )
 	{
 		[self->renderer mouseZoomOutClick:view_point];
 	}
@@ -1943,7 +1943,7 @@ static Box2 NSRectToBox2(NSRect rect)
     // this doesn't cause a redraw.  Would be nice if it did.
     for (LDrawDirective *directive in [ldrawDelegate selectedObjects]) {
 //        NSLog(@"directive: %@", directive);
-        [directive sendMessageToObservers:MessageObservedChanged];
+        [directive sendMessageToObservers:LDrawObserverObservedChanged];
     }
 
 	return dragOperation;
@@ -2323,7 +2323,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		NSUserDefaults      *userDefaults       = [NSUserDefaults standardUserDefaults];
 		NSString            *viewingAngleKey    = [LDrawPreferences viewingAnglePreferenceKeyForAutosaveName:self->autosaveName];
 		NSString            *projectionModeKey  = [LDrawPreferences projectionModePreferenceKeyForAutosaveName:self->autosaveName];
-		ViewOrientationT    orientation         = (ViewOrientationT)[userDefaults integerForKey:viewingAngleKey];
+		LDrawViewOrientation    orientation     = (LDrawViewOrientation)[userDefaults integerForKey:viewingAngleKey];
 		LDrawProjectionMode projection          = (LDrawProjectionMode)[userDefaults integerForKey:projectionModeKey];
 		
 		// It's imperative to read the modes from defaults prior to calling this 

@@ -59,15 +59,15 @@
     LDrawLSynth	*representedObject	= [self object];
 
     // Update the object
-	LSynthClassT	classType	= (LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag];
-	NSArray 		*types		= [[LSynthConfiguration sharedInstance] typesForLSynthClass:classType];
+	LDrawLSynthClass classType	= (LDrawLSynthClass)[[lsynthClassChooserMatrix selectedCell] tag];
+	NSArray 		 *types		= [[LSynthConfiguration sharedInstance] typesForLSynthClass:classType];
 
-    [representedObject setLsynthClass:(LSynthClassT)[[lsynthClassChooserMatrix selectedCell] tag]];
+    [representedObject setLsynthClass:(LDrawLSynthClass)[[lsynthClassChooserMatrix selectedCell] tag]];
     [representedObject setLsynthType:[LSynthConfiguration typeNameAtIndex:[typePopup indexOfSelectedItem]
 																  inTypes:types]];
 
     [[LSynthConfiguration sharedInstance] applyDefaultConstraintsToLSynth:representedObject
-																classType:(LSynthClassT)[[sender selectedCell] tag]];
+																classType:(LDrawLSynthClass)[[sender selectedCell] tag]];
 
     // We've made a change so resynthesis is probably required.
     [representedObject invalCache:ContainerInvalid];
@@ -171,11 +171,11 @@
 
 - (void) populateDefaultConstraint:(int)classTag
 {
-    NSDictionary *selectedType = [LSynthConfiguration selectedTypeForClass:(LSynthClassT)classTag
+    NSDictionary *selectedType = [LSynthConfiguration selectedTypeForClass:(LDrawLSynthClass)classTag
                                                                    atIndex:[typePopup indexOfSelectedItem]];
 
-    LSynthClassT constraintClass = [LSynthConfiguration constraintClassForSynthClass:(LSynthClassT)classTag
-                                                                        selectedType:selectedType];
+    LDrawLSynthClass constraintClass = [LSynthConfiguration constraintClassForSynthClass:(LDrawLSynthClass)classTag
+                                                                            selectedType:selectedType];
     NSArray *constraints = [[LSynthConfiguration sharedInstance] constraintsForClass:constraintClass];
     NSString *defaultConstraint = [LSynthConfiguration defaultConstraintForClass:constraintClass];
     NSArray *descriptions = [LSynthConfiguration constraintPopupDescriptionsFromConstraints:constraints];
@@ -232,13 +232,13 @@
     // Check that we're actually selecting a different class of synthesized part
     if ([[sender selectedCell] tag] != [representedObject lsynthClass]) {
         
-        [self updateSynthTypeLabel:(LSynthClassT)[[sender selectedCell] tag]];
+        [self updateSynthTypeLabel:(LDrawLSynthClass)[[sender selectedCell] tag]];
 
         // Populate the types dropdown correctly
         [self populateTypes:(int)[[sender selectedCell] tag]];
 
         // Select the default type for the class
-        NSString *typeName = [LSynthConfiguration defaultTypeNameForClass:(LSynthClassT)[[sender selectedCell] tag]];
+        NSString *typeName = [LSynthConfiguration defaultTypeNameForClass:(LDrawLSynthClass)[[sender selectedCell] tag]];
         NSDictionary *type = nil;
         if(typeName != nil)
         {
@@ -301,7 +301,7 @@
 // Purpose:		Show the label type.
 //
 //==============================================================================
-- (void) updateSynthTypeLabel:(LSynthClassT)tag
+- (void) updateSynthTypeLabel:(LDrawLSynthClass)tag
 {
     NSString *label = [LSynthConfiguration typeLabelForClass:tag];
     if(label != nil)

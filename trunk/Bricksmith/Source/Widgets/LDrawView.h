@@ -82,7 +82,7 @@
 - (LDrawProjectionMode) projectionMode;
 - (LDrawLocationMode) locationMode;
 - (Tuple3) viewingAngle;
-- (ViewOrientationT) viewOrientation;
+- (LDrawViewOrientation) viewOrientation;
 - (CGFloat) zoomPercentage;
 
 - (void) setAcceptsFirstResponder:(BOOL)flag;
@@ -90,13 +90,13 @@
 - (void) setBackAction:(SEL)newAction;
 - (void) setLDrawDelegate:(id)object;
 - (void) setForwardAction:(SEL)newAction;
-- (void) setGridSpacingMode:(gridSpacingModeT)newMode;
+- (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode;
 - (void) setLDrawDirective:(LDrawDirective *) newFile;
 - (void) setNudgeAction:(SEL)newAction;
 - (void) setProjectionMode:(LDrawProjectionMode) newProjectionMode;
 - (void) setLocationMode:(LDrawLocationMode) newLocationMode;
 - (void) setTarget:(id)target;
-- (void) setViewOrientation:(ViewOrientationT) newAngle;
+- (void) setViewOrientation:(LDrawViewOrientation) newAngle;
 - (void) setZoomPercentage:(CGFloat) newPercentage;
 - (void) setFocusRingVisible:(BOOL)isVisible;
 

@@ -16,7 +16,7 @@
 #define PREFS_STYLE_TAB_IDENTIFIER		@"PreferencesTabStyles"
 #define PREFS_LSYNTH_TAB_IDENTIFIER     @"PreferencesTabLSynth"
 
-// LSynthSelectionModeT moved into LDrawLSynthConfigSource.h (LDrawCore) so
+// LDrawLSynthSelectionMode moved into LDrawLSynthConfigSource.h (LDrawCore) so
 // the model layer can interpret the preference without pulling in the
 // AppKit preferences pane.
 #import <LDrawCore/LDrawLSynthConfigSource.h>

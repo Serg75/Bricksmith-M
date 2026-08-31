@@ -392,7 +392,7 @@
 
 
 #pragma mark -
-#pragma mark UTILITES
+#pragma mark UTILITIES
 #pragma mark -
 
 //========== containsReferenceTo: ==============================================
@@ -529,7 +529,7 @@
 //				eventful happens - we can respond if desired.
 //
 //==============================================================================
-- (void) receiveMessage:(MessageT) msg who:(id<LDrawObservable>) observable
+- (void) receiveMessage:(LDrawObserverMessage) msg who:(id<LDrawObservable>) observable
 {
 }
 

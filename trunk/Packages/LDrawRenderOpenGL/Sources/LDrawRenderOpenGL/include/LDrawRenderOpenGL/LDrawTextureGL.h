@@ -14,6 +14,8 @@
 
 #import <LDrawCore/LDrawContainer.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawTextureGL
@@ -28,3 +30,5 @@
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

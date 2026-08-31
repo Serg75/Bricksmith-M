@@ -319,7 +319,7 @@
 - (void) setEnclosingDirective:(LDrawContainer *)newParent
 {
 	[super setEnclosingDirective:newParent];
-	[self sendMessageToObservers:MessageScopeChanged];
+	[self sendMessageToObservers:LDrawObserverScopeChanged];
 }
 
 
@@ -365,7 +365,7 @@
 {
 	modelName = newModelName;
 	
-	[self sendMessageToObservers:MessageNameChanged];
+	[self sendMessageToObservers:LDrawObserverNameChanged];
 	
 }//end setModelName:
 

@@ -19,12 +19,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef enum SearchMode
+typedef NS_ENUM(NSInteger, LDrawPartBrowserSearchMode)
 {
-	SearchModeAllCategories	= 0,
-	SearchModeSelectedCategory = 1
+	LDrawPartBrowserSearchAllCategories	= 0,
+	LDrawPartBrowserSearchSelectedCategory = 1
 
-} SearchModeT;
+};
 
 //------------------------------------------------------------------------------
 ///
@@ -35,11 +35,11 @@ typedef enum SearchMode
 //------------------------------------------------------------------------------
 @interface LDrawPartBrowserModel : NSObject
 
-@property (nonatomic, strong)         LDrawPartLibrary *partLibrary;
-@property (nonatomic, copy)           NSString         *currentCategory;
-@property (nonatomic, copy, nullable) NSString         *searchString;
-@property (nonatomic, assign)         SearchModeT       searchMode;
-@property (nonatomic, readonly)       NSArray          *filteredParts;
+@property (nonatomic, strong)         LDrawPartLibrary              *partLibrary;
+@property (nonatomic, copy)           NSString                      *currentCategory;
+@property (nonatomic, copy, nullable) NSString                      *searchString;
+@property (nonatomic, assign)         LDrawPartBrowserSearchMode    searchMode;
+@property (nonatomic, readonly)       NSArray                       *filteredParts;
 
 - (instancetype)initWithPartLibrary:(LDrawPartLibrary *)library;
 

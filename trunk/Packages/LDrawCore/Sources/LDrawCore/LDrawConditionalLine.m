@@ -261,7 +261,7 @@
 		if([self->color colorCode] == LDrawCurrentColor)
 			[renderer drawConditionalLine:v normal:n color:LDrawRenderCurrentColor];
 		else if([self->color colorCode] == LDrawEdgeColor)
-			[renderer drawConditionalLine:v normal:n color:LDrawRenderComplimentColor];
+			[renderer drawConditionalLine:v normal:n color:LDrawRenderComplementColor];
 		else
 		{
 			float rgba[4];

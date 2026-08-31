@@ -13,6 +13,8 @@
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 
 //------------------------------------------------------------------------------
 ///
@@ -39,7 +41,7 @@
 	NSMutableArray		*minifigureHandsRight;
 	NSMutableArray		*minifigureHandsRightAccessories;
 	NSMutableArray		*minifigureLegsLeft;
-	NSMutableArray		*minifigureLegsLeftAcessories;
+	NSMutableArray		*minifigureLegsLeftAccessories;
 	NSMutableArray		*minifigureLegsRight;
 	NSMutableArray		*minifigureLegsRightAccessories;
 }
@@ -61,7 +63,7 @@
 - (NSArray *) minifigureHandsRight;
 - (NSArray *) minifigureHandsRightAccessories;
 - (NSArray *) minifigureLegsLeft;
-- (NSArray *) minifigureLegsLeftAcessories;
+- (NSArray *) minifigureLegsLeftAccessories;
 - (NSArray *) minifigureLegsRight;
 - (NSArray *) minifigureLegsRightAccessories;
 
@@ -71,3 +73,5 @@
 - (void) parseFromPath:(NSString *) path;
 
 @end
+
+NS_ASSUME_NONNULL_END

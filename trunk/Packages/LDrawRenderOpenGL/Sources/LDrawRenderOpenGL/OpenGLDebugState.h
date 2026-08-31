@@ -1,17 +1,17 @@
 //==============================================================================
 //
-//  File:       OpenGLUtilities.h
-//  Package:    LDrawRenderOpenGL
+//  File:		OpenGLDebugState.h
+//  Package:	LDrawRenderOpenGL
 //
-//  Purpose:    Debug helpers for querying OpenGL enable bits and integer state.
+//  Purpose:	Debug helpers for querying OpenGL enable bits and integer state.
+//				Not a sibling of MetalUtilities (matrix conversion).
 //
 //  Created by bsupnik on 7/5/12.
-//  Copyright 2012 __MyCompanyName__. All rights reserved.
 //
 //==============================================================================
 
-#ifndef OpenGLUtilities_h
-#define OpenGLUtilities_h
+#ifndef OpenGLDebugState_h
+#define OpenGLDebugState_h
 
 #include <OpenGL/gl.h>
 
@@ -25,4 +25,4 @@ GLboolean		glCheckInteger(GLenum cap, GLint value);
 
 #endif
 
-#endif /* OpenGLUtilities_h */
+#endif /* OpenGLDebugState_h */

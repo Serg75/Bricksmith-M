@@ -259,7 +259,7 @@
 		if([self->color colorCode] == LDrawCurrentColor)	
 			[renderer drawTri:v normal:n color:LDrawRenderCurrentColor];
 		else if([self->color colorCode] == LDrawEdgeColor)	
-			[renderer drawTri:v normal:n color:LDrawRenderComplimentColor];
+			[renderer drawTri:v normal:n color:LDrawRenderComplementColor];
 		else
 		{
 			float rgba[4];

@@ -81,17 +81,9 @@
 			inRange:(NSRange)range
 {
 	LDrawDirective      *directive  = nil;
-	dispatch_group_t    group       = NULL;
 	
-#if USE_BLOCKS
-	group = dispatch_group_create();
-#endif
-
-	directive = [self initWithLines:lines inRange:range parentGroup:group];
+	directive = [self initWithLines:lines inRange:range parentGroup:NULL];
 	
-#if USE_BLOCKS
-	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-#endif
 	
 	return directive;
 	
@@ -827,7 +819,7 @@
 //				set is private.
 //
 //==============================================================================
-- (void)sendMessageToObservers:(MessageT) msg
+- (void)sendMessageToObservers:(LDrawObserverMessage) msg
 {
 	for (NSValue * o in observers.objectEnumerator)
 	{

@@ -124,11 +124,6 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	
 	favorites                   = [[NSMutableArray alloc] init];
 	
-#if USE_BLOCKS
-	catalogAccessQueue          = dispatch_queue_create("com.AllenSmith.Bricksmith.CatalogAccess", NULL);
-#endif
-	parsingGroups               = [[NSMutableDictionary alloc] init];
-	
 	[self setPartCatalog:@{}];
 	
 	return self;
@@ -596,93 +591,17 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 - (void)loadImageForName:(NSString *)imageName
 				 inGroup:(dispatch_group_t)parentGroup
 {
-	// Determine if the model needs to be parsed.
-	// Dispatch to a serial queue to effectively mutex the query
-#if USE_BLOCKS
-	dispatch_group_async(parentGroup, self->catalogAccessQueue,
-	^{
-		NSMutableArray  *requestingGroups   = nil;
-#endif
-		CGImageRef      image              = NULL;
-		BOOL            alreadyParsing      = NO;	// another thread is already parsing partName
-	
-		// Already been parsed?
-		image = (__bridge CGImageRef)[self->loadedImages objectForKey:imageName];
-		if (image == nil)
+	(void)parentGroup;
+	CGImageRef image = (__bridge CGImageRef)[self->loadedImages objectForKey:imageName];
+	if (image == nil)
+	{
+		NSString *imagePath = [[LDrawPaths sharedPaths] pathForTextureName:imageName];
+		image = (CGImageRef)[self readImageAtPath:imagePath asynchronously:NO completionHandler:NULL];
+		if (image != nil)
 		{
-#if USE_BLOCKS
-			// Is it being parsed? If so, all we need to do is wait for whoever 
-			// is parsing it to finish. 
-			requestingGroups    = [self->parsingGroups objectForKey:imageName];
-			alreadyParsing      = (requestingGroups != nil);
-			
-			if (alreadyParsing == NO)
-			{
-				// Start a registry for all the dispatch groups which attempt to 
-				// load the same model. When parsing is complete, they will all 
-				// be signaled. 
-				requestingGroups = [[NSMutableArray alloc] init];
-				[self->parsingGroups setObject:requestingGroups forKey:imageName];
-				[requestingGroups release];
-			}
-				
-			// Register the calling group as having also requested a parse 
-			// for this file. This ensures the calling group cannot complete 
-			// until the parse is complete on whatever thread is actually 
-			// doing it. 
-			dispatch_group_enter(parentGroup);
-			[requestingGroups addObject:[NSValue valueWithPointer:CFBridgingRetain(parentGroup)]];
-#endif
-			
-			// Nobody has started parsing it yet, so we win! Parse from disk.
-			if (alreadyParsing == NO)
-			{
-#if USE_BLOCKS
-				dispatch_group_async(parentGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
-				^{
-#endif
-					NSString    *imagePath   = [[LDrawPaths sharedPaths] pathForTextureName:imageName];
-						
-#if USE_BLOCKS //------------------------------------------------------
-					[self readImageAtPath:imagePath asynchronously:YES completionHandler:^(CGImageRef image)
-					{
-						if (image) CFRetain(image);
-						
-						// Register new image in the library (serial queue "mutex" protected)
-						dispatch_group_async(parentGroup, self->catalogAccessQueue,
-						^{
-							if (image != nil)
-							{
-								[self->loadedImages setObject:(__bridge id)image forKey:imageName];
-							}
-							
-							// Notify waiting threads we are finished parsing this part.
-							for (NSValue *waitingGroupPtr in requestingGroups)
-							{
-								dispatch_group_t waitingGroup = [waitingGroupPtr pointerValue];
-								dispatch_group_leave(waitingGroup);
-							}
-							[self->parsingGroups removeObjectForKey:imageName];
-							
-							if (image) CFRelease(image);
-						});
-					}];
-#else //------------------------------------------------------------------------
-					// **** Non-multithreaded fallback code ****
-					image = (CGImageRef)[self readImageAtPath:imagePath asynchronously:NO completionHandler:NULL];
-					if (image != nil)
-					{
-						[self->loadedImages setObject:(__bridge id)image forKey:imageName];
-					}
-#endif //-----------------------------------------------------------------------
-#if USE_BLOCKS
-				});
-#endif
-			}
+			[self->loadedImages setObject:(__bridge id)image forKey:imageName];
 		}
-#if USE_BLOCKS
-	});
-#endif
+	}
 	
 } // end loadImageForName:
 
@@ -696,89 +615,17 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 - (void)loadModelForName:(NSString *)partName
 				 inGroup:(dispatch_group_t)parentGroup
 {
-	// Determine if the model needs to be parsed.
-	// Dispatch to a serial queue to effectively mutex the query
-#if USE_BLOCKS
-	dispatch_group_async(parentGroup, self->catalogAccessQueue,
-	^{
-		NSMutableArray  *requestingGroups   = nil;
-#endif
-		LDrawModel      *model              = nil;
-		BOOL            alreadyParsing      = NO;	// another thread is already parsing partName
-	
-		// Already been parsed?
-		model = [self->loadedFiles objectForKey:partName];
-		if (model == nil)
+	(void)parentGroup;
+	LDrawModel *model = [self->loadedFiles objectForKey:partName];
+	if (model == nil)
+	{
+		NSString *partPath = [[LDrawPaths sharedPaths] pathForPartName:partName];
+		model = [self readModelAtPath:partPath asynchronously:NO completionHandler:NULL];
+		if (model != nil)
 		{
-#if USE_BLOCKS
-			// Is it being parsed? If so, all we need to do is wait for whoever 
-			// is parsing it to finish. 
-			requestingGroups    = [self->parsingGroups objectForKey:partName];
-			alreadyParsing      = (requestingGroups != nil);
-			
-			if (alreadyParsing == NO)
-			{
-				// Start a registry for all the dispatch groups which attempt to 
-				// load the same model. When parsing is complete, they will all 
-				// be signaled. 
-				requestingGroups = [[NSMutableArray alloc] init];
-				[self->parsingGroups setObject:requestingGroups forKey:partName];
-				[requestingGroups release];
-			}
-				
-			// Register the calling group as having also requested a parse 
-			// for this file. This ensures the calling group cannot complete 
-			// until the parse is complete on whatever thread is actually 
-			// doing it. 
-			dispatch_group_enter(parentGroup);
-			[requestingGroups addObject:[NSValue valueWithPointer:CFBridgingRetain(parentGroup)]];
-#endif
-			
-			// Nobody has started parsing it yet, so we win! Parse from disk.
-			if (alreadyParsing == NO)
-			{
-#if USE_BLOCKS
-				dispatch_group_async(parentGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
-				^{
-#endif
-					NSString    *partPath   = [[LDrawPaths sharedPaths] pathForPartName:partName];
-						
-#if USE_BLOCKS //------------------------------------------------------
-					[self readModelAtPath:partPath asynchronously:YES completionHandler:^(LDrawModel *model)
-					{
-						// Register new model in the library (serial queue "mutex" protected)
-						dispatch_group_async(parentGroup, self->catalogAccessQueue,
-						^{
-							if (model != nil)
-							{
-								[self->loadedFiles setObject:model forKey:partName];
-							}
-							
-							// Notify waiting threads we are finished parsing this part.
-							for (NSValue *waitingGroupPtr in requestingGroups)
-							{
-								dispatch_group_t waitingGroup = [waitingGroupPtr pointerValue];
-								dispatch_group_leave(waitingGroup);
-							}
-							[self->parsingGroups removeObjectForKey:partName];
-						});
-					}];
-#else //------------------------------------------------------------------------
-					// **** Non-multithreaded fallback code ****
-					model = [self readModelAtPath:partPath asynchronously:NO completionHandler:NULL];
-					if (model != nil)
-					{
-						[self->loadedFiles setObject:model forKey:partName];
-					}
-#endif //-----------------------------------------------------------------------
-#if USE_BLOCKS
-				});
-#endif
-			}
+			[self->loadedFiles setObject:model forKey:partName];
 		}
-#if USE_BLOCKS
-	});
-#endif
+	}
 	
 } // end loadModelForName:
 
@@ -1023,49 +870,14 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 
 //========== modelForNameThreadSafe: ==========================================
 //
-// Purpose:		Returns the model to which this part name refers, thread-safe.
-//
-// Notes:		This will NOT attempt to read the file off disk. This method is 
-//				only intended to be called during the multi-threaded file 
-//				loading process, so there should be no need to do lazy loading.
+// Purpose:		Returns the model to which this part name refers from the 
+//				already-loaded cache. Does not read from disk.
 //
 //==============================================================================
 - (LDrawModel *)modelForNameThreadSafe:(NSString *)imageName
 {
-	__block LDrawModel	*model		= nil;
-
-#if USE_BLOCKS
-	dispatch_sync(self->catalogAccessQueue, ^{
-#endif	
-		model = [self->loadedFiles objectForKey:imageName];
-#if USE_BLOCKS		
-	});
-#endif	
-	
-	return model;
+	return [self->loadedFiles objectForKey:imageName];
 }
-
-#pragma mark -
-
-//========== optimizedDrawableForPart:color: ==================================
-//
-// Purpose:		Returns a vertex container which has been optimized to draw the 
-//				given part. Vertex objects are shared among multiple part 
-//				instances of the same name and color in order to reduce memory 
-//				space. 
-//
-// Parameters:	part	- part to get/create a display list for.
-//				color	- RGBA color for the part. We can't just ask the part for 
-//						  its color because it might be LDrawCurrentColor, in 
-//						  which case it is supposed to draw with its parent 
-//						  color. 
-//
-//==============================================================================
-- (LDrawDirective *)optimizedDrawableForPart:(LDrawPart *) part
-									   color:(LDrawColor *)color
-{
-	assert(!"Not used.\n");
-} // end optimizedDrawableForPart:color:
 
 
 #pragma mark -
@@ -1141,37 +953,9 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 			   asynchronously:(BOOL)asynchronous
 			completionHandler:(void (^)(CGImageRef))completionBlock
 {
-#if USE_BLOCKS
-	dispatch_group_t    group           = NULL;
-	__block
-#endif
-	CGImageRef			image          = nil;
-	
-#if USE_BLOCKS
-	group           = dispatch_group_create();
-#endif
-	
-#if USE_BLOCKS
-	if (asynchronous == NO)
-	{
-		dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-#endif
-		image = [LDrawUtilities imageAtPath:imagePath];
-#if USE_BLOCKS
-	}
-	else
-	{
-		dispatch_group_notify(group, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
-							  ^{
-								  image = [LDrawUtilities imageAtPath:imagePath];
-								  
-								  if (completionBlock)
-									  completionBlock(image);
-							  });
-	}
-#endif
-	
-	return image;
+	(void)asynchronous;
+	(void)completionBlock;
+	return [LDrawUtilities imageAtPath:imagePath];
 	
 } // end readImageAtPath:
 
@@ -1193,15 +977,10 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	NSString            *fileContents   = nil;
 	NSArray             *lines          = nil;
 	LDrawFile           *parsedFile     = nil;
-	dispatch_group_t    group           = NULL;
-#if USE_BLOCKS
-	__block
-#endif
-			LDrawModel  *model          = nil;
-	
-#if USE_BLOCKS
-	group           = dispatch_group_create();
-#endif
+	LDrawModel          *model          = nil;
+
+	(void)asynchronous;
+	(void)completionBlock;
 
 	if (partPath != nil)
 	{
@@ -1212,38 +991,17 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 		
 		parsedFile      = [[LDrawFile alloc] initWithLines:lines
 												   inRange:NSMakeRange(0, [lines count])
-											   parentGroup:group];
+											   parentGroup:NULL];
 	}
 	
-#if USE_BLOCKS
-	if (asynchronous == NO)
-	{
-		dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-#endif
-		[parsedFile optimizeStructure];
-		model = [[parsedFile submodels] objectAtIndex:0];
-		// We are "leaking" the enclosing file, but returning an internal model 
-		// without disconnecting it from its file is pretty dodgy and it would 
-		// be easy to code a bug in. We'd be better off returning the file 
-		// itself, or perhaps removing the model from its file (since everything 
-		// is theoretically flattened). 
-//		[parsedFile release];
-#if USE_BLOCKS
-	}
-	else
-	{
-		dispatch_group_notify(group, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
-							  ^{
-								  [parsedFile optimizeStructure];
-								  model = [[[[parsedFile submodels] objectAtIndex:0] retain] autorelease];
-								  
-								  if (completionBlock)
-									  completionBlock(model);
-								  
-								  //			[parsedFile release]; // see notes above
-							  });
-	}
-#endif
+	[parsedFile optimizeStructure];
+	model = [[parsedFile submodels] objectAtIndex:0];
+	// We are "leaking" the enclosing file, but returning an internal model 
+	// without disconnecting it from its file is pretty dodgy and it would 
+	// be easy to code a bug in. We'd be better off returning the file 
+	// itself, or perhaps removing the model from its file (since everything 
+	// is theoretically flattened). 
+//	[parsedFile release];
 	
 	return model;
 	

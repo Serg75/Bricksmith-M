@@ -164,7 +164,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     Class              CommandClass        = Nil;
     NSRange            commandRange        = range;
     NSUInteger         lineIndex           = 0;
-    LSynthParserStateT parserState         = PARSER_READY_TO_PARSE;
+    LDrawLSynthParserState parserState     = LDrawLSynthParserReadyToParse;
 
     self = [self init]; // Basic initialisation, not related to parsing
     self = [super initWithLines:lines inRange:range parentGroup:parentGroup];
@@ -185,7 +185,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
             // 0 SYNTH BEGIN <SYNTH_TYPE> <COLOR>
             if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+BEGIN\\s+(\\S+?)\\s+(\\S+)"] &&
-                parserState == PARSER_READY_TO_PARSE)  {
+                parserState == LDrawLSynthParserReadyToParse)  {
 
                 NSArray *paramMatches = [currentLine arrayOfCaptureComponentsMatchedByRegex:@"0\\s+SYNTH\\s+BEGIN\\s+(\\S+?)\\s+(\\S+)"];
 
@@ -196,39 +196,39 @@ static id<LDrawLSynthConfigSource> config_source = nil;
                 [self setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:(LDrawColorT) [synthColor integerValue]]];
 
                 [[LDrawLSynth configSource] setLSynthClassForDirective:self withType:type];
-                parserState = PARSER_PARSING_BEGUN;
+                parserState = LDrawLSynthParserParsingBegun;
             }
 
             // 0 SYNTH END - Synthesized parts may or may not be present
             else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+END"] &&
-                    (parserState == PARSER_PARSING_CONSTRAINTS ||
-                     parserState == PARSER_SYNTHESIZED_FINISHED)) {
-                parserState = PARSER_FINISHED;
+                    (parserState == LDrawLSynthParserParsingConstraints ||
+                     parserState == LDrawLSynthParserSynthesizedFinished)) {
+                parserState = LDrawLSynthParserFinished;
             }
 
             // 0 SYNTH SHOW or
             // 0 SYNTH HIDE
             else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+(?:SHOW|HIDE)"] &&
-               parserState == PARSER_PARSING_BEGUN) {
-                parserState = PARSER_PARSING_CONSTRAINTS;
+               parserState == LDrawLSynthParserParsingBegun) {
+                parserState = LDrawLSynthParserParsingConstraints;
             }
 
             // 0 SYNTH SYNTHESIZED BEGIN - start of synthesized constraints
             else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+SYNTHESIZED\\s+BEGIN"] &&
-                    parserState == PARSER_PARSING_CONSTRAINTS) {
-                parserState = PARSER_PARSING_SYNTHESIZED;
+                    parserState == LDrawLSynthParserParsingConstraints) {
+                parserState = LDrawLSynthParserParsingSynthesized;
             }
 
             // 0 SYNTH SYNTHESIZED BEGIN - end of synthesized constraints
             else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+SYNTHESIZED\\s+END"] &&
-                    parserState == PARSER_PARSING_SYNTHESIZED) {
-                parserState = PARSER_SYNTHESIZED_FINISHED;
+                    parserState == LDrawLSynthParserParsingSynthesized) {
+                parserState = LDrawLSynthParserSynthesizedFinished;
             }
 
             // 0 SYNTH INSIDE or
             // 0 SYNTH OUTSIDE or
             // 0 SYNTH CROSS
-            else if (parserState == PARSER_PARSING_CONSTRAINTS &&
+            else if (parserState == LDrawLSynthParserParsingConstraints &&
                 [currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+(INSIDE|OUTSIDE|CROSS)"]) {
 
                 NSString *direction = [[[currentLine arrayOfCaptureComponentsMatchedByRegex:@"(INSIDE|OUTSIDE|CROSS)"] objectAtIndex:0] objectAtIndex:0];
@@ -244,9 +244,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
             //
 
             else if ([currentLine isMatchedByRegex:@"^1\\s+"] &&
-                     (parserState == PARSER_PARSING_BEGUN ||
-                      parserState == PARSER_PARSING_CONSTRAINTS ||
-                      parserState == PARSER_PARSING_SYNTHESIZED)) {
+                     (parserState == LDrawLSynthParserParsingBegun ||
+                      parserState == LDrawLSynthParserParsingConstraints ||
+                      parserState == LDrawLSynthParserParsingSynthesized)) {
 
                 // Either way, create a part
                 CommandClass = [LDrawUtilities classForDirectiveBeginningWithLine:currentLine];
@@ -262,12 +262,12 @@ static id<LDrawLSynthConfigSource> config_source = nil;
                 [newDirective addObserver:self];
 
                 // Add our part in the correct place
-                if (parserState == PARSER_PARSING_CONSTRAINTS) {
+                if (parserState == LDrawLSynthParserParsingConstraints) {
                     [newDirective setIconName:[self determineIconName:newDirective]];
                     [[self subdirectives] addObject:newDirective];
                 }
 
-                else if (parserState == PARSER_PARSING_SYNTHESIZED) {
+                else if (parserState == LDrawLSynthParserParsingSynthesized) {
                     [synthesizedParts addObject:newDirective];
                 }
             }
@@ -287,7 +287,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
             //
 
             else {
-                NSLog(@"Unexpected line in LSynth definition at line %lu: %@ (state: %i)", (long)(lineIndex + 1), currentLine, parserState);
+                NSLog(@"Unexpected line in LSynth definition at line %lu: %@ (state: %i)", (long)(lineIndex + 1), currentLine, (int)parserState);
             }
 
             lineIndex += 1;
@@ -487,11 +487,11 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     if (self->hidden == NO)
     {
         // Draw each constraint, if:
-        if ([self isSelected] == YES ||               // We're selected
-                self->subdirectiveSelected != NO ||   // A subdirective (constraint) is selected
-                self->lsynthClass == LSYNTH_BAND ||   // We're a Band, so show constraints regardless
-                (self->lsynthClass == LSYNTH_PART &&  // We're a Band PART
-                 [self partClass] == LSYNTH_BAND)
+        if ([self isSelected] == YES ||                         // We're selected
+                self->subdirectiveSelected != NO ||             // A subdirective (constraint) is selected
+                self->lsynthClass == LDrawLSynthClassBand ||    // We're a Band, so show constraints regardless
+                (self->lsynthClass == LDrawLSynthClassPart &&   // We're a Band PART
+                 [self partClass] == LDrawLSynthClassBand)
                 ) {
             for (currentDirective in constraints)
             {
@@ -1003,7 +1003,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     // Modifies the constraints to provide automatic OUTSIDE/INSIDE determination for
     // constraints inside the convex hull.  Dig down for more details.
     BOOL doAutoHull = YES; // Placeholder until we make it a configurable setting
-    if (doAutoHull == YES && self->lsynthClass == LSYNTH_BAND) {
+    if (doAutoHull == YES && self->lsynthClass == LDrawLSynthClassBand) {
         // TODO: Turned off while the Inspector code is fleshed out
         //[self doAutoHullOnBand];
     }
@@ -1035,7 +1035,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
     // Create an LDraw file in memory
     LDrawColorT code = self->subdirectiveSelected ? LDrawClear : [[self LDrawColor] colorCode] ;
-    input = [input stringByAppendingFormat:@"0 SYNTH BEGIN %@ %d\n", self->synthType, code];
+    input = [input stringByAppendingFormat:@"0 SYNTH BEGIN %@ %d\n", self->synthType, (int)code];
     input = [input stringByAppendingFormat:@"0 SYNTH %@\n", @"SHOW"]; // TODO: honour visibility?
     for (LDrawPart *part in [self subdirectives]) {
         input = [input stringByAppendingFormat:@"%@\n", [part write]];
@@ -1352,21 +1352,21 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 - (NSString *)determineIconName:(LDrawDirective *)directive
 {
     // Hose
-    if (self->lsynthClass == LSYNTH_HOSE) {
+    if (self->lsynthClass == LDrawLSynthClassHose) {
         return @"LSynthHoseConstraint";
     }
 
     // Band
-    else if (self->lsynthClass == LSYNTH_BAND) {
+    else if (self->lsynthClass == LDrawLSynthClassBand) {
         return @"LSynthBandConstraint";
     }
 
     // Part
-    else if (self->lsynthClass == LSYNTH_PART) {
-        if ([self partClass] == LSYNTH_HOSE) {
+    else if (self->lsynthClass == LDrawLSynthClassPart) {
+        if ([self partClass] == LDrawLSynthClassHose) {
             return @"LSynthHoseConstraint";
         }
-        else if ([self partClass] == LSYNTH_BAND) {
+        else if ([self partClass] == LDrawLSynthClassBand) {
             return @"LSynthBandConstraint";
         }
     }
@@ -1387,7 +1387,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 - (void)colorSelectedSynthesizedParts:(BOOL)yesNo
 {
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    LSynthSelectionModeT selectionMode = (LSynthSelectionModeT)[userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
+    LDrawLSynthSelectionMode selectionMode = (LDrawLSynthSelectionMode)[userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
     float rgba[4]; // a temporary RGBA color we create and manipulate
     LDrawColor *theColor = [[LDrawColor alloc] init]; // an LDrawColor to set the part's color with
 
@@ -1395,13 +1395,13 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     if (yesNo == YES) {
 
         // Modify the transparency, but use the object's existing color
-        if (selectionMode == TransparentSelection) {
+        if (selectionMode == LDrawLSynthSelectionTransparent) {
             [color getColorRGBA:rgba];
             rgba[3] = ((float)[userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]) / 100;
         }
 
         // Modify the color, with full opacity/no transparency
-        else if (selectionMode == ColoredSelection) {
+        else if (selectionMode == LDrawLSynthSelectionColored) {
             float selectionRGBA[4];
             [LDrawLSynth getSelectionColorRGBA:selectionRGBA];
             rgba[0] = selectionRGBA[0];
@@ -1411,7 +1411,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
         }
 
         // Modify both color and transparency
-        else if (selectionMode == TransparentColoredSelection) {
+        else if (selectionMode == LDrawLSynthSelectionTransparentColored) {
             float selectionRGBA[4];
             [LDrawLSynth getSelectionColorRGBA:selectionRGBA];
             rgba[0] = selectionRGBA[0];
@@ -1517,18 +1517,18 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 //              remove the loops.
 //
 //==============================================================================
-- (LSynthClassT)partClass
+- (LDrawLSynthClass)partClass
 {
-	LSynthClassT class = self->lsynthClass;
+	LDrawLSynthClass class = self->lsynthClass;
 	
-    if (self->lsynthClass == LSYNTH_PART) {
+    if (self->lsynthClass == LDrawLSynthClassPart) {
         NSArray *partTypes = [[LDrawLSynth configSource] getParts];
 
         // Loop over the parts from config, and when we find one matching ourselves
         // use that part's class.
         for (NSDictionary *part in partTypes) {
             if ([[self lsynthType] isEqualToString:[part valueForKey:@"LSYNTH_TYPE"]]) {
-                class = (LSynthClassT)[[part valueForKey:@"LSYNTH_CLASS"] integerValue];
+                class = (LDrawLSynthClass)[[part valueForKey:@"LSYNTH_CLASS"] integerValue];
 				break;
             }
         }
@@ -1554,10 +1554,10 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 //				eventful happens - we can respond if desired.
 //
 //==============================================================================
-- (void)receiveMessage:(MessageT) msg who:(id<LDrawObservable>) observable
+- (void)receiveMessage:(LDrawObserverMessage) msg who:(id<LDrawObservable>) observable
 {
     // Typically if one of our child constraints changed we need to resynthesize
-    if (msg == MessageObservedChanged) {
+    if (msg == LDrawObserverObservedChanged) {
         [self invalCache:ContainerInvalid];
     }
 } //end receiveMessage:who:

@@ -17,7 +17,7 @@ varying vec4	position_eye;
 	attribute	vec4	transform_z;
 	attribute	vec4	transform_w;
 	attribute	vec4	color_current;
-	attribute	vec4	color_compliment;
+	attribute	vec4	color_complement;
 	attribute	float	texture_mix;
 	
 	void main (void)
@@ -41,7 +41,7 @@ varying vec4	position_eye;
 		vec4	col = color;
 		if (col.a == 0.0)
 		{
-			col = mix(color_current,color_compliment, col.r);
+			col = mix(color_current,color_complement, col.r);
 		}
 		gl_FrontColor.a = col.a;
 		gl_FrontColor.rgb = col.rgb;

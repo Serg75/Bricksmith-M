@@ -384,10 +384,10 @@
 		}
 		else
 		{
-			// set directiveCopy to compliment color
-			LDrawColor  *complimentColor        = [parentColor complimentColor];
+			// set directiveCopy to complement color
+			LDrawColor  *complementColor        = [parentColor complementColor];
 			
-			[self setLDrawColor:complimentColor];
+			[self setLDrawColor:complementColor];
 			
 			// then add.
 		}

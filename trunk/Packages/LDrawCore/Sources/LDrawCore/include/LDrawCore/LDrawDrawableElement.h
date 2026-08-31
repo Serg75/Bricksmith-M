@@ -26,6 +26,8 @@ typedef struct
 
 } VBOVertexData;
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawDrawableElement
@@ -55,3 +57,5 @@ typedef struct
 - (Point3) position:(Point3)position snappedToGrid:(float)gridSpacing;
 
 @end
+
+NS_ASSUME_NONNULL_END

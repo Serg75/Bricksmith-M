@@ -23,6 +23,8 @@
 @class LDrawStep;
 @class LDrawPart;
 
+NS_ASSUME_NONNULL_BEGIN
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 //				OBSERVABLE/OBSERVER PROTOCOLS FOR DIRECTIVES
@@ -96,7 +98,7 @@
 // now since it is just used for directives, maintain all directive-related
 // enums and flags here...
 
-typedef enum CacheFlags {
+typedef NS_OPTIONS(NSInteger, CacheFlagsT) {
 
 	// The bounding box of the directive has changed and is no longer valid.
 	CacheFlagBounds      = 1,
@@ -105,26 +107,26 @@ typedef enum CacheFlags {
 
 	// Ben says: ContainerInvalid is _not_ a good cache flag because it is not truly recursive - it is ONLY
 	// invoked on LDrawLSynth directives and should probably be private to that class.
-	// The flag "works" because the class maps the MessageObservedChanged message to inval itself, and 
-	// MessageObservedChanged has been specifically put into LDrawPart, which is the only thing an LSynth 
+	// The flag "works" because the class maps the LDrawObserverObservedChanged message to inval itself, and 
+	// LDrawObserverObservedChanged has been specifically put into LDrawPart, which is the only thing an LSynth 
 	// actually cares about.
-} CacheFlagsT;
+};
 
-typedef enum Message {
+typedef NS_ENUM(NSInteger, LDrawObserverMessage) {
 
 	// The reference name of the MPD model has changed and observers should 
 	// update their string references.
-	MessageNameChanged = 0,
+	LDrawObserverNameChanged = 0,
 
 	// The MPD's parent has changed, and thus its scope may have changed
-	MessageScopeChanged = 1,
+	LDrawObserverScopeChanged = 1,
 
     // The observed have changed in a way that may require the observer to
     // update its representation (e.g. an LSynth constraint has moved and
     // requires resynthesis)
 	// Ben says: this is really LSynth specific, e.g. part -> parent synth
-    MessageObservedChanged = 2
-} MessageT;
+    LDrawObserverObservedChanged = 2
+};
 
 //------------------------------------------------------------------------------
 ///
@@ -138,7 +140,7 @@ typedef enum Message {
 @required
 - (void)observableSaysGoodbyeCruelWorld:(id<LDrawObservable>) doomedObservable;
 - (void)statusInvalidated:(CacheFlagsT) flags who:(id<LDrawObservable>) observable;
-- (void)receiveMessage:(MessageT) msg who:(id<LDrawObservable>) observable;
+- (void)receiveMessage:(LDrawObserverMessage) msg who:(id<LDrawObservable>) observable;
 @end
 
 
@@ -185,16 +187,16 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 }
 
 // Class methods
-+ (NSString *)defaultIconName;
++ (nullable NSString *)defaultIconName;
 
 // Initialization
-- (id)initWithLines:(NSArray *)lines inRange:(NSRange)range;
-- (id)initWithLines:(NSArray *)lines inRange:(NSRange)range parentGroup:(dispatch_group_t)parentGroup;
+- (nullable instancetype)initWithLines:(NSArray *)lines inRange:(NSRange)range;
+- (nullable instancetype)initWithLines:(NSArray *)lines inRange:(NSRange)range parentGroup:(nullable dispatch_group_t)parentGroup;
 + (NSRange)rangeOfDirectiveBeginningAtIndex:(NSUInteger)index inLines:(NSArray *)lines maxIndex:(NSUInteger)maxIndex;
 
 // Directives
 - (void)drawSelf:(id<LDrawCoreRenderer>)renderer;
-- (void)collectSelf:(id<LDrawCollector>)renderer;
+- (void)collectSelf:(nullable id<LDrawCollector>)renderer;
 - (Box3)boundingBox3;
 
 // Debug helper. Default base-class implementation is a no-op; renderers that
@@ -204,9 +206,9 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 - (void)debugDrawBoundingBox;
 
 // Hit testing primitives
-- (void)hitTest:(Ray3)pickRay transform:(Matrix4)transform viewScale:(float)scaleFactor boundsOnly:(BOOL)boundsOnly creditObject:(id)creditObject hits:(NSMutableDictionary *)hits;
-- (BOOL)boxTest:(Box2)bounds transform:(Matrix4)transform boundsOnly:(BOOL)boundsOnly creditObject:(id)creditObject hits:(NSMutableSet *)hits;
-- (void)depthTest:(Point2)testPt inBox:(Box2)bounds transform:(Matrix4)transform creditObject:(id)creditObject bestObject:(id *)bestObject bestDepth:(float *)bestDepth;
+- (void)hitTest:(Ray3)pickRay transform:(Matrix4)transform viewScale:(float)scaleFactor boundsOnly:(BOOL)boundsOnly creditObject:(nullable id)creditObject hits:(NSMutableDictionary *)hits;
+- (BOOL)boxTest:(Box2)bounds transform:(Matrix4)transform boundsOnly:(BOOL)boundsOnly creditObject:(nullable id)creditObject hits:(NSMutableSet *)hits;
+- (void)depthTest:(Point2)testPt inBox:(Box2)bounds transform:(Matrix4)transform creditObject:(nullable id)creditObject bestObject:(id _Nullable * _Nonnull)bestObject bestDepth:(float *)bestDepth;
 
 - (NSString *)write;
 
@@ -216,13 +218,13 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 
 // Accessors
 - (NSArray *)ancestors;
-- (LDrawContainer *)enclosingDirective;
-- (LDrawFile *)enclosingFile;
-- (LDrawModel *)enclosingModel;
-- (LDrawStep *)enclosingStep;
+- (nullable LDrawContainer *)enclosingDirective;
+- (nullable LDrawFile *)enclosingFile;
+- (nullable LDrawModel *)enclosingModel;
+- (nullable LDrawStep *)enclosingStep;
 - (BOOL)isSelected;
 
-- (void)setEnclosingDirective:(LDrawContainer *)newParent;
+- (void)setEnclosingDirective:(nullable LDrawContainer *)newParent;
 - (void)setSelected:(BOOL)flag;
 - (void)setIconName:(NSString *)icon;
 
@@ -232,7 +234,7 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 		conditionalLines:(NSMutableArray *)conditionalLines
 			   triangles:(NSMutableArray *)triangles
 		  quadrilaterals:(NSMutableArray *)quadrilaterals
-				   other:(NSMutableArray *)everythingElse
+				   other:(nullable NSMutableArray *)everythingElse
 			currentColor:(LDrawColor *)parentColor
 		currentTransform:(Matrix4)transform
 		 normalTransform:(Matrix3)normalTransform
@@ -244,8 +246,10 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 // These methods should really be "protected" methods for sub-classes to use when acting like observables.
 // Obj-C doesn't give us compiler-level support to stop externals from calling them.
 
-- (void)sendMessageToObservers:(MessageT) msg;	// Send a specific message to all observers.
+- (void)sendMessageToObservers:(LDrawObserverMessage) msg;	// Send a specific message to all observers.
 - (void)invalCache:(CacheFlagsT) flags;			// Invalidate cache bits - this notifies observers as needed.  Flags are the bits to invalidate, not the net effect.
 - (CacheFlagsT)revalCache:(CacheFlagsT) flags;	// Revalidate flags - no notifications are sent, but internals are updated.  Returns which flags _were_ dirty.
 
 @end
+
+NS_ASSUME_NONNULL_END

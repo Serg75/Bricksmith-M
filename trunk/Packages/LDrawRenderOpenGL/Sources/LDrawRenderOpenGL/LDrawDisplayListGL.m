@@ -36,7 +36,7 @@ static const GLuint * idx_null = NULL;
 	because we draw the same bricks over and over and over again.
 	
 	When we instance, we identify the 'per instance' data - that is, data that is different for every instance.  In the case of
-	BrickSmith, the current/compliment color and transform are per instance data; the mesh and non-meta colors of the mesh are invariant.
+	BrickSmith, the current/complement color and transform are per instance data; the mesh and non-meta colors of the mesh are invariant.
 	
 	(As an example, when drawing the plate with red wheels, the red color of the wheels and the shape of the part are invariant;
 	the current color used for the plate and the location of the whole part are per-instance data.)
@@ -122,7 +122,7 @@ struct LDrawDLPerTex {
 };
 
 // DL draw instance: this stores one request to draw an un-textured DL for intsancing.
-// current color/compliment color, transform, and a next ptr to build a linked list.
+// current color/complement color, transform, and a next ptr to build a linked list.
 struct LDrawDLInstance {
 	struct LDrawDLInstance *next;
 	GLfloat					color[4];
@@ -759,7 +759,7 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 					for (i = 0; i < 4; ++i)
 						glVertexAttrib4f(attr_transform_x+i,inst->transform[i],inst->transform[4+i],inst->transform[8+i],inst->transform[12+i]);
 					glVertexAttrib4fv(attr_color_current, inst->color);
-					glVertexAttrib4fv(attr_color_compliment, inst->comp);
+					glVertexAttrib4fv(attr_color_complement, inst->comp);
 			
 					struct LDrawDLPerTex * tptr = dl->texes;
 					
@@ -809,13 +809,13 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 			glEnableVertexAttribArray(attr_transform_z);
 			glEnableVertexAttribArray(attr_transform_w);
 			glEnableVertexAttribArray(attr_color_current);
-			glEnableVertexAttribArray(attr_color_compliment);
+			glEnableVertexAttribArray(attr_color_complement);
 			glVertexAttribDivisorARB(attr_transform_x,1);
 			glVertexAttribDivisorARB(attr_transform_y,1);
 			glVertexAttribDivisorARB(attr_transform_z,1);
 			glVertexAttribDivisorARB(attr_transform_w,1);
 			glVertexAttribDivisorARB(attr_color_current,1);
-			glVertexAttribDivisorARB(attr_color_compliment,1);
+			glVertexAttribDivisorARB(attr_color_complement,1);
 
 			// Main loop 2 over DLs - for each DL that had hw-instances we built a segment
 			// in our array.  Bind the DL itself, as well as the instance pointers, and do an instanced-draw.
@@ -837,7 +837,7 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 
 				p = s->inst_base;
 				glVertexAttribPointer(attr_color_current, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p  );
-				glVertexAttribPointer(attr_color_compliment, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+4);
+				glVertexAttribPointer(attr_color_complement, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+4);
 				glVertexAttribPointer(attr_transform_x, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+8);
 				glVertexAttribPointer(attr_transform_y, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+12);
 				glVertexAttribPointer(attr_transform_z, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+16);
@@ -865,13 +865,13 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 			glDisableVertexAttribArray(attr_transform_z);
 			glDisableVertexAttribArray(attr_transform_w);
 			glDisableVertexAttribArray(attr_color_current);
-			glDisableVertexAttribArray(attr_color_compliment);
+			glDisableVertexAttribArray(attr_color_complement);
 			glVertexAttribDivisorARB(attr_transform_x,0);
 			glVertexAttribDivisorARB(attr_transform_y,0);
 			glVertexAttribDivisorARB(attr_transform_z,0);
 			glVertexAttribDivisorARB(attr_transform_w,0);
 			glVertexAttribDivisorARB(attr_color_current,0);
-			glVertexAttribDivisorARB(attr_color_compliment,0);
+			glVertexAttribDivisorARB(attr_color_complement,0);
 
 		}
 
@@ -913,7 +913,7 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 			for (i = 0; i < 4; ++i)
 				glVertexAttrib4f(attr_transform_x+i,l->transform[i],l->transform[4+i],l->transform[8+i],l->transform[12+i]);
 			glVertexAttrib4fv(attr_color_current, l->color);
-			glVertexAttrib4fv(attr_color_compliment, l->comp);
+			glVertexAttrib4fv(attr_color_complement, l->comp);
 			
 			dl = l->dl;
 			glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
@@ -1086,7 +1086,7 @@ void LDrawDLDraw(
 		glVertexAttrib4f(attr_transform_x+i,transform[i],transform[4+i],transform[8+i],transform[12+i]);
 		
 	glVertexAttrib4fv(attr_color_current, cur_color);
-	glVertexAttrib4fv(attr_color_compliment, cmp_color);
+	glVertexAttrib4fv(attr_color_complement, cmp_color);
 	
 	assert(dl->tex_count > 0);
 	

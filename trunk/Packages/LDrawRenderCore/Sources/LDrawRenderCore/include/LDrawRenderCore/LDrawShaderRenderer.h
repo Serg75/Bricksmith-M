@@ -13,6 +13,8 @@
 #import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawRenderCore/LDrawRenderTypes.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 /*
 
 	LDrawShaderRenderer - an implementation of the LDrawCoreRenderer API using shaders.
@@ -33,7 +35,7 @@ enum {
 	attr_transform_z,
 	attr_transform_w,
 	attr_color_current,
-	attr_color_compliment,
+	attr_color_complement,
 	attr_texture_mix,
 	attr_count
 };
@@ -42,7 +44,7 @@ enum {
 // Drag handle linked list.  When we get drag handle requests we transform the location into eye-space (to 'capture' the
 // drag handle location, then we draw it later when our coordinate system isn't possibly scaled.
 struct	LDrawDragHandleInstance {
-	struct LDrawDragHandleInstance * next;
+	struct LDrawDragHandleInstance * _Nullable next;
 	float	xyz[3];
 	float	size;
 };
@@ -69,8 +71,8 @@ struct	LDrawDragHandleInstance;
 //------------------------------------------------------------------------------
 @interface LDrawShaderRenderer : NSObject<LDrawCoreRenderer,LDrawCollector> {
 
-	struct LDrawDLSession *			session;										// DL session - this accumulates draw calls and sorts them.
-	struct LDrawPool *				pool;
+	struct LDrawDLSession * _Nullable	session;									// DL session - this accumulates draw calls and sorts them.
+	struct LDrawPool * _Nullable	pool;
 
 	float							color_now[4];									// Color stack.
 	float							compl_now[4];
@@ -90,20 +92,22 @@ struct	LDrawDragHandleInstance;
 	float							transform_now[16];
 	float							cull_now[16];
 
-	struct LDrawDLBuilder*			dl_stack[DL_STACK_DEPTH];						// DL stack from begin/end DL builds.
+	struct LDrawDLBuilder * _Nullable dl_stack[DL_STACK_DEPTH];						// DL stack from begin/end DL builds.
 	int								dl_stack_top;
-	struct LDrawDLBuilder*			dl_now;											// This is the DL being built "right now".
+	struct LDrawDLBuilder* _Nullable dl_now;										// This is the DL being built "right now".
 
 	float							mvp[16];										// Cached MVP from when shader is built.
 
-	struct LDrawDragHandleInstance *drag_handles;									// List of drag handles - deferred to draw at the end for perf and correct scaling.
+	struct LDrawDragHandleInstance * _Nullable drag_handles;						// List of drag handles - deferred to draw at the end for perf and correct scaling.
 	float							scale;											// Needed to code Allen's res-independent drag handles...someday get this from viewport?
 
 
 	// Metal
-	LDrawRenderEncoder				_renderEncoder;
+	LDrawRenderEncoder				_Nullable _renderEncoder;
 }
 
 - (void)setBoundsOnlyDrawing:(BOOL)boundsOnly;
 
 @end
+
+NS_ASSUME_NONNULL_END

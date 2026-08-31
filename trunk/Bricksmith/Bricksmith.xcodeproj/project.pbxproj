@@ -619,7 +619,7 @@
 		2BF2E3140AB0FCAB0026D5DB /* TransformerIntMinus1.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TransformerIntMinus1.m; sourceTree = "<group>"; };
 		32DBCF750370BD2300C91783 /* Mac LDraw_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "Mac LDraw_Prefix.pch"; sourceTree = "<group>"; };
 		39C633C2278F56F6005511E6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		737728C3A3DF6166BE9183ED /* InspectionLSynth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InspectionLSynth.m; sourceTree = "<group>"; };
+		737728C3A3DF6166BE9183ED /* InspectionLSynth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InspectionLSynth.m; sourceTree = "<group>"; usesTabs = 0; };
 		73772D9444E1E3B92321011F /* InspectionLSynth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectionLSynth.h; sourceTree = "<group>"; };
 		73772F01F06AC293E3F650C4 /* libicucore.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicucore.dylib; path = ../../../../../Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/usr/lib/libicucore.dylib; sourceTree = SDKROOT; };
 		8D15AC360486D014006FF6A4 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
@@ -2195,8 +2195,6 @@
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
-					"WANT_RELATED_PARTS=1",
-					"USE_AUTOMATIC_WIREFRAMES=1",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
@@ -2240,8 +2238,6 @@
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					NDEBUG,
-					"WANT_RELATED_PARTS=1",
-					"USE_AUTOMATIC_WIREFRAMES=1",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
@@ -2381,8 +2377,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					METAL,
-					"WANT_RELATED_PARTS=1",
-					"USE_AUTOMATIC_WIREFRAMES=1",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
@@ -2432,8 +2426,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					NDEBUG,
 					METAL,
-					"WANT_RELATED_PARTS=1",
-					"USE_AUTOMATIC_WIREFRAMES=1",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;

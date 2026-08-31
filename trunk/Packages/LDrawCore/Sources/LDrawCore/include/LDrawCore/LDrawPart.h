@@ -22,14 +22,16 @@
 @class LDrawStep;
 @class LDrawPartReport;
 
-typedef enum PartType {
-	PartTypeUnresolved = 0,	// We have not yet tried to figure out what we have.
-	PartTypeNotFound,		// We went looking and the part is missing.  This keeps us from retrying on every query until someone tells us to try again.
-	PartTypeLibrary,		// Part is in the library.
-	PartTypeSubmodel,		// Part is an MPD submodel from our parent LDrawFile
-	PartTypePeerFile		// Part is the first model in another file in the same directory as us.
-} PartTypeT;
+typedef NS_ENUM(NSInteger, LDrawPartType) {
+	LDrawPartTypeUnresolved = 0,// We have not yet tried to figure out what we have.
+	LDrawPartTypeNotFound,		// We went looking and the part is missing.  This keeps us from retrying on every query until someone tells us to try again.
+	LDrawPartTypeLibrary,		// Part is in the library.
+	LDrawPartTypeSubmodel,		// Part is an MPD submodel from our parent LDrawFile
+	LDrawPartTypePeerFile		// Part is the first model in another file in the same directory as us.
+};
 
+
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -48,13 +50,13 @@ typedef enum PartType {
 
 	LDrawDirective	*cacheDrawable;			// The drawable is the model we link to OR a VBO that represents it from the part library -- a drawable proxy.
 	LDrawModel		*cacheModel;			// The model is the real model we link to.
-	PartTypeT		cacheType;
+	LDrawPartType	cacheType;
 	NSLock			*drawLock;
 
 	Box3			cacheBounds;			// Cached bonuding box of resolved parts, in part's coordinate (that is, _not_ in the coordinates of the underlying model.
 }
 
-@property (strong) NSString * group;		// MLCAD group name or nil
+@property (strong, nullable) NSString * group;		// MLCAD group name or nil
 
 //Directives
 - (void) drawBoundsWithColor:(LDrawColor *)drawingColor;
@@ -64,12 +66,12 @@ typedef enum PartType {
 - (NSString *) displayName;
 - (Point3) position;
 - (NSString *) referenceName;
-- (LDrawModel *) referencedMPDSubmodel;
-- (LDrawModel *) referencedPeerFile;
+- (nullable LDrawModel *) referencedMPDSubmodel;
+- (nullable LDrawModel *) referencedPeerFile;
 - (TransformComponents) transformComponents;
 - (Matrix4) transformationMatrix;
 - (void) setDisplayName:(NSString *)newPartName;
-- (void) setDisplayName:(NSString *)newPartName parse:(BOOL)shouldParse inGroup:(dispatch_group_t)parentGroup;
+- (void) setDisplayName:(NSString *)newPartName parse:(BOOL)shouldParse inGroup:(nullable dispatch_group_t)parentGroup;
 - (void) setTransformComponents:(TransformComponents)newComponents;
 - (void) setTransformationMatrix:(Matrix4 *)newMatrix;
 
@@ -94,3 +96,5 @@ typedef enum PartType {
 
 
 @end
+
+NS_ASSUME_NONNULL_END

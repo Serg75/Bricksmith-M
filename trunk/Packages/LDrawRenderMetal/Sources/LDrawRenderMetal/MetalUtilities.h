@@ -3,7 +3,7 @@
 //  File:       MetalUtilities.h
 //  Package:    LDrawRenderMetal
 //
-//  Purpose:    Routines for converting matrix format.
+//  Purpose:    SIMD matrix conversion and Tuple4 helpers for CPU-side Metal code.
 //
 //  Created by Sergey Slobodenyuk on 2025-04-30.
 //
@@ -15,7 +15,15 @@
 #import <Foundation/Foundation.h>
 #import <simd/simd.h>
 
+#import <LDrawCore/MatrixMath.h> // Tuple4 / Point4
+
 NS_ASSUME_NONNULL_BEGIN
+
+// Converts a Tuple4 or Point4 to a vector_float4.
+static inline vector_float4 tuple4_to_float4(const Tuple4 t)
+{
+	return (vector_float4){ t.x, t.y, t.z, t.w };
+}
 
 // Converts a float[16] array (row-major) to a Metal-compatible 4x4 matrix.
 matrix_float4x4 simd_matrix4x4_from_array(const float *matrix);

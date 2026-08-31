@@ -63,7 +63,7 @@
 #define LDrawKeyboardDidChangeNotification				@"LDrawKeyboardDidChangeNotification"
 
 //tool mode changed.
-// Object is an NSNumber containing the new ToolModeT.
+// Object is an NSNumber containing the new LDrawToolMode.
 #define LDrawMouseToolDidChangeNotification				@"LDrawMouseToolDidChangeNotification"
 
 //tablet pointing device changed.
@@ -101,95 +101,95 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef enum MenuTags
+typedef NS_ENUM(NSInteger, LDrawMenuTag)
 {
 	// Application Menu
-	applicationMenuTag				= 0,
+	LDrawApplicationMenuTag				= 0,
 
 	// File Menu
-	fileMenuTag						= 1,
-    revealInFinderTag               = 101,
+	LDrawFileMenuTag					= 1,
+    LDrawRevealInFinderTag				= 101,
 
 	// Edit Menu
-	editMenuTag						= 2,
-	cutMenuTag						= 202,
-	copyMenuTag						= 203,
-	pasteMenuTag					= 204,
-	deleteMenuTag					= 205,
-	selectAllMenuTag				= 206,
-	duplicateMenuTag				= 207,
-	splitStepMenuTag				= 208,
-	changeOriginMenuTag				= 209,
-	splitModelMenuTag				= 210,
-	rotatePositiveXTag				= 220,
-	rotateNegativeXTag				= 221,
-	rotatePositiveYTag				= 222,
-	rotateNegativeYTag				= 223,
-	rotatePositiveZTag				= 224,
-	rotateNegativeZTag				= 225,
-	changeOriginByRotationMenuTag	= 226,
-	axesByPartRotationMenuTag		= 227,
-	moveToParentMenuTag				= 228,
+	LDrawEditMenuTag					= 2,
+	LDrawCutMenuTag						= 202,
+	LDrawCopyMenuTag					= 203,
+	LDrawPasteMenuTag					= 204,
+	LDrawDeleteMenuTag					= 205,
+	LDrawSelectAllMenuTag				= 206,
+	LDrawDuplicateMenuTag				= 207,
+	LDrawSplitStepMenuTag				= 208,
+	LDrawChangeOriginMenuTag			= 209,
+	LDrawSplitModelMenuTag				= 210,
+	LDrawRotatePositiveXTag				= 220,
+	LDrawRotateNegativeXTag				= 221,
+	LDrawRotatePositiveYTag				= 222,
+	LDrawRotateNegativeYTag				= 223,
+	LDrawRotatePositiveZTag				= 224,
+	LDrawRotateNegativeZTag				= 225,
+	LDrawChangeOriginByRotationMenuTag	= 226,
+	LDrawAxesByPartRotationMenuTag		= 227,
+	LDrawMoveToParentMenuTag			= 228,
 
 	// Tools Menu
-	toolsMenuTag					= 3,
-	fileContentsMenuTag				= 302,
-	showMouseToolsMenuTag			= 303,
-	hideMouseToolsMenuTag			= 304,
-	gridFineMenuTag					= 305,
-	gridMediumMenuTag				= 306,
-	gridCoarseMenuTag				= 307,
-	coordModelMenuTag				= 308,
-	coordPartMenuTag				= 309,	
+	LDrawToolsMenuTag					= 3,
+	LDrawFileContentsMenuTag			= 302,
+	LDrawShowMouseToolsMenuTag			= 303,
+	LDrawHideMouseToolsMenuTag			= 304,
+	LDrawGridFineMenuTag				= 305,
+	LDrawGridMediumMenuTag				= 306,
+	LDrawGridCoarseMenuTag				= 307,
+	LDrawCoordModelMenuTag				= 308,
+	LDrawCoordPartMenuTag				= 309,	
 
 	// Views Menu
-	viewsMenuTag					= 4,
-	stepDisplayMenuTag				= 404,
-	nextStepMenuTag					= 405,
-	previousStepMenuTag				= 406,
-	orientationMenuTag				= 407,
-	useSelectionForSpinCenterMenuTag= 408,
-	resetSpinCenterMenuTag			= 409,
+	LDrawViewsMenuTag					= 4,
+	LDrawStepDisplayMenuTag				= 404,
+	LDrawNextStepMenuTag				= 405,
+	LDrawPreviousStepMenuTag			= 406,
+	LDrawOrientationMenuTag				= 407,
+	LDrawUseSelectionForSpinCenterMenuTag = 408,
+	LDrawResetSpinCenterMenuTag			= 409,
 
 	// Piece Menu
-	pieceMenuTag					= 5,
-	hidePieceMenuTag				= 501,
-	showPieceMenuTag				= 502,
-	snapToGridMenuTag				= 503,
-	gotoModelMenuTag				= 504,
-	setGroupMenuTag					= 510,
+	LDrawPieceMenuTag					= 5,
+	LDrawHidePieceMenuTag				= 501,
+	LDrawShowPieceMenuTag				= 502,
+	LDrawSnapToGridMenuTag				= 503,
+	LDrawGotoModelMenuTag				= 504,
+	LDrawSetGroupMenuTag				= 510,
 
 	// Models Menu
-	modelsMenuTag					= 6,
-	addModelMenuTag					= 601,
-	modelsSeparatorMenuTag			= 602,
-	insertReferenceMenuTag			= 603,
-	submodelReferenceMenuTag		= 604, //used for all items in the Insert Reference menu.
-	rawCommandMenuTag               = 605,
-	addModelSelectionMenuTag		= 606,
-	relatedPartMenuTag				= 610, //used to add related parts dynamically.
+	LDrawModelsMenuTag					= 6,
+	LDrawAddModelMenuTag				= 601,
+	LDrawModelsSeparatorMenuTag			= 602,
+	LDrawInsertReferenceMenuTag			= 603,
+	LDrawSubmodelReferenceMenuTag		= 604, //used for all items in the Insert Reference menu.
+	LDrawRawCommandMenuTag				= 605,
+	LDrawAddModelSelectionMenuTag		= 606,
+	LDrawRelatedPartMenuTag				= 610, //used to add related parts dynamically.
 
-    lsynthMenuTag                   = 630,
-    lsynthPartMenuTag               = 631, // LSynth parts
-    lsynthHoseMenuTag				= 632, // LSynth synthesizable part: hose
-    lsynthHoseConstraintMenuTag     = 633, // LSynth constraint items: hose
-	lsynthBandMenuTag				= 634, // LSynth synthesizable part: band
-	lsynthBandConstraintMenuTag		= 635, // LSynth constraint items: band
-	lsynthInsideOutsideMenuTag		= 636,
-    lsynthSurroundINSIDEOUTSIDETag  = 637,
-    lsynthInvertINSIDEOUTSIDETag    = 638,
-    lsynthInsertINSIDETag           = 639,
-    lsynthInsertOUTSIDETag          = 640,
-    lsynthInsertCROSSTag            = 641,
+    LDrawLSynthMenuTag					= 630,
+    LDrawLSynthPartMenuTag				= 631, // LSynth parts
+    LDrawLSynthHoseMenuTag				= 632, // LSynth synthesizable part: hose
+    LDrawLSynthHoseConstraintMenuTag	= 633, // LSynth constraint items: hose
+	LDrawLSynthBandMenuTag				= 634, // LSynth synthesizable part: band
+	LDrawLSynthBandConstraintMenuTag	= 635, // LSynth constraint items: band
+	LDrawLSynthInsideOutsideMenuTag		= 636,
+    LDrawLSynthSurroundInsideOutsideTag	= 637,
+    LDrawLSynthInvertInsideOutsideTag	= 638,
+    LDrawLSynthInsertInsideTag			= 639,
+    LDrawLSynthInsertOutsideTag			= 640,
+    LDrawLSynthInsertCrossTag			= 641,
 
 	// Window Menu
-	windowMenuTag					= 7,
+	LDrawWindowMenuTag					= 7,
 
 	// Contextual Menus
-	partBrowserAddFavoriteTag		= 4001,
-	partBrowserRemoveFavoriteTag	= 4002
+	LDrawPartBrowserAddFavoriteTag		= 4001,
+	LDrawPartBrowserRemoveFavoriteTag	= 4002
 
-} menuTagsT;
+};
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -197,46 +197,38 @@ typedef enum MenuTags
 #pragma mark		Shared Datatypes
 //
 // Data types which would otherwise be homeless. LDrawSelectionMode is on
-// LDrawRenderer's delegate (RenderCore cannot depend on Editing). RotateModeT
+// LDrawRenderer's delegate (RenderCore cannot depend on Editing). LDrawRotateStyle
 // is read by LDrawCamera. Mouse-drag enums are read by LDrawViewPolicy.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef enum MouseDragBehavior
+typedef NS_ENUM(NSInteger, LDrawMouseDragBehavior)
 {
-	MouseDraggingOff									= 0,
-	MouseDraggingBeginImmediately						= 1,
-	MouseDraggingBeginAfterDelay						= 2,
-	MouseDraggingImmediatelyInOrthoNeverInPerspective	= 3
+	LDrawMouseDraggingOff									= 0,
+	LDrawMouseDraggingBeginImmediately						= 1,
+	LDrawMouseDraggingBeginAfterDelay						= 2,
+	LDrawMouseDraggingImmediatelyInOrthoNeverInPerspective	= 3
+};
 
-
-} MouseDragBehaviorT;
-
-typedef enum RightButtonBehavior
+typedef NS_ENUM(NSInteger, LDrawRightButtonBehavior)
 {
-	RightButtonContextual								= 0,
-	RightButtonRotates									= 1
+	LDrawRightButtonContextual								= 0,
+	LDrawRightButtonRotates									= 1
+};
 
-} RightButtonBehaviorT;
+typedef NS_ENUM(NSInteger, LDrawRotateStyle) {
+	LDrawRotateStyleTrackball								= 0,
+	LDrawRotateStyleTurntable								= 1
+};
 
-typedef enum RotateMode {
-	RotateModeTrackball									= 0,
-	RotateModeTurntable									= 1
+typedef NS_ENUM(NSInteger, LDrawMouseWheelBehavior) {
+	LDrawMouseWheelScrolls									= 0,
+	LDrawMouseWheelZooms									= 1
+};
 
-} RotateModeT;
-
-typedef enum MouseWheelBehavior {
-	MouseWheelScrolls									= 0,
-	MouseWheelZooms										= 1
-
-} MouseWheelBehaviorT;
-
-
-typedef enum SelectionMode {
-
+typedef NS_ENUM(NSInteger, LDrawSelectionMode) {
 	LDrawSelectionReplace		= 0,	// Normal drag - take new
 	LDrawSelectionExtend		= 1,	// Shift drag - take old | new
 	LDrawSelectionSubtract		= 2,	// Option drag - take old - new
 	LDrawSelectionIntersection	= 3		// Option-shift drag - take old & new
-
-} LDrawSelectionMode;
+};

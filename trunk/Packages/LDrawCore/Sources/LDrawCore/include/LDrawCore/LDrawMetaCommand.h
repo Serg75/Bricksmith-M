@@ -12,6 +12,7 @@
 
 #import <LDrawCore/LDrawDirective.h>
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -29,6 +30,8 @@
 - (NSString *) write;
 
 // Accessors
-@property (nonatomic) NSString *commandString;
+@property (nonatomic, nullable) NSString *commandString;
 
 @end
+
+NS_ASSUME_NONNULL_END

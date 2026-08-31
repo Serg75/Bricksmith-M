@@ -15,6 +15,8 @@
 #import <Foundation/Foundation.h>
 #import <LDrawCore/MatrixMath.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawPartSpecific
@@ -31,3 +33,5 @@
 + (Point3) rotationPlaneForPart:(NSString *)partName;
 
 @end
+
+NS_ASSUME_NONNULL_END

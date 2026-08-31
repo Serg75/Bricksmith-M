@@ -37,22 +37,22 @@
 {
 	if (outKind == NULL)
 	{
-		return (tag == changeOriginMenuTag
-			 || tag == changeOriginByRotationMenuTag
-			 || tag == axesByPartRotationMenuTag);
+		return (tag == LDrawChangeOriginMenuTag
+			 || tag == LDrawChangeOriginByRotationMenuTag
+			 || tag == LDrawAxesByPartRotationMenuTag);
 	}
 
-	if (tag == changeOriginByRotationMenuTag)
+	if (tag == LDrawChangeOriginByRotationMenuTag)
 	{
 		*outKind = LDrawOriginChangeByRotationAxis;
 		return YES;
 	}
-	if (tag == axesByPartRotationMenuTag)
+	if (tag == LDrawAxesByPartRotationMenuTag)
 	{
 		*outKind = LDrawOriginChangeByAxesAlignment;
 		return YES;
 	}
-	if (tag == changeOriginMenuTag)
+	if (tag == LDrawChangeOriginMenuTag)
 	{
 		*outKind = LDrawOriginChangeByPosition;
 		return YES;

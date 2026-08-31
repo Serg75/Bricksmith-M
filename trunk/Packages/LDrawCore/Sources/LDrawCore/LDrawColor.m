@@ -221,8 +221,12 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	// Color Code
 	if([scanner scanString:LDRAW_COLOR_DEF_CODE intoString:nil] == NO)
 		@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
-	if([scanner scanInt:&self->colorCode] == NO)
-		@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+	{
+		int scannedCode = 0;
+		if([scanner scanInt:&scannedCode] == NO)
+			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+		self->colorCode = scannedCode;
+	}
 	
 	// Color Components
 	if([scanner scanString:LDRAW_COLOR_DEF_VALUE intoString:nil] == NO)
@@ -236,7 +240,11 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	if([self scanHexString:scanner intoRGB:parsedColor] == YES)
 		[self setEdgeColorRGBA:parsedColor];
 	else
-		[scanner scanInt:&self->edgeColorCode];
+	{
+		int scannedEdge = 0;
+		[scanner scanInt:&scannedEdge];
+		self->edgeColorCode = scannedEdge;
+	}
 	
 	// Optional Fields
 	
@@ -293,7 +301,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 
 //---------- blendedColorForCode: ------------------------------------[static]--
 //
-// Purpose:		Returns pseduocolors according to logic found in LDRAW.EXE.
+// Purpose:		Returns pseudocolors according to logic found in LDRAW.EXE.
 //
 // Notes:		James Jessiman's original DOS-based LDraw was limited in to 16 
 //				colors (in 1995!), so he developed a hack to accommodate a 
@@ -360,7 +368,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	// Create a color to hold them.
 	[blendedColor setColorCode:colorCode];
 	[blendedColor setColorRGBA:blendedComponents];
-	[blendedColor setName:[NSString stringWithFormat:@"BlendedColor%d", colorCode]];
+	[blendedColor setName:[NSString stringWithFormat:@"BlendedColor%d", (int)colorCode]];
 	
 	return blendedColor;
 	
@@ -407,14 +415,14 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 							//	|	  |		|
 								LDRAW_COLOR_DEFINITION, self->name,
 							//		  |		|
-									  LDRAW_COLOR_DEF_CODE,	self->colorCode,
+									  LDRAW_COLOR_DEF_CODE,	(int)self->colorCode,
 							//				|
 											LDRAW_COLOR_DEF_VALUE,	[self hexStringForRGB:self->colorRGBA] ];
 											
 	if(self->edgeColorCode == LDrawColorBogus)
 		[line appendFormat:@" %@ %@", LDRAW_COLOR_DEF_EDGE, [self hexStringForRGB:self->edgeColorRGBA]];
 	else
-		[line appendFormat:@" %@ %d", LDRAW_COLOR_DEF_EDGE, self->edgeColorCode];
+		[line appendFormat:@" %@ %d", LDRAW_COLOR_DEF_EDGE, (int)self->edgeColorCode];
 		
 	if(self->hasExplicitAlpha == YES)
 		[line appendFormat:@" %@ %d", LDRAW_COLOR_DEF_ALPHA, (int)(self->colorRGBA[3] * 255)];
@@ -507,35 +515,35 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 }//end colorCode
 
 
-//========== complimentColor ===================================================
+//========== complementColor ===================================================
 //
 // Purpose:		Returns the color which should be used for drawing 
 //				LDrawEdgeColor for this color. 
 //
 //==============================================================================
-- (LDrawColor *) complimentColor
+- (LDrawColor *) complementColor
 {
-	// LDConfig compliment colors look ugly. Bricksmith uses internally-derived 
-	// compliments which look more like the original LDraw. 
-	if(fakeComplimentColor == nil)
+	// LDConfig complement colors look ugly. Bricksmith uses internally-derived 
+	// complements which look more like the original LDraw. 
+	if(fakeComplementColor == nil)
 	{
-		self->fakeComplimentColor = [[LDrawColor alloc] init];
+		self->fakeComplementColor = [[LDrawColor alloc] init];
 		
-		float fakeComplimentComponents[4] = {};
-		complimentColor(self->colorRGBA, fakeComplimentComponents);
+		float fakeComplementComponents[4] = {};
+		complementColor(self->colorRGBA, fakeComplementComponents);
 		
-		[fakeComplimentColor setColorCode:LDrawEdgeColor];
-		[fakeComplimentColor setColorRGBA:fakeComplimentComponents];
+		[fakeComplementColor setColorCode:LDrawEdgeColor];
+		[fakeComplementColor setColorRGBA:fakeComplementComponents];
 	}
 	
-	return fakeComplimentColor;
+	return fakeComplementColor;
 }
 
 
 //========== edgeColorCode =====================================================
 //
 // Purpose:		Return the LDraw color code to be used when drawing the 
-//				compilement of this color. If the compliment is stored as actual 
+//				complement of this color. If the complement is stored as actual 
 //				components instead, this call will return LDrawColorBogus. When 
 //				that code is encountered, you should instead call edgeColorRGBA 
 //				for the actual color values. 
@@ -563,7 +571,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 
 //========== getEdgeColorRGBA: =================================================
 //
-// Purpose:		Returns the actual color components specified for the compliment 
+// Purpose:		Returns the actual color components specified for the complement 
 //				of this color. 
 //
 // Notes:		These values MAY NOT BE VALID. To determine if they are in 
@@ -599,7 +607,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	
 	//Find the color's name in the localized string file.
 	// Color names are conveniently keyed.
-	nameKey		= [NSString stringWithFormat:@"LDraw: %d", colorCode];
+	nameKey		= [NSString stringWithFormat:@"LDraw: %d", (int)colorCode];
 	colorName	= NSLocalizedString(nameKey , nil);
 	
 	// If no localization was defined, then fall back on the name defined in the 
@@ -686,7 +694,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 
 //========== setEdgeColorCode: =================================================
 //
-// Purpose:		Sets the code of the color to use as this color's compliment 
+// Purpose:		Sets the code of the color to use as this color's complement 
 //				color. That value will have to be resolved by the color library. 
 //
 // Notes:		Edge colors may be specified either as real color components or 

@@ -78,15 +78,15 @@
 //------------------------------------------------------------------------------
 + (NSString *)lsynthDirectionCommandForMenuTag:(NSInteger)tag
 {
-	if (tag == lsynthInsertINSIDETag)
+	if (tag == LDrawLSynthInsertInsideTag)
 	{
 		return @"INSIDE";
 	}
-	if (tag == lsynthInsertOUTSIDETag)
+	if (tag == LDrawLSynthInsertOutsideTag)
 	{
 		return @"OUTSIDE";
 	}
-	if (tag == lsynthInsertCROSSTag)
+	if (tag == LDrawLSynthInsertCrossTag)
 	{
 		return @"CROSS";
 	}
@@ -102,8 +102,8 @@
 //------------------------------------------------------------------------------
 + (NSString *)lsynthInsertUndoKeyForMenuTag:(NSInteger)tag
 {
-	if (tag == lsynthInsertINSIDETag) return @"UndoAddLSynthInside";
-	if (tag == lsynthInsertOUTSIDETag) return @"UndoAddLSynthOutside";
+	if (tag == LDrawLSynthInsertInsideTag) return @"UndoAddLSynthInside";
+	if (tag == LDrawLSynthInsertOutsideTag) return @"UndoAddLSynthOutside";
 	return @"UndoAddLSynthCross";
 }
 

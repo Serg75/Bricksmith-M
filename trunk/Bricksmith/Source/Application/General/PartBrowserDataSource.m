@@ -191,7 +191,7 @@
 	// Not displaying anything yet.
 	categoryList	= [NSArray array];
 	tableDataSource	= [NSMutableArray array];
-	searchMode		= (SearchModeT)[[NSUserDefaults standardUserDefaults] integerForKey:PART_BROWSER_SEARCH_MODE];
+	searchMode		= (LDrawPartBrowserSearchMode)[[NSUserDefaults standardUserDefaults] integerForKey:PART_BROWSER_SEARCH_MODE];
 	
 	return self;
 	
@@ -378,8 +378,8 @@
 //==============================================================================
 - (IBAction) searchAllCategoriesButtonClicked:(id)sender
 {
-	self->searchMode = SearchModeAllCategories;
-	[[NSUserDefaults standardUserDefaults] setInteger:SearchModeAllCategories forKey:PART_BROWSER_SEARCH_MODE];
+	self->searchMode = LDrawPartBrowserSearchAllCategories;
+	[[NSUserDefaults standardUserDefaults] setInteger:LDrawPartBrowserSearchAllCategories forKey:PART_BROWSER_SEARCH_MODE];
 
 	[self performSearch];
 }
@@ -392,8 +392,8 @@
 //==============================================================================
 - (IBAction) searchSelectedCategoryButtonClicked:(id)sender
 {
-	self->searchMode = SearchModeSelectedCategory;
-	[[NSUserDefaults standardUserDefaults] setInteger:SearchModeSelectedCategory forKey:PART_BROWSER_SEARCH_MODE];
+	self->searchMode = LDrawPartBrowserSearchSelectedCategory;
+	[[NSUserDefaults standardUserDefaults] setInteger:LDrawPartBrowserSearchSelectedCategory forKey:PART_BROWSER_SEARCH_MODE];
 	
 	[self performSearch];
 }
@@ -828,8 +828,8 @@
 	[self->searchAllCategoriesButton	setHidden:(showSearchScopeButtons == NO)];
 	[self->searchSelectedCategoryButton	setHidden:(showSearchScopeButtons == NO)];
 	
-	[self->searchAllCategoriesButton	setState:(self->searchMode == SearchModeAllCategories)];
-	[self->searchSelectedCategoryButton	setState:(self->searchMode == SearchModeSelectedCategory)];
+	[self->searchAllCategoriesButton	setState:(self->searchMode == LDrawPartBrowserSearchAllCategories)];
+	[self->searchSelectedCategoryButton	setState:(self->searchMode == LDrawPartBrowserSearchSelectedCategory)];
 	
 	[self->searchSelectedCategoryButton setTitle:[partLibrary displayNameForCategory:self->selectedCategory]];
 	[self->searchSelectedCategoryButton sizeToFit];
@@ -851,8 +851,8 @@
 	}
 	
 	// Hide inapplicable menu items.
-	[[self->contextualMenu itemWithTag:partBrowserAddFavoriteTag]		setHidden:(showAddFavorite == NO)];
-	[[self->contextualMenu itemWithTag:partBrowserRemoveFavoriteTag]	setHidden:(showRemoveFavorite == NO)];
+	[[self->contextualMenu itemWithTag:LDrawPartBrowserAddFavoriteTag]		setHidden:(showAddFavorite == NO)];
+	[[self->contextualMenu itemWithTag:LDrawPartBrowserRemoveFavoriteTag]	setHidden:(showRemoveFavorite == NO)];
 	
 }//end setConstraints
 

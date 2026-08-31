@@ -210,7 +210,7 @@ int floatNearGrid(float v, float grid, float epsi)
 			self.group = [LDrawUtilities parseGroup:prevLine];
 			
 			// Debug check: full part resolution isn't thread-safe so make sure we haven't run it by accident here!
-			assert(cacheType == PartTypeUnresolved);
+			assert(cacheType == LDrawPartTypeUnresolved);
 		}
 		else
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad part syntax" userInfo:nil];
@@ -326,7 +326,7 @@ int floatNearGrid(float v, float grid, float epsi)
 				// which actually DOES know how to get this case
 				// right.
 				if([self->color colorCode] == LDrawEdgeColor)	
-					[renderer pushColor:LDrawRenderComplimentColor];
+					[renderer pushColor:LDrawRenderComplementColor];
 				else
 				{
 					float c[4];
@@ -753,9 +753,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (LDrawModel *) referencedPeerFile
 {
-	if(cacheType == PartTypeUnresolved)
+	if(cacheType == LDrawPartTypeUnresolved)
 		[self resolvePart];
-	if (cacheType != PartTypePeerFile)
+	if (cacheType != LDrawPartTypePeerFile)
 		return nil;
 	return cacheModel;
 }//end referencedPeerFile
@@ -863,13 +863,12 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 				inGroup:(dispatch_group_t)parentGroup
 {
 	NSString            *newReferenceName   = [newPartName lowercaseString];
-	dispatch_group_t    parseGroup          = NULL;
 
 	displayName = newPartName;
 	
 	referenceName = newReferenceName;
 
-	assert(parentGroup == NULL || cacheType == PartTypeUnresolved);
+	assert(parentGroup == NULL || cacheType == LDrawPartTypeUnresolved);
 	
 	[self unresolvePart];
 	
@@ -883,21 +882,8 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	// here - resolving later prevents thrash.
 	if(shouldParse == YES && newPartName != nil && [newPartName length] > 0)
 	{
-#if USE_BLOCKS
-		// Create a parsing group if needed.
-		if(parentGroup == NULL)
-			parseGroup = dispatch_group_create();
-		else
-			parseGroup = parentGroup;
-#endif
-		[[LDrawPartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
+		[[LDrawPartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parentGroup];
 
-#if USE_BLOCKS
-		if(parentGroup == NULL)
-		{
-			dispatch_group_wait(parseGroup, DISPATCH_TIME_FOREVER);
-		}
-#endif	
 	}
 	
 }//end setDisplayName:
@@ -1241,7 +1227,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	transformationMatrix = Matrix4Translate(transformationMatrix, moveVector);
 	
 	[self setTransformationMatrix:&transformationMatrix];
-    [self sendMessageToObservers:MessageObservedChanged];
+    [self sendMessageToObservers:LDrawObserverObservedChanged];
 	
 }//end moveBy:
 
@@ -1329,7 +1315,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	transform = Matrix4Translate(transform, displacement); //translate back to original position
 	
 	[self setTransformationMatrix:&transform];
-    [self sendMessageToObservers:MessageObservedChanged];
+    [self sendMessageToObservers:LDrawObserverObservedChanged];
 	
 }//end rotateByDegrees:centerPoint:
 
@@ -1345,7 +1331,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (void) observableSaysGoodbyeCruelWorld:(id<LDrawObservable>) doomedObservable
 {
-	if(cacheType == PartTypeUnresolved || cacheType == PartTypeNotFound)
+	if(cacheType == LDrawPartTypeUnresolved || cacheType == LDrawPartTypeNotFound)
 		NSLog(@"WARNING: LDraw part is receiving a notification that its observer is dying but it thinks it should have no observer.\n");
 	if(doomedObservable != cacheModel)
 		NSLog(@"WARNING: LDraw part is receiving a notification from an observer that is not its cached drawable.\n");
@@ -1372,11 +1358,11 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 // Purpose:		
 //
 //==============================================================================
-- (void) receiveMessage:(MessageT) msg who:(id<LDrawObservable>) observable
+- (void) receiveMessage:(LDrawObserverMessage) msg who:(id<LDrawObservable>) observable
 {
-	if(msg == MessageNameChanged)
+	if(msg == LDrawObserverNameChanged)
 		[self unresolvePart];
-	if(msg == MessageScopeChanged)
+	if(msg == LDrawObserverScopeChanged)
 		[self unresolvePart];
 }
 
@@ -1407,7 +1393,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 - (BOOL) partIsMissing
 {
 	[self resolvePart];
-	return cacheType == PartTypeNotFound;
+	return cacheType == LDrawPartTypeNotFound;
 }
 
 
@@ -1494,9 +1480,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 - (void) collectPartReport:(LDrawPartReport *)report
 {
 	[self resolvePart];
-	if(cacheType == PartTypeSubmodel || cacheType == PartTypePeerFile)
+	if(cacheType == LDrawPartTypeSubmodel || cacheType == LDrawPartTypePeerFile)
 		[cacheModel collectPartReport:report];
-	else if(cacheType == PartTypeLibrary)
+	else if(cacheType == LDrawPartTypeLibrary)
 		[report registerPart:self];
 	
 	//There's a bug here: -referencedMPDSubmodel doesn't necessarily tell you if 
@@ -1547,7 +1533,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (void) addedMPDModel:(NSNotification *)notification
 {
-	if(cacheType == PartTypeNotFound)
+	if(cacheType == LDrawPartTypeNotFound)
 		[self unresolvePart];
 }//end addedMPDModel
 
@@ -1560,14 +1546,14 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (void) resolvePart
 {
-	if(cacheType == PartTypeUnresolved)
+	if(cacheType == LDrawPartTypeUnresolved)
 	{
 		LDrawModel * mdpModel = [self referencedMPDSubmodel];
 		if(mdpModel != nil)
 		{
 			cacheModel = mdpModel;
 			cacheDrawable = mdpModel;
-			cacheType = PartTypeSubmodel;
+			cacheType = LDrawPartTypeSubmodel;
 			
 			[self invalCache:CacheFlagBounds];
 			[cacheModel addObserver:self];
@@ -1586,21 +1572,21 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 				// instead. 
 				cacheDrawable = nil;
 				[self invalCache:CacheFlagBounds];					
-				cacheType = PartTypeLibrary;
+				cacheType = LDrawPartTypeLibrary;
 			}
 			else
 			{
 				cacheModel = [[LDrawModelManager sharedModelManager] requestModel:referenceName withDocument:[self enclosingFile]];
 				if(cacheModel)
 				{
-					cacheType = PartTypePeerFile;
+					cacheType = LDrawPartTypePeerFile;
 					cacheDrawable = cacheModel;
 					[self invalCache:CacheFlagBounds];
 					[cacheModel addObserver:self];				
 				}
 				else
 				{
-					cacheType = PartTypeNotFound;
+					cacheType = LDrawPartTypeNotFound;
 					cacheDrawable = nil;
 					cacheModel = nil;
 					[self invalCache:CacheFlagBounds];
@@ -1627,20 +1613,20 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (void) unresolvePart
 {
-	if(cacheType != PartTypeUnresolved)
+	if(cacheType != LDrawPartTypeUnresolved)
 	{
-		if(cacheModel != nil && (cacheType == PartTypeSubmodel || cacheType == PartTypePeerFile))
+		if(cacheModel != nil && (cacheType == LDrawPartTypeSubmodel || cacheType == LDrawPartTypePeerFile))
 		{
 			//printf("Part %p telling observer/cache %p to forget us.\n",self,cacheModel);
 			[cacheModel removeObserver:self];
 		}
 		
-		if(cacheType == PartTypeNotFound)
+		if(cacheType == LDrawPartTypeNotFound)
 		{
 			[[NSNotificationCenter defaultCenter] removeObserver:self name:LDrawMPDSubModelAdded object:nil];	
 		}
 		
-		cacheType = PartTypeUnresolved;
+		cacheType = LDrawPartTypeUnresolved;
 		cacheDrawable = nil;
 		cacheModel = nil;
 	}
@@ -1659,7 +1645,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (void) unresolvePartIfPartLibrary
 {
-	if(cacheType == PartTypeLibrary || cacheType == PartTypeNotFound)
+	if(cacheType == LDrawPartTypeLibrary || cacheType == LDrawPartTypeNotFound)
 		[self unresolvePart];
 		
 }//end unresolvePartIfPartLibrary
@@ -1684,7 +1670,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 {
 	[self resolvePart]; // We need this to have a valid cache type and make sure we are
 						// a library part.
-	if(cacheType == PartTypeLibrary)
+	if(cacheType == LDrawPartTypeLibrary)
 	{
 		// This is a little gross, but: the library doesn't have the definition of our
 		// part - it has a completely flattened soup of triangles, so that we
@@ -1699,20 +1685,10 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		NSString *  fileContents    = [LDrawUtilities stringFromFile:partPath];
 		NSArray * 	lines           = [fileContents separateByLine];
 		
-		dispatch_group_t parseGroup = NULL;
-#if USE_BLOCKS
-		parseGroup 					= dispatch_group_create();
-#endif
 		LDrawFile * parsedFile      = [[LDrawFile alloc] initWithLines:lines
 															   inRange:NSMakeRange(0, [lines count])
-														   parentGroup:parseGroup];
+														   parentGroup:NULL];
 
-#if USE_BLOCKS
-		// The part parser is insanely dangerous: it parses on a dispatch group and fills in your
-		// NS containers in the background later, with no locks. We use a dispatch group to
-		// wait until the entire mess of loading is done, synchronously, so the part is safe to look at.
-		dispatch_group_wait(parseGroup, DISPATCH_TIME_FOREVER);
-#endif
 
 		// We're going to go get all of the directives and try to find EXACTLY one LDrawPart.
 		NSArray * 	directives = [parsedFile allEnclosedElements];

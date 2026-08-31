@@ -157,7 +157,7 @@
 	[representedObject noteNeedsDisplay];
 
     // Someone else might care that the part has changed
-    [representedObject sendMessageToObservers:MessageObservedChanged];
+    [representedObject sendMessageToObservers:LDrawObserverObservedChanged];
 
 }//end finishedEditing:
 

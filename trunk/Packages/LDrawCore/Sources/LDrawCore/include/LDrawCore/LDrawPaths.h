@@ -11,15 +11,17 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum
+typedef NS_ENUM(NSInteger, LDrawDomain)
 {
 	LDrawUserOfficial		= 0,
 	LDrawUserUnofficial		= 1,
 	LDrawInternalOfficial	= 2,
 	LDrawInternalUnofficial	= 3,
 
-} LDrawDomain;
+};
 
+
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -37,8 +39,8 @@ typedef enum
 
 // Accessors
 - (NSString *)internalLDrawPath;
-- (NSString *)preferredLDrawPath;
-- (void)setPreferredLDrawPath:(NSString *)pathIn;
+- (nullable NSString *)preferredLDrawPath;
+- (void)setPreferredLDrawPath:(nullable NSString *)pathIn;
 
 // Standard paths
 - (NSString *)partsPathForDomain:(LDrawDomain)domain;
@@ -50,9 +52,9 @@ typedef enum
 - (NSString *)subpartsPathForDomain:(LDrawDomain)domain;
 
 // Utilities
-- (NSString *)findLDrawPath;
-- (NSString *)pathForPartName:(NSString *)partName;
-- (NSString *)pathForTextureName:(NSString *)imageName;
+- (nullable NSString *)findLDrawPath;
+- (nullable NSString *)pathForPartName:(NSString *)partName;
+- (nullable NSString *)pathForTextureName:(NSString *)imageName;
 - (BOOL)validateLDrawFolder:(NSString *)folderPath;
 
 /// Alert keys when validateLDrawFolder: fails. The host still localizes.
@@ -60,3 +62,5 @@ typedef enum
 + (NSString *)ldrawFolderChooserErrorInformativeKey;
 
 @end
+
+NS_ASSUME_NONNULL_END

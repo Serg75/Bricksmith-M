@@ -97,8 +97,8 @@ ToolPalette *sharedToolPalette = nil;
 {
 	self = [super init];
 	
-	baseToolMode			= RotateSelectTool;
-	effectiveToolMode		= RotateSelectTool;
+	baseToolMode			= LDrawToolModeRotateSelect;
+	effectiveToolMode		= LDrawToolModeRotateSelect;
 	currentKeyCharacters	= @"";
 	currentKeyModifiers		= 0;
 	
@@ -146,7 +146,7 @@ ToolPalette *sharedToolPalette = nil;
 //				selection plus any modifiers and keys that may be down.
 //
 //------------------------------------------------------------------------------
-+ (ToolModeT) toolMode
++ (LDrawToolMode) toolMode
 {
 	return [[ToolPalette sharedToolPalette] toolMode];
 	
@@ -170,7 +170,7 @@ ToolPalette *sharedToolPalette = nil;
 //				selection plus any modifiers and keys that may be down.
 //
 //==============================================================================
-- (ToolModeT) toolMode
+- (LDrawToolMode) toolMode
 {
 	return self->effectiveToolMode;
 	
@@ -184,7 +184,7 @@ ToolPalette *sharedToolPalette = nil;
 //				the correct mode. 
 //
 //==============================================================================
-- (void) setToolMode:(ToolModeT)newToolMode
+- (void) setToolMode:(LDrawToolMode)newToolMode
 {
 	if(self->effectiveToolMode != newToolMode)
 	{
@@ -245,7 +245,7 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (IBAction) toolButtonClicked:(id)sender
 {
-	ToolModeT newMode = (ToolModeT)[self->toolButtons selectedTag];
+	LDrawToolMode newMode = (LDrawToolMode)[self->toolButtons selectedTag];
 	self->baseToolMode = newMode;
 	
 	//update the new effective tool mode with this base and any current keys.
@@ -425,11 +425,11 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (void) resolveCurrentToolMode
 {
-	ToolModeT newToolMode = LDrawToolModeResolved(baseToolMode,
-												  self->currentKeyCharacters,
-												  self->currentKeyModifiers,
-												  mouseButton3IsDown,
-												  self->tabletPointingDevice == NSPointingDeviceTypeEraser);
+	LDrawToolMode newToolMode = LDrawToolModeResolved(baseToolMode,
+													  self->currentKeyCharacters,
+													  self->currentKeyModifiers,
+													  mouseButton3IsDown,
+													  self->tabletPointingDevice == NSPointingDeviceTypeEraser);
 
 	// Update the tool mode!
 	[self setToolMode:newToolMode];
@@ -451,7 +451,7 @@ ToolPalette *sharedToolPalette = nil;
 //				If no characters are required, this will be an empty string.
 //
 //------------------------------------------------------------------------------
-+ (NSString *) keysForToolMode:(ToolModeT)toolMode
++ (NSString *) keysForToolMode:(LDrawToolMode)toolMode
 					 modifiers:(NSUInteger*)modifiersOut
 {
 	return LDrawToolModeCharacters(toolMode, modifiersOut);
@@ -464,7 +464,7 @@ ToolPalette *sharedToolPalette = nil;
 //				given characters and modifiers.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)  toolMode:(ToolModeT)toolMode
++ (BOOL)  toolMode:(LDrawToolMode)toolMode
  matchesCharacters:(NSString *)characters
 		 modifiers:(NSUInteger)modifiers
 {

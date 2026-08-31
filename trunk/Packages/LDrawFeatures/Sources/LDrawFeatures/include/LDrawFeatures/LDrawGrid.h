@@ -30,21 +30,21 @@ NS_ASSUME_NONNULL_BEGIN
 
 // How much parts move when you nudge them. Numeric values match the
 // document-toolbar segmented control tags.
-typedef enum gridSpacingMode
+typedef NS_ENUM(NSInteger, LDrawGridSpacingMode)
 {
-	gridModeFine	= 0,
-	gridModeMedium	= 1,
-	gridModeCoarse	= 2
+	LDrawGridModeFine	= 0,
+	LDrawGridModeMedium	= 1,
+	LDrawGridModeCoarse	= 2
 
-} gridSpacingModeT;
+};
 
 // Are movements aligned to the overall model or the individual selected part.
-typedef enum gridOrientationMode
+typedef NS_ENUM(NSInteger, LDrawGridOrientationMode)
 {
-	gridOrientationModel = 0,
-	gridOrientationPart  = 1
+	LDrawGridOrientationModel = 0,
+	LDrawGridOrientationPart  = 1
 
-} gridOrientationModeT;
+};
 
 // Fine-grid rotation differs: axis nudges use 1°, snap-to-grid uses 15°.
 typedef NS_ENUM(NSInteger, LDrawGridRotationKind) {
@@ -61,23 +61,23 @@ typedef NS_ENUM(NSInteger, LDrawGridRotationKind) {
 //------------------------------------------------------------------------------
 @interface LDrawGrid : NSObject
 
-+ (float)spacingForMode:(gridSpacingModeT)mode;
-+ (float)rotationDegreesForMode:(gridSpacingModeT)mode kind:(LDrawGridRotationKind)kind;
-+ (float)rotationDegreesForMode:(gridSpacingModeT)mode
++ (float)spacingForMode:(LDrawGridSpacingMode)mode;
++ (float)rotationDegreesForMode:(LDrawGridSpacingMode)mode kind:(LDrawGridRotationKind)kind;
++ (float)rotationDegreesForMode:(LDrawGridSpacingMode)mode
 						   kind:(LDrawGridRotationKind)kind
 					  extraFine:(BOOL)extraFine;
 
-/// Grid menu checkmarks in validateMenuItem:. Tags are gridFineMenuTag, etc.
+/// Grid menu checkmarks in validateMenuItem:. Tags are LDrawGridFineMenuTag, etc.
 + (BOOL)menuItemShouldBeSelectedForGridModeTag:(NSInteger)tag
-								   currentMode:(gridSpacingModeT)currentMode;
+								   currentMode:(LDrawGridSpacingMode)currentMode;
 
-/// Grid-orientation menu checkmarks. Tags are coordModelMenuTag, etc.
+/// Grid-orientation menu checkmarks. Tags are LDrawCoordModelMenuTag, etc.
 + (BOOL)menuItemShouldBeSelectedForGridOrientationTag:(NSInteger)tag
-								   currentOrientation:(gridOrientationModeT)currentOrientation;
+								   currentOrientation:(LDrawGridOrientationMode)currentOrientation;
 
 /// Inverse of the checkmark helpers for menu actions.
-+ (BOOL)gridSpacingMode:(gridSpacingModeT *)outMode forMenuTag:(NSInteger)tag;
-+ (BOOL)gridOrientationMode:(gridOrientationModeT *)outMode forMenuTag:(NSInteger)tag;
++ (BOOL)gridSpacingMode:(LDrawGridSpacingMode *)outMode forMenuTag:(NSInteger)tag;
++ (BOOL)gridOrientationMode:(LDrawGridOrientationMode *)outMode forMenuTag:(NSInteger)tag;
 
 @end
 

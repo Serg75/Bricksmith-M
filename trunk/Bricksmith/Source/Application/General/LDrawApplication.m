@@ -509,12 +509,12 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		//
 		////////////////////////////////////////
 			
-		case showMouseToolsMenuTag:
+		case LDrawShowMouseToolsMenuTag:
 			[menuItem setHidden:[[ToolPalette sharedToolPalette] isVisible]];
 			enable = YES;
 			break;
 			
-		case hideMouseToolsMenuTag:
+		case LDrawHideMouseToolsMenuTag:
 			[menuItem setHidden:[[ToolPalette sharedToolPalette] isVisible] == NO];
 			enable = YES;
 			break;
@@ -625,8 +625,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 - (void) populateLSynthModelMenus
 {
     NSMenu				*mainMenu       = [NSApp mainMenu];
-    NSMenu				*modelMenu      = [[mainMenu itemWithTag:modelsMenuTag] submenu];
-	NSMenu				*lsynthMenu     = [[modelMenu itemWithTag:lsynthMenuTag] submenu];
+    NSMenu				*modelMenu      = [[mainMenu itemWithTag:LDrawModelsMenuTag] submenu];
+	NSMenu				*lsynthMenu     = [[modelMenu itemWithTag:LDrawLSynthMenuTag] submenu];
     NSUserDefaults	    *userDefaults   = [NSUserDefaults standardUserDefaults];
 
 	// A declarative encoding of our LSynth menus
@@ -670,21 +670,21 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	// Add INSIDE/OUTSIDE menus
 	//
 	
-	NSMenu *insideOutsideMenu = [[lsynthMenu itemWithTag:lsynthInsideOutsideMenuTag] submenu];
+	NSMenu *insideOutsideMenu = [[lsynthMenu itemWithTag:LDrawLSynthInsideOutsideMenuTag] submenu];
 	
 	// TODO: Add these in later
 //  NSMenuItem *surroundSelectionItem = [[[NSMenuItem alloc] init] autorelease];
 //  [surroundSelectionItem setTitle:@"Surround Selection"];
 //  [surroundSelectionItem setTarget:self];
 //  [surroundSelectionItem setAction:@selector(surroundLSynthConstraints:)];
-//  [surroundSelectionItem setTag:lsynthSurroundINSIDEOUTSIDETag];
+//  [surroundSelectionItem setTag:LDrawLSynthSurroundInsideOutsideTag];
 //  [insideOutsideMenu addItem:surroundSelectionItem];
 //
 //  NSMenuItem *invertSelectionItem = [[[NSMenuItem alloc] init] autorelease];
 //  [invertSelectionItem setTitle:@"Invert Selection"];
 //  [invertSelectionItem setTarget:self];
 //  [invertSelectionItem setAction:@selector(invertLSynthConstraintSelection:)];
-//  [invertSelectionItem setTag:lsynthInvertINSIDEOUTSIDETag];
+//  [invertSelectionItem setTag:LDrawLSynthInvertInsideOutsideTag];
 //  [insideOutsideMenu addItem:invertSelectionItem];
 	
 	for(NSDictionary *spec in [LSynthConfiguration insideOutsideInsertMenuSpecs])
@@ -937,7 +937,7 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 						// based on the grid. If motion on a given axis doesn't exceed the threshold, it
 						// is set to zero. This helps ignore "noise" when you primarily move along one axis,
 						// but the controller still detects minor motion along others.
-						gridSpacingModeT mode = [currentDocument gridSpacingMode];
+						LDrawGridSpacingMode mode = [currentDocument gridSpacingMode];
 						int translationQuantum = (int)[LDrawGrid spacingForMode:mode];
 						if (!controlDown)
 						{
@@ -979,14 +979,14 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 						case 1:
 							switch([currentDocument gridSpacingMode])
 							{
-								case gridModeFine:
-									[currentDocument setGridSpacingMode:gridModeCoarse];
+								case LDrawGridModeFine:
+									[currentDocument setGridSpacingMode:LDrawGridModeCoarse];
 									break;
-								case gridModeMedium:
-									[currentDocument setGridSpacingMode:gridModeFine];
+								case LDrawGridModeMedium:
+									[currentDocument setGridSpacingMode:LDrawGridModeFine];
 									break;
-								case gridModeCoarse:
-									[currentDocument setGridSpacingMode:gridModeMedium];
+								case LDrawGridModeCoarse:
+									[currentDocument setGridSpacingMode:LDrawGridModeMedium];
 									break;
 							}
 							break;

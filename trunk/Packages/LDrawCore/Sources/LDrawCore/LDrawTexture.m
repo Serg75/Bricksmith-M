@@ -619,7 +619,6 @@ static Class LDrawTexture_registeredClass = Nil;
 					inGroup:(dispatch_group_t)parentGroup
 {
 	NSString	*newReferenceName   = [newName lowercaseString];
-	dispatch_group_t    parseGroup          = NULL;
 	
 	self->imageDisplayName = newName;
 	self->imageReferenceName = newReferenceName;
@@ -629,21 +628,8 @@ static Class LDrawTexture_registeredClass = Nil;
 	// predictability and allows better potential threading optimization. 
 	if (shouldParse == YES && newName != nil && [newName length] > 0)
 	{
-#if USE_BLOCKS
-		// Create a parsing group if needed.
-		if (parentGroup == NULL)
-			parseGroup = dispatch_group_create();
-		else
-			parseGroup = parentGroup;
-#endif
-		[[LDrawPartLibrary sharedPartLibrary] loadImageForName:self->imageDisplayName inGroup:parseGroup];
+		[[LDrawPartLibrary sharedPartLibrary] loadImageForName:self->imageDisplayName inGroup:parentGroup];
 
-#if USE_BLOCKS
-		if (parentGroup == NULL)
-		{
-			dispatch_group_wait(parseGroup, DISPATCH_TIME_FOREVER);
-		}
-#endif	
 	}
 	
 } // end setImageDisplayName:

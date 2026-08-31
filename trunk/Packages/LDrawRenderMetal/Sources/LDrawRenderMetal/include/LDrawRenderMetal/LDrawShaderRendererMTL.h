@@ -14,6 +14,7 @@
 #import <Metal/Metal.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 
+NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
@@ -26,8 +27,10 @@
 
 - (id)initWithEncoder:(id<MTLRenderCommandEncoder>)encoder scale:(float)scale modelView:(float *)mv_matrix projection:(float *)proj_matrix;
 
-- (struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
+- (nullable struct LDrawDL *)builderFinish:(struct LDrawDLBuilder *)ctx;
 
 - (void)finishDraw;
 
 @end
+
+NS_ASSUME_NONNULL_END

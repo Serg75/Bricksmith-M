@@ -179,27 +179,27 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 } // end colorForCode:
 
 
-//========== complimentColorForCode: ===========================================
+//========== complementColorForCode: ===========================================
 //
-// Purpose:		Returns the color that should be used when the compliment color 
-//				is requested for the given code. Compliment colors are usually 
+// Purpose:		Returns the color that should be used when the complement color 
+//				is requested for the given code. Complement colors are usually 
 //				used to draw lines on the edges of parts. 
 //
 // Notes:		It may seem odd to have the method in the Color Library rather 
 //				than the color object itself. The reason is that a color may 
-//				specify its compliment color either as actual color components 
+//				specify its complement color either as actual color components 
 //				or as another color code. Since colors have no actual knowledge 
 //				of the library in which they are contained, we must look up the 
 //				actual code here. 
 //
 //				Also note that the default ldconfig.ldr file defines most 
-//				compliment colors as black, which is well and good for printed 
+//				complement colors as black, which is well and good for printed 
 //				instructions, but less than stellar for onscreen display. The 
 //				visual looks a lot more realistic when red has an edge color of, 
 //				say, pink. 
 //
 //==============================================================================
-- (void)getComplimentRGBA:(float *)complimentRGBA
+- (void)getComplementRGBA:(float *)complementRGBA
 				  forCode:(LDrawColorT)colorCode
 {
 	LDrawColor	*mainColor		= [self colorForCode:colorCode];
@@ -212,12 +212,12 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 		// If the color has a defined RGBA edge color, use it. Otherwise, look 
 		// up the components of the color it points to. 
 		if (edgeColorCode == LDrawColorBogus)
-			[mainColor getEdgeColorRGBA:complimentRGBA];
+			[mainColor getEdgeColorRGBA:complementRGBA];
 		else
-			[[self colorForCode:edgeColorCode] getColorRGBA:complimentRGBA];
+			[[self colorForCode:edgeColorCode] getColorRGBA:complementRGBA];
 	}
 	
-} // end complimentColorForCode:
+} // end complementColorForCode:
 
 
 #pragma mark -
@@ -354,7 +354,7 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 + (NSString *)tooltipForColorCode:(LDrawColorT)colorCode
 					localizedName:(NSString *)localizedName
 {
-	return [NSString stringWithFormat:@"LDraw %d\n%@", colorCode, localizedName];
+	return [NSString stringWithFormat:@"LDraw %d\n%@", (int)colorCode, localizedName];
 }
 
 
@@ -482,13 +482,13 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 #pragma mark UTILITY FUNCTIONS
 #pragma mark -
 
-//========== complimentColor() =================================================
+//========== complementColor() =================================================
 //
-// Purpose:		Changes the given RGBA color into a "complimentary" color, which 
+// Purpose:		Changes the given RGBA color into a "complementary" color, which 
 //				stands out in the original color, but maintains the same hue.
 //
 //==============================================================================
-void complimentColor(const float *originalColor, float *complimentColor)
+void complementColor(const float *originalColor, float *complementRGBA)
 {
 	float	brightness		= 0.0;
 	
@@ -497,25 +497,25 @@ void complimentColor(const float *originalColor, float *complimentColor)
 				+	originalColor[1] * 0.59
 				+	originalColor[2] * 0.11;
 	
-	// compliment dark colors with light ones and light colors with dark ones.
+	// complement dark colors with light ones and light colors with dark ones.
 	if (brightness > 0.5)
 	{
 		// Darken
-		complimentColor[0] = MAX(originalColor[0] - 0.40, 0.0);
-		complimentColor[1] = MAX(originalColor[1] - 0.40, 0.0);
-		complimentColor[2] = MAX(originalColor[2] - 0.40, 0.0);
+		complementRGBA[0] = MAX(originalColor[0] - 0.40, 0.0);
+		complementRGBA[1] = MAX(originalColor[1] - 0.40, 0.0);
+		complementRGBA[2] = MAX(originalColor[2] - 0.40, 0.0);
 	}
 	else
 	{
 		// Lighten
-		complimentColor[0] = MIN(originalColor[0] + 0.40, 1.0);
-		complimentColor[1] = MIN(originalColor[1] + 0.40, 1.0);
-		complimentColor[2] = MIN(originalColor[2] + 0.40, 1.0);
+		complementRGBA[0] = MIN(originalColor[0] + 0.40, 1.0);
+		complementRGBA[1] = MIN(originalColor[1] + 0.40, 1.0);
+		complementRGBA[2] = MIN(originalColor[2] + 0.40, 1.0);
 	}
 	
-	complimentColor[3] = originalColor[3];
+	complementRGBA[3] = originalColor[3];
 	
-} // end complimentColor
+} // end complementColor
 
 
 @end

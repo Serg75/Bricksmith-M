@@ -62,8 +62,8 @@
 - (NSToolbarItem *) makeZoomItem;
 
 //Accessors
-- (void) setGridSpacingMode:(gridSpacingModeT)newMode;
-- (void) setGridOrientationMode:(gridOrientationModeT)newMode;
+- (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode;
+- (void) setGridOrientationMode:(LDrawGridOrientationMode)newMode;
 
 //Actions
 - (IBAction) gridSpacingSegmentedControlClicked:(id)sender;

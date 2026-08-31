@@ -12,6 +12,8 @@
 
 #import <LDrawCore/LDrawMetaCommand.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawComment
@@ -24,3 +26,5 @@
 - (NSString *) write;
 
 @end
+
+NS_ASSUME_NONNULL_END

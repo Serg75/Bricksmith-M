@@ -26,18 +26,18 @@ static NSString * const		GROUP_WRITE_PATTERN		= @"0 MLCAD BTG %@%@";
 static NSString * const		GROUP_REGEX_PATTERN		= @"0\\s+MLCAD\\s+BTG\\s+(\\S+)";
 
 // Viewing Angle
-typedef enum
+typedef NS_ENUM(NSInteger, LDrawViewOrientation)
 {
-	ViewOrientation3D			= 0,
-	ViewOrientationFront		= 1,
-	ViewOrientationBack			= 2,
-	ViewOrientationLeft			= 3,
-	ViewOrientationRight		= 4,
-	ViewOrientationTop			= 5,
-	ViewOrientationBottom		= 6,
-	ViewOrientationWalkThrough	= 7
+	LDrawViewOrientation3D			= 0,
+	LDrawViewOrientationFront		= 1,
+	LDrawViewOrientationBack		= 2,
+	LDrawViewOrientationLeft		= 3,
+	LDrawViewOrientationRight		= 4,
+	LDrawViewOrientationTop			= 5,
+	LDrawViewOrientationBottom		= 6,
+	LDrawViewOrientationWalkThrough	= 7
 
-} ViewOrientationT;
+};
 
 /// Dimension-panel unit rows. Height uses vertical studs (1/24 LDU);
 /// other axes use horizontal studs (1/20 LDU).
@@ -98,12 +98,12 @@ enum {
 + (nullable CGImageRef)imageAtPath:(NSString *)imagePath CF_RETURNS_NOT_RETAINED;
 
 // Miscellaneous
-+ (Tuple3)angleForViewOrientation:(ViewOrientationT)orientation;
++ (Tuple3)angleForViewOrientation:(LDrawViewOrientation)orientation;
 + (Box3)boundingBox3ForDirectives:(NSArray *)directives;
 + (BOOL)isLDrawFilenameValid:(NSString *)fileName;
 + (void)updateNameForMovedPart:(LDrawPart *)movedPart;
 + (void)updateNamesForMovedParts:(NSArray *)movedParts;
-+ (ViewOrientationT)viewOrientationForAngle:(Tuple3)rotationAngle;
++ (LDrawViewOrientation)viewOrientationForAngle:(Tuple3)rotationAngle;
 + (void)unresolveLibraryParts:(LDrawDirective *)directive;
 
 /// Hover-coordinate axis: confidence 0 means the axis is unknown /

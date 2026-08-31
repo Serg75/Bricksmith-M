@@ -18,6 +18,7 @@
 // forward declarations
 @class LDrawMPDModel;
 
+NS_ASSUME_NONNULL_BEGIN
 
 //Active model changed.
 // Object is the LDrawFile in which the model resides. No userInfo.
@@ -40,29 +41,31 @@
 
 // Initialization
 + (LDrawFile *) file;
-+ (LDrawFile *) fileFromContentsAtPath:(NSString *)path;
-+ (LDrawFile *) parseFromFileContents:(NSString *) fileContents;
++ (nullable LDrawFile *) fileFromContentsAtPath:(NSString *)path;
++ (nullable LDrawFile *) parseFromFileContents:(NSString *) fileContents;
 
 // Directives
 - (void) collectColorsFromConfig;
 
 // Accessors
-- (LDrawMPDModel *) activeModel;
+- (nullable LDrawMPDModel *) activeModel;
 - (LDrawMPDModel *) firstModel;							// For using another file, we always refer to the FIRST model even if the doc is open and another model is actively edited!
 - (void) addSubmodel:(LDrawMPDModel *)newSubmodel;
-- (NSArray *) draggingDirectives;
+- (nullable NSArray *) draggingDirectives;
 - (NSArray *) modelNames;
-- (LDrawMPDModel *) modelWithName:(NSString *)soughtName;
-- (NSString *)path;
+- (nullable LDrawMPDModel *) modelWithName:(NSString *)soughtName;
+- (nullable NSString *)path;
 - (NSArray *) submodels;
 - (NSArray<LDrawPart *> *) partsWithName:(NSString *)name;
 
-- (void) setActiveModel:(LDrawMPDModel *)newModel;
-- (void) setDraggingDirectives:(NSArray *)directives;
-- (void) setPath:(NSString *)newPath;
+- (void) setActiveModel:(nullable LDrawMPDModel *)newModel;
+- (void) setDraggingDirectives:(nullable NSArray *)directives;
+- (void) setPath:(nullable NSString *)newPath;
 
 // Utilities
 - (void) optimizeStructure;
 - (void) renameModel:(LDrawMPDModel *)submodel toName:(NSString *)newName;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -20,10 +20,7 @@ let package = Package(
                 .product(name: "LDrawCore", package: "LDrawCore"),
             ],
             path: "Sources/LDrawFeatures",
-            publicHeadersPath: "include",
-            cSettings: [
-                .define("WANT_RELATED_PARTS", to: "1"),
-            ]
+            publicHeadersPath: "include"
         ),
     ]
 )

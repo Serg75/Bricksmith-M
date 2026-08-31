@@ -33,7 +33,6 @@
 #import <LDrawRenderMetal/LDrawShaderRendererMTL.h>
 #import <LDrawRenderMetal/MetalGPU.h>
 #import "MetalUtilities.h"
-#import "SIMDConversions.h"
 #import <objc/runtime.h>
 
 

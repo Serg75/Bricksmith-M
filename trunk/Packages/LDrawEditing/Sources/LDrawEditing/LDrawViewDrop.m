@@ -32,7 +32,7 @@
 //---------- viewDropIsSameDocumentMoveFromSource:toDocument:selectionCount:
 //																     [static]--
 //
-// Purpose:		The user has deposited some drag-anddrop parts into an
+// Purpose:		The user has deposited some drag-and-drop parts into an
 //				LDrawView. Now they need to be imported into the model.
 //
 // Notes:		Just like in -duplicate: and
@@ -142,7 +142,7 @@
 // Purpose:		The parts which originated the most recent drag operation have
 //				apparently been dragged clear out of the document. Maybe they
 //				went into another document. Maybe they got dragged into empty
-//				space. Whereever they went, they are gone now.
+//				space. Wherever they went, they are gone now.
 //
 //				The trouble is that when we started dragging them, we just *hid*
 //				them, in anticipation of their landing back within the document.

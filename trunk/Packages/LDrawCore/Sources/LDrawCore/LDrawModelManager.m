@@ -127,7 +127,7 @@
 	for(NSString * partPath in trackedFiles)
 	{
 		LDrawFile * deadFile = [trackedFiles objectForKey:partPath];
-		[[deadFile firstModel] sendMessageToObservers:MessageScopeChanged];
+		[[deadFile firstModel] sendMessageToObservers:LDrawObserverScopeChanged];
 		[[LDrawModelManager sharedModelManager] documentSignOut:deadFile];
 
 	}
@@ -157,18 +157,10 @@
 	NSString *	fileContents	= [LDrawUtilities stringFromFile:fullPath];
 	NSArray *	lines			= [fileContents separateByLine];		
 	
-	dispatch_group_t group = NULL;
-#if USE_BLOCKS
-	group           = dispatch_group_create();
-#endif
-	
 	LDrawFile * parsedFile = [[LDrawFile alloc] initWithLines:lines
 													  inRange:NSMakeRange(0, [lines count])
-												  parentGroup:group];
+												  parentGroup:NULL];
 	
-#if USE_BLOCKS
-	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-#endif	
 	if(parsedFile)
 	{
 		[parsedFile setPath:fullPath];
@@ -205,7 +197,7 @@
 	if(deadFile)
 	{
 		//NSLog(@"%p: drop sevice for %@\n", self,inFileName);		
-		[[deadFile firstModel] sendMessageToObservers:MessageScopeChanged];
+		[[deadFile firstModel] sendMessageToObservers:LDrawObserverScopeChanged];
 
 		// This releases any files that deadFile was in tunr using.
 		[[LDrawModelManager sharedModelManager] documentSignOut:deadFile];

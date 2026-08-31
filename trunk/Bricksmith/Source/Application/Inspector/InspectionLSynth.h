@@ -38,6 +38,6 @@
 - (void) populateTypes:(int)lsynthClass;
 - (void) populateDefaultConstraint:(int)class;
 
-- (void) updateSynthTypeLabel:(LSynthClassT)tag;
+- (void) updateSynthTypeLabel:(LDrawLSynthClass)tag;
 
 @end

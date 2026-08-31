@@ -81,8 +81,8 @@
 		LDrawPart		*lastSelectedPart; //the part in the file which was most recently selected in the contents. (retained)
 		NSArray			*selectedDirectives; //mirrors the selection of the file contents outline.
 		NSArray			*selectedDirectivesBeforeCopyDrag;
-		gridSpacingModeT gridMode;
-		gridOrientationModeT gridOrientation;
+		LDrawGridSpacingMode gridMode;
+		LDrawGridOrientationMode gridOrientation;
 		LDrawView		*mostRecentLDrawView; //file graphic view which most recently had focus. Weak link.
 		NSArray		*	markedSelection;		// if we are mid-marquee selection, this is an array of the previously selected directives before drag started
 }
@@ -90,15 +90,15 @@
 // Accessors
 - (LDrawFile *) documentContents;
 - (NSWindow *)foremostWindow;
-- (gridSpacingModeT) gridSpacingMode;
-- (gridOrientationModeT) gridOrientationMode;
+- (LDrawGridSpacingMode) gridSpacingMode;
+- (LDrawGridOrientationMode) gridOrientationMode;
 - (Tuple3) viewingAngle;
 
 - (void) setActiveModel:(LDrawMPDModel *)newActiveModel;
 - (void) setCurrentStep:(NSInteger)requestedStep;
 - (void) setDocumentContents:(LDrawFile *)newContents;
-- (void) setGridSpacingMode:(gridSpacingModeT)newMode;
-- (void) setGridOrientationMode:(gridOrientationModeT)newMode;
+- (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode;
+- (void) setGridOrientationMode:(LDrawGridOrientationMode)newMode;
 - (void) setLastSelectedPart:(LDrawPart *)newPart;
 - (void) setMostRecentLDrawView:(LDrawView *)viewIn;
 - (void) setStepDisplay:(BOOL)showStepsFlag;

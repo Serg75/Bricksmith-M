@@ -43,7 +43,7 @@
 	__weak NSString			*selectedCategory;
 	__weak NSArray 			*categoryList;
 	NSMutableArray  		*tableDataSource;
-	SearchModeT				searchMode;
+	LDrawPartBrowserSearchMode	searchMode;
 	LDrawPartBrowserModel	*browserModel;
 }
 

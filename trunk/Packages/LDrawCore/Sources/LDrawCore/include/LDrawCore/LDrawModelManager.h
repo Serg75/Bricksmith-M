@@ -16,6 +16,8 @@
 @class LDrawModel;
 @class LDrawFile;
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawModelManager
@@ -58,7 +60,9 @@
 // Signed in document (ID-ed by its ldraw-doc) can request a part by name.
 // Code will search its service table and load the part if needed.  The model is
 // retained by the model manager until the document signs out.
-- (LDrawModel *) requestModel:(NSString *) partName withDocument:(LDrawFile *) whoIsAsking;
+- (nullable LDrawModel *) requestModel:(NSString *) partName withDocument:(LDrawFile *) whoIsAsking;
 
 
 @end
+
+NS_ASSUME_NONNULL_END

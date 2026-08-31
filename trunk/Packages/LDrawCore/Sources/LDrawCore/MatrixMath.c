@@ -91,7 +91,7 @@ size_t FloorPowerOfTwo(size_t value)
 //				There are 0xFFFFFFFF possible floating-point values; a 
 //				difference of, say, 2 doesn't amount to much! 
 //
-//				The main issue now is converting from 2's compliment into 
+//				The main issue now is converting from two's complement into 
 //				sign-magnitude ints. 
 //
 //==============================================================================

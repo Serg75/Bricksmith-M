@@ -25,17 +25,17 @@
 //			    horizontal along the brick. Vertical distances may be adjusted. 
 //
 //------------------------------------------------------------------------------
-+ (float)spacingForMode:(gridSpacingModeT)mode
++ (float)spacingForMode:(LDrawGridSpacingMode)mode
 {
 	NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
 
 	switch (mode)
 	{
-		case gridModeFine:
+		case LDrawGridModeFine:
 			return [userDefaults floatForKey:GRID_SPACING_FINE];
-		case gridModeMedium:
+		case LDrawGridModeMedium:
 			return [userDefaults floatForKey:GRID_SPACING_MEDIUM];
-		case gridModeCoarse:
+		case LDrawGridModeCoarse:
 			return [userDefaults floatForKey:GRID_SPACING_COARSE];
 	}
 	return 0.0f;
@@ -48,7 +48,7 @@
 //				(snap vs extra-fine), without the extraFine divisor.
 //
 //------------------------------------------------------------------------------
-+ (float)rotationDegreesForMode:(gridSpacingModeT)mode kind:(LDrawGridRotationKind)kind
++ (float)rotationDegreesForMode:(LDrawGridSpacingMode)mode kind:(LDrawGridRotationKind)kind
 {
 	return [self rotationDegreesForMode:mode kind:kind extraFine:NO];
 }
@@ -62,7 +62,7 @@
 //				fine rotation in the original ToolPalette.
 //
 //------------------------------------------------------------------------------
-+ (float)rotationDegreesForMode:(gridSpacingModeT)mode
++ (float)rotationDegreesForMode:(LDrawGridSpacingMode)mode
 						   kind:(LDrawGridRotationKind)kind
 					  extraFine:(BOOL)extraFine
 {
@@ -70,15 +70,15 @@
 
 	switch (mode)
 	{
-		case gridModeFine:
+		case LDrawGridModeFine:
 			degrees = (kind == LDrawGridRotationSnap)
 						? GRID_ROTATION_FINE
 						: GRID_ROTATION_SUPERFINE;
 			break;
-		case gridModeMedium:
+		case LDrawGridModeMedium:
 			degrees = GRID_ROTATION_MEDIUM;
 			break;
-		case gridModeCoarse:
+		case LDrawGridModeCoarse:
 			degrees = GRID_ROTATION_COARSE;
 			break;
 	}
@@ -98,16 +98,16 @@
 //
 //------------------------------------------------------------------------------
 + (BOOL)menuItemShouldBeSelectedForGridModeTag:(NSInteger)tag
-								   currentMode:(gridSpacingModeT)currentMode
+								   currentMode:(LDrawGridSpacingMode)currentMode
 {
 	switch (tag)
 	{
-		case gridFineMenuTag:
-			return currentMode == gridModeFine;
-		case gridMediumMenuTag:
-			return currentMode == gridModeMedium;
-		case gridCoarseMenuTag:
-			return currentMode == gridModeCoarse;
+		case LDrawGridFineMenuTag:
+			return currentMode == LDrawGridModeFine;
+		case LDrawGridMediumMenuTag:
+			return currentMode == LDrawGridModeMedium;
+		case LDrawGridCoarseMenuTag:
+			return currentMode == LDrawGridModeCoarse;
 	}
 	return NO;
 }
@@ -119,14 +119,14 @@
 //
 //------------------------------------------------------------------------------
 + (BOOL)menuItemShouldBeSelectedForGridOrientationTag:(NSInteger)tag
-								   currentOrientation:(gridOrientationModeT)currentOrientation
+								   currentOrientation:(LDrawGridOrientationMode)currentOrientation
 {
 	switch (tag)
 	{
-		case coordModelMenuTag:
-			return currentOrientation == gridOrientationModel;
-		case coordPartMenuTag:
-			return currentOrientation == gridOrientationPart;
+		case LDrawCoordModelMenuTag:
+			return currentOrientation == LDrawGridOrientationModel;
+		case LDrawCoordPartMenuTag:
+			return currentOrientation == LDrawGridOrientationPart;
 	}
 	return NO;
 }
@@ -137,21 +137,21 @@
 // Purpose:		Map grid menu tags to spacing modes for menu actions.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)gridSpacingMode:(gridSpacingModeT *)outMode forMenuTag:(NSInteger)tag
++ (BOOL)gridSpacingMode:(LDrawGridSpacingMode *)outMode forMenuTag:(NSInteger)tag
 {
 	if (outMode == NULL)
 		return NO;
 
 	switch (tag)
 	{
-		case gridFineMenuTag:
-			*outMode = gridModeFine;
+		case LDrawGridFineMenuTag:
+			*outMode = LDrawGridModeFine;
 			return YES;
-		case gridMediumMenuTag:
-			*outMode = gridModeMedium;
+		case LDrawGridMediumMenuTag:
+			*outMode = LDrawGridModeMedium;
 			return YES;
-		case gridCoarseMenuTag:
-			*outMode = gridModeCoarse;
+		case LDrawGridCoarseMenuTag:
+			*outMode = LDrawGridModeCoarse;
 			return YES;
 	}
 	return NO;
@@ -163,18 +163,18 @@
 // Purpose:		Map orientation menu tags for menu actions.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)gridOrientationMode:(gridOrientationModeT *)outMode forMenuTag:(NSInteger)tag
++ (BOOL)gridOrientationMode:(LDrawGridOrientationMode *)outMode forMenuTag:(NSInteger)tag
 {
 	if (outMode == NULL)
 		return NO;
 
 	switch (tag)
 	{
-		case coordModelMenuTag:
-			*outMode = gridOrientationModel;
+		case LDrawCoordModelMenuTag:
+			*outMode = LDrawGridOrientationModel;
 			return YES;
-		case coordPartMenuTag:
-			*outMode = gridOrientationPart;
+		case LDrawCoordPartMenuTag:
+			*outMode = LDrawGridOrientationPart;
 			return YES;
 	}
 	return NO;

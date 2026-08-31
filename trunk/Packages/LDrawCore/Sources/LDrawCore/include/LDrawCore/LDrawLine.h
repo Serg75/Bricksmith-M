@@ -14,6 +14,8 @@
 
 #import <LDrawCore/LDrawDrawableElement.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawLine
@@ -39,3 +41,5 @@
 - (void) setVertex2:(Point3)newVertex;
 
 @end
+
+NS_ASSUME_NONNULL_END
