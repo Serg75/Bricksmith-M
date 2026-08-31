@@ -13,7 +13,7 @@
 #import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawRenderCore/LDrawPoolAllocator.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
-#import <LDrawCore/MatrixMathEx.h>
+#import <LDrawCore/MatrixMath.h>
 #import <LDrawRenderCore/MeshSmooth.h>
 
 #include <OpenGL/gl.h>

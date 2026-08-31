@@ -9,10 +9,12 @@
 //              file/model/step containers, primitives, color library, math, and
 //              the part library. It has no AppKit, UIKit, or GPU renderer
 //              dependencies and is shared by Bricksmith and other host apps.
-//              Implementation helpers (LDrawFastSet, PartCatalogBuilder,
-//              ComputationalGeometry) are private headers next to their .m
-//              files, not under include/. Host chrome keys live in
-//              LDrawFeatures; pasteboard type names live in LDrawEditing.
+//              Implementation helpers (LDrawFastSet, LDrawClassInspector,
+//              PartCatalogBuilder, ComputationalGeometry, MatrixMathEx.c) are
+//              private next to their .m/.c files, not under include/. Host
+//              chrome keys live in LDrawFeatures; pasteboard type names live in
+//              LDrawEditing. Column-major 4x4 helpers that used to live in
+//              MatrixMathEx.h are declared on MatrixMath.h.
 //
 //  Created by Sergey Slobodenyuk on 2026-05-26.
 //
@@ -23,14 +25,12 @@
 // Math, keys, and string helpers
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawCore/MatrixMathEx.h>
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawPathNames.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawRegex.h>
 #import <LDrawCore/NSScanner+LDraw.h>
 #import <LDrawCore/NSString+LDraw.h>
-#import <LDrawCore/LDrawClassInspector.h>
 
 // Protocol surface consumed by renderer / feature packages
 #import <LDrawCore/LDrawCoreRenderer.h>

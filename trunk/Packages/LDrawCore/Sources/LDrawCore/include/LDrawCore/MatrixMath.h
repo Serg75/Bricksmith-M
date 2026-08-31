@@ -362,5 +362,32 @@ extern bool		VolumeCanIntersectPoint(
 						Box2		testPoint,			// We provide a RANGE that our point is inside - this is how we get 'fuzzy' hits for infinitely thin geometry like lines.
 						float		testDepthSoFar);
 
+// Column-major 16-float matrices (the layout OpenGL and Metal both use).
+// These emulate the old fixed-function transform stack; arguments match the
+// historical glRotate/glTranslate/glOrtho/glFrustum shapes.
+
+void applyMatrixInPlace(float v[4], const float m[16]);
+void applyMatrix(float dst[4], const float m[16], const float v[4]);
+
+void perspectiveDivideInPlace(float p[4]);
+void perspectiveDivide(float o[3], const float p[4]);
+
+void applyMatrixTranspose(float dst[4], const float m[16], const float v[4]);
+
+void multMatrices(float dst[16], const float a[16], const float b[16]);
+
+void buildRotationMatrix(float m[16], float angle, float x, float y, float z);
+void buildTranslationMatrix(float m[16], float x, float y, float z);
+void buildIdentity(float m[16]);
+void buildOrthoMatrix(float m[16], float left, float right, float bottom, float top, float zNear, float zFar);
+void buildFrustumMatrix(float m[16], float left, float right, float bottom, float top, float zNear, float zFar);
+
+void applyRotationMatrix(float m[16], float angle, float x, float y, float z);
+
+void meshToClipbox(float * vertices, int vcount, const int * lines, const float m[16], float out_aabb_ndc[6]);
+void aabbToClipbox(const float aabb_mv[6], const float m[16], float aabb_ndc[6]);
+
+int clipTriangle(const float in_tri[12], float out_tri[18]);
+
 
 #endif // _MatrixMath_

@@ -1,14 +1,13 @@
 //==============================================================================
 //
-//  File:       LDrawToolbarLabels.h
-//  Package:    LDrawFeatures
+// File:		LDrawToolbarLabels.h
 //
-//  Purpose:    Localization keys for document-toolbar item labels. Identifiers
-//              are not always the same as the strings-file key (e.g.
-//              PartBrowser → ShowPartBrowser). The host still localizes and
-//              builds NSToolbarItem.
+// Purpose:		Localization keys for document-toolbar item labels. Identifiers
+//				are not always the same as the strings-file key (e.g.
+//				PartBrowser → ShowPartBrowser). The host still localizes and
+//				builds NSToolbarItem.
 //
-//  Created by Sergey Slobodenyuk on 2026-08-27.
+// Created by Sergey Slobodenyuk on 2026-08-27.
 //
 //==============================================================================
 

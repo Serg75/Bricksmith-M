@@ -1,15 +1,14 @@
 //==============================================================================
 //
-//  File:       LDrawToolbarLabels.m
-//  Package:    LDrawFeatures
+// File:		LDrawToolbarLabels.m
 //
-//  Purpose:    Localization keys for document-toolbar item labels.
+// Purpose:		Localization keys for document-toolbar item labels.
 //
-//  Created by Sergey Slobodenyuk on 2026-08-27.
+// Created by Sergey Slobodenyuk on 2026-08-27.
 //
 //==============================================================================
 
-#import <LDrawFeatures/LDrawToolbarLabels.h>
+#import "LDrawToolbarLabels.h"
 
 @implementation LDrawToolbarLabels
 

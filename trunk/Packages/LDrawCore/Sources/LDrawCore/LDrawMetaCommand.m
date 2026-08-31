@@ -20,11 +20,11 @@
 //
 //==============================================================================
 
-#import <LDrawCore/LDrawMetaCommand.h>
-
-#import <LDrawCore/LDrawClassInspector.h>
 #import <LDrawCore/LDrawColor.h>
+#import <LDrawCore/LDrawMetaCommand.h>
 #import <LDrawCore/LDrawUtilities.h>
+
+#import "LDrawClassInspector.h"
 
 
 static NSArray<Class>	*subclasses;

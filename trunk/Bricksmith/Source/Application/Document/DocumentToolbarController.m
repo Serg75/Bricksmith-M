@@ -19,7 +19,8 @@
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawEditing/LDrawSelection.h>
-#import <LDrawFeatures/LDrawToolbarLabels.h>
+
+#import "LDrawToolbarLabels.h"
 
 
 @implementation DocumentToolbarController

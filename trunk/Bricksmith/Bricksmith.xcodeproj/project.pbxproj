@@ -131,6 +131,8 @@
 		0BE84A201300F91F004E7626 /* BricksmithUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BE84A1E1300F91F004E7626 /* BricksmithUtilities.m */; };
 		0BF729B808AD849300E3DA53 /* DocumentToolbarController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */; };
 		0BF729B908AD849300E3DA53 /* DocumentToolbarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */; };
+		B5C01A031A2B3C4D5E6F7083 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
+		B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
 		0BF729BA08AD849300E3DA53 /* LDrawDocument.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A908AD849300E3DA53 /* LDrawDocument.h */; };
 		0BF729BB08AD849300E3DA53 /* LDrawDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AA08AD849300E3DA53 /* LDrawDocument.m */; };
 		0BF729BC08AD849300E3DA53 /* LDrawApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AC08AD849300E3DA53 /* LDrawApplication.h */; };
@@ -174,6 +176,7 @@
 		956D9B872A30768000FA956B /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
 		956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 32DBCF750370BD2300C91783 /* Mac LDraw_Prefix.pch */; };
 		956D9B8E2A30768000FA956B /* DocumentToolbarController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */; };
+		B5C01A051A2B3C4D5E6F7085 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
 		956D9B8F2A30768000FA956B /* LDrawDocument.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A908AD849300E3DA53 /* LDrawDocument.h */; };
 		956D9B902A30768000FA956B /* LDrawApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AC08AD849300E3DA53 /* LDrawApplication.h */; };
 		956D9B922A30768000FA956B /* LDrawColorPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AE08AD849300E3DA53 /* LDrawColorPanelController.h */; };
@@ -265,6 +268,7 @@
 		956D9C1B2A30768000FA956B /* lsynth.mpd in Resources */ = {isa = PBXBuildFile; fileRef = 95D893AD1655334500AA055B /* lsynth.mpd */; };
 		956D9C1D2A30768000FA956B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A37F4B0FDCFA73011CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		956D9C2E2A30768000FA956B /* DocumentToolbarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */; };
+		B5C01A061A2B3C4D5E6F7086 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
 		956D9C2F2A30768000FA956B /* LDrawDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AA08AD849300E3DA53 /* LDrawDocument.m */; };
 		956D9C302A30768000FA956B /* LDrawApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AD08AD849300E3DA53 /* LDrawApplication.m */; };
 		956D9C312A30768000FA956B /* LDrawColorPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AF08AD849300E3DA53 /* LDrawColorPanelController.m */; };
@@ -589,6 +593,8 @@
 		0BE84A1E1300F91F004E7626 /* BricksmithUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BricksmithUtilities.m; sourceTree = "<group>"; };
 		0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DocumentToolbarController.h; sourceTree = "<group>"; };
 		0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DocumentToolbarController.m; sourceTree = "<group>"; };
+		B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawToolbarLabels.h; sourceTree = "<group>"; };
+		B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawToolbarLabels.m; sourceTree = "<group>"; };
 		0BF729A908AD849300E3DA53 /* LDrawDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawDocument.h; sourceTree = "<group>"; };
 		0BF729AA08AD849300E3DA53 /* LDrawDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawDocument.m; sourceTree = "<group>"; usesTabs = 1; };
 		0BF729AC08AD849300E3DA53 /* LDrawApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawApplication.h; sourceTree = "<group>"; };
@@ -881,6 +887,8 @@
 				0BC699CC08B93A0500DAF996 /* DimensionsPanel.m */,
 				0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */,
 				0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */,
+				B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */,
+				B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */,
 				0BF729A908AD849300E3DA53 /* LDrawDocument.h */,
 				0BF729AA08AD849300E3DA53 /* LDrawDocument.m */,
 				2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */,
@@ -1348,6 +1356,7 @@
 				9526F9892A0BA1A50083A86A /* LDrawApplicationGL.h in Headers */,
 				0B6770EE0817588D0044A0E0 /* Mac LDraw_Prefix.pch in Headers */,
 				0BF729B808AD849300E3DA53 /* DocumentToolbarController.h in Headers */,
+				B5C01A031A2B3C4D5E6F7083 /* LDrawToolbarLabels.h in Headers */,
 				0BF729BA08AD849300E3DA53 /* LDrawDocument.h in Headers */,
 				0BF729BC08AD849300E3DA53 /* LDrawApplication.h in Headers */,
 				0BF729BE08AD849300E3DA53 /* LDrawColorPanelController.h in Headers */,
@@ -1414,6 +1423,7 @@
 				18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */,
 				956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */,
 				956D9B8E2A30768000FA956B /* DocumentToolbarController.h in Headers */,
+				B5C01A051A2B3C4D5E6F7085 /* LDrawToolbarLabels.h in Headers */,
 				956D9B8F2A30768000FA956B /* LDrawDocument.h in Headers */,
 				956D9B902A30768000FA956B /* LDrawApplication.h in Headers */,
 				956D9CA02A30A72300FA956B /* LDrawApplicationMTL.h in Headers */,
@@ -1742,6 +1752,7 @@
 			files = (
 				8D15AC320486D014006FF6A4 /* main.m in Sources */,
 				0BF729B908AD849300E3DA53 /* DocumentToolbarController.m in Sources */,
+				B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */,
 				0BF729BB08AD849300E3DA53 /* LDrawDocument.m in Sources */,
 				0BF729BD08AD849300E3DA53 /* LDrawApplication.m in Sources */,
 				0BF729BF08AD849300E3DA53 /* LDrawColorPanelController.m in Sources */,
@@ -1811,6 +1822,7 @@
 				956D9CA12A30A72300FA956B /* LDrawApplicationMTL.m in Sources */,
 				18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */,
 				956D9C2E2A30768000FA956B /* DocumentToolbarController.m in Sources */,
+				B5C01A061A2B3C4D5E6F7086 /* LDrawToolbarLabels.m in Sources */,
 				956D9C2F2A30768000FA956B /* LDrawDocument.m in Sources */,
 				956D9C302A30768000FA956B /* LDrawApplication.m in Sources */,
 				956D9C312A30768000FA956B /* LDrawColorPanelController.m in Sources */,
@@ -2498,6 +2510,10 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREFIX_HEADER = UnitTests/Other/UnitTests_Prefix.pch;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2563,6 +2579,10 @@
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREFIX_HEADER = UnitTests/Other/UnitTests_Prefix.pch;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
+				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;

@@ -29,7 +29,7 @@
 #import <LDrawCore/LDrawDragHandle.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MatrixMathEx.h>
+#import <LDrawCore/MatrixMath.h>
 
 
 @implementation LDrawTriangle

@@ -1,13 +1,15 @@
-/*
- *  MatrixMathEx.c
- *  Bricksmith
- *
- *  Created by bsupnik on 9/24/13.
- *  Copyright 2013 __MyCompanyName__. All rights reserved.
- *
- */
+//==============================================================================
+//
+//  File:       MatrixMathEx.c
+//  Package:    LDrawCore
+//
+//  Purpose:    Column-major 16-float matrix helpers (declared in MatrixMath.h).
+//
+//  Created by bsupnik on 9/24/13.
+//
+//==============================================================================
 
-#include <LDrawCore/MatrixMathEx.h>
+#include <LDrawCore/MatrixMath.h>
 
 #include <assert.h>
 #include <math.h>

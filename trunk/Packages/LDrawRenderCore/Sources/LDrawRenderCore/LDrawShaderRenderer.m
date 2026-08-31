@@ -13,7 +13,7 @@
 #import <LDrawRenderCore/LDrawDisplayList.h>
 #import <LDrawRenderCore/LDrawPoolAllocator.h>
 
-#import <LDrawCore/MatrixMathEx.h>
+#import <LDrawCore/MatrixMath.h>
 #import <LDrawCore/LDrawColorLibrary.h>
 
 //========== set_color4fv ========================================================

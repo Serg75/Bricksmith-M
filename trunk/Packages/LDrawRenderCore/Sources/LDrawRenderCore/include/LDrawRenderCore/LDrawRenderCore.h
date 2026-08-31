@@ -7,8 +7,9 @@
 //
 //  Info:       GPU-agnostic renderer protocols, shader renderer, camera, and
 //              display-list API shared by the Metal and OpenGL renderers.
-//              MeshSmooth, the pool allocator, and Metal/OpenGL categories remain
-//              public because other packages import them as modular headers.
+//              MeshSmooth, the pool allocator, and the display-list builder
+//              remain on the umbrella because Clang modules only surface
+//              headers listed here (Metal/OpenGL import them as LDrawRenderCore).
 //
 //  Created by Sergey Slobodenyuk on 2026-05-26.
 //

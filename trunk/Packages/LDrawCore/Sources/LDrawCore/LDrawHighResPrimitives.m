@@ -14,7 +14,7 @@
 
 #import <LDrawCore/LDrawQuadrilateral.h>
 #import <LDrawCore/LDrawTriangle.h>
-#import <LDrawCore/MatrixMathEx.h>
+#import <LDrawCore/MatrixMath.h>
 
 
 @interface LDrawHighResPrimitives ()

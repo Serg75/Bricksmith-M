@@ -17,12 +17,12 @@
 //
 //==============================================================================
 
-#import <LDrawCore/LPubCommand.h>
-
-#import <LDrawCore/LDrawClassInspector.h>
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/NSScanner+LDraw.h>
+
+#import "LDrawClassInspector.h"
 
 
 static NSString * const		LPUB_COMMAND_STRING_KEY = @"lpubCommandString";

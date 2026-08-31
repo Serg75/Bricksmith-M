@@ -9,7 +9,7 @@
 //
 //==============================================================================
 
-#import <LDrawCore/LDrawClassInspector.h>
+#import "LDrawClassInspector.h"
 
 #import <objc/runtime.h>
 

@@ -3,6 +3,10 @@
 //  File:       LDrawClassInspector.h
 //  Package:    LDrawCore
 //
+//  Info:       Private header next to LDrawClassInspector.m. Not under
+//              include/; used by LDrawMetaCommand and LPubCommand to discover
+//              subclasses. Host code should not import this.
+//
 //  Created by Sergey Slobodenyuk on 2023-02-06.
 //
 //==============================================================================

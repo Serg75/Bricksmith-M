@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <LDrawCore/MatrixMathEx.h>
 
 const Size2 ZeroSize2   = {0.0, 0.0};
 const Box2  ZeroBox2    = {	{0.0, 0.0},

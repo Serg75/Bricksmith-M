@@ -14,7 +14,6 @@
 #import <LDrawRenderCore/LDrawCamera.h>
 
 #import <LDrawCore/LDrawKeys.h>
-#import <LDrawCore/MatrixMathEx.h>
 
 // Normally the doc size is rounded so that it doesn't jump per frame as we nudge; we can turn this OFF to debug editing.
 #define NO_ROUNDING_DOC_SIZE	0
