@@ -19,6 +19,7 @@
 #import <LDrawRenderCore/GPUTypes.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
+#import <LDrawRenderCore/LDrawDisplayListBuilder.h>
 #import <LDrawRenderCore/LDrawBDPAllocator.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 #import <LDrawRenderCore/LDrawShaderRendererGPU.h>

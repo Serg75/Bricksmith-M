@@ -82,32 +82,18 @@ static PartLibraryMTL *SharedPartLibrary = nil;
 		
 		if (image)
 		{
-			CGRect			canvasRect		= CGRectMake( 0, 0, FloorPowerOfTwo(CGImageGetWidth(image)), FloorPowerOfTwo(CGImageGetHeight(image)) );
-			uint8_t 		*imageBuffer	= malloc( (canvasRect.size.width) * (canvasRect.size.height) * 4 );
+			CGSize			canvasSize		= CGSizeZero;
+			uint8_t 		*imageBuffer	= [PartLibrary copyPowerOfTwoPixelsForImage:image size:&canvasSize];
 			CGColorSpaceRef colorSpace		= CGColorSpaceCreateDeviceRGB();
-			CGContextRef	bitmapContext	= CGBitmapContextCreate(imageBuffer,
-																	canvasRect.size.width,
-																	canvasRect.size.height,
-																	8, // bits per component
-																	canvasRect.size.width * 4, // bytes per row
-																	colorSpace,
-																	kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst
-																	);
 			
-			// Draw the image into the bitmap context. By doing so, we use the mighty
-			// power of Quartz handle the nasty conversion details necessary to fill up
-			// a pixel buffer in an Metal-friendly storage format and color space.
-			CGContextSetBlendMode(bitmapContext, kCGBlendModeCopy);
-			CGContextDrawImage(bitmapContext, canvasRect, image);
-			
-			NSData *imageData = [NSData dataWithBytesNoCopy:imageBuffer length:(canvasRect.size.width * canvasRect.size.height * 4) freeWhenDone:YES];
+			NSData *imageData = [NSData dataWithBytesNoCopy:imageBuffer length:(canvasSize.width * canvasSize.height * 4) freeWhenDone:YES];
 			CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData((CFDataRef)imageData);
 			CGImageRef processedImage = CGImageCreate(
-				canvasRect.size.width,
-				canvasRect.size.height,
+				canvasSize.width,
+				canvasSize.height,
 				8,
 				32,
-				canvasRect.size.width * 4,
+				canvasSize.width * 4,
 				colorSpace,
 				kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst,
 				dataProvider,
@@ -136,12 +122,10 @@ static PartLibraryMTL *SharedPartLibrary = nil;
 			}
 
 
-			// free memory
-			//	free(imageBuffer);
+			// free memory (imageBuffer belongs to imageData, which frees it)
 			CGDataProviderRelease(dataProvider);
 			CGImageRelease(processedImage);
 			CFRelease(colorSpace);
-			CFRelease(bitmapContext);
 		}
 		else
 		{

@@ -44,34 +44,10 @@
 	NSArray 		*commands			= [self subdirectives];
 	LDrawDirective	*currentDirective	= nil;
 
-	Vector3 		normal				= ZeroPoint3;
-	float			length				= 0;
-
 	if (self->metalTexture == nil)
 		self->metalTexture = [[PartLibraryMTL sharedPartLibrary] metalTextureForTexture:self];
 
-	struct LDrawTextureSpec spec;
-
-	normal = V3Sub(self->planePoint2, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-
-	spec.plane_s[0] = normal.x / length;
-	spec.plane_s[1] = normal.y / length;
-	spec.plane_s[2] = normal.z / length;
-	spec.plane_s[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-
-	normal = V3Sub(self->planePoint3, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-
-	spec.plane_t[0] = normal.x / length;
-	spec.plane_t[1] = normal.y / length;
-	spec.plane_t[2] = normal.z / length;
-	spec.plane_t[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-
-	spec.projection = tex_proj_planar;
-	spec.tex_obj = (__bridge void *)self->metalTexture;
+	struct LDrawTextureSpec spec = [self textureSpecWithHandle:(__bridge void *)self->metalTexture];
 
 	[renderer pushTexture:&spec];
 	for (currentDirective in commands)
@@ -100,34 +76,10 @@
 	NSArray 		*commands			= [self subdirectives];
 	LDrawDirective	*currentDirective	= nil;
 
-	Vector3 		normal				= ZeroPoint3;
-	float			length				= 0;
-
 	if (self->metalTexture == nil)
 		self->metalTexture = [[PartLibraryMTL sharedPartLibrary] metalTextureForTexture:self];
 
-	struct LDrawTextureSpec spec;
-
-	normal = V3Sub(self->planePoint2, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-
-	spec.plane_s[0] = normal.x / length;
-	spec.plane_s[1] = normal.y / length;
-	spec.plane_s[2] = normal.z / length;
-	spec.plane_s[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-
-	normal = V3Sub(self->planePoint3, self->planePoint1);
-	length = V3Length(normal);//128./80;//
-	normal = V3Normalize(normal);
-
-	spec.plane_t[0] = normal.x / length;
-	spec.plane_t[1] = normal.y / length;
-	spec.plane_t[2] = normal.z / length;
-	spec.plane_t[3] = V3DistanceFromPointToPlane(ZeroPoint3, normal, self->planePoint1) / length;
-
-	spec.projection = tex_proj_planar;
-	spec.tex_obj = (__bridge void *)self->metalTexture;
+	struct LDrawTextureSpec spec = [self textureSpecWithHandle:(__bridge void *)self->metalTexture];
 
 	[renderer pushTexture:&spec];
 	for (currentDirective in commands)

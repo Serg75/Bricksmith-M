@@ -12,6 +12,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/LDrawContainer.h>
+#import <LDrawCore/LDrawCoreRenderer.h>
 
 //------------------------------------------------------------------------------
 ///
@@ -57,5 +58,10 @@
 + (BOOL)lineIsTextureFallback:(NSString*)line;
 + (BOOL)lineIsTextureTerminator:(NSString*)line;
 - (BOOL)parsePlanarTextureFromLine:(NSString *)line parentGroup:(dispatch_group_t)parentGroup;
+
+// Builds the projection the renderer needs to stamp this texture onto the
+// enclosed geometry. The renderer subclasses differ only in the kind of
+// texture handle they hold, so they pass it in as the opaque `tex_obj` value.
+- (struct LDrawTextureSpec)textureSpecWithHandle:(void *)textureHandle;
 
 @end

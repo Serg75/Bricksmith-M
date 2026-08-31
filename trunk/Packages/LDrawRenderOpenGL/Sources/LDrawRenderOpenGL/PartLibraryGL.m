@@ -82,30 +82,8 @@ static PartLibraryGL *SharedPartLibrary = nil;
 		
 		if (image)
 		{
-			CGRect			canvasRect		= CGRectMake( 0, 0, FloorPowerOfTwo(CGImageGetWidth(image)), FloorPowerOfTwo(CGImageGetHeight(image)) );
-			uint8_t 		*imageBuffer	= malloc( (canvasRect.size.width) * (canvasRect.size.height) * 4 );
-			CGColorSpaceRef colorSpace		= CGColorSpaceCreateDeviceRGB();
-			CGContextRef	bitmapContext	= CGBitmapContextCreate(imageBuffer,
-																	canvasRect.size.width,
-																	canvasRect.size.height,
-																	8, // bits per component
-																	canvasRect.size.width * 4, // bytes per row
-																	colorSpace,
-																	kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst
-																	);
-			
-			// Draw the image into the bitmap context. By doing so, we use the mighty
-			// power of Quartz handle the nasty conversion details necessary to fill up
-			// a pixel buffer in an OpenGL-friendly storage format and color space.
-			CGContextSetBlendMode(bitmapContext, kCGBlendModeCopy);
-			CGContextDrawImage(bitmapContext, canvasRect, image);
-			
-//			CGImageRef output = CGBitmapContextCreateImage(bitmapContext);
-//			CGImageDestinationRef myImageDest = CGImageDestinationCreateWithURL((CFURLRef)[NSURL fileURLWithPath:@"/out.png"], kUTTypePNG, 1, nil);
-//			//NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt:1.0], kCGImageDestinationLossyCompressionQuality, nil]; // Don't know if this is necessary
-//			CGImageDestinationAddImage(myImageDest, output, NULL);
-//			CGImageDestinationFinalize(myImageDest);
-//			CFRelease(myImageDest);
+			CGSize		canvasSize		= CGSizeZero;
+			uint8_t 	*imageBuffer	= [PartLibrary copyPowerOfTwoPixelsForImage:image size:&canvasSize];
 			
 			// Generate a tag for the texture we're about to generate, then set it as
 			// the active texture.
@@ -115,11 +93,11 @@ static PartLibraryGL *SharedPartLibrary = nil;
 			glBindTexture(GL_TEXTURE_2D, textureTag);
 			
 			// Generate Texture!
-			glPixelStorei(GL_PACK_ROW_LENGTH,	canvasRect.size.width * 4);
+			glPixelStorei(GL_PACK_ROW_LENGTH,	canvasSize.width * 4);
 			glPixelStorei(GL_PACK_ALIGNMENT,	1); // byte alignment
 			
 			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8,			// texture type params
-						 canvasRect.size.width, canvasRect.size.height, 0,	// source image (w, h)
+						 canvasSize.width, canvasSize.height, 0,	// source image (w, h)
 						 GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV,				// source storage format
 						 imageBuffer );
 						// see function notes about the source storage format.
@@ -139,10 +117,8 @@ static PartLibraryGL *SharedPartLibrary = nil;
 			
 			[self->optimizedTextures setObject:[NSNumber numberWithUnsignedInt:textureTag] forKey:name];
 			
-			// free memory
-			//	free(imageBuffer);
-			CFRelease(colorSpace);
-			CFRelease(bitmapContext);
+			// glTexImage2D has copied the pixels into the texture object.
+			free(imageBuffer);
 		}
 	}
 	

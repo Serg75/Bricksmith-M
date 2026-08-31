@@ -899,6 +899,47 @@ static PartLibrary *PartLibrary_sharedInstance = nil;
 } // end imageFromNeighboringFileForTexture:
 
 
+//========== copyPowerOfTwoPixelsForImage:size: ================================
+//
+// Purpose:		Redraws the image into a freshly allocated pixel buffer whose
+//				dimensions are powers of two, which is what the GPU backends
+//				need before they can hand the pixels to Metal or OpenGL.
+//
+// Notes:		The caller owns the returned buffer. Shared by PartLibraryMTL
+//				and PartLibraryGL, which differ only in what they do with the
+//				pixels afterwards.
+//
+//==============================================================================
++ (uint8_t *)copyPowerOfTwoPixelsForImage:(CGImageRef)image size:(CGSize *)outSize
+{
+	CGRect			canvasRect		= CGRectMake( 0, 0, FloorPowerOfTwo(CGImageGetWidth(image)), FloorPowerOfTwo(CGImageGetHeight(image)) );
+	uint8_t 		*imageBuffer	= malloc( (canvasRect.size.width) * (canvasRect.size.height) * 4 );
+	CGColorSpaceRef colorSpace		= CGColorSpaceCreateDeviceRGB();
+	CGContextRef	bitmapContext	= CGBitmapContextCreate(imageBuffer,
+															canvasRect.size.width,
+															canvasRect.size.height,
+															8, // bits per component
+															canvasRect.size.width * 4, // bytes per row
+															colorSpace,
+															kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst
+															);
+	
+	// Draw the image into the bitmap context. By doing so, we use the mighty
+	// power of Quartz handle the nasty conversion details necessary to fill up
+	// a pixel buffer in a GPU-friendly storage format and color space.
+	CGContextSetBlendMode(bitmapContext, kCGBlendModeCopy);
+	CGContextDrawImage(bitmapContext, canvasRect, image);
+	
+	CFRelease(colorSpace);
+	CFRelease(bitmapContext);
+	
+	*outSize = canvasRect.size;
+	
+	return imageBuffer;
+	
+} // end copyPowerOfTwoPixelsForImage:size:
+
+
 //========== modelForName: =====================================================
 //
 // Purpose:		Attempts to find the part based only on the given name.

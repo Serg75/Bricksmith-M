@@ -114,6 +114,10 @@ extern NSString	*Category_Subparts;
 - (LDrawDirective *)optimizedDrawableForPart:(LDrawPart *) part color:(LDrawColor *)color;
 
 // Utilites
+// Redraws a texture image into a power-of-two pixel buffer in the one format
+// both GPU backends upload. The caller owns the returned buffer.
++ (uint8_t *)copyPowerOfTwoPixelsForImage:(CGImageRef)image size:(CGSize *)outSize;
+
 - (NSString *)descriptionForPart:(LDrawPart *)part;
 - (NSString *)descriptionForPartName:(NSString *)name;
 - (CGImageRef)readImageAtPath:(NSString *)imagePath

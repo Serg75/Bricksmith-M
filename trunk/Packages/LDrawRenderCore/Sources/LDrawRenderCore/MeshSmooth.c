@@ -16,18 +16,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int g_mesh_smooth_use_metal = 0;
+static int g_mesh_smooth_has_quads = 1;
 
-//========== MeshSmoothSetUseMetal =============================================
+//========== MeshSmoothSetHasQuads =============================================
 //
-// Purpose:		Select Metal vs OpenGL mesh output conventions for the shared
-//				MeshSmooth implementation. Each renderer's LDrawDLBuilderFinish
-//				must call this before invoking any mesh processing routines.
+// Purpose:		State whether the meshes we are about to be handed contain quads,
+//				which decides what a four-point face means: a quad if they do, a
+//				conditional line if they do not.
+//
+// Notes:		Each renderer's LDrawDLBuilderFinish must call this before
+//				invoking any mesh processing routines.
 //
 //==============================================================================
-void MeshSmoothSetUseMetal(int useMetal)
+void MeshSmoothSetHasQuads(int hasQuads)
 {
-	g_mesh_smooth_use_metal = useMetal ? 1 : 0;
+	g_mesh_smooth_has_quads = hasQuads ? 1 : 0;
 }
 
 #pragma mark -
@@ -1021,10 +1024,10 @@ void				add_face(struct Mesh * mesh, const float p1[3], const float p2[3], const
 		mesh->highest_tid = tid;
 
 	bool is_polygon;
-	if (g_mesh_smooth_use_metal) {
-		is_polygon = p3 != NULL && p4 == NULL;
-	} else {
+	if (g_mesh_smooth_has_quads) {
 		is_polygon = p3 != NULL;
+	} else {
+		is_polygon = p3 != NULL && p4 == NULL;
 	}
 	if (is_polygon)
 	{
@@ -1350,7 +1353,7 @@ void add_creases(struct Mesh * mesh)
 	for (fi = mesh->poly_count; fi < mesh->face_count; ++fi)
 	{
 		f = mesh->faces+fi;
-		if (g_mesh_smooth_use_metal && f->degree == 4) {
+		if (!g_mesh_smooth_has_quads && f->degree == 4) {
 			continue;	// skip conditional lines
 		}
 		assert(f->degree == 2);
@@ -1410,7 +1413,7 @@ void				finish_creases_and_join(struct Mesh * mesh)
 					assert(compare_points(p1->location,v->location)==0);
 					
 					struct Face * n = v->face;
-					if (g_mesh_smooth_use_metal && n->degree == 4) {
+					if (!g_mesh_smooth_has_quads && n->degree == 4) {
 						continue;	// skip conditional lines
 					}
 					struct Vertex * dst = n->vertex[CCW(n,v->index)];
@@ -1759,16 +1762,7 @@ void				write_indexed_mesh(
 {
 	int * starts[5];
 	int * counts[5];
-	if (g_mesh_smooth_use_metal) {
-		starts[0] = NULL; starts[1] = NULL;
-		starts[2] = out_line_starts;
-		starts[3] = out_tri_starts;
-		starts[4] = out_cond_line_starts;
-		counts[0] = NULL; counts[1] = NULL;
-		counts[2] = out_line_counts;
-		counts[3] = out_tri_counts;
-		counts[4] = out_cond_line_counts;
-	} else {
+	if (g_mesh_smooth_has_quads) {
 		starts[0] = NULL; starts[1] = NULL;
 		starts[2] = out_line_starts;
 		starts[3] = out_tri_starts;
@@ -1777,6 +1771,15 @@ void				write_indexed_mesh(
 		counts[2] = out_line_counts;
 		counts[3] = out_tri_counts;
 		counts[4] = out_quad_counts;
+	} else {
+		starts[0] = NULL; starts[1] = NULL;
+		starts[2] = out_line_starts;
+		starts[3] = out_tri_starts;
+		starts[4] = out_cond_line_starts;
+		counts[0] = NULL; counts[1] = NULL;
+		counts[2] = out_line_counts;
+		counts[3] = out_tri_counts;
+		counts[4] = out_cond_line_counts;
 	}
 
 	volatile float * vert_ptr = io_vertex_table;

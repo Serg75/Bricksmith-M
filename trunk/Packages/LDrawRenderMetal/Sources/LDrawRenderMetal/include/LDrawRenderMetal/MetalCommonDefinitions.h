@@ -22,8 +22,6 @@
 
 // MARK: - Constants -
 
-// Stride of our vertices - we always write  X Y Z   NX NY NZ   R G B A
-#define VERT_STRIDE 10
 // The number of float values in InstanceInput struct
 #define InstanceInputLength 24
 // The size in bytes of InstanceInput struct

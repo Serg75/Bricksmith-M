@@ -9,6 +9,7 @@
 //==============================================================================
 
 #import <LDrawRenderCore/LDrawDisplayList.h>
+#import <LDrawRenderCore/LDrawDisplayListBuilder.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawRenderCore/LDrawBDPAllocator.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
@@ -17,11 +18,6 @@
 
 #include <OpenGL/gl.h>
 
-
-// This forces quads to be subdivided into tris at creation.
-// For unindexed geometry this is a loss - we end up pushing 50% more vertices for the quad data, which hurts vertex-bound big models.
-// To revisit: once we are indexed, will quads vs tris be a wash?
-#define ONLY_USE_TRIS 0
 
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
@@ -73,19 +69,10 @@ static const GLuint * idx_null = NULL;
 
 #define WANT_STATS 0
 
-#define VERT_STRIDE 10								// Stride of our vertices - we always write X Y Z	NX NY NZ		R G B A
 #define INST_CUTOFF 0								// Minimum instances to use hw case, which has higher overhead to set up.
 #define INST_MAX_COUNT (1024 * 512)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
 #define INST_RING_BUFFER_COUNT 1					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
 #define MODE_FOR_INST_STREAM GL_DYNAMIC_STATIC		// VBO mode for instancing.
-
-enum {
-	dl_has_alpha = 1,		// At least one prim in this DL has translucency.
-	dl_has_meta = 2,		// At least one prim in this DL uses a meta-color and thus MIGHT pick up translucency from parent state during draw.
-	dl_has_tex = 4,			// At lesat one real texture is used.
-	dl_needs_destroy = 8	// Destroy after drawing - ptr is only around because it is queued!
-};
-
 
 //========== get_instance_cutoff =================================================
 //
@@ -114,9 +101,6 @@ static int	get_instance_cutoff(void)
 	}
 	return has_instancing ? INST_CUTOFF : INT32_MAX;
 }
-
-static void copy_vec3(GLfloat d[3], const GLfloat s[3]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2];			  }
-static void copy_vec4(GLfloat d[4], const GLfloat s[4]) { d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3]; }
 
 static GLuint inst_vbo_ring[INST_RING_BUFFER_COUNT] = { 0 };
 static int inst_ring_last = 0;
@@ -237,280 +221,23 @@ struct LDrawDLSession {
 
 
 
-//========== Dastructures for BUILDING a VBO ==============================
-
-
-// As we build our VBO, we keep sets of vertices in a linked list.  When done
-// we copy them into our VBO.  The linked list lets us add vertices a little 
-// at a time without expensive array resizes.  Since the linked list comes
-// from a BDP locality is actually pretty good.
+//========== LDrawDLSupportedPrimitives ==========================================
 //
-// Our link has a vertex count followed by VERT_STRIDE * vcount floats.
-struct	LDrawDLBuilderVertexLink {
-	struct LDrawDLBuilderVertexLink * next;
-	int		vcount;
-	float	data[0];
-};
-
-
-// Build structure per texture.  Textures are kept in a linked list during build
-// since we don't know how many we will have.  Each type of drawing (line, tri, quad)
-// is kept in a singly linked list of vertex links so that we can copy them consecutively when done.
-struct LDrawDLBuilderPerTex {
-	struct LDrawDLBuilderPerTex *		next;
-	struct LDrawTextureSpec				spec;
-	struct LDrawDLBuilderVertexLink *	tri_head;
-	struct LDrawDLBuilderVertexLink *	tri_tail;
-	struct LDrawDLBuilderVertexLink *	quad_head;
-	struct LDrawDLBuilderVertexLink *	quad_tail;
-	struct LDrawDLBuilderVertexLink *	line_head;
-	struct LDrawDLBuilderVertexLink *	line_tail;
-	struct LDrawDLBuilderVertexLink *	cond_line_head;
-	struct LDrawDLBuilderVertexLink *	cond_line_tail;
-};
-
-
-// LDrawBuilder: our build structure contains a BDP for temporary allocations and a
-// linked list of textures (which in turn contain the geometry.  So the entire
-// structure just accumulates data in a set of linked lists, then cleans and saves
-// the data carefully hwen we are done.
-struct	LDrawDLBuilder {
-	int								flags;
-	struct LDrawBDP *				alloc;
-	struct LDrawDLBuilderPerTex *	head;
-	struct LDrawDLBuilderPerTex *	cur;
-};
-
-
-
-//========== LDrawDLBuilderCreate ================================================
+// Purpose:	Tell the shared builder what our display lists carry.
 //
-// Purpose:	Create a new builder capable of accumulating DL data.
+// Notes:	We keep quads whole.  For unindexed geometry splitting them into tris
+//			is a loss - we end up pushing 50% more vertices for the quad data,
+//			which hurts vertex-bound big models.  To revisit: once we are indexed,
+//			will quads vs tris be a wash?  Drop dl_supports_quads to measure it.
+//
+//			Conditional lines we do not draw at all, so we do not ask for them.
 //
 //================================================================================
-struct LDrawDLBuilder * LDrawDLBuilderCreate(void)
+int LDrawDLSupportedPrimitives(void)
 {
-	// All allocs for the builder come from one pool.
-	struct LDrawBDP * alloc = LDrawBDPCreate();
+	return dl_supports_quads;
 
-	// Build one tex struct now for the untextured set of meshes, which are the default state.
-	struct LDrawDLBuilderPerTex * untex = (struct LDrawDLBuilderPerTex *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLBuilderPerTex));
-	memset(untex,0,sizeof(struct LDrawDLBuilderPerTex));
-
-	struct LDrawDLBuilder * bld = (struct LDrawDLBuilder *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLBuilder));
-	bld->cur = bld->head = untex;
-	
-	bld->alloc = alloc;
-	bld->flags = 0;
-	
-	return bld;
-} // end LDrawDLBuilderCreate
-
-
-//========== LDrawDLBuilderSetTex ================================================
-//
-// Purpose:	Change the current texture we are adding geometry to in a builder.
-//
-//================================================================================
-void LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec * spec)
-{
-	struct LDrawDLBuilderPerTex * prev = ctx->head;
-	
-	// Walk "cur" down our texture list, stopping if we have a hit.
-	for (ctx->cur = ctx->head; ctx->cur; ctx->cur = ctx->cur->next)
-	{
-		if (memcmp(spec,&ctx->cur->spec,sizeof(struct LDrawTextureSpec)) == 0)
-			break;
-		prev = ctx->cur;
-	}
-	
-	if (ctx->cur == NULL)
-	{
-		// If we get here, we have never seen this texture before in this builder and
-		// we need to allocate a new per-texture chunk of build state.
-		struct LDrawDLBuilderPerTex * new_tex = (struct LDrawDLBuilderPerTex *) LDrawBDPAllocate(ctx->alloc,sizeof(struct LDrawDLBuilderPerTex));
-		memset(new_tex,0,sizeof(struct LDrawDLBuilderPerTex));
-		memcpy(&new_tex->spec,spec,sizeof(struct LDrawTextureSpec));
-		prev->next = new_tex;
-		ctx->cur = new_tex;
-	}
-	
-} // end LDrawDLBuilderSetTex
-
-
-//========== LDrawDLBuilderAddTri ================================================
-//
-// Purpose: Add one triangle to our DL using the current texture.
-//
-// Notes:	This routine 'sniffs' the alpha as it goes by and keeps the DL flags
-//			correct - this is how a DL "knows" if it is translucent.
-//
-//			We accumulate the tri by allocating a 3-vertex DL link and queueing it
-//			onto the triangle list for the current texture.
-//
-//================================================================================
-void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const GLfloat v[9], GLfloat n[3], GLfloat c[4])
-{
-	// Alpha = 0 means meta color.  0 < Alpha < 1 means translucency.	
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
-	
-	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 3);
-	nl->next = NULL;
-	nl->vcount = 3;
-	for (i = 0; i < 3; ++i)
-	{
-		copy_vec3(nl->data+VERT_STRIDE*i  ,v+i*3);	// Vertex data is per vertex.
-		copy_vec3(nl->data+VERT_STRIDE*i+3,n    );	// But color and norm are for the whole tri, for now.  So we replicate it out to get
-		copy_vec4(nl->data+VERT_STRIDE*i+6,c    );	// a uniform DL.
-	}
-	
-	if (ctx->cur->tri_tail)
-	{
-		ctx->cur->tri_tail->next = nl;
-		ctx->cur->tri_tail = nl;
-	}
-	else
-	{
-		ctx->cur->tri_head = nl;
-		ctx->cur->tri_tail = nl;
-	}
-} // end LDrawDLBuilderAddTri
-
-
-//========== LDrawDLBuilderAddQuad ===============================================
-//
-// Purpose:	Add one quad to the current DL builder in the current texture.
-//
-//================================================================================
-void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const GLfloat v[12], GLfloat n[3], GLfloat c[4])
-{
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
-
-	#if ONLY_USE_TRIS
-
-	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 3);
-	nl->next = NULL;
-	nl->vcount = 3;
-	for (i = 0; i < 3; ++i)
-	{
-		copy_vec3(nl->data+VERT_STRIDE*i  ,v+i*3);	// Vertex data is per vertex.
-		copy_vec3(nl->data+VERT_STRIDE*i+3,n    );	// But color and norm are for the whole tri, for now.  So we replicate it out to get
-		copy_vec4(nl->data+VERT_STRIDE*i+6,c    );	// a uniform DL.
-	}
-	
-	if (ctx->cur->tri_tail)
-	{
-		ctx->cur->tri_tail->next = nl;
-		ctx->cur->tri_tail = nl;
-	}
-	else
-	{
-		ctx->cur->tri_head = nl;
-		ctx->cur->tri_tail = nl;
-	}
-
-
-	nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 3);
-	nl->next = NULL;
-	nl->vcount = 3;
-	for (i = 0; i < 3; ++i)
-	{
-		copy_vec3(nl->data+VERT_STRIDE*i+3,n    );	// But color and norm are for the whole tri, for now.  So we replicate it out to get
-		copy_vec4(nl->data+VERT_STRIDE*i+6,c    );	// a uniform DL.
-	}
-
-	copy_vec3(nl->data+VERT_STRIDE*0  ,v  );	// Vertex data is per vertex.
-	copy_vec3(nl->data+VERT_STRIDE*1  ,v+6);	// Vertex data is per vertex.
-	copy_vec3(nl->data+VERT_STRIDE*2  ,v+9);	// Vertex data is per vertex.
-	
-	if (ctx->cur->tri_tail)
-	{
-		ctx->cur->tri_tail->next = nl;
-		ctx->cur->tri_tail = nl;
-	}
-	else
-	{
-		ctx->cur->tri_head = nl;
-		ctx->cur->tri_tail = nl;
-	}
-
-	
-	#else
-
-	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(
-												ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 4);
-	nl->next = NULL;
-	nl->vcount = 4;
-	for (i = 0; i < 4; ++i)
-	{
-		copy_vec3(nl->data+VERT_STRIDE*i  ,v+i*3);
-		copy_vec3(nl->data+VERT_STRIDE*i+3,n    );
-		copy_vec4(nl->data+VERT_STRIDE*i+6,c    );
-	}
-	
-	if (ctx->cur->quad_tail)
-	{
-		ctx->cur->quad_tail->next = nl;
-		ctx->cur->quad_tail = nl;
-	}
-	else
-	{
-		ctx->cur->quad_head = nl;
-		ctx->cur->quad_tail = nl;
-	}
-	#endif
-} // end LDrawDLBuilderAddQuad
-
-
-//========== LDrawDLBuilderAddLine ===============================================
-//
-// Purpose:	Add one line to the current DL builder in the current texture.
-//
-//================================================================================
-void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4])
-{
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
-
-	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(GLfloat) * VERT_STRIDE * 2);
-	nl->next = NULL;
-	nl->vcount = 2;
-	for (i = 0; i < 2; ++i)
-	{
-		copy_vec3(nl->data+VERT_STRIDE*i  ,v+i*3);
-		copy_vec3(nl->data+VERT_STRIDE*i+3,n    );
-		copy_vec4(nl->data+VERT_STRIDE*i+6,c    );
-	}
-	
-	if (ctx->cur->line_tail)
-	{
-		ctx->cur->line_tail->next = nl;
-		ctx->cur->line_tail = nl;
-	}
-	else
-	{
-		ctx->cur->line_head = nl;
-		ctx->cur->line_tail = nl;
-	}
-} // end LDrawDLBuilderAddLine
-
-
-//========== LDrawDLBuilderAddCondLine ===========================================
-//
-// Purpose:	Add one conditional line to the current DL builder in the current texture.
-//
-//================================================================================
-void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], GLfloat n[3], GLfloat c[4])
-{
-	// Conditional lines are ignored for OpenGL implementation
-
-} // end LDrawDLBuilderAddCondLine
+} // end LDrawDLSupportedPrimitives
 
 
 //========== LDrawDLBuilderFinish ================================================
@@ -527,7 +254,7 @@ void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const GLfloat v[6], 
 struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 {
 #if WANT_SMOOTH
-	MeshSmoothSetUseMetal(0);
+	MeshSmoothSetHasQuads(LDrawDLSupportedPrimitives() & dl_supports_quads);
 
 	#if TIME_SMOOTHING
 	NSTimeInterval startTime = [NSDate timeIntervalSinceReferenceDate];

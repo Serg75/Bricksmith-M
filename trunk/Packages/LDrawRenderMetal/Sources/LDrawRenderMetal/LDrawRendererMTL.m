@@ -27,6 +27,7 @@
 
 #import <TargetConditionals.h>
 #include <LDrawRenderMetal/MetalCommonDefinitions.h>
+#import <LDrawRenderCore/LDrawDisplayListBuilder.h>	// VERT_STRIDE - our vertex descriptor has to match what the DL builder writes.
 
 #import "LDrawRenderMetalResources.h"
 #import <LDrawRenderMetal/LDrawShaderRendererMTL.h>
