@@ -12,9 +12,11 @@
 #import "InspectionLSynth.h"
 
 #import <LDrawCore/LDrawLSynth.h>
-#import <LDrawFeatures/LSynthConfiguration.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+
+#import <LDrawFeatures/LSynthConfiguration.h>
+
 #import "LDrawView.h"
 
 @implementation InspectionLSynth

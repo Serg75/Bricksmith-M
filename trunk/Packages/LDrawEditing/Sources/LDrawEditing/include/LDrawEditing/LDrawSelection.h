@@ -22,7 +22,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 
 #import <LDrawEditing/LDrawPartTransformUpdate.h>
@@ -32,10 +32,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum {
-	RotateAroundSelectionCenter = 0,
-	RotateAroundPartPositions   = 1,
-	RotateAroundFixedPoint      = 2
-} RotationModeT;
+	LDrawRotateAroundSelectionCenter = 0,
+	LDrawRotateAroundPartPositions   = 1,
+	LDrawRotateAroundFixedPoint      = 2
+} LDrawRotationMode;
 
 typedef NS_ENUM(NSInteger, LDrawArrowNudge) {
 	LDrawArrowNudgeNone  = 0,
@@ -78,7 +78,7 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 + (Tuple3)partRelativeRotation:(Tuple3)rotation
 				  forSelection:(NSArray *)selection
 				  partRelative:(BOOL)partRelative;
-+ (RotationModeT)rotationModeForSelectionCount:(NSUInteger)count aroundOrigin:(BOOL)aroundOrigin;
++ (LDrawRotationMode)rotationModeForSelectionCount:(NSUInteger)count aroundOrigin:(BOOL)aroundOrigin;
 
 /// Screen-space nudge mapped onto the part's axes using the camera basis.
 /// Pass identity for partMatrix to nudge in model space. useTurntable should
@@ -90,7 +90,7 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 		  useTurntable:(BOOL)useTurntable;
 
 /// Shift = 1<<17, Option = 1<<19 (NSEventModifierFlagShift / Option).
-+ (SelectionModeT)selectionModeFromModifiers:(NSUInteger)modifiers;
++ (LDrawSelectionMode)selectionModeFromModifiers:(NSUInteger)modifiers;
 
 /// Maps an arrow + modifier mask into a screen-space unit nudge.
 /// Option moves on Z; Shift ×10; Command ×0.04. Returns NO if arrow is None.
@@ -121,10 +121,10 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 	   gridSpacing:(float)gridSpacing
 		 selection:(NSArray *)selection;
 
-/// Shared center for RotateAroundSelectionCenter / FixedPoint.
-/// RotateAroundPartPositions still uses each part's origin in the host loop.
+/// Shared center for LDrawRotateAroundSelectionCenter / FixedPoint.
+/// LDrawRotateAroundPartPositions still uses each part's origin in the host loop.
 + (Point3)rotationCenterForDirectives:(NSArray *)directives
-								 mode:(RotationModeT)mode
+								 mode:(LDrawRotationMode)mode
 						  fixedCenter:(const Point3 * _Nullable)fixedCenter;
 
 /// Origin when the list is empty; otherwise the first drawable’s position.
@@ -135,7 +135,7 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 /// intersection = old&new. Empty result means the host should deselect.
 + (NSArray *)mergedSelectionWithMarked:(NSArray *)marked
 						 newDirectives:(NSArray *)directives
-								  mode:(SelectionModeT)mode;
+								  mode:(LDrawSelectionMode)mode;
 
 + (NSArray *)hideableDirectivesInSelection:(NSArray *)selection;
 + (NSArray *)hiddenHideableDirectivesIn:(NSArray *)directives;

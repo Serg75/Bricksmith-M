@@ -7,7 +7,7 @@
 //
 //==============================================================================
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawLSynthConfigSource.h>
@@ -73,7 +73,7 @@ typedef enum
     NSString        *synthType;
     int              lsynthClass;
     LDrawColor      *color;
-    float			 glTransformation[16];
+    float			 transformation[16];
     BOOL             hidden;
     BOOL             subdirectiveSelected;
     Box3			 cachedBounds;			// cached bounds of the enclosed directives

@@ -17,9 +17,9 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawRegex.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/NSString+LDraw.h>
 #import <TargetConditionals.h>
 
 // AppKit/preferences indirection removed (Phase 2e). LDrawCore reads the
@@ -193,7 +193,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
                 NSString *synthColor = [[paramMatches objectAtIndex:0] objectAtIndex:2];
 
                 [self setLsynthType:type];
-                [self setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:(LDrawColorT) [synthColor integerValue]]];
+                [self setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:(LDrawColorT) [synthColor integerValue]]];
 
                 [[LDrawLSynth configSource] setLSynthClassForDirective:self withType:type];
                 parserState = PARSER_PARSING_BEGUN;
@@ -870,12 +870,12 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 //==============================================================================
 - (TransformComponents)transformComponents
 {
-    Matrix4				transformation	= [self transformationMatrix];
-    TransformComponents	components		= IdentityComponents;
+    Matrix4				transform	= [self transformationMatrix];
+    TransformComponents	components	= IdentityComponents;
 
     // This is a pretty darn neat little function. I wish I could say I wrote it.
     // It will extract all the user-friendly components out of this nasty matrix.
-    Matrix4DecomposeTransformation( transformation, &components );
+    Matrix4DecomposeTransformation( transform, &components );
 
     return components;
 
@@ -1455,7 +1455,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 //==============================================================================
 - (Matrix4)transformationMatrix
 {
-    return Matrix4CreateFromGLMatrix4(glTransformation);
+    return Matrix4CreateFromFloats(transformation);
 
 } // end transformationMatrix
 

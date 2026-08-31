@@ -13,8 +13,8 @@
 #import <LDrawCore/LDrawPathNames.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/PartLibrary.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/NSString+LDraw.h>
 
 @implementation PartCatalogBuilder
 
@@ -483,7 +483,7 @@
 						// Force alias parts into a ghetto category which will keep
 						// them far away from normal building.
 						// !LDRAW_ORG: optional qualifier Alias can appear with Part/Shortcut/etc https://www.ldraw.org/article/398.html
-						if([lineRemainder ams_containsString:@"Alias" options:kNilOptions])
+						if([lineRemainder ldraw_containsString:@"Alias" options:kNilOptions])
 						{
 							category = Category_Alias;
 							[catalogInfo setObject:category forKey:PART_CATEGORY_KEY];

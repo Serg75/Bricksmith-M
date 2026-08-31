@@ -14,9 +14,9 @@
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawCore/PartSpecific.h>
+#import <LDrawCore/LDrawPartSpecific.h>
 
 
 @implementation LDrawStructure (Origin)
@@ -84,8 +84,8 @@
 
 	if (kind == LDrawOriginChangeByRotationAxis)
 	{
-		Vector3 rotCenter = [PartSpecific rotationCenterForPart:anchor.displayName];
-		Vector3 rotPlane  = [PartSpecific rotationPlaneForPart:anchor.displayName];
+		Vector3 rotCenter = [LDrawPartSpecific rotationCenterForPart:anchor.displayName];
+		Vector3 rotPlane  = [LDrawPartSpecific rotationPlaneForPart:anchor.displayName];
 		Matrix4 anchorMatrix = [anchor transformationMatrix];
 		rotCenter = V3MulPointByProjMatrix(rotCenter, anchorMatrix);
 		rotPlane  = V3Val(V3MulPointByProjMatrix(rotPlane, Matrix4ClearTranslation(anchorMatrix)));
@@ -213,7 +213,7 @@
 //---------- selectionCanChangeOriginByRotation: ---------------------[static]--
 //
 // Purpose:		Change-origin by rotation axis. The selected part must have a
-//				PartSpecific rotation center.
+//				LDrawPartSpecific rotation center.
 //
 //------------------------------------------------------------------------------
 + (BOOL)selectionCanChangeOriginByRotation:(NSArray *)selection
@@ -223,7 +223,7 @@
 		return NO;
 	}
 	LDrawPart *part = [selection objectAtIndex:0];
-	return [PartSpecific hasRotationCenter:[part displayName]];
+	return [LDrawPartSpecific hasRotationCenter:[part displayName]];
 }
 
 

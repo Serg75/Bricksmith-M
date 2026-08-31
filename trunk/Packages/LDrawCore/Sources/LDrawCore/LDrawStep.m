@@ -39,7 +39,7 @@
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/NSString+LDraw.h>
 #import <LDrawCore/LDrawLSynthDirective.h>
 #import <LDrawCore/LDrawRegex.h>
 

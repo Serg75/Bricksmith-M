@@ -12,7 +12,7 @@
 #import <LDrawEditing/LDrawSearch.h>
 
 #import <LDrawEditing/LDrawClipboard.h>
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawLSynth.h>
@@ -45,23 +45,23 @@
 //              - Select the remaining matching parts
 //
 //==============================================================================
-+ (void)normalizeEmptySelectionScope:(ScopeT *)ioScope
-						 colorFilter:(ColorFilterT *)ioColor
-					   partCriterion:(SearchPartCriteriaT *)ioCriterion
++ (void)normalizeEmptySelectionScope:(LDrawSearchScope *)ioScope
+						 colorFilter:(LDrawSearchColorFilter *)ioColor
+					   partCriterion:(LDrawSearchPartCriteria *)ioCriterion
 {
 	// First up, adjust the options if there's no selection
 
-	if (ioScope != NULL && (*ioScope == ScopeStep || *ioScope == ScopeSelection))
+	if (ioScope != NULL && (*ioScope == LDrawSearchScopeStep || *ioScope == LDrawSearchScopeSelection))
 	{
-		*ioScope = ScopeFile;
+		*ioScope = LDrawSearchScopeFile;
 	}
-	if (ioColor != NULL && *ioColor == ColorSelectionFilter)
+	if (ioColor != NULL && *ioColor == LDrawSearchColorFromSelection)
 	{
-		*ioColor = ColorNoFilter;
+		*ioColor = LDrawSearchColorNone;
 	}
-	if (ioCriterion != NULL && *ioCriterion == SearchSelectedParts)
+	if (ioCriterion != NULL && *ioCriterion == LDrawSearchSelectedParts)
 	{
-		*ioCriterion = SearchAllParts;
+		*ioCriterion = LDrawSearchAllParts;
 	}
 }
 
@@ -76,37 +76,37 @@
 //
 //------------------------------------------------------------------------------
 + (nullable NSArray<NSString *> *)emptySelectionWarningKeysWithCount:(NSUInteger)selectionCount
-															   scope:(ScopeT)scope
-														 colorFilter:(ColorFilterT)colorFilter
-													   partCriterion:(SearchPartCriteriaT)partCriterion
+															   scope:(LDrawSearchScope)scope
+														 colorFilter:(LDrawSearchColorFilter)colorFilter
+													   partCriterion:(LDrawSearchPartCriteria)partCriterion
 {
 	if (selectionCount > 0) return nil;
 
-	if (scope != ScopeSelection
-	   && scope != ScopeStep
-	   && colorFilter != ColorSelectionFilter
-	   && partCriterion != SearchSelectedParts)
+	if (scope != LDrawSearchScopeSelection
+	   && scope != LDrawSearchScopeStep
+	   && colorFilter != LDrawSearchColorFromSelection
+	   && partCriterion != LDrawSearchSelectedParts)
 	{
 		return nil;
 	}
 
 	// The "what"
 	NSString *whatKey = @"SearchWarningAllParts";
-	if (partCriterion == SearchSpecificPart)
+	if (partCriterion == LDrawSearchSpecificPart)
 	{
 		whatKey = @"SearchWarningSpecifiedParts";
 	}
 
 	// The color
 	NSString *colorKey = @"SearchWarningAnyColor";
-	if (colorFilter == ColorFilter)
+	if (colorFilter == LDrawSearchColorSpecified)
 	{
 		colorKey = @"SearchWarningSpecifiedColor";
 	}
 
 	// The "where"
 	NSString *whereKey = @"SearchWarningFileScope";
-	if (scope == ScopeModel)
+	if (scope == LDrawSearchScopeModel)
 	{
 		whereKey = @"SearchWarningModelScope";
 	}
@@ -147,16 +147,16 @@
 // Purpose:		Collect the containers to search given the panel's scope radio,
 //				the current selection, and the active model / file.
 //
-//				An empty selection at ScopeModel searches the active model; at
-//				ScopeFile it searches the whole file.
+//				An empty selection at LDrawSearchScopeModel searches the active model; at
+//				LDrawSearchScopeFile it searches the whole file.
 //
 //------------------------------------------------------------------------------
-+ (NSArray *)searchableObjectsForScope:(ScopeT)scope
++ (NSArray *)searchableObjectsForScope:(LDrawSearchScope)scope
 							 selection:(NSArray *)selectedObjects
 						   activeModel:(nullable LDrawModel *)activeModel
 								  file:(nullable LDrawFile *)file
 {
-	if (scope == ScopeSelection)
+	if (scope == LDrawSearchScopeSelection)
 	{
 		return [selectedObjects mutableCopy];
 	}
@@ -165,7 +165,7 @@
 
 	if ([selectedObjects count] == 0)
 	{
-		if (scope == ScopeModel)
+		if (scope == LDrawSearchScopeModel)
 		{
 			if (activeModel != nil)
 			{
@@ -182,8 +182,8 @@
 	for (id obj in selectedObjects)
 	{
 		if ([obj isKindOfClass:[LDrawPart class]] || [obj isKindOfClass:[LDrawLSynth class]]
-		   || ([obj isKindOfClass:[LDrawStep class]] && scope == ScopeStep)
-		   || ([obj isKindOfClass:[LDrawModel class]] && scope == ScopeModel))
+		   || ([obj isKindOfClass:[LDrawStep class]] && scope == LDrawSearchScopeStep)
+		   || ([obj isKindOfClass:[LDrawModel class]] && scope == LDrawSearchScopeModel))
 		{
 			[selectedParts addObject:obj];
 		}
@@ -192,15 +192,15 @@
 	for (id part in selectedParts)
 	{
 		id scopedContainer = nil;
-		if (scope == ScopeStep)
+		if (scope == LDrawSearchScopeStep)
 		{
 			scopedContainer = [part enclosingStep];
 		}
-		else if (scope == ScopeModel)
+		else if (scope == LDrawSearchScopeModel)
 		{
 			scopedContainer = [part enclosingModel];
 		}
-		else if (scope == ScopeFile)
+		else if (scope == LDrawSearchScopeFile)
 		{
 			scopedContainer = [part enclosingFile];
 		}
@@ -221,11 +221,11 @@
 //				color filter.
 //
 //------------------------------------------------------------------------------
-+ (nullable NSArray *)colorFilterForCriterion:(ColorFilterT)colorCriterion
++ (nullable NSArray *)colorFilterForCriterion:(LDrawSearchColorFilter)colorCriterion
 									wellColor:(nullable LDrawColor *)wellColor
 									selection:(NSArray *)selectedObjects
 {
-	if (colorCriterion == ColorFilter)
+	if (colorCriterion == LDrawSearchColorSpecified)
 	{
 		if (wellColor == nil)
 		{
@@ -233,7 +233,7 @@
 		}
 		return @[wellColor];
 	}
-	if (colorCriterion == ColorSelectionFilter)
+	if (colorCriterion == LDrawSearchColorFromSelection)
 	{
 		NSMutableArray *colors = [NSMutableArray array];
 		for (id obj in selectedObjects)
@@ -258,11 +258,11 @@
 //				match all parts.
 //
 //------------------------------------------------------------------------------
-+ (nullable NSArray *)partFilterForCriterion:(SearchPartCriteriaT)criterion
++ (nullable NSArray *)partFilterForCriterion:(LDrawSearchPartCriteria)criterion
 							   specificNames:(nullable NSString *)commaSeparatedNames
 								   selection:(NSArray *)selectedObjects
 {
-	if (criterion == SearchSpecificPart)
+	if (criterion == LDrawSearchSpecificPart)
 	{
 		NSArray        *tmpParts  = [(commaSeparatedNames ?: @"") componentsSeparatedByString:@","];
 		NSMutableArray *partNames = [NSMutableArray array];
@@ -277,7 +277,7 @@
 		}
 		return partNames;
 	}
-	if (criterion == SearchSelectedParts)
+	if (criterion == LDrawSearchSelectedParts)
 	{
 		NSMutableArray *partNames = [NSMutableArray array];
 		for (id obj in selectedObjects)

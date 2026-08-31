@@ -13,7 +13,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawContainer.h>
 
 // This notification is sent by steps when step-specific meta-data (e.g. the viewing

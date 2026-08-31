@@ -19,10 +19,10 @@
 
 #import <LDrawCore/LPubCommand.h>
 
-#import <LDrawCore/ClassInspector.h>
+#import <LDrawCore/LDrawClassInspector.h>
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/ScannerCategory.h>
+#import <LDrawCore/NSScanner+LDraw.h>
 
 
 static NSString * const		LPUB_COMMAND_STRING_KEY = @"lpubCommandString";
@@ -43,7 +43,7 @@ static NSArray<Class>		*subclasses;
 + (void)initialize
 {
 	if (self == [LPubCommand class]) {
-		subclasses = [ClassInspector firstLevelSubclassesFor:[self class]];
+		subclasses = [LDrawClassInspector firstLevelSubclassesFor:[self class]];
 	}
 	
 }//end initialize

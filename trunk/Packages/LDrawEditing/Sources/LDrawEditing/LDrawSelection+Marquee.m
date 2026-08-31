@@ -22,16 +22,16 @@
 //				AppKit host can pass event.modifierFlags through unchanged.
 //
 //------------------------------------------------------------------------------
-+ (SelectionModeT)selectionModeFromModifiers:(NSUInteger)modifiers
++ (LDrawSelectionMode)selectionModeFromModifiers:(NSUInteger)modifiers
 {
 	BOOL shift  = (modifiers & kLDrawModifierShift)  != 0;
 	BOOL option = (modifiers & kLDrawModifierOption) != 0;
 
 	if (shift)
 	{
-		return option ? SelectionIntersection : SelectionExtend;
+		return option ? LDrawSelectionIntersection : LDrawSelectionExtend;
 	}
-	return option ? SelectionSubtract : SelectionReplace;
+	return option ? LDrawSelectionSubtract : LDrawSelectionReplace;
 }
 
 //---------- mergedSelectionWithMarked:newDirectives:mode: -----------[static]--
@@ -48,9 +48,9 @@
 //------------------------------------------------------------------------------
 + (NSArray *)mergedSelectionWithMarked:(NSArray *)marked
 						 newDirectives:(NSArray *)directives
-								  mode:(SelectionModeT)mode
+								  mode:(LDrawSelectionMode)mode
 {
-	if (mode == SelectionIntersection)
+	if (mode == LDrawSelectionIntersection)
 	{
 		NSMutableSet *orig = [NSMutableSet setWithArray:marked];
 		[orig intersectSet:[NSSet setWithArray:directives]];
@@ -58,15 +58,15 @@
 	}
 
 	// Replace takes the new set; every other mode starts from the marked set.
-	NSMutableArray *all = (mode != SelectionReplace)
+	NSMutableArray *all = (mode != LDrawSelectionReplace)
 		? [NSMutableArray arrayWithArray:marked]
 		: [NSMutableArray arrayWithArray:directives];
 
-	if (mode == SelectionExtend)
+	if (mode == LDrawSelectionExtend)
 	{
 		[all addObjectsFromArray:directives];
 	}
-	else if (mode == SelectionSubtract)
+	else if (mode == LDrawSelectionSubtract)
 	{
 		[all removeObjectsInArray:directives];
 	}

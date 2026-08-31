@@ -17,11 +17,13 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import <LDrawCore/ColorLibrary.h>
-#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MatrixMath.h>
+
 #import <LDrawEditing/LDrawSelection.h>
+#import <LDrawFeatures/LDrawGrid.h>
+
 #import "ViewportArranger.h"
 
 @class DocumentToolbarController;
@@ -105,7 +107,7 @@
 - (void) moveSelectionBy:(Vector3) movementVector;
 - (void) nudgeSelectionBy:(Vector3) nudgeVector;
 - (void) rotateSelectionAround:(Vector3)rotationAxis extraFine:(BOOL)extraFine aroundOrigin:(BOOL)aroundOrigin;
-- (void) rotateSelection:(Tuple3)rotation mode:(RotationModeT)mode fixedCenter:(Point3 *)fixedCenter;
+- (void) rotateSelection:(Tuple3)rotation mode:(LDrawRotationMode)mode fixedCenter:(Point3 *)fixedCenter;
 - (void) selectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL)shouldExtend;
 - (void) selectDirectives:(NSArray *)directivesToSelect;
 - (void) setSelectionToHidden:(BOOL)hideFlag;

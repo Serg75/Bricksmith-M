@@ -9,7 +9,7 @@
 //
 //  Info:       Core/RenderCore/Editing cannot import this header. Keys those
 //              packages read (LDraw path, LSynth executable, syntax colors,
-//              mouse/rotate) stay in LDrawCore/MacLDraw.h. Grid spacing keys
+//              mouse/rotate) stay in LDrawCore/LDrawKeys.h. Grid spacing keys
 //              live next to LDrawGrid.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-30.
@@ -28,8 +28,8 @@
 #define DONATION_SCREEN_LAST_VERSION_DISPLAYED		@"DonationRequestLastVersion"
 #define DONATION_SCREEN_SUPPRESS_THIS_VERSION		@"DonationRequestSuppressThisVersion"
 #define FAVORITE_PARTS_KEY							@"FavoriteParts"
-#define LDRAW_GL_VIEW_ANGLE							@"LDrawGLView Viewing Angle"
-#define LDRAW_GL_VIEW_PROJECTION					@"LDrawGLView Viewing Projection"
+#define LDRAW_VIEW_ANGLE							@"LDrawGLView Viewing Angle"
+#define LDRAW_VIEW_PROJECTION					    @"LDrawGLView Viewing Projection"
 #define LDRAW_VIEWER_BACKGROUND_COLOR_KEY			@"LDraw Viewer Background Color"
 #define PART_BROWSER_PANEL_SHOW_AT_LAUNCH			@"Part Browser Panel Show at Launch"
 #define PART_BROWSER_PREVIOUS_CATEGORY				@"Part Browser Previous Category"

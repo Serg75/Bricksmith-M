@@ -20,4 +20,4 @@
 #import <LDrawRenderOpenGL/LDrawRendererGL.h>
 #import <LDrawRenderOpenGL/LDrawDirectiveGL.h>
 #import <LDrawRenderOpenGL/LDrawTextureGL.h>
-#import <LDrawRenderOpenGL/PartLibraryGL.h>
+#import <LDrawRenderOpenGL/LDrawPartLibraryGL.h>

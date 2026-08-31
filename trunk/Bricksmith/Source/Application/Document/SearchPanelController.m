@@ -7,12 +7,13 @@
 //==============================================================================
 #import "SearchPanelController.h"
 
-#import "LDrawDocument.h"
 #import <LDrawCore/LDrawFile.h>
+#import <LDrawEditing/LDrawClipboard.h>
+
 #import "LDrawColorPanelController.h"
+#import "LDrawDocument.h"
 #import "LDrawFileOutlineView.h"
 #import "PartBrowserTableView.h"
-#import <LDrawEditing/LDrawClipboard.h>
 
 @implementation SearchPanelController
 
@@ -102,12 +103,12 @@ SearchPanelController *sharedSearchPanel = nil;
 //==============================================================================
 - (IBAction)doSearchAndSelect:(id)sender
 {
-    NSDocumentController *documentController = [NSDocumentController sharedDocumentController];
-    LDrawDocument        *currentDocument    = [documentController currentDocument];
-    NSArray              *selectedObjects    = [self selectedObjects];
-    ScopeT                scope              = (ScopeT)[[scopeMatrix selectedCell] tag];
-    SearchPartCriteriaT   criterion          = (SearchPartCriteriaT)[[findTypeMatrix selectedCell] tag];
-    ColorFilterT          colorCriterion     = (ColorFilterT)[[colorMatrix selectedCell] tag];
+    NSDocumentController   *documentController  = [NSDocumentController sharedDocumentController];
+    LDrawDocument          *currentDocument     = [documentController currentDocument];
+    NSArray                *selectedObjects     = [self selectedObjects];
+    LDrawSearchScope        scope               = (LDrawSearchScope)[[scopeMatrix selectedCell] tag];
+    LDrawSearchPartCriteria criterion           = (LDrawSearchPartCriteria)[[findTypeMatrix selectedCell] tag];
+    LDrawSearchColorFilter  colorCriterion      = (LDrawSearchColorFilter)[[colorMatrix selectedCell] tag];
 
     if ([selectedObjects count] == 0) {
         [LDrawSearch normalizeEmptySelectionScope:&scope
@@ -213,9 +214,9 @@ SearchPanelController *sharedSearchPanel = nil;
     [LDrawColorWell setActiveColorWell:nil];
 
     NSArray *keys = [LDrawSearch emptySelectionWarningKeysWithCount:[selectedObjects count]
-                                                              scope:(ScopeT)[scopeMatrix selectedTag]
-                                                        colorFilter:(ColorFilterT)[colorMatrix selectedTag]
-                                                      partCriterion:(SearchPartCriteriaT)[findTypeMatrix selectedTag]];
+                                                              scope:(LDrawSearchScope)[scopeMatrix selectedTag]
+                                                        colorFilter:(LDrawSearchColorFilter)[colorMatrix selectedTag]
+                                                      partCriterion:(LDrawSearchPartCriteria)[findTypeMatrix selectedTag]];
     if(keys != nil)
     {
         NSMutableArray *localized = [NSMutableArray array];

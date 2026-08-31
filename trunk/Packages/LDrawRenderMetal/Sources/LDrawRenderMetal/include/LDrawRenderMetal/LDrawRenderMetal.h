@@ -20,4 +20,4 @@
 #import <LDrawRenderMetal/LDrawShaderRendererMTL.h>
 #import <LDrawRenderMetal/LDrawRendererMTL.h>
 #import <LDrawRenderMetal/LDrawTextureMTL.h>
-#import <LDrawRenderMetal/PartLibraryMTL.h>
+#import <LDrawRenderMetal/LDrawPartLibraryMTL.h>

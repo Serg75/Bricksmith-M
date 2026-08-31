@@ -16,7 +16,7 @@
 #import <LDrawCore/LDrawDragHandle.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawRenderCore/LDrawCamera.h>
 
@@ -162,7 +162,7 @@
 // Returns:		YES if a directive was hit, NO otherwise.
 //
 //==============================================================================
-- (BOOL)mouseSelectionClickAtPoint:(Point2)point_view selectionMode:(SelectionModeT)selectionMode
+- (BOOL)mouseSelectionClickAtPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode
 {
 	id<LDrawSceneControllerRendererBridge> bridge = self.rendererBridge;
 	LDrawDirective *clickedDirective = nil;
@@ -190,8 +190,8 @@
 
 		LDrawCamera *cam = [bridge camera];
 		Matrix4 mvp = Matrix4Multiply(
-							Matrix4CreateFromGLMatrix4([cam getModelView]),
-							Matrix4CreateFromGLMatrix4([cam getProjection]));
+							Matrix4CreateFromFloats([cam modelView]),
+							Matrix4CreateFromFloats([cam projection]));
 
 		id bestObject = nil;
 		[[bridge LDrawDirective] depthTest:point_clip inBox:test_box transform:mvp creditObject:nil bestObject:&bestObject bestDepth:&depth];
@@ -205,28 +205,28 @@
 		{
 			_activeDragHandle = nil;
 
-			BOOL extendSelection = selectionMode == SelectionExtend || selectionMode == SelectionIntersection;
+			BOOL extendSelection = selectionMode == LDrawSelectionExtend || selectionMode == LDrawSelectionIntersection;
 			BOOL has_sel_directive = clickedDirective != nil && [clickedDirective isSelected];
 			BOOL has_any_directive = clickedDirective != nil;
 
 			switch (selectionMode)
 			{
-				case SelectionReplace:
+				case LDrawSelectionReplace:
 					if (!has_sel_directive)
 						[bridge wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection];
 					break;
 
-				case SelectionExtend:
+				case LDrawSelectionExtend:
 					if (has_any_directive)
 						[bridge wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection];
 					break;
 
-				case SelectionIntersection:
+				case LDrawSelectionIntersection:
 					if (!has_sel_directive)
 						[bridge wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection];
 					break;
 
-				case SelectionSubtract:
+				case LDrawSelectionSubtract:
 					if (has_any_directive && !has_sel_directive)
 						[bridge wantsToSelectDirective:clickedDirective byExtendingSelection:extendSelection];
 					break;
@@ -248,7 +248,7 @@
 //				subtract, intersection).
 //
 //==============================================================================
-- (void)mouseSelectionDragToPoint:(Point2)point_view selectionMode:(SelectionModeT)selectionMode
+- (void)mouseSelectionDragToPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode
 {
 	id<LDrawSceneControllerRendererBridge> bridge = self.rendererBridge;
 
@@ -374,7 +374,7 @@
 //
 // Purpose:		Move currently-dragged parts as the mouse moves.
 //
-//				Displacement is snapped to the current grid. Axis constraint
+//				Displacement is snapped to the current grid. LDrawAxis constraint
 //				isolates the greatest component of the cumulative move.
 //
 //==============================================================================

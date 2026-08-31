@@ -14,7 +14,7 @@
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 
 @implementation LDrawSelection (Rotation)
@@ -114,22 +114,22 @@
 //				the user asked to rotate around the origin.
 //
 //------------------------------------------------------------------------------
-+ (RotationModeT)rotationModeForSelectionCount:(NSUInteger)count aroundOrigin:(BOOL)aroundOrigin
++ (LDrawRotationMode)rotationModeForSelectionCount:(NSUInteger)count aroundOrigin:(BOOL)aroundOrigin
 {
 	if (aroundOrigin)
 	{
-		return RotateAroundFixedPoint;
+		return LDrawRotateAroundFixedPoint;
 	}
 	if (count == 1)
 	{
 		// Just one part selected; rotate around that part's origin. That is
 		// presumably what the part's author intended to be the rotation point.
-		return RotateAroundPartPositions;
+		return LDrawRotateAroundPartPositions;
 	}
 	// More than one part selected. We now must make a "best guess" about 
 	// what to rotate around. So we will go with the center of the bounding 
 	// box of the selection.
-	return RotateAroundSelectionCenter;
+	return LDrawRotateAroundSelectionCenter;
 }
 
 //========== rotateSelection:mode:fixedCenter: =================================
@@ -139,21 +139,21 @@
 // Parameters:	rotation	= degrees x,y,z to rotate
 //				mode		= how to derive the rotation centerpoint
 //				fixedCenter	= explicit centerpoint, or NULL if mode not equal to 
-//							  RotateAroundFixedPoint
+//							  LDrawRotateAroundFixedPoint
 //
 //==============================================================================
 + (Point3)rotationCenterForDirectives:(NSArray *)directives
-								 mode:(RotationModeT)mode
+								 mode:(LDrawRotationMode)mode
 						  fixedCenter:(const Point3 * _Nullable)fixedCenter
 {
 	Point3 rotationCenter = {0};
 
-	if (mode == RotateAroundSelectionCenter)
+	if (mode == LDrawRotateAroundSelectionCenter)
 	{
 		Box3 selectionBounds = [LDrawUtilities boundingBox3ForDirectives:directives];
 		rotationCenter = V3Midpoint(selectionBounds.min, selectionBounds.max);
 	}
-	else if (mode == RotateAroundFixedPoint && fixedCenter != NULL)
+	else if (mode == LDrawRotateAroundFixedPoint && fixedCenter != NULL)
 	{
 		rotationCenter = *fixedCenter;
 	}

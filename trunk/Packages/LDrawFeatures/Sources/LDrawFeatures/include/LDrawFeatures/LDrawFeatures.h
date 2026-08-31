@@ -19,8 +19,8 @@
 
 #import <LDrawFeatures/LDrawHostKeys.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
-#import <LDrawFeatures/RelatedParts.h>
-#import <LDrawFeatures/MLCadIni.h>
+#import <LDrawFeatures/LDrawRelatedParts.h>
+#import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawToolMode.h>

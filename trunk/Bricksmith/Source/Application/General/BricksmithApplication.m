@@ -17,7 +17,7 @@
 //==============================================================================
 #import "BricksmithApplication.h"
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawFeatures/LDrawToolMode.h>
 
 @implementation BricksmithApplication

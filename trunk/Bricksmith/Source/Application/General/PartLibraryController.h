@@ -2,7 +2,7 @@
 //
 // File:		PartLibraryController.h
 //
-// Purpose:		UI layerings on top of PartLibrary.
+// Purpose:		UI layerings on top of LDrawPartLibrary.
 //
 // Modified:	01/28/2009 Allen Smith. Creation Date.
 //
@@ -10,9 +10,9 @@
 #import <Cocoa/Cocoa.h>
 
 #ifdef METAL
-#import <LDrawRenderMetal/PartLibraryMTL.h>
+#import <LDrawRenderMetal/LDrawPartLibraryMTL.h>
 #else
-#import <LDrawRenderOpenGL/PartLibraryGL.h>
+#import <LDrawRenderOpenGL/LDrawPartLibraryGL.h>
 #endif
 
 
@@ -21,7 +21,7 @@
 // class PartLibraryController
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface PartLibraryController : NSObject <PartLibraryDelegate>
+@interface PartLibraryController : NSObject <LDrawPartLibraryDelegate>
 
 // Actions
 - (void) loadPartCatalog:(void (^)(BOOL success))completionHandler;

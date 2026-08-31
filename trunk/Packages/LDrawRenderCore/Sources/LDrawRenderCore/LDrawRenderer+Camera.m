@@ -93,8 +93,8 @@
 		if (V3EqualBoxes(boundingBox, InvalidBox) == NO)
 		{		
 			// Project the bounds onto the 2D "canvas"
-			modelView   = Matrix4CreateFromGLMatrix4([camera getModelView]);
-			projection  = Matrix4CreateFromGLMatrix4([camera getProjection]);
+			modelView   = Matrix4CreateFromFloats([camera modelView]);
+			projection  = Matrix4CreateFromFloats([camera projection]);
 
 			projectedBounds = [(id)self->fileBeingDrawn
 									   projectedBoundingBoxWithModelView:modelView

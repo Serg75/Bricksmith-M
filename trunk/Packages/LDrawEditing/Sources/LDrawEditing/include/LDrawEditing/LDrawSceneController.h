@@ -18,7 +18,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawRenderCore/LDrawCamera.h>
 
 @class LDrawDirective;
@@ -93,14 +93,14 @@ NS_ASSUME_NONNULL_BEGIN
 /// offered to the host via the renderer bridge.
 ///
 /// @return YES if a directive was hit, NO otherwise.
-- (BOOL)mouseSelectionClickAtPoint:(Point2)point_view selectionMode:(SelectionModeT)selectionMode;
+- (BOOL)mouseSelectionClickAtPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode;
 
 /// Update the selection marquee to the dragged point and select every
 /// directive under the rectangle.
 ///
 /// The host maps modifier keys to selectionMode (replace, extend, subtract,
 /// intersection).
-- (void)mouseSelectionDragToPoint:(Point2)point_view selectionMode:(SelectionModeT)selectionMode;
+- (void)mouseSelectionDragToPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode;
 
 /// Move the active drag handle (and its vertex) with the mouse.
 ///
@@ -191,7 +191,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (TransformComponents)preferredPartTransform;
 
 - (void)wantsToSelectDirective:(nullable LDrawDirective *)directive byExtendingSelection:(BOOL)shouldExtend;
-- (void)wantsToSelectDirectives:(NSArray *)directives selectionMode:(SelectionModeT)selectionMode;
+- (void)wantsToSelectDirectives:(NSArray *)directives selectionMode:(LDrawSelectionMode)selectionMode;
 - (void)willBeginDraggingHandle:(LDrawDragHandle *)handle;
 - (void)dragHandleDidMove:(LDrawDragHandle *)handle;
 - (void)noteNeedsDisplay;

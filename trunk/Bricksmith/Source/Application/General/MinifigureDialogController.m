@@ -9,20 +9,22 @@
 //==============================================================================
 #import "MinifigureDialogController.h"
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawColor.h>
-#import "LDrawColorWell.h"
-#import "LDrawView.h"
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
-#import "LDrawViewerContainer.h"
+
 #import <LDrawFeatures/LDrawMinifigureAssembler.h>
 #import <LDrawFeatures/LDrawMinifigureSnapshot.h>
-#import <LDrawFeatures/MLCadIni.h>
+#import <LDrawFeatures/LDrawMLCadIni.h>
+
+#import "LDrawColorWell.h"
+#import "LDrawView.h"
+#import "LDrawViewerContainer.h"
 
 @interface MinifigureDialogController ()
 {
-	MLCadIni		*iniFile;
+	LDrawMLCadIni	*iniFile;
 	NSString		*minifigureName;
 	LDrawMPDModel	*minifigure;
 	NSArray			*topLevelObjects;	// holds NIB objects
@@ -132,7 +134,7 @@
 {
 	self = [super init];
 	
-	iniFile = [MLCadIni iniFile]; // KVC: XIB binds array controllers to iniFile.minifigure*
+	iniFile = [LDrawMLCadIni iniFile]; // KVC: XIB binds array controllers to iniFile.minifigure*
 	[self setMinifigureName:NSLocalizedString([LDrawMinifigureAssembler untitledMinifigureLocalizationKey], nil)];
 	
 	//we'll call -generateMinifigure: when the dialog is ready and loaded with 
@@ -398,7 +400,7 @@
 - (void) restoreFromPreferences
 {
 	NSUserDefaults            *userDefaults = [NSUserDefaults standardUserDefaults];
-	ColorLibrary              *colorLibrary = [ColorLibrary sharedColorLibrary];
+	LDrawColorLibrary         *colorLibrary = [LDrawColorLibrary sharedColorLibrary];
 	LDrawMinifigureSnapshot   *snap         = [LDrawMinifigureSnapshot snapshotFromUserDefaults:userDefaults];
 
 	[snap applyInclusionAndAnglesToTarget:self];

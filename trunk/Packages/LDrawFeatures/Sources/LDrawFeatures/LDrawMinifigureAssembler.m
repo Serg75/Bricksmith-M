@@ -18,7 +18,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawFeatures/MLCadIni.h>
+#import <LDrawFeatures/LDrawMLCadIni.h>
 
 @interface LDrawMinifigureSpec ()
 + (NSArray<NSString *> *)partSlotKeys;
@@ -253,7 +253,7 @@ static void RotateParts(Tuple3 degrees, LDrawPart *firstPart, ...)
 	float		armAngle			= 0.0f;
 	if (torso != nil)
 	{
-		armAngle = [[MLCadIni iniFile] armAngleForTorsoName:[torso referenceName]];
+		armAngle = [[LDrawMLCadIni iniFile] armAngleForTorsoName:[torso referenceName]];
 	}
 
 	///////////////////////////////////////

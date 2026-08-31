@@ -31,7 +31,7 @@
 #import <LDrawCore/LDrawLSynth.h>
 #import <LDrawCore/LDrawRegex.h>
 
-#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 
 
 static BOOL                 ColumnizesOutput    = NO;
@@ -234,7 +234,7 @@ static NSString				*defaultAuthor		= @"anonymous";
 	{
 		// Regular, standards-compliant LDraw color code
 		colorCode   = [colorField intValue];
-		color       = [[ColorLibrary sharedColorLibrary] colorForCode:colorCode];
+		color       = [[LDrawColorLibrary sharedColorLibrary] colorForCode:colorCode];
 		
 		if (color == nil)
 		{
@@ -775,7 +775,7 @@ static NSString				*defaultAuthor		= @"anonymous";
 //------------------------------------------------------------------------------
 + (void)updateNameForMovedPart:(LDrawPart *)movedPart
 {
-	NSString	*description	= [[PartLibrary sharedPartLibrary] descriptionForPart:movedPart];
+	NSString	*description	= [[LDrawPartLibrary sharedPartLibrary] descriptionForPart:movedPart];
 
 	if ([description hasPrefix:LDRAW_MOVED_DESCRIPTION_PREFIX])
 	{

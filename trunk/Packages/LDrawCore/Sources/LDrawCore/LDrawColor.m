@@ -7,7 +7,7 @@
 //              most commonly encountered in ldconfig.ldr, but they may also
 //              appear within models for local scope.
 //
-//              At a high level, colors should be retrieved from a ColorLibrary
+//              At a high level, colors should be retrieved from a LDrawColorLibrary
 //              object.
 //
 //  Modified:   3/16/08 Allen Smith. Creation Date.
@@ -379,7 +379,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 - (void) collectSelf:(id<LDrawCollector>)renderer
 {
 	// Need to add this color to the model's color library.
-	ColorLibrary *colorLibrary = [[(LDrawStep*)[self enclosingDirective] enclosingModel] colorLibrary];
+	LDrawColorLibrary *colorLibrary = [[(LDrawStep*)[self enclosingDirective] enclosingModel] colorLibrary];
 	
 	[colorLibrary addColor:self];
 		

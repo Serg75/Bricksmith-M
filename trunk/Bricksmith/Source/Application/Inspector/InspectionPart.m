@@ -11,13 +11,15 @@
 //==============================================================================
 #import "InspectionPart.h"
 
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+
+#import <LDrawEditing/LDrawInspection.h>
+
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
-#import <LDrawCore/LDrawFile.h>
-#import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/PartLibrary.h>
-#import <LDrawEditing/LDrawInspection.h>
 
 @interface InspectionPart ()
 
@@ -125,7 +127,7 @@
 {
 	LDrawPart			*representedObject	= [self object];
 	TransformComponents	 components			= [representedObject transformComponents];
-	NSString			*description		= [[PartLibrary sharedPartLibrary] descriptionForPart:representedObject];
+	NSString			*description		= [[LDrawPartLibrary sharedPartLibrary] descriptionForPart:representedObject];
 	Point3				 position			= ZeroPoint3;
 	Vector3				 scaling			= ZeroPoint3;
 	Tuple3				 shear				= ZeroPoint3;

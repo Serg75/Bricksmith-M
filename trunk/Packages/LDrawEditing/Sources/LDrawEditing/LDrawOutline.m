@@ -29,7 +29,7 @@
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawColor.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 
 @interface LDrawOutline ()
 + (BOOL)canNestDirective:(LDrawDirective *)directive inParent:(id)parent;

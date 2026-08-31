@@ -249,11 +249,11 @@
 //				WalkThrough is also perspective.
 //
 //------------------------------------------------------------------------------
-+ (ProjectionModeT)projectionModeForViewOrientation:(ViewOrientationT)orientation
++ (LDrawProjectionMode)projectionModeForViewOrientation:(ViewOrientationT)orientation
 {
 	if (orientation == ViewOrientation3D || orientation == ViewOrientationWalkThrough)
-		return ProjectionModePerspective;
-	return ProjectionModeOrthographic;
+		return LDrawProjectionModePerspective;
+	return LDrawProjectionModeOrthographic;
 }
 
 
@@ -263,11 +263,11 @@
 //				model.
 //
 //------------------------------------------------------------------------------
-+ (LocationModeT)locationModeForViewOrientation:(ViewOrientationT)orientation
++ (LDrawLocationMode)locationModeForViewOrientation:(ViewOrientationT)orientation
 {
 	if (orientation == ViewOrientationWalkThrough)
-		return LocationModeWalkthrough;
-	return LocationModeModel;
+		return LDrawLocationModeWalkthrough;
+	return LDrawLocationModeModel;
 }
 
 

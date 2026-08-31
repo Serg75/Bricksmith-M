@@ -23,11 +23,12 @@
 //==============================================================================
 #import "ToolPalette.h"
 
+#import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/NSString+LDraw.h>
+#import <LDrawFeatures/LDrawPreferences.h>
+
 #import "LDrawColorPanelController.h"
 #import "LDrawColorWell.h"
-#import <LDrawCore/MacLDraw.h>
-#import <LDrawCore/StringCategory.h>
-#import <LDrawFeatures/LDrawPreferences.h>
 
 ToolPalette *sharedToolPalette = nil;
 

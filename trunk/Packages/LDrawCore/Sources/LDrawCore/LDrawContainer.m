@@ -16,7 +16,7 @@
 #import <LDrawCore/LDrawContainer.h>
 
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/PartReport.h>
+#import <LDrawCore/LDrawPartReport.h>
 
 @implementation LDrawContainer
 
@@ -263,7 +263,7 @@
 //				how deeply they may be contained.
 //
 //==============================================================================
-- (void) collectPartReport:(PartReport *)report
+- (void) collectPartReport:(LDrawPartReport *)report
 {
 	id          currentDirective    = nil;
 	NSInteger   counter             = 0;

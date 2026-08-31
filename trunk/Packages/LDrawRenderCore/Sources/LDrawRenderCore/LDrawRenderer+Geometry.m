@@ -168,8 +168,8 @@
 	
 		// Convert back to a point in the model.
 		modelPoint = V3Unproject(contextPoint,
-								  Matrix4CreateFromGLMatrix4([camera getModelView]),
-								  Matrix4CreateFromGLMatrix4([camera getProjection]),
+								  Matrix4CreateFromFloats([camera modelView]),
+								  Matrix4CreateFromFloats([camera projection]),
 								 [self viewport]);
 	}
 	
@@ -222,14 +222,14 @@
 	
 	// - Near clipping plane unprojection
 	nearModelPoint = V3Unproject(V3Make(contextPoint.x, contextPoint.y, 0.0),
-								  Matrix4CreateFromGLMatrix4([camera getModelView]),
-								  Matrix4CreateFromGLMatrix4([camera getProjection]),
+								  Matrix4CreateFromFloats([camera modelView]),
+								  Matrix4CreateFromFloats([camera projection]),
 								 viewport);
 	
 	// - Far clipping plane unprojection
 	farModelPoint = V3Unproject(V3Make(contextPoint.x, contextPoint.y, 1.0),
-								  Matrix4CreateFromGLMatrix4([camera getModelView]),
-								  Matrix4CreateFromGLMatrix4([camera getProjection]),
+								  Matrix4CreateFromFloats([camera modelView]),
+								  Matrix4CreateFromFloats([camera projection]),
 								viewport);
 	
 	//---------- Derive the actual point from the depth point --------------

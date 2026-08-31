@@ -13,7 +13,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
 
@@ -81,15 +81,15 @@
 	//
 
 	// GPU viewer settings -- see -restoreConfiguration in LDrawView.
-	// ProjectionModeT lives in LDrawRenderCore; values are 0=perspective, 1=orthographic.
-	[initialDefaults setObject:@(ViewOrientation3D)				forKey:[LDRAW_GL_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_0"]];
-	[initialDefaults setObject:@0								forKey:[LDRAW_GL_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_0"]];
-	[initialDefaults setObject:@(ViewOrientationFront)			forKey:[LDRAW_GL_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_1"]];
-	[initialDefaults setObject:@1								forKey:[LDRAW_GL_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_1"]];
-	[initialDefaults setObject:@(ViewOrientationLeft)			forKey:[LDRAW_GL_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_2"]];
-	[initialDefaults setObject:@1								forKey:[LDRAW_GL_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_2"]];
-	[initialDefaults setObject:@(ViewOrientationTop)			forKey:[LDRAW_GL_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_3"]];
-	[initialDefaults setObject:@1								forKey:[LDRAW_GL_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_3"]];
+	// LDrawProjectionMode lives in LDrawRenderCore; values are 0=perspective, 1=orthographic.
+	[initialDefaults setObject:@(ViewOrientation3D)				forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_0"]];
+	[initialDefaults setObject:@0								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_0"]];
+	[initialDefaults setObject:@(ViewOrientationFront)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_1"]];
+	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_1"]];
+	[initialDefaults setObject:@(ViewOrientationLeft)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_2"]];
+	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_2"]];
+	[initialDefaults setObject:@(ViewOrientationTop)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" fileGraphicView_3"]];
+	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" fileGraphicView_3"]];
 
 	//
 	// Part Browser
@@ -180,8 +180,8 @@
 	[initialDefaults setObject:@(LDrawBlack)					forKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY];
 	[initialDefaults setObject:@4.0f							forKey:MINIFIGURE_HEAD_ELEVATION];
 
-	[initialDefaults setObject:@(ViewOrientationFront)			forKey:[LDRAW_GL_VIEW_ANGLE stringByAppendingString:@" MinifigureGeneratorView"]];
-	[initialDefaults setObject:@1								forKey:[LDRAW_GL_VIEW_PROJECTION stringByAppendingString:@" MinifigureGeneratorView"]];
+	[initialDefaults setObject:@(ViewOrientationFront)			forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" MinifigureGeneratorView"]];
+	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" MinifigureGeneratorView"]];
 
 	[[NSUserDefaults standardUserDefaults] registerDefaults:initialDefaults];
 }
@@ -324,7 +324,7 @@
 //------------------------------------------------------------------------------
 + (NSString *)viewingAnglePreferenceKeyForAutosaveName:(NSString *)autosaveName
 {
-	return [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_ANGLE, autosaveName];
+	return [NSString stringWithFormat:@"%@ %@", LDRAW_VIEW_ANGLE, autosaveName];
 }
 
 
@@ -335,7 +335,7 @@
 //------------------------------------------------------------------------------
 + (NSString *)projectionModePreferenceKeyForAutosaveName:(NSString *)autosaveName
 {
-	return [NSString stringWithFormat:@"%@ %@", LDRAW_GL_VIEW_PROJECTION, autosaveName];
+	return [NSString stringWithFormat:@"%@ %@", LDRAW_VIEW_PROJECTION, autosaveName];
 }
 
 

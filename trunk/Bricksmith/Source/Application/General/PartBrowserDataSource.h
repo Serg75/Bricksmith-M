@@ -9,11 +9,12 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import "LDrawView.h"
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
 
+#import "LDrawView.h"
+
 @class LDrawViewerContainer;
-@class PartLibrary;
+@class LDrawPartLibrary;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -38,11 +39,11 @@
 
 	NSArray				*topLevelObjects;	// holds NIB objects
 
-	__weak PartLibrary	*partLibrary; //weak reference to the shared part catalog.
-	__weak NSString		*selectedCategory;
-	__weak NSArray 		*categoryList;
-	NSMutableArray  	*tableDataSource;
-	SearchModeT			searchMode;
+	__weak LDrawPartLibrary	*partLibrary; //weak reference to the shared part catalog.
+	__weak NSString			*selectedCategory;
+	__weak NSArray 			*categoryList;
+	NSMutableArray  		*tableDataSource;
+	SearchModeT				searchMode;
 	LDrawPartBrowserModel	*browserModel;
 }
 
@@ -50,7 +51,7 @@
 - (NSString *) category;
 - (NSString *) selectedPartName;
 
-- (void) setPartLibrary:(PartLibrary *)partLibraryIn;
+- (void) setPartLibrary:(LDrawPartLibrary *)partLibraryIn;
 - (BOOL) loadCategory:(NSString *)newCategory;
 - (void) setCategoryList:(NSArray *)categoryList;
 - (void) setTableDataSource:(NSMutableArray *) partsInCategory;

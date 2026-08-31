@@ -229,9 +229,9 @@
 //==============================================================================
 - (void)rotationDragged:(Vector2)viewDirection
 {
-	if ([self projectionMode] != ProjectionModePerspective)
+	if ([self projectionMode] != LDrawProjectionModePerspective)
 	{
-		[self setProjectionMode:ProjectionModePerspective];
+		[self setProjectionMode:LDrawProjectionModePerspective];
 		self->viewOrientation = ViewOrientation3D;
 	}
 
@@ -308,9 +308,9 @@
 //==============================================================================
 - (void)rotateByDegrees:(float)angle
 {
-	if ([self projectionMode] != ProjectionModePerspective)
+	if ([self projectionMode] != LDrawProjectionModePerspective)
 	{
-		[self setProjectionMode:ProjectionModePerspective];
+		[self setProjectionMode:LDrawProjectionModePerspective];
 		self->viewOrientation = ViewOrientation3D;
 	}
 

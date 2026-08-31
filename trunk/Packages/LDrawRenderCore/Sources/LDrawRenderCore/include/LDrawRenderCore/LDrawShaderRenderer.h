@@ -11,7 +11,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/LDrawCoreRenderer.h>
-#import <LDrawRenderCore/GPUTypes.h>
+#import <LDrawRenderCore/LDrawRenderTypes.h>
 
 /*
 
@@ -55,7 +55,7 @@ struct	LDrawDragHandleInstance {
 #define DL_STACK_DEPTH 64
 
 struct	LDrawDLBuilder;
-struct	LDrawBDP;
+struct	LDrawPool;
 struct	LDrawDragHandleInstance;
 
 //------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ struct	LDrawDragHandleInstance;
 @interface LDrawShaderRenderer : NSObject<LDrawCoreRenderer,LDrawCollector> {
 
 	struct LDrawDLSession *			session;										// DL session - this accumulates draw calls and sorts them.
-	struct LDrawBDP *				pool;
+	struct LDrawPool *				pool;
 
 	float							color_now[4];									// Color stack.
 	float							compl_now[4];

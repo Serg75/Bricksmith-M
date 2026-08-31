@@ -17,7 +17,7 @@
 #define LDrawDisplayList_h
 
 #import <Foundation/Foundation.h>
-#import <LDrawRenderCore/GPUTypes.h>
+#import <LDrawRenderCore/LDrawRenderTypes.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
 
 /*

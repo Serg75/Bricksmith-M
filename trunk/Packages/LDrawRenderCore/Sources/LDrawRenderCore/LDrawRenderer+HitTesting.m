@@ -49,8 +49,8 @@
 		Box2	test_box = V2MakeBox(x1,y1,x2-x1,y2-y1);
 
 	Matrix4	mvp =			Matrix4Multiply(
-									Matrix4CreateFromGLMatrix4([camera getModelView]),
-									Matrix4CreateFromGLMatrix4([camera getProjection]));
+									Matrix4CreateFromFloats([camera modelView]),
+									Matrix4CreateFromFloats([camera projection]));
 				
 	id bestObject = nil;
 	[fileBeingDrawn depthTest:point_clip inBox:test_box transform:mvp creditObject:nil bestObject:&bestObject bestDepth:&depth];
@@ -107,8 +107,8 @@
 		Box2	test_box = V2MakeBox(x1,y1,x2-x1,y2-y1);
 		
 		Matrix4	mvp =			Matrix4Multiply(
-									  Matrix4CreateFromGLMatrix4([camera getModelView]),
-									  Matrix4CreateFromGLMatrix4([camera getProjection]));
+									  Matrix4CreateFromFloats([camera modelView]),
+									  Matrix4CreateFromFloats([camera projection]));
 										
 		// Do hit test
 		for (counter = 0; counter < [directives count]; counter++)
@@ -153,7 +153,7 @@
 	{
 		modelPoint = [self modelPointForPoint:point_view];
 		
-		if ([self projectionMode] == ProjectionModeOrthographic)
+		if ([self projectionMode] == LDrawProjectionModeOrthographic)
 		{
 			[self getModelAxesForViewX:&modelAxisForX Y:&modelAxisForY Z:&modelAxisForZ];
 			

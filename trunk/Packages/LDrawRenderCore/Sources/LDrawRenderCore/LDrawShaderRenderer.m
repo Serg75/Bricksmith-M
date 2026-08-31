@@ -9,12 +9,12 @@
 //==============================================================================
 
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
-#import <LDrawRenderCore/LDrawShaderRendererGPU.h>
+#import <LDrawRenderCore/LDrawShaderRendererDraw.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
-#import <LDrawRenderCore/LDrawBDPAllocator.h>
+#import <LDrawRenderCore/LDrawPoolAllocator.h>
 
 #import <LDrawCore/MatrixMathEx.h>
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 
 //========== set_color4fv ========================================================
 //
@@ -432,7 +432,7 @@ static void set_color4fv(float * c, float storage[4])
 //================================================================================
 - (void)drawDragHandle:(float *)xyz withSize:(float)size
 {
-	struct LDrawDragHandleInstance * dh = (struct LDrawDragHandleInstance *) LDrawBDPAllocate(pool,sizeof(struct LDrawDragHandleInstance));
+	struct LDrawDragHandleInstance * dh = (struct LDrawDragHandleInstance *) LDrawPoolAllocate(pool,sizeof(struct LDrawDragHandleInstance));
 	
 	dh->next = drag_handles;	
 	drag_handles = dh;
@@ -474,15 +474,15 @@ static void set_color4fv(float * c, float storage[4])
 // Purpose: close off a DL, returning the display list if there is one.
 //
 //================================================================================
-- (void)endDL:(LDrawDLHandle *) outHandle cleanupFunc:(LDrawDLCleanup_f *)func
+- (void)endDL:(LDrawMeshHandle *) outHandle cleanupFunc:(LDrawMeshCleanup_f *)func
 {
 	assert(dl_stack_top > 0);
 	struct LDrawDL * dl = dl_now ? [self builderFinish:dl_now] : NULL;
 	--dl_stack_top;
 	dl_now = dl_stack[dl_stack_top];
 	
-	*outHandle = (LDrawDLHandle)dl;
-	*func =  (LDrawDLCleanup_f) LDrawDLDestroy;
+	*outHandle = (LDrawMeshHandle)dl;
+	*func =  (LDrawMeshCleanup_f) LDrawDLDestroy;
 
 } // end endDL:cleanupFunc:
 
@@ -493,7 +493,7 @@ static void set_color4fv(float * c, float storage[4])
 //			that sorts out how to actually do tihs.
 //
 //================================================================================
-- (void)drawDL:(LDrawDLHandle)dl
+- (void)drawDL:(LDrawMeshHandle)dl
 {
 	LDrawDLDraw(
 		_renderEncoder,

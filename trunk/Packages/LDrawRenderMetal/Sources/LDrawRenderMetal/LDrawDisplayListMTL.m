@@ -16,7 +16,7 @@
 #import <LDrawRenderCore/LDrawDisplayList.h>
 #import <LDrawRenderCore/LDrawDisplayListBuilder.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
-#import <LDrawRenderCore/LDrawBDPAllocator.h>
+#import <LDrawRenderCore/LDrawPoolAllocator.h>
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 #import <LDrawRenderCore/MeshSmooth.h>
 #import <LDrawRenderMetal/MetalGPU.h>
@@ -198,7 +198,7 @@ struct LDrawDLSession {
 		int								num_work_ins;
 	} stats;
 	#endif
-	struct LDrawBDP *					alloc;					// Pool allocator for the session to rapidly save linked lists of 'stuff'.
+	struct LDrawPool *					alloc;					// Pool allocator for the session to rapidly save linked lists of 'stuff'.
 	struct LDrawDL *					dl_head;				// Linked list of all DLs that will be instance-drawn, with count.
 	int									dl_count;
 	int									total_instance_count;	// Used in calculation the size of instance buffer
@@ -351,7 +351,7 @@ static void saveForSortDraw(struct LDrawDLSession *		session,
 #endif
 
 	// Build a sorted link, copy the instance data to it, and link it up to our session for later processing.
-	struct LDrawDLSortedInstanceLink * link = LDrawBDPAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
+	struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
 	link->next = session->sorted_head;
 	session->sorted_head = link;
 	link->dl = dl;
@@ -389,7 +389,7 @@ static void saveForInstanceDraw(struct LDrawDLSession *	session,
 		session->dl_head = dl;
 	}
 	// Copy our instance data into a LDrawDLInstance and link that into the DL for later use.
-	struct LDrawDLInstance * inst = (struct LDrawDLInstance *) LDrawBDPAllocate(session->alloc,sizeof(struct LDrawDLInstance));
+	struct LDrawDLInstance * inst = (struct LDrawDLInstance *) LDrawPoolAllocate(session->alloc,sizeof(struct LDrawDLInstance));
 	{
 		if (dl->instance_head == NULL)
 		{
@@ -650,7 +650,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// an empty one.
 	if (total_texes == 0)
 	{
-		LDrawBDPDestroy(ctx->alloc);
+		LDrawPoolDestroy(ctx->alloc);
 		return NULL;
 	}
 
@@ -776,14 +776,14 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// Grab variable size arrays for the start/offsets of each sub-part of our big pile-o-mesh...
 	// the mesher will give us back our tris sorted by texture.
 
-	int * line_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * line_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * cond_line_start = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * cond_line_count = (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * tri_start		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * tri_count		= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * quad_start	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
-	int * quad_count	= (int *) LDrawBDPAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * line_start	= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * line_count	= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * cond_line_start = (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * cond_line_count = (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * tri_start		= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * tri_count		= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * quad_start	= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int * quad_count	= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
 
 	write_indexed_mesh(
 		M,
@@ -875,7 +875,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	#endif
 
 	// Release the BDP that contains all of the build-related junk.
-	LDrawBDPDestroy(ctx->alloc);
+	LDrawPoolDestroy(ctx->alloc);
 
 	#if TIME_SMOOTHING
 	NSTimeInterval endTime = [NSDate timeIntervalSinceReferenceDate];
@@ -911,7 +911,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// an empty one.
 	if (total_texes == 0)
 	{
-		LDrawBDPDestroy(ctx->alloc);
+		LDrawPoolDestroy(ctx->alloc);
 		return NULL;
 	}
 
@@ -1020,7 +1020,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	// Staging buffer will be released when it goes out of scope
 
 	// Release the BDP that contains all of the build-related junk.
-	LDrawBDPDestroy(ctx->alloc);
+	LDrawPoolDestroy(ctx->alloc);
 
 	return dl;
 
@@ -1072,8 +1072,8 @@ void LDrawDLDestroy(struct LDrawDL * dl)
 //================================================================================
 struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 {
-	struct LDrawBDP * alloc = LDrawBDPCreate();
-	struct LDrawDLSession * session = (struct LDrawDLSession *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLSession));
+	struct LDrawPool * alloc = LDrawPoolCreate();
+	struct LDrawDLSession * session = (struct LDrawDLSession *) LDrawPoolAllocate(alloc,sizeof(struct LDrawDLSession));
 	session->alloc = alloc;
 	session->dl_head = NULL;
 	session->dl_count = 0;
@@ -1109,7 +1109,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// Build a var-sized array of segments to record our instances for hardware instancing.  We may not need it for every DL but that's okay.
 		// We need twice the space because each DL can have both wireframe and non-wireframe instances that need to be drawn separately.
 		size_t segmentsSize = sizeof(struct LDrawDLSegment) * session->dl_count * 2;
-		struct LDrawDLSegment * segments = (struct LDrawDLSegment *) LDrawBDPAllocate(session->alloc, segmentsSize);
+		struct LDrawDLSegment * segments = (struct LDrawDLSegment *) LDrawPoolAllocate(session->alloc, segmentsSize);
 		struct LDrawDLSegment * cur_segment = segments;
 
 		// Get or create an instance buffer of appropriate size
@@ -1322,7 +1322,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	if (session->sorted_head)
 	{
 		// If we have any sorting to do, allocate an array of the size of all sorted geometry for sorting purposes.
-		struct LDrawDLSortedInstanceLink * arr = (struct LDrawDLSortedInstanceLink *) LDrawBDPAllocate(session->alloc,sizeof(struct LDrawDLSortedInstanceLink) * session->sort_count);
+		struct LDrawDLSortedInstanceLink * arr = (struct LDrawDLSortedInstanceLink *) LDrawPoolAllocate(session->alloc,sizeof(struct LDrawDLSortedInstanceLink) * session->sort_count);
 		struct LDrawDLSortedInstanceLink * p = arr;		
 		
 		// Copy each sorted instance into our array.  "Eval" is the measurement of distance - calculate eye-space Z and use that.
@@ -1425,7 +1425,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	// Finally done - all allocations for session (including our own obj) come from a BDP, so cleanup is quick.  
 	// Instance buffer remains to be reused.
 	// DLs themselves live on beyond session.
-	LDrawBDPDestroy(session->alloc);
+	LDrawPoolDestroy(session->alloc);
 	
 } // end LDrawDLSessionDrawAndDestroy
 

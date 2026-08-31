@@ -16,7 +16,7 @@
 //==============================================================================
 #import "DocumentToolbarController.h"
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawEditing/LDrawSelection.h>
 #import <LDrawFeatures/LDrawToolbarLabels.h>

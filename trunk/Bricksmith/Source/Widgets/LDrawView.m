@@ -28,14 +28,17 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
+
 #import <LDrawEditing/LDrawClipboard.h>
 #import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
 #import <LDrawEditing/LDrawSceneController.h>
 #import <LDrawEditing/LDrawSelection.h>
 #import <LDrawEditing/LDrawViewPolicy.h>
+
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
+
 #import "BricksmithUtilities.h"
 #import "FocusRingView.h"
 #import "LDrawApplication.h"
@@ -150,7 +153,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	return [LDrawSelection nudgeVector:self->nudgeVector
 							partMatrix:partMatrix
 						  cameraMatrix:[self->renderer getMatrix]
-						  orthographic:([self projectionMode] == ProjectionModeOrthographic)
+						  orthographic:([self projectionMode] == LDrawProjectionModeOrthographic)
 						  useTurntable:USE_TURNTABLE];
 
 }//end nudgeVectorForMatrix:
@@ -158,7 +161,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 //========== projectionMode ====================================================
 //==============================================================================
-- (ProjectionModeT) projectionMode
+- (LDrawProjectionMode) projectionMode
 {
 	[self makeCurrentContext];
 	return [self->renderer projectionMode];
@@ -168,7 +171,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 //========== locationMode ====================================================
 //==============================================================================
-- (LocationModeT) locationMode
+- (LDrawLocationMode) locationMode
 {
 	[self makeCurrentContext];
 	return [self->renderer locationMode];
@@ -436,7 +439,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //									this is how humans see the world.
 //
 //==============================================================================
-- (void) setProjectionMode:(ProjectionModeT)newProjectionMode
+- (void) setProjectionMode:(LDrawProjectionMode)newProjectionMode
 {
 	[self lockContextAndExecute:^
 	{
@@ -457,7 +460,7 @@ static Box2 NSRectToBox2(NSRect rect)
 // Purpose:		Sets the location mode used when drawing the receiver.
 //
 //==============================================================================
-- (void) setLocationMode:(LocationModeT)newLocationMode
+- (void) setLocationMode:(LDrawLocationMode)newLocationMode
 {
 	[self lockContextAndExecute:^
 	{
@@ -711,16 +714,16 @@ static Box2 NSRectToBox2(NSRect rect)
 			if(self->selectionIsMarquee)
 			{
 				switch(self->marqueeSelectionMode) {
-				case SelectionIntersection:
+				case LDrawSelectionIntersection:
 					cursorImage = [NSImage imageNamed:@"CrosshairTimes"];
 					break;
-				case SelectionExtend:
+				case LDrawSelectionExtend:
 					cursorImage = [NSImage imageNamed:@"CrosshairPlus"];
 					break;
-				case SelectionSubtract:
+				case LDrawSelectionSubtract:
 					cursorImage = [NSImage imageNamed:@"CrosshairMinus"];
 					break;
-				case SelectionReplace:
+				case LDrawSelectionReplace:
 					cursorImage = [NSImage imageNamed:@"Crosshair"];
 					break;
 				}
@@ -949,7 +952,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 		self->nudgeVector = actualNudge;
 
-		if([self locationMode] == LocationModeWalkthrough)
+		if([self locationMode] == LDrawLocationModeWalkthrough)
 			[renderer moveCamera:actualNudge];
 		else
 			[NSApp sendAction:self->nudgeAction to:self->target from:self];
@@ -1025,7 +1028,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Reset event tracking flags.
 
 	selectionIsMarquee = NO;
-	marqueeSelectionMode = SelectionReplace;
+	marqueeSelectionMode = LDrawSelectionReplace;
 
 	[self->renderer mouseDown];
 
@@ -1063,7 +1066,7 @@ static Box2 NSRectToBox2(NSRect rect)
 																   repeats:NO ];
 		}
 		else if([LDrawViewPolicy shouldSelectPartsOnMouseDownForDraggingBehavior:draggingBehavior
-																  isOrthographic:([self->renderer projectionMode] == ProjectionModeOrthographic)])
+																  isOrthographic:([self->renderer projectionMode] == LDrawProjectionModeOrthographic)])
 		{
 			[self mousePartSelection:theEvent];
 		}
@@ -1123,7 +1126,7 @@ static Box2 NSRectToBox2(NSRect rect)
 			[LDrawViewPolicy rotateSelectDragActionForBehavior:draggingBehavior
 										   canBeginDragAndDrop:self->canBeginDragAndDrop
 											selectionIsMarquee:selectionIsMarquee
-												 isPerspective:([self->renderer projectionMode] == ProjectionModePerspective)];
+												 isPerspective:([self->renderer projectionMode] == LDrawProjectionModePerspective)];
 		switch(dragAction)
 		{
 			case LDrawRotateSelectDragRotateCamera:
@@ -1201,7 +1204,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	[self resetCursor];
 
 	selectionIsMarquee = NO;
-	marqueeSelectionMode = SelectionReplace;
+	marqueeSelectionMode = LDrawSelectionReplace;
 
 	if(self->autoscrollTimer)
 	{
@@ -1577,7 +1580,7 @@ static Box2 NSRectToBox2(NSRect rect)
 {
 	NSPoint windowPoint     = [theEvent locationInWindow];
 	NSPoint viewPoint       = [self convertPoint:windowPoint fromView:nil];
-	SelectionModeT selectionMode;
+	LDrawSelectionMode selectionMode;
 
 	[self makeCurrentContext];
 
@@ -1803,7 +1806,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Do not allow rotating in orthographic views if we started out doing a
 	// zoom gesture. Rotating will automatically change an orthographic view to
 	// perspective, and we don't want to do that when unexpected.
-	if(([self->renderer projectionMode] == ProjectionModePerspective)
+	if(([self->renderer projectionMode] == LDrawProjectionModePerspective)
 		|| (self->startingGestureType == NSEventTypeRotate))
 	{
 		[self lockContextAndExecute:^
@@ -2206,7 +2209,7 @@ static Box2 NSRectToBox2(NSRect rect)
 // Purpose:		Pass a multi-selection notification on to our delegate.
 //
 //==============================================================================
-- (void) LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode
+- (void) LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(LDrawSelectionMode) selectionMode
 {
 	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:wantsToSelectDirectives:selectionMode:)])
 	{
@@ -2321,7 +2324,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		NSString            *viewingAngleKey    = [LDrawPreferences viewingAnglePreferenceKeyForAutosaveName:self->autosaveName];
 		NSString            *projectionModeKey  = [LDrawPreferences projectionModePreferenceKeyForAutosaveName:self->autosaveName];
 		ViewOrientationT    orientation         = (ViewOrientationT)[userDefaults integerForKey:viewingAngleKey];
-		ProjectionModeT     projection			= (ProjectionModeT)[userDefaults integerForKey:projectionModeKey];
+		LDrawProjectionMode projection          = (LDrawProjectionMode)[userDefaults integerForKey:projectionModeKey];
 		
 		// It's imperative to read the modes from defaults prior to calling this 
 		// methods, since -setViewOrientation automatically saves current values 

@@ -26,10 +26,11 @@
 
 #import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
 #import <LDrawEditing/LDrawSceneController.h>
-#import "FocusRingView.h"
-#import "LDrawApplicationMTL.h"
 #import <LDrawRenderMetal/LDrawRendererMTL.h>
 #import <LDrawRenderMetal/MetalGPU.h>
+
+#import "FocusRingView.h"
+#import "LDrawApplicationMTL.h"
 #import "OverlayViewCategory.h"
 
 
@@ -93,7 +94,7 @@
 	self.enableSetNeedsDisplay = YES;
 
 	selectionIsMarquee = NO;
-	marqueeSelectionMode = SelectionReplace;
+	marqueeSelectionMode = LDrawSelectionReplace;
 
 	//---------- Load UI -------------------------------------------------------
 
@@ -118,7 +119,7 @@
 
 	renderer = [[LDrawRenderer alloc] initWithBounds:[self bounds].size];
 	[renderer setDelegate:self withScroller:self];
-	[renderer setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
+	[renderer setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 	sceneController = [[LDrawSceneController alloc] initWithRendererBridge:renderer];
 	[renderer prepareMetal];
 	self.delegate = renderer;

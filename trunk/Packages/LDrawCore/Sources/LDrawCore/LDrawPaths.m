@@ -12,7 +12,7 @@
 #import <LDrawCore/LDrawPaths.h>
 
 #import <LDrawCore/LDrawPathNames.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 
 
 @implementation LDrawPaths

@@ -26,17 +26,17 @@
 #import <math.h>
 #import <string.h>
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/ModelManager.h>
-#import <LDrawCore/PartReport.h>
-#import <LDrawCore/StringCategory.h>
-#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/LDrawModelManager.h>
+#import <LDrawCore/LDrawPartReport.h>
+#import <LDrawCore/NSString+LDraw.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 // This is experimental for now: one way to draw the gaps between lego bricks 
 // without using lines is to simply shrink the entire brick by a tiny amount,
 // leaving a small gap between bricks.  (This is based on the seam-shrink code
@@ -126,7 +126,7 @@ int floatNearGrid(float v, float grid, float epsi)
 	NSString    *workingLine    = [lines objectAtIndex:range.location];
 	NSString    *prevLine       = range.location > 0 ? [lines objectAtIndex:range.location - 1] : nil;
 	NSString    *parsedField    = nil;
-	Matrix4     transformation  = IdentityMatrix4;
+	Matrix4     transform       = IdentityMatrix4;
 	LDrawColor  *parsedColor    = nil;
 	
 	self = [super initWithLines:lines inRange:range parentGroup:parentGroup];
@@ -151,54 +151,54 @@ int floatNearGrid(float v, float grid, float epsi)
 			//Read position.
 			// (x)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[3][0] = [parsedField floatValue];
+			transform.element[3][0] = [parsedField floatValue];
 			// (y)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[3][1] = [parsedField floatValue];
+			transform.element[3][1] = [parsedField floatValue];
 			// (z)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[3][2] = [parsedField floatValue];
+			transform.element[3][2] = [parsedField floatValue];
 			
 			
 			//Read Transformation X.
 			// (a)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[0][0] = [parsedField floatValue];
+			transform.element[0][0] = [parsedField floatValue];
 			// (b)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[1][0] = [parsedField floatValue];
+			transform.element[1][0] = [parsedField floatValue];
 			// (c)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[2][0] = [parsedField floatValue];
+			transform.element[2][0] = [parsedField floatValue];
 			
 			
 			//Read Transformation Y.
 			// (d)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[0][1] = [parsedField floatValue];
+			transform.element[0][1] = [parsedField floatValue];
 			// (e)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[1][1] = [parsedField floatValue];
+			transform.element[1][1] = [parsedField floatValue];
 			// (f)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[2][1] = [parsedField floatValue];
+			transform.element[2][1] = [parsedField floatValue];
 			
 			
 			//Read Transformation Z.
 			// (g)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[0][2] = [parsedField floatValue];
+			transform.element[0][2] = [parsedField floatValue];
 			// (h)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[1][2] = [parsedField floatValue];
+			transform.element[1][2] = [parsedField floatValue];
 			// (i)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transformation.element[2][2] = [parsedField floatValue];
+			transform.element[2][2] = [parsedField floatValue];
 			
 			//finish off the corner of the matrix.
-			transformation.element[3][3] = 1;
+			transform.element[3][3] = 1;
 			
-			[self setTransformationMatrix:&transformation];
+			[self setTransformationMatrix:&transform];
 			
 			//Read Part Name
 			// (part.dat) -- It can have spaces (for MPD models), so we just use the whole 
@@ -247,7 +247,7 @@ int floatNearGrid(float v, float grid, float epsi)
 
 	//Decoding structures is a bit messy.
 	temporary	= [decoder decodeBytesForKey:@"glTransformation" returnedLength:NULL];
-	memcpy(glTransformation, temporary, sizeof(float)*16 );
+	memcpy(transformation, temporary, sizeof(float)*16 );
 	
 	return self;
 	
@@ -269,7 +269,7 @@ int floatNearGrid(float v, float grid, float epsi)
 
     // Parts may have icons other than the standard "Brick", i.e. LSynth constraints
 	[encoder encodeObject:[self iconName] forKey:@"iconName"];
-	[encoder encodeBytes:(void *)glTransformation
+	[encoder encodeBytes:(void *)transformation
 				  length:sizeof(float)*16
 				  forKey:@"glTransformation"];
 	
@@ -284,10 +284,10 @@ int floatNearGrid(float v, float grid, float epsi)
 - (id) copyWithZone:(NSZone *)zone
 {
 	LDrawPart	*copied			= (LDrawPart *)[super copyWithZone:zone];
-	Matrix4		 transformation	= [self transformationMatrix];
+	Matrix4		transform		= [self transformationMatrix];
 	
 	[copied setDisplayName:[self displayName]];
-	[copied setTransformationMatrix:&transformation];
+	[copied setTransformationMatrix:&transform];
 	
 	return copied;
 	
@@ -366,12 +366,12 @@ int floatNearGrid(float v, float grid, float epsi)
 				}
 			}
 
-			[renderer pushMatrix:glTransformation];			
+			[renderer pushMatrix:transformation];			
 			[renderer pushMatrix:shrinkMatrix];
 			
 			#else
 			
-			[renderer pushMatrix:glTransformation];
+			[renderer pushMatrix:transformation];
 			#endif
 			
 			[cacheModel drawSelf:renderer];
@@ -525,7 +525,7 @@ int floatNearGrid(float v, float grid, float epsi)
 - (NSString *) write
 {
 	NSString        *CRLF           = [NSString CRLF];
-	Matrix4			transformation	= [self transformationMatrix];
+	Matrix4         transform       = [self transformationMatrix];
 	NSMutableString *written 		= [NSMutableString string];
 	
 	if (self.group.length > 0) {
@@ -536,21 +536,21 @@ int floatNearGrid(float v, float grid, float epsi)
 				@"1 %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@ %@",
 				[LDrawUtilities outputStringForColor:self->color],
 				
-				[LDrawUtilities outputStringForFloat:transformation.element[3][0]], //position.x,			(x)
-				[LDrawUtilities outputStringForFloat:transformation.element[3][1]], //position.y,			(y)
-				[LDrawUtilities outputStringForFloat:transformation.element[3][2]], //position.z,			(z)
+				[LDrawUtilities outputStringForFloat:transform.element[3][0]], //position.x,			(x)
+				[LDrawUtilities outputStringForFloat:transform.element[3][1]], //position.y,			(y)
+				[LDrawUtilities outputStringForFloat:transform.element[3][2]], //position.z,			(z)
 				
-				[LDrawUtilities outputStringForFloat:transformation.element[0][0]], //transformationX.x,	(a)
-				[LDrawUtilities outputStringForFloat:transformation.element[1][0]], //transformationX.y,	(b)
-				[LDrawUtilities outputStringForFloat:transformation.element[2][0]], //transformationX.z,	(c)
+				[LDrawUtilities outputStringForFloat:transform.element[0][0]], //transformationX.x,	(a)
+				[LDrawUtilities outputStringForFloat:transform.element[1][0]], //transformationX.y,	(b)
+				[LDrawUtilities outputStringForFloat:transform.element[2][0]], //transformationX.z,	(c)
 				
-				[LDrawUtilities outputStringForFloat:transformation.element[0][1]], //transformationY.x,	(d)
-				[LDrawUtilities outputStringForFloat:transformation.element[1][1]], //transformationY.y,	(e)
-				[LDrawUtilities outputStringForFloat:transformation.element[2][1]], //transformationY.z,	(f)
+				[LDrawUtilities outputStringForFloat:transform.element[0][1]], //transformationY.x,	(d)
+				[LDrawUtilities outputStringForFloat:transform.element[1][1]], //transformationY.y,	(e)
+				[LDrawUtilities outputStringForFloat:transform.element[2][1]], //transformationY.z,	(f)
 				
-				[LDrawUtilities outputStringForFloat:transformation.element[0][2]], //transformationZ.x,	(g)
-				[LDrawUtilities outputStringForFloat:transformation.element[1][2]], //transformationZ.y,	(h)
-				[LDrawUtilities outputStringForFloat:transformation.element[2][2]], //transformationZ.z,	(i)
+				[LDrawUtilities outputStringForFloat:transform.element[0][2]], //transformationZ.x,	(g)
+				[LDrawUtilities outputStringForFloat:transform.element[1][2]], //transformationZ.y,	(h)
+				[LDrawUtilities outputStringForFloat:transform.element[2][2]], //transformationZ.z,	(i)
 				
 				displayName
 			];
@@ -572,7 +572,7 @@ int floatNearGrid(float v, float grid, float epsi)
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	NSString *description = [[PartLibrary sharedPartLibrary] descriptionForPart:self];
+	NSString *description = [[LDrawPartLibrary sharedPartLibrary] descriptionForPart:self];
 	if (self.group.length > 0) {
 		description = [NSString stringWithFormat:@"[%@] %@", self.group, description];
 	}
@@ -601,7 +601,7 @@ int floatNearGrid(float v, float grid, float epsi)
 		
 		Box3        bounds              = InvalidBox;
 					cacheBounds			= InvalidBox;
-		Matrix4     transformation      = [self transformationMatrix];
+		Matrix4     transform           = [self transformationMatrix];
 		
 		// We need to have an actual model here. Blithely calling boundingBox3 will 
 		// result in most of our Box3 structure being garbage data!
@@ -627,7 +627,7 @@ int floatNearGrid(float v, float grid, float epsi)
 									  };
 				for(counter = 0; counter < 8; counter++)
 				{
-					vertices[counter] = V3MulPointByProjMatrix(vertices[counter], transformation);
+					vertices[counter] = V3MulPointByProjMatrix(vertices[counter], transform);
 					cacheBounds = V3UnionBoxAndPoint(cacheBounds, vertices[counter]);
 				}
 			}
@@ -683,7 +683,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 								projection:(Matrix4)projection
 									  view:(Box2)viewport;
 {
-	LDrawModel  *modelToDraw    = [[PartLibrary sharedPartLibrary] modelForPart:self];
+	LDrawModel  *modelToDraw    = [[LDrawPartLibrary sharedPartLibrary] modelForPart:self];
 	Box3        projectedBounds = InvalidBox;
 	
 	projectedBounds = [modelToDraw projectedBoundingBoxWithModelView:modelViewGLMatrix
@@ -717,7 +717,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //
 // Note:		This method is ONLY intended to be used for resolving MPD 
 //				references. If you want to resolve the general reference, you 
-//				should call -modelForPart: in the PartLibrary!
+//				should call -modelForPart: in the LDrawPartLibrary!
 //
 //==============================================================================
 - (LDrawModel *) referencedMPDSubmodel
@@ -745,7 +745,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //
 // Note:		This method is ONLY intended to be used for resolving peer file
 //				references. If you want to resolve the general reference, you 
-//				should call -modelForPart: in the PartLibrary!
+//				should call -modelForPart: in the LDrawPartLibrary!
 //
 //				referencedPeerFile will attempt re-resolution for unresolved
 //				parts.
@@ -769,12 +769,12 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (TransformComponents) transformComponents
 {
-	Matrix4				transformation	= [self transformationMatrix];
-	TransformComponents	components		= IdentityComponents;
+	Matrix4				transform	= [self transformationMatrix];
+	TransformComponents	components	= IdentityComponents;
 	
 	//This is a pretty darn neat little function. I wish I could say I wrote it.
 	// It will extract all the user-friendly components out of this nasty matrix.
-	Matrix4DecomposeTransformation( transformation, &components );
+	Matrix4DecomposeTransformation( transform, &components );
 
 	return components;
 	
@@ -798,7 +798,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (Matrix4) transformationMatrix
 {
-	return Matrix4CreateFromGLMatrix4(glTransformation);
+	return Matrix4CreateFromFloats(transformation);
 	
 }//end transformationMatrix
 
@@ -890,7 +890,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		else
 			parseGroup = parentGroup;
 #endif
-		[[PartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
+		[[LDrawPartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parseGroup];
 
 #if USE_BLOCKS
 		if(parentGroup == NULL)
@@ -911,9 +911,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (void) setTransformComponents:(TransformComponents)newComponents
 {
-	Matrix4 transformation = Matrix4CreateTransformation(&newComponents);
+	Matrix4 transform = Matrix4CreateTransformation(&newComponents);
 	
-	[self setTransformationMatrix:&transformation];
+	[self setTransformationMatrix:&transform];
 
 }//end setTransformComponents:
 
@@ -938,7 +938,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 - (void) setTransformationMatrix:(Matrix4 *)newMatrix
 {
 	[self invalCache:CacheFlagBounds];
-	Matrix4GetGLMatrix4(*newMatrix, self->glTransformation);
+	Matrix4GetFloats(*newMatrix, self->transformation);
 	
 }//end setTransformationMatrix
 
@@ -1459,7 +1459,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		modelToDraw = [self referencedMPDSubmodel];
 		
 		if(modelToDraw == nil)
-			modelToDraw = [[PartLibrary sharedPartLibrary] modelForName_threadSafe:referenceName];
+			modelToDraw = [[LDrawPartLibrary sharedPartLibrary] modelForNameThreadSafe:referenceName];
 
 		flatCopy    = [modelToDraw copy];
 		
@@ -1491,7 +1491,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //				actual part.
 //
 //==============================================================================
-- (void) collectPartReport:(PartReport *)report
+- (void) collectPartReport:(LDrawPartReport *)report
 {
 	[self resolvePart];
 	if(cacheType == PartTypeSubmodel || cacheType == PartTypePeerFile)
@@ -1575,7 +1575,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		else 
 		{
 			// Try the part library first for speed - sub-paths will thrash the modelmanager.
-			cacheModel = [[PartLibrary sharedPartLibrary] modelForName:referenceName];
+			cacheModel = [[LDrawPartLibrary sharedPartLibrary] modelForName:referenceName];
 			if(cacheModel != nil)
 			{
 				// Intentional: do not observe library parts - they are immutable so 
@@ -1590,7 +1590,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 			}
 			else
 			{
-				cacheModel = [[ModelManager sharedModelManager] requestModel:referenceName withDocument:[self enclosingFile]];
+				cacheModel = [[LDrawModelManager sharedModelManager] requestModel:referenceName withDocument:[self enclosingFile]];
 				if(cacheModel)
 				{
 					cacheType = PartTypePeerFile;
@@ -1744,7 +1744,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 
 			// Our new location is our old location with the relative transform of that part applied.
 			Matrix4 new_loc = Matrix4Multiply([redirect transformationMatrix], [self transformationMatrix]);
-			Matrix4GetGLMatrix4(new_loc, glTransformation);
+			Matrix4GetFloats(new_loc, transformation);
 		}
 		
 	}

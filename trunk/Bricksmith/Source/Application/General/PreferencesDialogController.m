@@ -34,7 +34,7 @@
 //   - Add controls
 //   - Hook up Actions and Outlets in PreferencesDialogController.h as you build up your .xib
 //   - Flesh-out the Actions defined in the header in PreferencesDialogController.m
-//   - Add preference key #defines to MacLDraw.h
+//   - Add preference key #defines to LDrawKeys.h
 //   - Make sure that your controls have sensible initial defaults set in
 //     PreferencesDialogController.m/+(void)ensureDefaults
 //
@@ -48,18 +48,20 @@
 //==============================================================================
 #import "PreferencesDialogController.h"
 
-#import "LDrawApplication.h"
-#import "LDrawView.h"			//for ViewOrientationT
+#import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPaths.h>
-#import <LDrawCore/MacLDraw.h>
-#import <LDrawCore/PartLibrary.h>
-#import "PartLibraryController.h"
-#import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawCore/LDrawRegex.h>
+
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LSynthConfiguration.h>
+
+#import "LDrawApplication.h"
+#import "LDrawView.h"			//for ViewOrientationT
+#import "PartLibraryController.h"
 #import "UserDefaultsCategory.h"
 #import "WindowCategory.h"
-#import <LDrawCore/LDrawRegex.h>
 
 static inline NSData *archivedData(id object) {
     return [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:nil];

@@ -22,7 +22,7 @@
 
 #import <LDrawCore/LDrawMetaCommand.h>
 
-#import <LDrawCore/ClassInspector.h>
+#import <LDrawCore/LDrawClassInspector.h>
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawUtilities.h>
 
@@ -45,7 +45,7 @@ static NSArray<Class>	*subclasses;
 + (void)initialize
 {
 	if (self == [LDrawMetaCommand class]) {
-		subclasses = [ClassInspector firstLevelSubclassesFor:[self class]];
+		subclasses = [LDrawClassInspector firstLevelSubclassesFor:[self class]];
 	}
 }
 

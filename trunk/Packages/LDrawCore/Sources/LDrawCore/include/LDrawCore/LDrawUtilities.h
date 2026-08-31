@@ -14,7 +14,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/MatrixMath.h>
 
 @class LDrawDirective;

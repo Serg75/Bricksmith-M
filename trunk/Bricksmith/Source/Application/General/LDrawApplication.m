@@ -18,23 +18,25 @@
 #import <mach/mach_time.h>
 #import <Sparkle/Sparkle.h>
 
+#import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/LDrawPaths.h>
+
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawMLCadIni.h>
+#import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LSynthConfiguration.h>
+
 #import "DonationDialogController.h"
 #import "Inspector.h"
 #import "LDrawColorPanelController.h"
 #import "LDrawDocument.h"
-#import <LDrawCore/LDrawPaths.h>
-#import <LDrawCore/MacLDraw.h>
-#import <LDrawFeatures/LDrawGrid.h>
-#import <LDrawFeatures/LDrawPreferences.h>
 #import "PartBrowserPanelController.h"
-#import <LDrawCore/PartLibrary.h>
 #import "PartLibraryController.h"
-#import <LDrawCore/LDrawLSynth.h>
-#import <LDrawFeatures/LSynthConfiguration.h>
 #import "PreferencesDialogController.h"
 #import "ToolPalette.h"
 #import "TransformerIntMinus1.h"
-#import <LDrawFeatures/MLCadIni.h>
 
 //==============================================================================
 // Define a weak link to the 3DConnexion driver. See link below for more info on weak linking
@@ -488,7 +490,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 // Purpose:		Determines whether the given menu item should be available.
 //				This method is called automatically each time a menu is opened.
 //				We identify the menu item by its tag, which is defined in 
-//				MacLDraw.h.
+//				LDrawKeys.h.
 //
 // Notes:		Menu items targeted at the document are handled in 
 //				LDrawDocument. 
@@ -639,7 +641,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
         
 		// Retrieve the appropriate data for each menu entry, based on the getter given above
 
-        NSArray *lsynthMLCADDefaults = [[MLCadIni iniFile] lsynthVisibleTypes];
+        NSArray *lsynthMLCADDefaults = [[LDrawMLCadIni iniFile] lsynthVisibleTypes];
         BOOL showOnlyOfficial = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
         NSArray *entries = [self->lsynthConfiguration entriesForMenuGetter:[menuSpec objectForKey:@"getter"]];
         BOOL shouldFilter = [[menuSpec valueForKey:@"shouldFilter"] boolValue];
@@ -959,7 +961,7 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 						length = fabsf(V3Length(rotation));
 						if (length > 0)
 						{
-							[currentDocument rotateSelection:rotation mode:RotateAroundSelectionCenter fixedCenter:NULL];
+							[currentDocument rotateSelection:rotation mode:LDrawRotateAroundSelectionCenter fixedCenter:NULL];
 							rotationAccumulatedSinceLastMove = V3Make(0.0, 0.0, 0.0);
 						}
 						//printf("3Dconnexion moved: %llu %12.6f %12.6f %12.6f %12.6f %12.6f %12.6f\n", deltaT, translation.x, translation.y, translation.z, rotation.x, rotation.y, rotation.z);

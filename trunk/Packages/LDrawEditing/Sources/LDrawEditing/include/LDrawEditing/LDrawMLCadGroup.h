@@ -40,7 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// Trim whitespace; nil stays nil.
 + (nullable NSString *)normalizedGroupName:(nullable NSString *)name;
 
-/// LDrawObjectWithValue pairs for directives whose group differs from newName.
+/// LDrawGroupedObject pairs for directives whose group differs from newName.
 + (NSArray *)groupChangesInSelection:(NSArray *)selection
 						 toGroupName:(nullable NSString *)newName;
 

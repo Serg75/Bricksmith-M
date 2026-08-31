@@ -11,7 +11,7 @@
 
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
 
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/NSString+LDraw.h>
 
 @interface LDrawPartBrowserModel ()
 @property (nonatomic, strong, readwrite) NSArray *filteredParts;
@@ -26,7 +26,7 @@
 //				starting in the All category with an empty search.
 //
 //==============================================================================
-- (instancetype)initWithPartLibrary:(PartLibrary *)library
+- (instancetype)initWithPartLibrary:(LDrawPartLibrary *)library
 {
 	self = [super init];
 	if (self)
@@ -142,7 +142,7 @@
 	}
 
 	NSMutableArray *matchingParts        = [NSMutableArray array];
-	NSString       *searchSansWhitespace = [searchString ams_stringByRemovingWhitespace];
+	NSString       *searchSansWhitespace = [searchString ldraw_stringByRemovingWhitespace];
 	NSArray        *searchWords          = [searchString componentsSeparatedByCharactersInSet:
 											[NSCharacterSet whitespaceCharacterSet]];
 
@@ -153,7 +153,7 @@
 	{
 		NSString *partNumber        = [record objectForKey:PART_NUMBER_KEY];
 		NSString *partDescription   = [record objectForKey:PART_NAME_KEY];
-		NSString *partSansWhitespace = [partDescription ams_stringByRemovingWhitespace];
+		NSString *partSansWhitespace = [partDescription ldraw_stringByRemovingWhitespace];
 
 		if ([excludedParts containsObject:partNumber])
 		{
@@ -177,8 +177,8 @@
 		BOOL matches = YES;
 		for (NSString *word in searchWords)
 		{
-			if (!([partNumber ams_containsString:word options:NSCaseInsensitiveSearch] ||
-				 [partSansWhitespace ams_containsString:word options:NSCaseInsensitiveSearch]))
+			if (!([partNumber ldraw_containsString:word options:NSCaseInsensitiveSearch] ||
+				 [partSansWhitespace ldraw_containsString:word options:NSCaseInsensitiveSearch]))
 			{
 				matches = NO;
 				break;
@@ -193,8 +193,8 @@
 
 		for (NSString *keyword in [record objectForKey:PART_KEYWORDS_KEY])
 		{
-			if ([[keyword ams_stringByRemovingWhitespace] ams_containsString:searchSansWhitespace
-																	 options:NSCaseInsensitiveSearch])
+            if ([[keyword ldraw_stringByRemovingWhitespace] ldraw_containsString:searchSansWhitespace
+                                                                         options:NSCaseInsensitiveSearch])
 			{
 				[matchingParts addObject:record];
 				break;

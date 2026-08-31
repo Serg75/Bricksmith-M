@@ -11,15 +11,17 @@
 //==============================================================================
 #import "LDrawColorPanelController.h"
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawColor.h>
+#import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/NSString+LDraw.h>
+
+#import <LDrawEditing/LDrawInspection.h>
+#import <LDrawFeatures/LDrawPreferences.h>
+
 #import "LDrawColorBar.h"
 #import "LDrawColorCell.h"
 #import "LDrawColorWell.h"
-#import <LDrawCore/MacLDraw.h>
-#import <LDrawCore/StringCategory.h>
-#import <LDrawEditing/LDrawInspection.h>
-#import <LDrawFeatures/LDrawPreferences.h>
 
 @implementation LDrawColorPanelController
 
@@ -81,8 +83,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	self = [super initWithWindowNibName:@"ColorPanel"];
 	if(self)
 	{
-		ColorLibrary    *colorLibrary   = [ColorLibrary sharedColorLibrary];
-		NSArray         *colorList      = [colorLibrary colors];
+		LDrawColorLibrary  *colorLibrary   = [LDrawColorLibrary sharedColorLibrary];
+		NSArray            *colorList      = [colorLibrary colors];
 		
 		//While the data is being loaded in the table, a color will automatically
 		// be selected. We do not want this color-selection to generate a
@@ -121,7 +123,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (LDrawColor *) LDrawColor
 {
 	NSArray		*selection			= [self->colorListController selectedObjects];
-	LDrawColor	*selectedColor		= [ColorLibrary colorFromListSelection:selection
+	LDrawColor	*selectedColor		= [LDrawColorLibrary colorFromListSelection:selection
 															 fallbackColor:[colorBar LDrawColor]];
 	
 	return selectedColor;
@@ -141,7 +143,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	//Try to find the color we are after in the current list.
 	NSInteger rowToSelect = [self indexOfColor:newColor]; //will be the row index for the color we want.
 	
-	if([ColorLibrary shouldClearColorFilterWhenIndexNotFound:rowToSelect])
+	if([LDrawColorLibrary shouldClearColorFilterWhenIndexNotFound:rowToSelect])
 	{
 		//It wasn't in the currently-displayed list. Search the master list.
 		[self->colorListController setFilterPredicate:nil];
@@ -149,7 +151,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	}
 	
 	//We'd better have found it by now!
-	if([ColorLibrary canSelectColorAtRowIndex:rowToSelect])
+	if([LDrawColorLibrary canSelectColorAtRowIndex:rowToSelect])
 	{
 		[self->colorListController setSelectionIndex:rowToSelect];
 		[colorBar setLDrawColor:newColor];
@@ -287,8 +289,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (NSInteger) indexOfColor:(LDrawColor *)colorSought
 {
-	return [ColorLibrary indexOfColor:colorSought
-							 inColors:[self->colorListController arrangedObjects]];
+	return [LDrawColorLibrary indexOfColor:colorSought
+								  inColors:[self->colorListController arrangedObjects]];
 }//end indexOfColor:
 
 
@@ -344,12 +346,12 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (void) updateColorFilter
 {
 	NSString			*searchString				= [searchField stringValue];
-	LDrawColorFilterT	materialType				= (LDrawColorFilterT)[[materialPopUpButton selectedItem] tag];
+	LDrawColorFilter	materialType				= (LDrawColorFilter)[[materialPopUpButton selectedItem] tag];
 	NSPredicate 		*searchPredicate			= nil;
 	LDrawColor			*currentColor				= [self LDrawColor];
 	NSInteger			indexOfPreviousSelection	= 0;
 	
-	searchPredicate = [ColorLibrary predicateForSearchString:searchString material:materialType];
+	searchPredicate = [LDrawColorLibrary predicateForSearchString:searchString material:materialType];
 	
 	//Update the table with our results.
 	[self->colorListController setFilterPredicate:searchPredicate];
@@ -357,7 +359,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	// The array controller will automatically maintain the selection if it can.
 	// But if it can't, we need to come up a reasonable new answer.
 	indexOfPreviousSelection = [self indexOfColor:currentColor];
-	if([ColorLibrary shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
+	if([LDrawColorLibrary shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
 	{
 		[self->colorListController setSelectionIndex:0];
 	}

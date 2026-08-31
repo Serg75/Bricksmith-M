@@ -15,7 +15,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/PartLibrary.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -35,13 +35,13 @@ typedef enum SearchMode
 //------------------------------------------------------------------------------
 @interface LDrawPartBrowserModel : NSObject
 
-@property (nonatomic, strong)            PartLibrary  *partLibrary;
-@property (nonatomic, copy)              NSString     *currentCategory;
-@property (nonatomic, copy, nullable)    NSString     *searchString;
-@property (nonatomic, assign)            SearchModeT   searchMode;
-@property (nonatomic, readonly)          NSArray      *filteredParts;
+@property (nonatomic, strong)         LDrawPartLibrary *partLibrary;
+@property (nonatomic, copy)           NSString         *currentCategory;
+@property (nonatomic, copy, nullable) NSString         *searchString;
+@property (nonatomic, assign)         SearchModeT       searchMode;
+@property (nonatomic, readonly)       NSArray          *filteredParts;
 
-- (instancetype)initWithPartLibrary:(PartLibrary *)library;
+- (instancetype)initWithPartLibrary:(LDrawPartLibrary *)library;
 
 // Apply category + search filter and update -filteredParts.
 - (void)reloadFilter;

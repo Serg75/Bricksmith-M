@@ -58,7 +58,7 @@
 //				around the given axis, so a high-res conversion is possible.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)hasRotationByAxis:(Axis)axis forPrimitives:(NSArray *)primitives
++ (BOOL)hasRotationByAxis:(LDrawAxis)axis forPrimitives:(NSArray *)primitives
 {
 	int rotatedPointCount = 0;
 	for (LDrawDirective *primitive in primitives) {
@@ -77,7 +77,7 @@
 //				Dispatches to the quad / triangle / line helpers.
 //
 //------------------------------------------------------------------------------
-+ (int)rotatedVertexCountByAxis:(Axis)axis forPrimitive:(LDrawDirective *)primitive
++ (int)rotatedVertexCountByAxis:(LDrawAxis)axis forPrimitive:(LDrawDirective *)primitive
 {
 	if ([primitive isKindOfClass:LDrawQuadrilateral.class]) {
 		return [self rotatedVertexCountByAxis:axis forQuadrilateral:(LDrawQuadrilateral *)primitive];
@@ -96,7 +96,7 @@
 //				Returns the larger of the two pair counts.
 //
 //------------------------------------------------------------------------------
-+ (int)rotatedVertexCountByAxis:(Axis)axis forQuadrilateral:(LDrawQuadrilateral *)quad
++ (int)rotatedVertexCountByAxis:(LDrawAxis)axis forQuadrilateral:(LDrawQuadrilateral *)quad
 {
 	int count1 = 0;
 	if ([self isVertex:quad.vertex1 andVertex:quad.vertex2 rotatedByAxis:axis]) {
@@ -124,7 +124,7 @@
 //				otherwise 0.
 //
 //------------------------------------------------------------------------------
-+ (int)rotatedVertexCountByAxis:(Axis)axis forTriangle:(LDrawTriangle *)triangle
++ (int)rotatedVertexCountByAxis:(LDrawAxis)axis forTriangle:(LDrawTriangle *)triangle
 {
 	if ([self isVertex:triangle.vertex1 andVertex:triangle.vertex2 rotatedByAxis:axis]) {
 		return 1;
@@ -144,7 +144,7 @@
 // Purpose:		Return 1 if the line's endpoints rotate around axis, otherwise 0.
 //
 //------------------------------------------------------------------------------
-+ (int)rotatedVertexCountByAxis:(Axis)axis forLine:(LDrawLine *)line
++ (int)rotatedVertexCountByAxis:(LDrawAxis)axis forLine:(LDrawLine *)line
 {
 	if ([self isVertex:line.vertex1 andVertex:line.vertex2 rotatedByAxis:axis]) {
 		return 1;
@@ -159,7 +159,7 @@
 //				(same radius, different angle).
 //
 //------------------------------------------------------------------------------
-+ (BOOL)isVertex:(Point3)vertex1 andVertex:(Point3)vertex2 rotatedByAxis:(Axis)axis
++ (BOOL)isVertex:(Point3)vertex1 andVertex:(Point3)vertex2 rotatedByAxis:(LDrawAxis)axis
 {
 	if (component(vertex1, axis) != component(vertex2, axis)) {
 		return NO;
@@ -167,23 +167,23 @@
 	
 	float v11, v12, v21, v22;
 	switch (axis) {
-		case AxisX:
-			v11 = component(vertex1, AxisY);
-			v12 = component(vertex1, AxisZ);
-			v21 = component(vertex2, AxisY);
-			v22 = component(vertex2, AxisZ);
+		case LDrawAxisX:
+			v11 = component(vertex1, LDrawAxisY);
+			v12 = component(vertex1, LDrawAxisZ);
+			v21 = component(vertex2, LDrawAxisY);
+			v22 = component(vertex2, LDrawAxisZ);
 			break;
-		case AxisY:
-			v11 = component(vertex1, AxisX);
-			v12 = component(vertex1, AxisZ);
-			v21 = component(vertex2, AxisX);
-			v22 = component(vertex2, AxisZ);
+		case LDrawAxisY:
+			v11 = component(vertex1, LDrawAxisX);
+			v12 = component(vertex1, LDrawAxisZ);
+			v21 = component(vertex2, LDrawAxisX);
+			v22 = component(vertex2, LDrawAxisZ);
 			break;
-		case AxisZ:
-			v11 = component(vertex1, AxisX);
-			v12 = component(vertex1, AxisY);
-			v21 = component(vertex2, AxisX);
-			v22 = component(vertex2, AxisY);
+		case LDrawAxisZ:
+			v11 = component(vertex1, LDrawAxisX);
+			v12 = component(vertex1, LDrawAxisY);
+			v21 = component(vertex2, LDrawAxisX);
+			v22 = component(vertex2, LDrawAxisY);
 			break;
 		default:
 			return NO;
@@ -198,13 +198,13 @@
 //---------- rotationForVertex:toVertex:byAxis: ---------------------[static]--
 //
 // Purpose:		Build the rotation matrix that carries vertex1 onto vertex2
-//				around axis. axis is AxisUnknown when the pair is not a rotation.
+//				around axis. axis is LDrawAxisUnknown when the pair is not a rotation.
 //
 //------------------------------------------------------------------------------
-+ (RotationParameters)rotationForVertex:(Point3)vertex1 toVertex:(Point3)vertex2 byAxis:(Axis)axis
++ (RotationParameters)rotationForVertex:(Point3)vertex1 toVertex:(Point3)vertex2 byAxis:(LDrawAxis)axis
 {
 	RotationParameters result;
-	result.axis = AxisUnknown;
+	result.axis = LDrawAxisUnknown;
 	
 	if (![self isVertex:vertex1 andVertex:vertex2 rotatedByAxis:axis]) {
 		return result;
@@ -226,23 +226,23 @@
 		for (int i = 0; i < 3; i++) {
 			float m[16];
 			buildRotationMatrix(m, 360.0f / step, x[i], y[i], z[i]);
-			rotationMatrix = Matrix4CreateFromGLMatrix4(m);
+			rotationMatrix = Matrix4CreateFromFloats(m);
 			Point3 rotatedPoint = V3MulPointByProjMatrix(*verticesPair[0], rotationMatrix);
 			
 			if (V3PointsWithinGivenTolerance(rotatedPoint, *verticesPair[1], 0.001f)) {
 				buildRotationMatrix(m, 360.0f / step / 3, x[i], y[i], z[i]);
-				result.rotationMatrix = Matrix4CreateFromGLMatrix4(m);;
+				result.rotationMatrix = Matrix4CreateFromFloats(m);;
 				result.axis = i;
 				return result;
 			}
 			
 			buildRotationMatrix(m, -360.0f / step, x[i], y[i], z[i]);
-			rotationMatrix = Matrix4CreateFromGLMatrix4(m);
+			rotationMatrix = Matrix4CreateFromFloats(m);
 			rotatedPoint = V3MulPointByProjMatrix(*verticesPair[0], rotationMatrix);
 			
 			if (V3PointsWithinGivenTolerance(rotatedPoint, *verticesPair[1], 0.001f)) {
 				buildRotationMatrix(m, -360.0f / step / 3, x[i], y[i], z[i]);
-				result.rotationMatrix = Matrix4CreateFromGLMatrix4(m);;
+				result.rotationMatrix = Matrix4CreateFromFloats(m);;
 				result.axis = i;
 				return result;
 			}
@@ -368,7 +368,7 @@
 //				Dispatches by concrete type; returns nil for unsupported types.
 //
 //------------------------------------------------------------------------------
-+ (LDrawHighResPrimitives *)highResPrimitivesFor:(LDrawDirective *)primitive axis:(Axis)axis
++ (LDrawHighResPrimitives *)highResPrimitivesFor:(LDrawDirective *)primitive axis:(LDrawAxis)axis
 {
 	if ([primitive isKindOfClass:LDrawQuadrilateral.class]) {
 		return [self highResPrimitivesForQuad:(LDrawQuadrilateral *)primitive axis:axis];
@@ -390,7 +390,7 @@
 //				of higher-resolution primitives.
 //
 //------------------------------------------------------------------------------
-+ (LDrawHighResPrimitives *)highResPrimitivesForQuad:(LDrawQuadrilateral *)quad axis:(Axis)axis
++ (LDrawHighResPrimitives *)highResPrimitivesForQuad:(LDrawQuadrilateral *)quad axis:(LDrawAxis)axis
 {
 	NSMutableArray *newPrimitives = [NSMutableArray array];
 	
@@ -410,10 +410,10 @@
 	
 	RotationParameters *rotation;
 	
-	BOOL is12 = rotation12.axis != AxisUnknown;
-	BOOL is23 = rotation23.axis != AxisUnknown;
-	BOOL is34 = rotation34.axis != AxisUnknown;
-	BOOL is41 = rotation41.axis != AxisUnknown;
+	BOOL is12 = rotation12.axis != LDrawAxisUnknown;
+	BOOL is23 = rotation23.axis != LDrawAxisUnknown;
+	BOOL is34 = rotation34.axis != LDrawAxisUnknown;
+	BOOL is41 = rotation41.axis != LDrawAxisUnknown;
 	
 	if (is12 && is34) {
 		isAllVertices = YES;
@@ -529,7 +529,7 @@
 //				resolution primitives.
 //
 //------------------------------------------------------------------------------
-+ (LDrawHighResPrimitives *)highResPrimitivesForTriangle:(LDrawTriangle *)triangle axis:(Axis)axis
++ (LDrawHighResPrimitives *)highResPrimitivesForTriangle:(LDrawTriangle *)triangle axis:(LDrawAxis)axis
 {
 	NSMutableArray *newPrimitives = [NSMutableArray array];
 	
@@ -545,9 +545,9 @@
 	
 	RotationParameters *rotation;
 	
-	BOOL is12 = rotation12.axis != AxisUnknown;
-	BOOL is13 = rotation13.axis != AxisUnknown;
-	BOOL is23 = rotation23.axis != AxisUnknown;
+	BOOL is12 = rotation12.axis != LDrawAxisUnknown;
+	BOOL is13 = rotation13.axis != LDrawAxisUnknown;
+	BOOL is23 = rotation23.axis != LDrawAxisUnknown;
 	
 	if (is12) {
 		pair[0] = &vertex1;
@@ -602,7 +602,7 @@
 //				higher-resolution conditional lines.
 //
 //------------------------------------------------------------------------------
-+ (LDrawHighResPrimitives *)highResPrimitivesForConditionLine:(LDrawConditionalLine *)line axis:(Axis)axis
++ (LDrawHighResPrimitives *)highResPrimitivesForConditionLine:(LDrawConditionalLine *)line axis:(LDrawAxis)axis
 {
 	NSMutableArray *newPrimitives = [NSMutableArray array];
 	
@@ -613,7 +613,7 @@
 	
 	RotationParameters rotation = [self rotationForVertex:vertex1 toVertex:vertex2 byAxis:axis];
 	
-	if (rotation.axis != AxisUnknown) {
+	if (rotation.axis != LDrawAxisUnknown) {
 		pair[0] = &vertex1;
 		pair[1] = &vertex2;
 	} else {
@@ -670,7 +670,7 @@
 //				line segments.
 //
 //------------------------------------------------------------------------------
-+ (LDrawHighResPrimitives *)highResPrimitivesForLine:(LDrawLine *)line axis:(Axis)axis
++ (LDrawHighResPrimitives *)highResPrimitivesForLine:(LDrawLine *)line axis:(LDrawAxis)axis
 {
 	NSMutableArray *newPrimitives = [NSMutableArray array];
 	
@@ -681,7 +681,7 @@
 	
 	RotationParameters rotation = [self rotationForVertex:vertex1 toVertex:vertex2 byAxis:axis];
 	
-	if (rotation.axis != AxisUnknown) {
+	if (rotation.axis != LDrawAxisUnknown) {
 		pair[0] = &vertex1;
 		pair[1] = &vertex2;
 	} else {
@@ -780,7 +780,7 @@
 //
 //------------------------------------------------------------------------------
 + (NSArray<LDrawHighResReplacement *> *)replacementsForDirectives:(NSArray *)directives
-															 axis:(Axis)axis
+															 axis:(LDrawAxis)axis
 													 unknownLines:(NSMutableArray *)unknownLines
 {
 	if ([self hasRotationByAxis:axis forPrimitives:directives] == NO)

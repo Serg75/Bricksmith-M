@@ -11,8 +11,8 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/ColorLibrary.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawColorLibrary.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawRenderCore/LDrawCamera.h>
 #import <LDrawCore/LDrawUtilities.h>
@@ -39,7 +39,7 @@ typedef enum
 	LDrawDetailNormal			= 0,	// full draw
 	LDrawDetailFast				= 1		// bounds only
 
-} LDrawDetailModeT;
+} LDrawDetailMode;
 
 
 //------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ typedef enum
 
 	float				backgroundColor[4];
 	Box2				selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
-	LDrawDetailModeT	detailMode;				// full geometry vs bounds-only during interaction
+	LDrawDetailMode		detailMode;				// full geometry vs bounds-only during interaction
 	ViewOrientationT	viewOrientation;		// our orientation
 	NSInteger			framesSinceStartTime;
 	NSTimeInterval		fpsStartTime;
@@ -79,8 +79,8 @@ typedef enum
 - (BOOL)isTrackingDrag;
 - (Matrix4)getMatrix;
 - (LDrawDirective *)LDrawDirective;
-- (ProjectionModeT)projectionMode;
-- (LocationModeT)locationMode;
+- (LDrawProjectionMode)projectionMode;
+- (LDrawLocationMode)locationMode;
 - (Box2)selectionMarquee;
 - (Tuple3)viewingAngle;
 - (ViewOrientationT)viewOrientation;
@@ -95,8 +95,8 @@ typedef enum
 - (float)gridSpacing;
 - (void)setLDrawDirective:(LDrawDirective *) newFile;
 - (void)setGraphicsSurfaceSize:(Size2)size;						// This is how we find out that the visible frame of our window is bigger or smaller
-- (void)setProjectionMode:(ProjectionModeT) newProjectionMode;
-- (void)setLocationMode:(LocationModeT) newLocationMode;
+- (void)setProjectionMode:(LDrawProjectionMode) newProjectionMode;
+- (void)setLocationMode:(LDrawLocationMode) newLocationMode;
 - (void)setSelectionMarquee:(Box2)newBox;
 - (void)setTarget:(id)target;
 - (void)setViewingAngle:(Tuple3)newAngle;
@@ -172,7 +172,7 @@ typedef enum
 - (TransformComponents)LDrawRendererPreferredPartTransform:(LDrawRenderer*)renderer;
 
 - (void)LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
-- (void)LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode;
+- (void)LDrawRenderer:(LDrawRenderer*)renderer wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(LDrawSelectionMode) selectionMode;
 - (void)LDrawRenderer:(LDrawRenderer*)renderer willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
 - (void)LDrawRenderer:(LDrawRenderer*)renderer dragHandleDidMove:(LDrawDragHandle *)dragHandle;
 

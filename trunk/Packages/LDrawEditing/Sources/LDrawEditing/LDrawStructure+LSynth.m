@@ -14,7 +14,7 @@
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawLSynth.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 
 
 @implementation LDrawStructure (LSynth)
@@ -72,7 +72,7 @@
 //
 // Purpose:		Insert an LSynth direction directive, INSIDE or OUTSIDE, which
 //				causes a constraint to switch the side the band passes it.
-//				INSIDE / OUTSIDE / CROSS from MacLDraw.h menu tags; nil if the
+//				INSIDE / OUTSIDE / CROSS from LDrawKeys.h menu tags; nil if the
 //				tag is unrelated.
 //
 //------------------------------------------------------------------------------

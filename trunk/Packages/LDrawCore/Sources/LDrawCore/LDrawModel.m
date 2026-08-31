@@ -21,7 +21,7 @@
 
 #import <string.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawConditionalLine.h>
 #import <LDrawCore/LDrawFile.h>
@@ -32,7 +32,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/NSString+LDraw.h>
 #import <LDrawCore/LDrawLSynthDirective.h>
 
 // This disables culling and box approximations for small bricks.  Normally
@@ -84,7 +84,7 @@
 {
 	self = [super init];
 	
-	self->colorLibrary  = [[ColorLibrary alloc] init];
+	self->colorLibrary  = [[LDrawColorLibrary alloc] init];
 	self->cachedBounds = InvalidBox;
 	[self setModelDescription:@""];
 	[self setFileName:@""];
@@ -370,8 +370,8 @@
 		
 		if(self->draggingDirectives != nil)
 		{
-			LDrawDLHandle			drag_dl = NULL;
-			LDrawDLCleanup_f		drag_dl_dtor = NULL;
+			LDrawMeshHandle			drag_dl = NULL;
+			LDrawMeshCleanup_f		drag_dl_dtor = NULL;
 
 			id<LDrawCollector> collector = [renderer beginDL];
 			[self->draggingDirectives collectSelf:collector];
@@ -708,7 +708,7 @@
 //				drawing, however. 
 //
 //==============================================================================
-- (ColorLibrary *) colorLibrary
+- (LDrawColorLibrary *) colorLibrary
 {
 	return self->colorLibrary;
 	
@@ -984,7 +984,7 @@
 										 triangles:triangles
 									quadrilaterals:quadrilaterals
 											 other:nil
-									  currentColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+									  currentColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
 								  currentTransform:IdentityMatrix4
 								   normalTransform:IdentityMatrix3
 										 recursive:NO];
@@ -1022,7 +1022,7 @@
 						 triangles:triangles
 					quadrilaterals:quadrilaterals
 							 other:nil
-					  currentColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+					  currentColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
 				  currentTransform:IdentityMatrix4
 				   normalTransform:IdentityMatrix3
 						 recursive:NO];
@@ -1353,7 +1353,7 @@
 				 triangles:triangles
 			quadrilaterals:quadrilaterals
 					 other:everythingElse
-			  currentColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+			  currentColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
 		  currentTransform:IdentityMatrix4
 		   normalTransform:IdentityMatrix3
 				 recursive:YES];

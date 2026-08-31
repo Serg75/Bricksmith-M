@@ -13,7 +13,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawCore/LDrawMovableDirective.h>

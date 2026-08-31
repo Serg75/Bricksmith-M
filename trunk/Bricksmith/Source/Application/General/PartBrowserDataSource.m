@@ -23,17 +23,19 @@
 //==============================================================================
 #import "PartBrowserDataSource.h"
 
+#import <LDrawCore/LDrawModel.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/NSString+LDraw.h>
+
+#import <LDrawEditing/LDrawClipboard.h>
+#import <LDrawEditing/LDrawInsertion.h>
+#import <LDrawFeatures/LDrawHostKeys.h>
+
 #import "IconTextCell.h"
 #import "LDrawApplication.h"
 #import "LDrawColorPanelController.h"
-#import <LDrawCore/LDrawModel.h>
-#import <LDrawCore/LDrawPart.h>
 #import "LDrawViewerContainer.h"
-#import <LDrawEditing/LDrawClipboard.h>
-#import <LDrawFeatures/LDrawHostKeys.h>
-#import <LDrawEditing/LDrawInsertion.h>
-#import <LDrawCore/PartLibrary.h>
-#import <LDrawCore/StringCategory.h>
 #import "TableViewCategory.h"
 
 
@@ -146,7 +148,7 @@
 		
 		//---------- Set Data --------------------------------------------------
 		
-		[self setPartLibrary:[PartLibrary sharedPartLibrary]];
+		[self setPartLibrary:[LDrawPartLibrary sharedPartLibrary]];
 		[self loadCategory:startingCategory];
 		
 		[partsTable scrollRowToVisible:startingRow];
@@ -284,7 +286,7 @@
 //				set up the data sources to reflect it.
 //
 //==============================================================================
-- (void) setPartLibrary:(PartLibrary *)partLibraryIn
+- (void) setPartLibrary:(LDrawPartLibrary *)partLibraryIn
 {
 	NSArray         *categories         = nil;
 	
@@ -745,7 +747,7 @@
 //==============================================================================
 - (void) sharedPartCatalogDidChange:(NSNotification *)notification
 {
-	PartLibrary *newLibrary 				= [notification object];
+	LDrawPartLibrary *newLibrary 			= [notification object];
 	NSString	*originalSelectedCategory	= self->selectedCategory;
 	NSString	*originalSearch				= [self->searchField stringValue];
 	NSInteger	selectedRow 				= [self->partsTable selectedRow];
@@ -903,7 +905,7 @@
 //		modelToView = [self->partLibrary modelForName:selectedPartName];
 
 		newPart = [LDrawInsertion partNamed:selectedPartName
-									  color:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+									  color:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
 					   copyingTransformFrom:nil];
 		[LDrawApplication makeCurrentSharedContext];
 	}

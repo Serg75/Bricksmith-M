@@ -13,7 +13,7 @@
 
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawModel.h>
-#import <LDrawCore/LDrawObjectWithValue.h>
+#import <LDrawCore/LDrawGroupedObject.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
 
@@ -137,7 +137,7 @@ static BOOL LDrawDirectiveSupportsGroup(id object)
 
 //---------- groupChangesInSelection:toGroupName: --------------------[static]--
 //
-// Purpose:		Set/edit MLCAD group. LDrawObjectWithValue pairs for directives
+// Purpose:		Set/edit MLCAD group. LDrawGroupedObject pairs for directives
 //				whose group differs from newName.
 //
 //------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ static BOOL LDrawDirectiveSupportsGroup(id object)
 		}
 		if ([newName isEqualToString:[object group]] == NO)
 		{
-			[changes addObject:[[LDrawObjectWithValue alloc] initWithObject:object value:newName]];
+			[changes addObject:[[LDrawGroupedObject alloc] initWithObject:object value:newName]];
 		}
 	}
 	return changes;
@@ -169,11 +169,11 @@ static BOOL LDrawDirectiveSupportsGroup(id object)
 + (NSArray *)invertedGroupChanges:(NSArray *)directivesAndGroups
 {
 	NSMutableArray *inverted = [NSMutableArray array];
-	for (LDrawObjectWithValue *pair in directivesAndGroups)
+	for (LDrawGroupedObject *pair in directivesAndGroups)
 	{
 		id        directive = pair.object;
 		NSString *oldGroup  = [directive valueForKey:@"group"];
-		[inverted addObject:[[LDrawObjectWithValue alloc] initWithObject:directive
+		[inverted addObject:[[LDrawGroupedObject alloc] initWithObject:directive
 																   value:(oldGroup != nil) ? oldGroup : @""]];
 	}
 	return inverted;
@@ -188,7 +188,7 @@ static BOOL LDrawDirectiveSupportsGroup(id object)
 //------------------------------------------------------------------------------
 + (void)applyGroupChanges:(NSArray *)directivesAndGroups
 {
-	for (LDrawObjectWithValue *pair in directivesAndGroups)
+	for (LDrawGroupedObject *pair in directivesAndGroups)
 	{
 		[pair.object setValue:pair.value forKey:@"group"];
 	}

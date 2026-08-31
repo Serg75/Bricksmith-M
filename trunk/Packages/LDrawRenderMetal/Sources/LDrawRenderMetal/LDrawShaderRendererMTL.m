@@ -22,10 +22,10 @@
 @import MetalKit;
 @import simd;
 
-#import <LDrawRenderCore/LDrawBDPAllocator.h>
+#import <LDrawRenderCore/LDrawPoolAllocator.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
 #import "LDrawRenderMetalResources.h"
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawRenderMetal/MetalGPU.h>
 #import "MetalUtilities.h"
 #import <LDrawRenderMetal/MetalCommonDefinitions.h>
@@ -47,7 +47,7 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 			modelView:(float *)mv_matrix
 		   projection:(float *)proj_matrix
 {
-	pool = LDrawBDPCreate();
+	pool = LDrawPoolCreate();
 
 	self = [super init];
 
@@ -56,7 +56,7 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	self->scale = initial_scale;
 	boundsOnlyDrawing = NO;
 
-	[[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
+	[[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
 	complimentColor(color_now, compl_now);
 
 	// Set up the basic transform to be identity - our transform is on top of the MVP matrix.
@@ -330,7 +330,7 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	
 	[self drawDragHandles];
 
-	LDrawBDPDestroy(pool);
+	LDrawPoolDestroy(pool);
 	
 } // end finishDraw:
 

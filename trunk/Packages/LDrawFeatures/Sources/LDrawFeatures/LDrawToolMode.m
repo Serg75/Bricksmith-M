@@ -11,7 +11,7 @@
 
 #import <LDrawFeatures/LDrawToolMode.h>
 
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/NSString+LDraw.h>
 
 NSString *LDrawToolModeCharacters(LDrawToolMode mode, NSUInteger *modifiersOut)
 {
@@ -64,7 +64,7 @@ BOOL LDrawToolModeMatches(LDrawToolMode mode, NSString *characters, NSUInteger m
 	NSUInteger  testModifiers   = 0;
 	NSString   *testCharacters  = LDrawToolModeCharacters(mode, &testModifiers);
 
-	return [characters ams_containsString:testCharacters options:0]
+	return [characters ldraw_containsString:testCharacters options:0]
 		&& (modifiers & testModifiers) == testModifiers;
 }
 

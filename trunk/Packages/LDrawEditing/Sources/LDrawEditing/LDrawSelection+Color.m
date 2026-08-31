@@ -13,7 +13,7 @@
 
 #import <LDrawEditing/LDrawSelection.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 
 @implementation LDrawSelection (Color)
 

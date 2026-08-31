@@ -27,7 +27,7 @@
 
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawRenderOpenGL/LDrawShaderRendererGL.h>
-#import <LDrawRenderCore/LDrawShaderRendererGPU.h>
+#import <LDrawRenderCore/LDrawShaderRendererDraw.h>
 #include "OpenGLUtilities.h"
 
 
@@ -209,12 +209,12 @@
 	glLineWidth(MIN([self zoomPercentageForViewport]/100 * 0.5, 1.0));
 
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf([camera getProjection]);
+	glLoadMatrixf([camera projection]);
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf([camera getModelView]);
+	glLoadMatrixf([camera modelView]);
 
 	// DRAW!
-	LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForViewport]/100. modelView:[camera getModelView] projection:[camera getProjection]];
+	LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForViewport]/100. modelView:[camera modelView] projection:[camera projection]];
 	if (ren != nil) {
 		[ren setBoundsOnlyDrawing:boundsOnly];
 		[self->fileBeingDrawn drawSelf:ren];

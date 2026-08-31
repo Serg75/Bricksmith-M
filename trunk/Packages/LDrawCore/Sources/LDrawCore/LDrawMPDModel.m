@@ -29,7 +29,7 @@
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/NSString+LDraw.h>
 
 
 @implementation LDrawMPDModel

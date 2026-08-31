@@ -9,7 +9,7 @@
 //  Info:       The host supplies copied catalog parts and colors in slot order.
 //              Spec takes inclusion flags and joint angles from the generator
 //              via KVC. This assembler positions those parts and returns an
-//              LDrawMPDModel. Torso arm-socket angle comes from MLCadIni.
+//              LDrawMPDModel. Torso arm-socket angle comes from LDrawMLCadIni.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //

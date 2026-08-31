@@ -340,7 +340,7 @@
 		95C773C62A24D6ED00058D75 /* LDrawDocumentGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773C42A24D6ED00058D75 /* LDrawDocumentGL.m */; };
 		95C773C92A274A3800058D75 /* LDrawViewGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773C72A274A3800058D75 /* LDrawViewGL.h */; };
 		95C773CA2A274A3800058D75 /* LDrawViewGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773C82A274A3800058D75 /* LDrawViewGL.m */; };
-		95D021F829B1F533001F2B4D /* ScannerCategory_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */; };
+		95D021F829B1F533001F2B4D /* LDrawScannerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021F729B1F533001F2B4D /* LDrawScannerTests.m */; };
 		95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */; };
 		95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D0223C29B68FE0001F2B4D /* MockArchiver.m */; };
 		95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
@@ -350,7 +350,7 @@
 		95DFF98E298F165300E7BF76 /* InspectionLPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */; };
 		95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
 		95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
-		95FBD68129C4A5A900E84D2F /* ClassInspector_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */; };
+		95FBD68129C4A5A900E84D2F /* LDrawClassInspectorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */; };
 		BB0300000000000000000001 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000001 /* LDrawCore */; };
 		BB0300000000000000000002 /* LDrawRenderCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000002 /* LDrawRenderCore */; };
 		BB0300000000000000000003 /* LDrawRenderMetal in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000003 /* LDrawRenderMetal */; };
@@ -625,7 +625,7 @@
 		8D15AC360486D014006FF6A4 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
 		8D15AC370486D014006FF6A4 /* Bricksmith.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bricksmith.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9506E0EE18A3F4130006CE9C /* SearchPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SearchPanelController.h; sourceTree = "<group>"; };
-		9506E0EF18A3F4130006CE9C /* SearchPanelController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SearchPanelController.m; sourceTree = "<group>"; };
+		9506E0EF18A3F4130006CE9C /* SearchPanelController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SearchPanelController.m; sourceTree = "<group>"; usesTabs = 0; };
 		9506E0FD18AA74BE0006CE9C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/SearchPanel.xib; sourceTree = "<group>"; };
 		9526F9872A0BA1A50083A86A /* LDrawApplicationGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawApplicationGL.h; sourceTree = "<group>"; };
 		9526F9882A0BA1A50083A86A /* LDrawApplicationGL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawApplicationGL.m; sourceTree = "<group>"; };
@@ -646,7 +646,7 @@
 		95C773C72A274A3800058D75 /* LDrawViewGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawViewGL.h; sourceTree = "<group>"; };
 		95C773C82A274A3800058D75 /* LDrawViewGL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawViewGL.m; sourceTree = "<group>"; };
 		95D021ED29B1F482001F2B4D /* UnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScannerCategory_Tests.m; sourceTree = "<group>"; };
+		95D021F729B1F533001F2B4D /* LDrawScannerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawScannerTests.m; sourceTree = "<group>"; };
 		95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand_Tests.m; sourceTree = "<group>"; };
 		95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UnitTests_Prefix.pch; path = UnitTests/Other/UnitTests_Prefix.pch; sourceTree = SOURCE_ROOT; };
 		95D0223B29B68FE0001F2B4D /* MockArchiver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockArchiver.h; sourceTree = "<group>"; };
@@ -659,7 +659,7 @@
 		95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubRemoveGroup.h; sourceTree = "<group>"; };
 		95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubRemoveGroup.m; sourceTree = "<group>"; };
 		95FBD67C29C46BC100E84D2F /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorRemoveGroup.xib; sourceTree = "<group>"; };
-		95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClassInspector_Tests.m; sourceTree = "<group>"; };
+		95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawClassInspectorTests.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -1241,7 +1241,7 @@
 		95D021F629B1F4DB001F2B4D /* Categories */ = {
 			isa = PBXGroup;
 			children = (
-				95D021F729B1F533001F2B4D /* ScannerCategory_Tests.m */,
+				95D021F729B1F533001F2B4D /* LDrawScannerTests.m */,
 			);
 			path = Categories;
 			sourceTree = "<group>";
@@ -1325,7 +1325,7 @@
 		95FBD67F29C4A56200E84D2F /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				95FBD68029C4A5A900E84D2F /* ClassInspector_Tests.m */,
+				95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -1874,8 +1874,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				95FBD68129C4A5A900E84D2F /* ClassInspector_Tests.m in Sources */,
-				95D021F829B1F533001F2B4D /* ScannerCategory_Tests.m in Sources */,
+				95FBD68129C4A5A900E84D2F /* LDrawClassInspectorTests.m in Sources */,
+				95D021F829B1F533001F2B4D /* LDrawScannerTests.m in Sources */,
 				95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */,
 				95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */,
 				95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */,

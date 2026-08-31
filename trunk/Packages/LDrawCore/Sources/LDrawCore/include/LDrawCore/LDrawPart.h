@@ -12,7 +12,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/MatrixMath.h>
@@ -20,7 +20,7 @@
 @class LDrawFile;
 @class LDrawModel;
 @class LDrawStep;
-@class PartReport;
+@class LDrawPartReport;
 
 typedef enum PartType {
 	PartTypeUnresolved = 0,	// We have not yet tried to figure out what we have.
@@ -44,7 +44,7 @@ typedef enum PartType {
 	NSString		*displayName;
 	NSString		*referenceName; 		//lower-case version of display name
 
-	float			glTransformation[16];
+	float			transformation[16];
 
 	LDrawDirective	*cacheDrawable;			// The drawable is the model we link to OR a VBO that represents it from the part library -- a drawable proxy.
 	LDrawModel		*cacheModel;			// The model is the real model we link to.
@@ -74,7 +74,7 @@ typedef enum PartType {
 - (void) setTransformationMatrix:(Matrix4 *)newMatrix;
 
 //Actions
-- (void) collectPartReport:(PartReport *)report;
+- (void) collectPartReport:(LDrawPartReport *)report;
 - (void) applyToAllParts:(LDrawPartVisitor) visitor;
 
 - (TransformComponents) componentsSnappedToGrid:(float) gridSpacing minimumAngle:(float)degrees;

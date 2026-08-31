@@ -60,7 +60,7 @@ RotationPanelController *sharedRotationPanel = nil;
 //==============================================================================
 - (BOOL) enableFixedPointCoordinates
 {
-	return (self->rotationMode == RotateAroundFixedPoint);
+	return (self->rotationMode == LDrawRotateAroundFixedPoint);
 	
 }//end enableFixedPointCoordinates
 
@@ -83,7 +83,7 @@ RotationPanelController *sharedRotationPanel = nil;
 // Purpose:		Returns the center of rotation.
 //
 // Note:		This value is only valid if the rotation mode is 
-//				RotateAroundFixedPoint.
+//				LDrawRotateAroundFixedPoint.
 //
 //==============================================================================
 - (Point3) fixedPoint
@@ -98,7 +98,7 @@ RotationPanelController *sharedRotationPanel = nil;
 // Purpose:		Returns the current rotation behavior.
 //
 //==============================================================================
-- (RotationModeT) rotationMode
+- (LDrawRotationMode) rotationMode
 {
 	return self->rotationMode;
 	

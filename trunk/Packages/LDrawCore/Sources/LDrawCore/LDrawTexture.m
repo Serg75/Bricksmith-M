@@ -15,8 +15,8 @@
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/PartLibrary.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/NSString+LDraw.h>
 
 
 @implementation LDrawTexture
@@ -636,7 +636,7 @@ static Class LDrawTexture_registeredClass = Nil;
 		else
 			parseGroup = parentGroup;
 #endif
-		[[PartLibrary sharedPartLibrary] loadImageForName:self->imageDisplayName inGroup:parseGroup];
+		[[LDrawPartLibrary sharedPartLibrary] loadImageForName:self->imageDisplayName inGroup:parseGroup];
 
 #if USE_BLOCKS
 		if (parentGroup == NULL)

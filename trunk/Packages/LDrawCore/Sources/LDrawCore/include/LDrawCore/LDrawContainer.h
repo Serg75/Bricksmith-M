@@ -16,7 +16,7 @@
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/MatrixMath.h>
 
-@class PartReport;
+@class LDrawPartReport;
 
 
 //------------------------------------------------------------------------------
@@ -49,7 +49,7 @@
 
 //Actions
 - (void) addDirective:(LDrawDirective *)directive;
-- (void) collectPartReport:(PartReport *)report;
+- (void) collectPartReport:(LDrawPartReport *)report;
 - (void) applyToAllParts:(LDrawPartVisitor) visitor;
 - (void) insertDirective:(LDrawDirective *)directive atIndex:(NSInteger)index;
 - (void) removeDirective:(LDrawDirective *)doomedDirective;

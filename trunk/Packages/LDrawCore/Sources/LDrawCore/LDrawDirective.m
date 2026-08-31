@@ -16,11 +16,11 @@
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawStep.h>
-#import "FastSet.h"
+#import "LDrawFastSet.h"
 
 @interface LDrawDirective ()
 {
-	FastSet *observers;
+	LDrawFastSet *observers;
 }
 @end
 
@@ -66,7 +66,7 @@
 	
 	enclosingDirective = nil;
     iconName = @"";
-	observers = [[FastSet alloc] init];
+	observers = [[LDrawFastSet alloc] init];
 	return self;
 	
 } // end init
@@ -141,7 +141,7 @@
 {
 	// The superclass doesn't support NSCoding. So we just call the default init.
 	self = [super init];
-	observers = [[FastSet alloc] init];
+	observers = [[LDrawFastSet alloc] init];
 	
 	[self setEnclosingDirective:[decoder decodeObjectForKey:@"enclosingDirective"]];
 	

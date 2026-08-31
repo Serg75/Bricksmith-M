@@ -20,9 +20,9 @@
 
 #include <OpenGL/gl.h>
 
-#import <LDrawCore/ColorLibrary.h>
-#import <LDrawRenderCore/LDrawBDPAllocator.h>
-#import <LDrawRenderCore/LDrawShaderRendererGPU.h>
+#import <LDrawCore/LDrawColorLibrary.h>
+#import <LDrawRenderCore/LDrawPoolAllocator.h>
+#import <LDrawRenderCore/LDrawShaderRendererDraw.h>
 #import "LDrawShaderLoader.h"
 #import <LDrawRenderCore/LDrawDisplayList.h>
 #import <LDrawCore/MatrixMathEx.h>
@@ -53,13 +53,13 @@ static const char * attribs[] = {
 		  modelView:(GLfloat *)mv_matrix
 		 projection:(GLfloat *)proj_matrix
 {
-	pool = LDrawBDPCreate();
+	pool = LDrawPoolCreate();
 	// Build our shader if it doesn't exist yet.  For now, just stash the GL
 	// object statically.
 	static GLuint prog = 0;
 	if (!prog)
 	{
-		prog = LDrawLoadShaderFromResource(@"test.glsl", attribs);
+		prog = LDrawLoadShaderFromResource(@"LDrawDefault.glsl", attribs);
 		if (prog == 0) {
 			return nil;
 		}
@@ -80,7 +80,7 @@ static const char * attribs[] = {
 	self->scale = initial_scale;
 	boundsOnlyDrawing = NO;
 	
-	[[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
+	[[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
 	glVertexAttrib1f(attr_texture_mix,0.0f);
 	complimentColor(color_now, compl_now);
 	
@@ -307,7 +307,7 @@ static const char * attribs[] = {
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
 
-	LDrawBDPDestroy(pool);
+	LDrawPoolDestroy(pool);
 	pool = NULL;
 } // end finishDraw:
 

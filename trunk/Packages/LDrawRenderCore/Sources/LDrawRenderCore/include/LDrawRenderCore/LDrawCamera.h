@@ -17,16 +17,16 @@
 // Projection Mode
 typedef enum
 {
-	ProjectionModePerspective	= 0,
-	ProjectionModeOrthographic	= 1
+	LDrawProjectionModePerspective	= 0,
+	LDrawProjectionModeOrthographic	= 1
 
-} ProjectionModeT;
+} LDrawProjectionMode;
 
 typedef enum
 {
-	LocationModeModel = 0,
-	LocationModeWalkthrough = 1
-} LocationModeT;
+	LDrawLocationModeModel       = 0,
+	LDrawLocationModeWalkthrough = 1
+} LDrawLocationMode;
 
 @protocol LDrawCameraScroller;
 
@@ -67,19 +67,19 @@ typedef enum
 @interface LDrawCamera : NSObject
 
 @property (nonatomic, assign) Size2 graphicsSurfaceSize;
-@property (nonatomic, assign) BOOL usesMetalProjection;
+@property (nonatomic, assign) BOOL usesZeroToOneDepth;
 
 - (void)	setScroller:(id<LDrawCameraScroller>)newScroller;
 
 // Output - the official OpenGL transform.
-- (float*)getProjection;
-- (float*)getModelView;
+- (float*)projection;
+- (float*)modelView;
 
 // Output - camera meta-data for UI/persistence.  The camera outpust perspective/orthographic and a Euler viewing angle; 
 // the client code creates the "known" views.
 - (CGFloat) zoomPercentage;
-- (ProjectionModeT) projectionMode;
-- (LocationModeT) locationMode; 
+- (LDrawProjectionMode) projectionMode;
+- (LDrawLocationMode) locationMode; 
 - (Tuple3) viewingAngle;
 - (Point3) rotationCenter;
 
@@ -96,8 +96,8 @@ typedef enum
 
 // These change the camera by sending 'rotation' commands of various kinds to the camera.
 - (void) setViewingAngle:(Tuple3)newAngle;
-- (void) setProjectionMode:(ProjectionModeT)newProjectionMode;
-- (void) setLocationMode:(LocationModeT)newLocationMode;
+- (void) setProjectionMode:(LDrawProjectionMode)newProjectionMode;
+- (void) setLocationMode:(LDrawLocationMode)newLocationMode;
 - (void) rotationDragged:(Vector2)viewDirection;
 - (void) rotateByDegrees:(float)angle;
 

@@ -1842,10 +1842,10 @@ Vector4 V4MulPointByMatrix(Vector4 pin, Matrix4 m)
 
 #pragma mark -
 
-//========== Matrix4CreateFromGLMatrix4() ======================================
+//========== Matrix4CreateFromFloats() =========================================
 //
-// Purpose:		Returns a two-dimensional (row matrix) representation of the 
-//				given OpenGL transformation matrix.
+// Purpose:		Returns a two-dimensional (row matrix) representation of the
+//				given column-major 4×4 transformation matrix.
 //
 //																  +-       -+
 //				+-                             -+        +-     -+| a d g 0 |
@@ -1853,22 +1853,22 @@ Vector4 V4MulPointByMatrix(Vector4 pin, Matrix4 m)
 //				+-                             -+        +-     -+| c f i 0 |
 //													              | x y z 1 |
 //																  +-       -+
-//					  OpenGL Matrix Format                Matrix4 Format
-//				(flat column-major of transpose)   (shown multiplied by a point)  
+//				   Column-major 4×4 format                Matrix4 Format
+//				(flat column-major of transpose)   (shown multiplied by a point)
 //
 //==============================================================================
-Matrix4 Matrix4CreateFromGLMatrix4(const float *glMatrix)
+Matrix4 Matrix4CreateFromFloats(const float *floats)
 {
 	int		row, column;
 	Matrix4	newMatrix;
 	
 	for(row = 0; row < 4; row++)
 		for(column = 0; column < 4; column++)
-			newMatrix.element[row][column] = glMatrix[row * 4 + column];
+			newMatrix.element[row][column] = floats[row * 4 + column];
 	
 	return newMatrix;
 	
-}//end Matrix4CreateFromGLMatrix4
+}//end Matrix4CreateFromFloats
 
 
 //========== Matrix4CreateTransformation() =====================================
@@ -2225,7 +2225,7 @@ Tuple3 Matrix4DecomposeZYXRotation(Matrix4 matrix)
 }//end Matrix4DecomposeZYXRotation
 
 
-//========== Matrix4GetGLMatrix4 ===============================================
+//========== Matrix4GetFloats ==================================================
 //
 // Purpose:		Converts the row-major row-vector matrix into a flat column-
 //				major column-vector matrix understood by OpenGL.
@@ -2242,7 +2242,7 @@ Tuple3 Matrix4DecomposeZYXRotation(Matrix4 matrix)
 //  (also Matrix4 format)
 //
 //==============================================================================
-void Matrix4GetGLMatrix4(Matrix4 matrix, float *glTransformation)
+void Matrix4GetFloats(Matrix4 matrix, float *transformation)
 {
 	unsigned int row, column;
 	
@@ -2250,14 +2250,14 @@ void Matrix4GetGLMatrix4(Matrix4 matrix, float *glTransformation)
 	{
 		for(column = 0; column < 4; column++)
 		{
-			glTransformation[row * 4 + column] = matrix.element[row][column];
+			transformation[row * 4 + column] = matrix.element[row][column];
 		}
 	}
 	
-}//end Matrix4GetGLMatrix4
+}//end Matrix4GetFloats
 
 
-//========== Matrix4Multiply ==========================================================
+//========== Matrix4Multiply ===================================================
 //
 // Purpose:		multiply together matrices c = ab
 //
@@ -2286,14 +2286,14 @@ Matrix4 Matrix4Multiply(Matrix4 a, Matrix4 b)
 }//end Matrix4Multiply
 
 
-//========== Matrix4MultiplyGLMatrices =========================================
+//========== Matrix4MultiplyFloats =============================================
 //
 // Purpose:		multiply together matrices c = ab
 //
 // Notes:		c must not point to either of the input matrices
 //
 //==============================================================================
-void Matrix4MultiplyGLMatrices(float *a, float *b, float *result)
+void Matrix4MultiplyFloats(float *a, float *b, float *result)
 {
 	int row;
 	int column;
@@ -2634,7 +2634,7 @@ void Matrix4Print(Matrix4 *matrix)
 }//end Matrix4Print
 
 
-//========== Matrix4EqualMatrices() ===============================================
+//========== Matrix4EqualMatrices() ============================================
 ///
 /// @abstract	Test 2 matrices for identity.
 ///
@@ -2680,7 +2680,7 @@ bool	VolumeCanIntersectBox(
 	float aabb_ndc[6];
 	float m[16];
 	
-	Matrix4GetGLMatrix4(transform, m);
+	Matrix4GetFloats(transform, m);
 	
 	aabbToClipbox(aabb_mv, m, aabb_ndc);
 
@@ -2731,7 +2731,7 @@ bool		VolumeCanIntersectPoint(
 	float aabb_ndc[6];
 	float m[16];
 	
-	Matrix4GetGLMatrix4(transform, m);
+	Matrix4GetFloats(transform, m);
 	
 	aabbToClipbox(aabb_mv, m, aabb_ndc);
 

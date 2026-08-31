@@ -21,12 +21,12 @@
 #import <dispatch/dispatch.h>
 #endif
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/PartReport.h>
-#import <LDrawCore/StringCategory.h>
+#import <LDrawCore/LDrawPartReport.h>
+#import <LDrawCore/NSString+LDraw.h>
 #import <LDrawCore/LDrawLSynthDirective.h>
 
 
@@ -806,7 +806,7 @@
 	NSArray     *submodels          = [self submodels];
 	BOOL        containsSubmodel    = ([submodels indexOfObjectIdenticalTo:submodel] != NSNotFound);
 	NSString    *oldName            = [submodel modelName];
-	PartReport  *partReport         = nil;
+	LDrawPartReport  *partReport    = nil;
 	NSArray     *allParts           = nil;
 	LDrawPart   *currentPart        = nil;
 	NSInteger   counter             = 0;
@@ -818,7 +818,7 @@
 		[submodel setModelName:newName];
 		
 		// Update all references to the old name
-		partReport	= [PartReport partReportForContainer:self];
+		partReport	= [LDrawPartReport partReportForContainer:self];
 		allParts	= [partReport allParts];
 		
 		for(counter = 0; counter < [allParts count]; counter++)

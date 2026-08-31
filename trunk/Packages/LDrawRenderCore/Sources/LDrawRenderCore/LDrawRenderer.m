@@ -47,7 +47,7 @@
 	
 	//---------- Initialize instance variables ---------------------------------
 	
-	[self setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
+	[self setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 	
 	camera = [[LDrawCamera alloc] init];
 	camera.graphicsSurfaceSize = V2MakeSize(boundsIn.width, boundsIn.height);
@@ -83,7 +83,7 @@
 //==============================================================================
 - (Matrix4)getInverseMatrix
 {
-	Matrix4	transformation	= Matrix4CreateFromGLMatrix4([camera getModelView]);
+	Matrix4	transformation	= Matrix4CreateFromFloats([camera modelView]);
 	Matrix4	inversed		= Matrix4Invert(transformation);
 	
 	return inversed;
@@ -104,7 +104,7 @@
 //==============================================================================
 - (Matrix4)getMatrix
 {
-	return Matrix4CreateFromGLMatrix4([camera getModelView]);
+	return Matrix4CreateFromFloats([camera modelView]);
 	
 } // end getMatrix
 
@@ -150,7 +150,7 @@
 //				orthographic) used in the view.
 //
 //==============================================================================
-- (ProjectionModeT)projectionMode
+- (LDrawProjectionMode)projectionMode
 {
 	return [camera projectionMode];
 	
@@ -162,7 +162,7 @@
 // Purpose:		Returns the current location mode (model or walkthrough).
 //
 //==============================================================================
-- (LocationModeT)locationMode
+- (LDrawLocationMode)locationMode
 {
 	return [camera locationMode];
 	
@@ -249,7 +249,7 @@
 //==============================================================================
 - (CGFloat)zoomPercentageForViewport
 {
-	if ([self locationMode] == LocationModeWalkthrough)
+	if ([self locationMode] == LDrawLocationModeWalkthrough)
 		return 100.0;
 	return [camera zoomPercentage];
 	
@@ -421,7 +421,7 @@
 //									this is how humans see the world.
 //
 //==============================================================================
-- (void)setProjectionMode:(ProjectionModeT)newProjectionMode
+- (void)setProjectionMode:(LDrawProjectionMode)newProjectionMode
 {
 	[camera setProjectionMode:newProjectionMode];
 	
@@ -437,7 +437,7 @@
 //					- walk-through puts the camera _on_ the model center.
 //
 //==============================================================================
-- (void)setLocationMode:(LocationModeT)newLocationMode
+- (void)setLocationMode:(LDrawLocationMode)newLocationMode
 {
 	[camera setLocationMode:newLocationMode];
 	

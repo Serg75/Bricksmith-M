@@ -13,7 +13,7 @@
 
 #import <LDrawRenderCore/LDrawCamera.h>
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMathEx.h>
 
 // Normally the doc size is rounded so that it doesn't jump per frame as we nudge; we can turn this OFF to debug editing.
@@ -37,8 +37,8 @@
 	float				modelView[16];
 	float				orientation[16];
 
-	ProjectionModeT		projectionMode;
-	LocationModeT		locationMode;
+	LDrawProjectionMode	projectionMode;
+	LDrawLocationMode	locationMode;
 	Box3				modelSize;
 
 	float				zoomFactor;
@@ -75,8 +75,8 @@
 	
 	zoomFactor						= 100; // percent
 	cameraDistance					= -10000;
-	projectionMode					= ProjectionModePerspective;
-	locationMode					= LocationModeModel;
+	projectionMode					= LDrawProjectionModePerspective;
+	locationMode					= LDrawLocationModeModel;
 	modelSize						= InvalidBox;
 	
 	buildRotationMatrix(orientation,180,1,0,0);
@@ -113,7 +113,7 @@
 #pragma mark -
 
 
-//========== getProjection =====================================================
+//========== projection =====================================================
 ///
 /// @abstract	Returns the current projection matrix as a float[16] ptr.
 ///				The projection matrix handles the effects of scrolling and
@@ -126,25 +126,25 @@
 ///				custom shaders.
 ///
 //==============================================================================
-- (float*)getProjection
+- (float*)projection
 {
 	return projection;
 	
-} // end getProjection
+} // end projection
 
 
-//========== getModelView ======================================================
+//========== modelView ======================================================
 //
 /// @abstract	Returns the current modelview matrix as a float[16] ptr.
 //				The modelview matrix accounts for camera view distance, model
 //				rotation and model center changes.
 //
 //==============================================================================
-- (float*)getModelView
+- (float*)modelView
 {
 	return modelView;
 	
-} // end getModelView
+} // end modelView
 
 
 //========== zoomPercentage ====================================================
@@ -164,7 +164,7 @@
 /// @abstract	Returns the current projection mode (perspective or ortho).
 ///
 //==============================================================================
-- (ProjectionModeT)projectionMode
+- (LDrawProjectionMode)projectionMode
 {
 	return self->projectionMode;
 	
@@ -176,7 +176,7 @@
 /// @abstract	Returns the current location mode.
 ///
 //==============================================================================
-- (LocationModeT)locationMode
+- (LDrawLocationMode)locationMode
 {
 	return self->locationMode;
 	
@@ -194,7 +194,7 @@
 	TransformComponents  components			= IdentityComponents;
 	Tuple3				 degrees			= ZeroPoint3;
 	
-	transformation = Matrix4CreateFromGLMatrix4([self getModelView]);
+	transformation = Matrix4CreateFromFloats([self modelView]);
 	transformation = Matrix4Rotate(transformation, V3Make(180, 0, 0)); // LDraw is upside-down
 	Matrix4DecomposeTransformation(transformation, &components);
 	degrees = components.rotate;
@@ -434,7 +434,7 @@
 	// openGLContext the current context
 	
 	// Start from scratch
-	if (self->locationMode == LocationModeWalkthrough)
+	if (self->locationMode == LDrawLocationModeWalkthrough)
 	{
 		Size2	viewportSize = self.visibleRect.size;
 		float aspect_ratio = viewportSize.width / viewportSize.height;
@@ -451,7 +451,7 @@
 	{
 		Box2 visibleRect = self.visibleRect;
 
-		if (self->projectionMode == ProjectionModePerspective)
+		if (self->projectionMode == LDrawProjectionModePerspective)
 		{
 			visibilityPlane = [self nearFrustumClippingRectFromVisibleRect:visibleRect];
 			
@@ -484,7 +484,7 @@
 		}
 	}
 
-	if (self.usesMetalProjection)
+	if (self.usesZeroToOneDepth)
 	{
 	// Metal defines its Normalized Device Coordinate (NDC) system as a 2x2x1 cube with its center at (0, 0, 0.5),
 	// whereas OpenGL defines NDC as a 2x2x2 cube with its center at (0,0,0).
@@ -516,7 +516,7 @@
 	buildTranslationMatrix(cam_trans, 0, 0, self->cameraDistance);
 	buildTranslationMatrix(center_trans,-rotationCenter.x, -rotationCenter.y, -rotationCenter.z);
 
-	if (locationMode == LocationModeModel)
+	if (locationMode == LDrawLocationModeModel)
 	{
 		buildIdentity(temp1);	
 		multMatrices(temp2,temp1,cam_trans);
@@ -595,7 +595,7 @@
 		newDocumentRect.size.height = MAX(_graphicsSurfaceSize.height, MAX(snugDocumentSize.height, expandedViewportSize.height));
 		newDocumentRect = V2SizeCenteredOnPoint(newDocumentRect.size, V2BoxMid(viewportRect));
 		
-		if (locationMode == LocationModeModel)
+		if (locationMode == LDrawLocationModeModel)
 		{
 			// I have only seen this on Lion and later: when we set the document size the scroll point is set to something totally 
 			// silly.  Because of this, the visible rect is empty, and the entire camera calculation NaNs out.
@@ -694,7 +694,7 @@
 	
 	self->mute++;
 	
-	if (locationMode == LocationModeWalkthrough)
+	if (locationMode == LDrawLocationModeWalkthrough)
 		[scroller reflectScaleFactor:1.0];
 	else
 		[scroller reflectScaleFactor:self->zoomFactor/100.0];
@@ -720,8 +720,8 @@
 	
 	// - Near clipping plane unprojection
 	Point3 nearModelPoint = V3Project(modelPoint,
-								 Matrix4CreateFromGLMatrix4(modelView),
-								 Matrix4CreateFromGLMatrix4(projection),
+								 Matrix4CreateFromFloats(modelView),
+								 Matrix4CreateFromFloats(projection),
 								 viewport);
 
 	Point2 viewportProportion  = V2Make(nearModelPoint.x,nearModelPoint.y);
@@ -782,13 +782,13 @@
 //==============================================================================
 - (void)scrollModelPoint:(Point3)modelPoint toViewportProportionalPoint:(Point2)viewportPoint
 {
-	if (locationMode == LocationModeWalkthrough)
+	if (locationMode == LDrawLocationModeWalkthrough)
 		return;
 
 	Point2  newCenter           = ZeroPoint2;
 	float   zEval               = 0;
 	float	zNear				= 0;
-	Matrix4 modelViewMatrix     = Matrix4CreateFromGLMatrix4(modelView);
+	Matrix4 modelViewMatrix     = Matrix4CreateFromFloats(modelView);
 	Point4  transformedPoint    = ZeroPoint4;
 	Box2    newVisibleRect      = ZeroBox2;
 	Box2    currentClippingRect = ZeroBox2;
@@ -802,7 +802,7 @@
 	// fixed position, but the frustum changes with the scrollbars. We need to 
 	// calculate the world point we just clicked on, then derive a new frustum 
 	// projection centered on that point. 
-	if (self->projectionMode == ProjectionModePerspective)
+	if (self->projectionMode == LDrawProjectionModePerspective)
 	{
 		currentClippingRect = [self nearFrustumClippingRectFromVisibleRect:self.visibleRect];
 		
@@ -890,12 +890,12 @@
 //==============================================================================
 - (void)setViewingAngle:(Tuple3)newAngle
 {
-	float gl_angle[16],gl_flip[16];
+	float angleFloats[16], flipFloats[16];
 	Matrix4 angle = Matrix4RotateModelview(IdentityMatrix4, newAngle);
 
-	Matrix4GetGLMatrix4(angle,gl_angle);	
-	buildRotationMatrix(gl_flip, 180, 1, 0, 0);
-	multMatrices(orientation, gl_flip, gl_angle);
+	Matrix4GetFloats(angle, angleFloats);
+	buildRotationMatrix(flipFloats, 180, 1, 0, 0);
+	multMatrices(orientation, flipFloats, angleFloats);
 	
 	[self makeModelView];
 
@@ -911,7 +911,7 @@
 ///				projection modes keep the same document size.
 ///
 //==============================================================================
-- (void)setProjectionMode:(ProjectionModeT)newProjectionMode
+- (void)setProjectionMode:(LDrawProjectionMode)newProjectionMode
 {
 	self->projectionMode = newProjectionMode;
 	[self makeProjection];		// This doesn't need a full tickle because proj mode doesn't change the doc size.
@@ -924,14 +924,14 @@
 /// @abstract	Change Location modes.
 ///
 //==============================================================================
-- (void)setLocationMode:(LocationModeT)newLocationMode
+- (void)setLocationMode:(LDrawLocationMode)newLocationMode
 {
 	if (self->locationMode != newLocationMode)
 	{
 		self->locationMode = newLocationMode;
 		
 		// Tell NS that sizes have changed - once we do this, we can request a re-scroll.
-		if (locationMode == LocationModeWalkthrough)
+		if (locationMode == LDrawLocationModeWalkthrough)
 			[scroller reflectScaleFactor:1.0];
 		else
 			[scroller reflectScaleFactor:self->zoomFactor/100.0];
@@ -974,7 +974,7 @@
 	// Get the current transformation matrix. By using its inverse, we can 
 	// convert projection-coordinates back to the model coordinates they 
 	// are displaying.
-	Matrix4 inversed = Matrix4Invert(Matrix4CreateFromGLMatrix4([self getModelView]));
+	Matrix4 inversed = Matrix4Invert(Matrix4CreateFromFloats([self modelView]));
 	
 	// clear any translation resulting from a rotation center
 	inversed.element[3][0] = 0;

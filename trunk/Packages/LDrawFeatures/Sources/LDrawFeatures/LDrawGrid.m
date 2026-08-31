@@ -12,7 +12,7 @@
 
 #import <LDrawFeatures/LDrawGrid.h>
 
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 
 @implementation LDrawGrid
 

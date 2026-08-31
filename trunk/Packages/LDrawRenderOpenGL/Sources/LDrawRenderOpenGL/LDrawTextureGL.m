@@ -9,7 +9,7 @@
 
 #import <LDrawRenderOpenGL/LDrawTextureGL.h>
 
-#import <LDrawRenderOpenGL/PartLibraryGL.h>
+#import <LDrawRenderOpenGL/LDrawPartLibraryGL.h>
 
 
 @implementation LDrawTextureGL
@@ -45,7 +45,7 @@
 	LDrawDirective	*currentDirective	= nil;
 
 	if (textureTag == 0)
-		textureTag = [[PartLibraryGL sharedPartLibrary] textureTagForTexture:self];
+		textureTag = [[LDrawPartLibraryGL sharedPartLibrary] textureTagForTexture:self];
 
 	struct LDrawTextureSpec spec = [self textureSpecWithHandle:(void *)(uintptr_t)self->textureTag];
 
@@ -76,7 +76,7 @@
 	LDrawDirective	*currentDirective	= nil;
 
 	if (textureTag == 0)
-		textureTag = [[PartLibraryGL sharedPartLibrary] textureTagForTexture:self];
+		textureTag = [[LDrawPartLibraryGL sharedPartLibrary] textureTagForTexture:self];
 
 	struct LDrawTextureSpec spec = [self textureSpecWithHandle:(void *)(uintptr_t)self->textureTag];
 

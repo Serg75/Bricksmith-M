@@ -20,18 +20,31 @@
 
 #import <AMSProgressBar/AMSProgressBar.h>
 
-#import "DimensionsPanel.h"
-#import "DocumentToolbarController.h"
-#import "ExtendedSplitView.h"
-#import "IconTextCell.h"
-#import "Inspector.h"
-#import "LDrawApplication.h"
 #import <LDrawCore/LDrawColor.h>
-#import "LDrawColorPanelController.h"
 #import <LDrawCore/LDrawComment.h>
 #import <LDrawCore/LDrawConditionalLine.h>
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDirective.h>
+#import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawDrawableElement.h>
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawHighResPrimitives.h>
+#import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawLine.h>
+#import <LDrawCore/LDrawModelManager.h>
+#import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawLSynthDirective.h>
+#import <LDrawCore/LDrawMPDModel.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/LDrawPartReport.h>
+#import <LDrawCore/LDrawQuadrilateral.h>
+#import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LDrawTriangle.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubRemoveGroup.h>
+
 #import <LDrawEditing/LDrawClipboard.h>
 #import <LDrawEditing/LDrawEditorStrings.h>
 #import <LDrawEditing/LDrawInsertion.h>
@@ -43,35 +56,25 @@
 #import <LDrawEditing/LDrawStructure.h>
 #import <LDrawEditing/LDrawViewDrop.h>
 #import <LDrawEditing/LDrawViewPolicy.h>
-#import "LDrawDocumentWindow.h"
-#import <LDrawCore/LDrawDragHandle.h>
-#import <LDrawCore/LDrawDrawableElement.h>
-#import <LDrawCore/LDrawFile.h>
-#import "LDrawFileOutlineView.h"
-#import <LDrawCore/LDrawHighResPrimitives.h>
-#import <LDrawCore/LDrawLine.h>
-#import <LDrawCore/LDrawLSynth.h>
-#import <LDrawCore/LDrawLSynthDirective.h>
-#import <LDrawCore/LDrawMPDModel.h>
-#import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/LDrawQuadrilateral.h>
-#import <LDrawCore/LDrawStep.h>
-#import <LDrawCore/LDrawTriangle.h>
-#import <LDrawCore/LDrawUtilities.h>
-#import "LDrawViewerContainer.h"
-#import <LDrawCore/LPubCommand.h>
-#import <LDrawCore/LPubRemoveGroup.h>
+
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
-#import <LDrawCore/MacLDraw.h>
+
+#import "DimensionsPanel.h"
+#import "DocumentToolbarController.h"
+#import "ExtendedSplitView.h"
+#import "IconTextCell.h"
+#import "Inspector.h"
+#import "LDrawApplication.h"
+#import "LDrawColorPanelController.h"
+#import "LDrawDocumentWindow.h"
+#import "LDrawFileOutlineView.h"
+#import "LDrawViewerContainer.h"
 #import "MinifigureDialogController.h"
-#import <LDrawCore/ModelManager.h>
 #import "MovePanel.h"
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
-#import <LDrawCore/PartLibrary.h>
-#import <LDrawCore/PartReport.h>
 #import "PieceCountPanel.h"
 #import "RotationPanelController.h"
 #import "SearchPanelController.h"
@@ -79,8 +82,9 @@
 #import "UserDefaultsCategory.h"
 #import "ViewportArranger.h"
 #import "WindowCategory.h"
+
 #if WANT_RELATED_PARTS
-#import <LDrawFeatures/RelatedParts.h>
+#import <LDrawFeatures/LDrawRelatedParts.h>
 #endif
 
 
@@ -104,7 +108,7 @@ void AppendChoicesToNewItem(
 		my_item = [[NSMenuItem alloc] initWithTitle:group.title action:NULL keyEquivalent:@""];
 		[parent_menu addItem:my_item];
 		
-		choices_menu = [[NSMenu alloc] initWithTitle:[RelatedParts relatedPartsChoicesSubmenuTitle]];
+		choices_menu = [[NSMenu alloc] initWithTitle:[LDrawRelatedParts relatedPartsChoicesSubmenuTitle]];
 		[my_item setSubmenu:choices_menu];
 	}
 	else
@@ -113,7 +117,7 @@ void AppendChoicesToNewItem(
 	counter = [group.choices count];
 	for(i = 0; i < counter; ++i)
 	{
-		RelatedPart * ps = [group.choices objectAtIndex:i];
+		LDrawRelatedPart * ps = [group.choices objectAtIndex:i];
 
 		NSMenuItem * ps_item = [[NSMenuItem alloc] initWithTitle:[group titleForChoice:ps]
 														  action:@selector(addRelatedPartClicked:)
@@ -135,7 +139,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (id) init
 {
-//	[[RelatedParts sharedRelatedParts] dump];
+//	[[LDrawRelatedParts sharedRelatedParts] dump];
     self = [super init];
     if (self)
 	{
@@ -342,7 +346,7 @@ void AppendChoicesToNewItem(
 		if([absoluteURL isFileURL] == YES)
 		{
 			[[self documentContents] setPath:[absoluteURL path]];
-			[[ModelManager sharedModelManager] documentSignIn:[absoluteURL path] withFile:documentContents];
+			[[LDrawModelManager sharedModelManager] documentSignIn:[absoluteURL path] withFile:documentContents];
 		}
 		else
 			[[self documentContents] setPath:nil];
@@ -489,7 +493,7 @@ void AppendChoicesToNewItem(
 	if([absoluteURL isFileURL] == YES)
 	{
 		[[self documentContents] setPath:[absoluteURL path]];
-		[[ModelManager sharedModelManager] documentSignIn:[absoluteURL path] withFile:documentContents];
+		[[LDrawModelManager sharedModelManager] documentSignIn:[absoluteURL path] withFile:documentContents];
 	}
 	else
 		[[self documentContents] setPath:nil];
@@ -869,10 +873,10 @@ void AppendChoicesToNewItem(
 									   forSelection:selectedObjects
 									   partRelative:(self->gridOrientation == gridOrientationPart)];
 
-	RotationModeT rotationMode = [LDrawSelection rotationModeForSelectionCount:[selectedObjects count]
+	LDrawRotationMode rotationMode = [LDrawSelection rotationModeForSelectionCount:[selectedObjects count]
 																  aroundOrigin:aroundOrigin];
 	Point3 origin = {0};
-	Point3 *fixedCenter = (rotationMode == RotateAroundFixedPoint) ? &origin : NULL;
+	Point3 *fixedCenter = (rotationMode == LDrawRotateAroundFixedPoint) ? &origin : NULL;
 
 	[self rotateSelection:rotation mode:rotationMode fixedCenter:fixedCenter];
 
@@ -886,11 +890,11 @@ void AppendChoicesToNewItem(
 // Parameters:	rotation	= degrees x,y,z to rotate
 //				mode		= how to derive the rotation centerpoint
 //				fixedCenter	= explicit centerpoint, or NULL if mode not equal to 
-//							  RotateAroundFixedPoint
+//							  LDrawRotateAroundFixedPoint
 //
 //==============================================================================
 - (void) rotateSelection:(Tuple3)rotation
-					mode:(RotationModeT)mode
+					mode:(LDrawRotationMode)mode
 			 fixedCenter:(Point3 *)fixedCenter
 {
 	NSArray     *selectedObjects    = [self selectedObjects]; //array of LDrawDirectives.
@@ -902,7 +906,7 @@ void AppendChoicesToNewItem(
 	for(LDrawPart *currentObject in [LDrawSelection partsInSelection:selectedObjects])
 	{
 		Point3 center = rotationCenter;
-		if(mode == RotateAroundPartPositions)
+		if(mode == LDrawRotateAroundPartPositions)
 			center = [currentObject position];
 
 		[self rotatePart:currentObject
@@ -1187,9 +1191,9 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) panelRotateParts:(id)sender
 {
-	Tuple3			angles			= [sender angles];
-	RotationModeT	rotationMode	= [sender rotationMode];
-	Point3			centerPoint		= [sender fixedPoint];
+	Tuple3				angles			= [sender angles];
+	LDrawRotationMode	rotationMode	= [sender rotationMode];
+	Point3				centerPoint		= [sender fixedPoint];
 	
 	//the center may not be valid, but that will get taken care of by the 
 	// rotation mode.
@@ -1256,8 +1260,8 @@ void AppendChoicesToNewItem(
 	// "resolve" time contains the time to figure out what each part points to, and the dominant cost 
 	// is loading neighbor files when they are in use.
 				
-	PartReport		*partReport			= [PartReport partReportForContainer:[self documentContents]];
-	NSArray			*missingParts		= [partReport missingParts];
+	LDrawPartReport		*partReport		= [LDrawPartReport partReportForContainer:[self documentContents]];
+	NSArray				*missingParts	= [partReport missingParts];
 
 	partReportTime = CFAbsoluteTimeGetCurrent() - startTime;
 #if DEBUG
@@ -1303,9 +1307,9 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) doMovedPiecesCheck:(id)sender
 {
-	PartReport	*partReport     = [PartReport partReportForContainer:[self documentContents]];
-	NSArray     *movedParts     = [partReport movedParts];
-	NSInteger   buttonReturned  = 0;
+	LDrawPartReport	*partReport 	= [LDrawPartReport partReportForContainer:[self documentContents]];
+	NSArray     	*movedParts     = [partReport movedParts];
+	NSInteger   	buttonReturned  = 0;
 	
 	if([movedParts count] > 0)
 	{
@@ -2753,9 +2757,9 @@ void AppendChoicesToNewItem(
 - (IBAction) addRelatedPartClicked:(id)sender
 {
 #if WANT_RELATED_PARTS
-	RelatedPart   *relatedPart   = [sender representedObject];
-	NSUndoManager *undoManager   = [self undoManager];
-	LDrawColor    *selectedColor = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
+	LDrawRelatedPart   *relatedPart		= [sender representedObject];
+	NSUndoManager      *undoManager		= [self undoManager];
+	LDrawColor         *selectedColor	= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
 
 	// Snapshot selection first — inserting parts would change it under us.
 	NSArray *parentParts = [NSArray arrayWithArray:selectedDirectives];
@@ -2869,7 +2873,7 @@ void AppendChoicesToNewItem(
 	}
 
 	LDrawPart *constraint = [LDrawInsertion partNamed:[[sender representedObject] objectForKey:@"partName"]
-												color:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+												color:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
 								 copyingTransformFrom:lastSelectedPart];
 
 	[self addDirective:constraint toParent:parent atIndex:index];
@@ -2965,7 +2969,7 @@ void AppendChoicesToNewItem(
 	{
 		NSArray<LDrawHighResReplacement *> *replacements =
 			[LDrawHighResPrimitives replacementsForDirectives:directives
-														 axis:(Axis)axis
+														 axis:(LDrawAxis)axis
 												 unknownLines:unknownLines];
 
 		for(LDrawHighResReplacement *replacement in replacements)
@@ -3773,7 +3777,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void)	   LDrawView:(LDrawView *)glView
  wantsToSelectDirectives:(NSArray *)directivesToSelect
-		   selectionMode:(SelectionModeT) selectionMode
+		   selectionMode:(LDrawSelectionMode) selectionMode
  {
 	if(markedSelection)
 	{
@@ -4286,7 +4290,7 @@ void AppendChoicesToNewItem(
 // Purpose:		Determines whether the given menu item should be available.
 //				This method is called automatically each time a menu is opened.
 //				We identify the menu item by its tag, which is defined in 
-//				MacLDraw.h.
+//				LDrawKeys.h.
 //
 //==============================================================================
 - (BOOL) validateMenuItem:(NSMenuItem *)menuItem
@@ -4683,11 +4687,11 @@ void AppendChoicesToNewItem(
 	
 	if(parentName != nil)
 	{
-		LDrawRelatedPartsMenuPlan *plan = [[RelatedParts sharedRelatedParts] menuPlanForParentName:parentName];
+		LDrawRelatedPartsMenuPlan *plan = [[LDrawRelatedParts sharedRelatedParts] menuPlanForParentName:parentName];
 
 		if(plan != nil)
 		{
-			NSMenu * kids_and_roles = [[NSMenu alloc] initWithTitle:[RelatedParts relatedPartsMenuTitle]];
+			NSMenu * kids_and_roles = [[NSMenu alloc] initWithTitle:[LDrawRelatedParts relatedPartsMenuTitle]];
 
 			[relatedItem setSubmenu:kids_and_roles];
 			[relatedItem setEnabled:TRUE];
@@ -5424,7 +5428,7 @@ void AppendChoicesToNewItem(
 	
 	[affectedViewport setViewOrientation:viewOrientation];
 	[affectedViewport setViewingAngle:viewingAngle];
-	[affectedViewport setLocationMode:LocationModeModel];
+	[affectedViewport setLocationMode:LDrawLocationModeModel];
 	
 }//end updateViewingAngleToMatchStep
 
@@ -5618,7 +5622,7 @@ void AppendChoicesToNewItem(
 {
 	if ([NSThread isMainThread])
 	{
-		[[ModelManager sharedModelManager] documentSignOut:documentContents];
+		[[LDrawModelManager sharedModelManager] documentSignOut:documentContents];
 	}
 	else
 	{
@@ -5630,7 +5634,7 @@ void AppendChoicesToNewItem(
 		// from inside dealloc which blows up the obj-C runtime.
 		LDrawFile * doc = documentContents;
 		dispatch_async(dispatch_get_main_queue(),^{
-			[[ModelManager sharedModelManager] documentSignOut:doc];
+			[[LDrawModelManager sharedModelManager] documentSignOut:doc];
 		});
 	}
 

@@ -9,16 +9,17 @@
 //==============================================================================
 #import "PieceCountPanel.h"
 
-#import "LDrawApplication.h"
 #import <LDrawCore/LDrawColor.h>
-#import "LDrawColorCell.h"
 #import <LDrawCore/LDrawFile.h>
-#import "LDrawView.h"
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/LDrawPartReport.h>
+
+#import "LDrawApplication.h"
+#import "LDrawColorCell.h"
+#import "LDrawView.h"
 #import "LDrawViewerContainer.h"
-#import <LDrawCore/PartLibrary.h>
-#import <LDrawCore/PartReport.h>
 
 @interface PieceCountPanel ()
 
@@ -140,7 +141,7 @@
 //				are currently analyzing and updates the data view.
 //
 //==============================================================================
-- (PartReport *) partReport
+- (LDrawPartReport *) partReport
 {
 	return self->partReport;
 	
@@ -157,13 +158,13 @@
 //==============================================================================
 - (void) setActiveModel:(LDrawMPDModel *)newModel
 {
-	PartReport		*modelReport	= nil;
+	LDrawPartReport		*modelReport	= nil;
 	
 	//Update the model name.
 	self->activeModel = newModel;
 	
 	//Get the report for the new model.
-	modelReport = [PartReport partReportForContainer:self->activeModel];
+	modelReport = [LDrawPartReport partReportForContainer:self->activeModel];
 	[modelReport getPieceCountReport];
 	
 	[self setPartReport:modelReport];
@@ -192,7 +193,7 @@
 // Notes:		You should never call this method directly.
 //
 //==============================================================================
-- (void) setPartReport:(PartReport *)newPartReport
+- (void) setPartReport:(LDrawPartReport *)newPartReport
 {
 	NSMutableArray *flattened = nil;
 	
@@ -274,9 +275,9 @@
 	//set up the save panel
 	[savePanel setAllowedFileTypes:[NSArray arrayWithObject:@"txt"]];
 	[savePanel setCanSelectHiddenExtension:YES];
-	[savePanel setTitle:NSLocalizedString([PartReport pieceCountSaveDialogTitleKey], nil)];
-	[savePanel setMessage:NSLocalizedString([PartReport pieceCountSaveDialogMessageKey], nil)];
-	[savePanel setNameFieldStringValue:NSLocalizedString([PartReport untitledLocalizationKey], nil)];
+	[savePanel setTitle:NSLocalizedString([LDrawPartReport pieceCountSaveDialogTitleKey], nil)];
+	[savePanel setMessage:NSLocalizedString([LDrawPartReport pieceCountSaveDialogMessageKey], nil)];
+	[savePanel setNameFieldStringValue:NSLocalizedString([LDrawPartReport untitledLocalizationKey], nil)];
 	
 	//run it and export the file if needed
 	result = [savePanel runModal];
@@ -335,7 +336,7 @@
 //	}
 //	
 //	else if([identifier isEqualToString:PART_NAME_KEY])
-//		object = [[PartLibrary sharedPartLibrary] descriptionForPartName:[partRecord objectForKey:PART_NUMBER_KEY]];
+//		object = [[LDrawPartLibrary sharedPartLibrary] descriptionForPartName:[partRecord objectForKey:PART_NUMBER_KEY]];
 //	
 //	else if([identifier isEqualToString:COLOR_NAME])
 //		object = [LDrawColor nameForLDrawColor:[[partRecord objectForKey:LDRAW_COLOR] intValue]];
@@ -394,7 +395,7 @@
 	if(rowIndex >= 0)
 	{
 		partRecord	= [flattenedReport objectAtIndex:rowIndex];
-		newPart		= [PartReport previewPartFromRecord:partRecord];
+		newPart		= [LDrawPartReport previewPartFromRecord:partRecord];
 		partColor	= [partRecord objectForKey:PART_REPORT_LDRAW_COLOR];
 
 		[LDrawApplication makeCurrentSharedContext];

@@ -12,7 +12,7 @@
 
 #import <Foundation/Foundation.h>
 #import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/MacLDraw.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawRenderCore/LDrawCamera.h>
 
@@ -88,10 +88,10 @@ typedef NS_ENUM(NSInteger, LDrawSwipeStepAction) {
 
 
 /// We treat 3D / WalkThrough as perspective; straight-on views are orthographic.
-+ (ProjectionModeT)projectionModeForViewOrientation:(ViewOrientationT)orientation;
++ (LDrawProjectionMode)projectionModeForViewOrientation:(ViewOrientationT)orientation;
 
 /// WalkThrough → walkthrough location; otherwise model.
-+ (LocationModeT)locationModeForViewOrientation:(ViewOrientationT)orientation;
++ (LDrawLocationMode)locationModeForViewOrientation:(ViewOrientationT)orientation;
 
 /// Numpad-style viewing-angle hotkeys: 4/6/2/8/5/7|9/0.
 + (BOOL)viewOrientation:(ViewOrientationT *)outOrientation

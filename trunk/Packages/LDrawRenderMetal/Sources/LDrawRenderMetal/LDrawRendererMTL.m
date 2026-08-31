@@ -116,7 +116,7 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 //==============================================================================
 - (void)prepareMetal
 {
-	camera.usesMetalProjection = YES;
+	camera.usesZeroToOneDepth = YES;
 	id<MTLDevice> device = MetalGPU.device;
 	_commandQueue = [device newCommandQueue];
 	_commandQueue.label = @"Main Command Queue";
@@ -440,8 +440,8 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	id<MTLBuffer> vertexUniformBuffer = _vertexUniformBuffers[_currentUniformBufferIndex];
 
 	struct VertexUniform vertexUniform;
-	vertexUniform.model_view_matrix	= simd_matrix4x4_from_array_transposed([camera getModelView]);
-	vertexUniform.projection_matrix	= simd_matrix4x4_from_array_transposed([camera getProjection]);
+	vertexUniform.model_view_matrix	= simd_matrix4x4_from_array_transposed([camera modelView]);
+	vertexUniform.projection_matrix	= simd_matrix4x4_from_array_transposed([camera projection]);
 	vertexUniform.normal_matrix		= simd_normal_matrix_from_matrix4x4(vertexUniform.model_view_matrix);
 
 	void *vertexUniformBufferPointer = [vertexUniformBuffer contents];
@@ -455,8 +455,8 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 
 	LDrawShaderRenderer *ren = [[LDrawShaderRenderer alloc] initWithEncoder:renderEncoder
 																	  scale:[self zoomPercentageForViewport] / 100.
-																  modelView:[camera getModelView]
-																 projection:[camera getProjection]];
+																  modelView:[camera modelView]
+																 projection:[camera projection]];
 
 	[ren setBoundsOnlyDrawing:boundsOnly];
 	[self->fileBeingDrawn drawSelf:ren];

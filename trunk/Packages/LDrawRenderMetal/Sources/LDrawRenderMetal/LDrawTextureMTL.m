@@ -9,7 +9,7 @@
 
 #import <LDrawRenderMetal/LDrawTextureMTL.h>
 
-#import <LDrawRenderMetal/PartLibraryMTL.h>
+#import <LDrawRenderMetal/LDrawPartLibraryMTL.h>
 
 
 @implementation LDrawTextureMTL
@@ -45,7 +45,7 @@
 	LDrawDirective	*currentDirective	= nil;
 
 	if (self->metalTexture == nil)
-		self->metalTexture = [[PartLibraryMTL sharedPartLibrary] metalTextureForTexture:self];
+		self->metalTexture = [[LDrawPartLibraryMTL sharedPartLibrary] metalTextureForTexture:self];
 
 	struct LDrawTextureSpec spec = [self textureSpecWithHandle:(__bridge void *)self->metalTexture];
 
@@ -77,7 +77,7 @@
 	LDrawDirective	*currentDirective	= nil;
 
 	if (self->metalTexture == nil)
-		self->metalTexture = [[PartLibraryMTL sharedPartLibrary] metalTextureForTexture:self];
+		self->metalTexture = [[LDrawPartLibraryMTL sharedPartLibrary] metalTextureForTexture:self];
 
 	struct LDrawTextureSpec spec = [self textureSpecWithHandle:(__bridge void *)self->metalTexture];
 

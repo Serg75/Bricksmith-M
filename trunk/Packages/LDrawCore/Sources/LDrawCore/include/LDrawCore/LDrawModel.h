@@ -14,7 +14,7 @@
 
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawCoreRenderer.h>
-@class ColorLibrary;
+@class LDrawColorLibrary;
 @class LDrawFile;
 @class LDrawStep;
 
@@ -32,7 +32,7 @@
 	NSString				*author;
 	Point3					rotationCenter;
 
-	ColorLibrary			*colorLibrary;			// in-scope !COLOURS local to the model
+	LDrawColorLibrary		*colorLibrary;			// in-scope !COLOURS local to the model
 	BOOL					 stepDisplayActive;		// YES if we are only display steps 1-currentStepDisplayed
 	NSUInteger				 currentStepDisplayed;	// display up to and including this step index
 
@@ -45,8 +45,8 @@
 
 	BOOL					isOptimized;			// Were we ever structure-optimized - used to optimize out 
 													// some drawing on library parts.
-	LDrawDLHandle			dl;						// Cached DL if we have one.
-	LDrawDLCleanup_f		dl_dtor;
+	LDrawMeshHandle			dl;						// Cached DL if we have one.
+	LDrawMeshCleanup_f		dl_dtor;
 }
 
 //Initialization
@@ -54,7 +54,7 @@
 
 //Accessors
 - (NSString *) category;
-- (ColorLibrary *) colorLibrary;
+- (LDrawColorLibrary *) colorLibrary;
 - (NSArray *) draggingDirectives;
 - (LDrawFile *)enclosingFile;
 - (NSString *)modelDescription;

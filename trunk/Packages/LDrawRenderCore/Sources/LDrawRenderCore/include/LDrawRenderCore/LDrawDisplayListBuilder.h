@@ -18,7 +18,7 @@
 #define LDrawDisplayListBuilder_h
 
 #import <LDrawCore/LDrawCoreRenderer.h>
-#import <LDrawRenderCore/LDrawBDPAllocator.h>
+#import <LDrawRenderCore/LDrawPoolAllocator.h>
 
 #define VERT_STRIDE 10		// Stride of our vertices - we always write X Y Z	NX NY NZ		R G B A
 
@@ -94,7 +94,7 @@ struct LDrawDLBuilderPerTex {
 // the data carefully when we are done.
 struct	LDrawDLBuilder {
 	int								flags;
-	struct LDrawBDP *				alloc;
+	struct LDrawPool *				alloc;
 	struct LDrawDLBuilderPerTex *	head;
 	struct LDrawDLBuilderPerTex *	cur;
 };

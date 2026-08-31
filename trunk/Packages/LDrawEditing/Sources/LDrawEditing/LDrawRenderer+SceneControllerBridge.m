@@ -63,7 +63,7 @@
 //				delegate when it implements the optional method.
 //
 //==============================================================================
-- (void)wantsToSelectDirectives:(NSArray *)directives selectionMode:(SelectionModeT)selectionMode
+- (void)wantsToSelectDirectives:(NSArray *)directives selectionMode:(LDrawSelectionMode)selectionMode
 {
 	if ([delegate respondsToSelector:@selector(LDrawRenderer:wantsToSelectDirectives:selectionMode:)])
 	{

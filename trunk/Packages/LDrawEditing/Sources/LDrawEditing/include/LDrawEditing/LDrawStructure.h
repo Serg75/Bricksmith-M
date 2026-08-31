@@ -94,7 +94,7 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 /// (undo).
 + (NSArray<LDrawSplitExpansion *> *)splitExpansionsInSelection:(NSArray *)selection;
 
-/// Menu-tag mapping for change-origin commands (MacLDraw.h tags).
+/// Menu-tag mapping for change-origin commands (LDrawKeys.h tags).
 + (BOOL)originChangeKind:(nullable LDrawOriginChangeKind *)outKind forMenuTag:(NSInteger)tag;
 
 /// Matrices for every part in the anchor's model, plus instances of that
@@ -149,7 +149,7 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 						index:(NSInteger * _Nullable)outIndex
 			  forLastSelected:(nullable id)lastSelected;
 
-/// INSIDE / OUTSIDE / CROSS from MacLDraw.h menu tags; nil if the tag is unrelated.
+/// INSIDE / OUTSIDE / CROSS from LDrawKeys.h menu tags; nil if the tag is unrelated.
 + (nullable NSString *)lsynthDirectionCommandForMenuTag:(NSInteger)tag;
 
 /// Localization keys for the INSIDE / OUTSIDE / CROSS undo action. CROSS is

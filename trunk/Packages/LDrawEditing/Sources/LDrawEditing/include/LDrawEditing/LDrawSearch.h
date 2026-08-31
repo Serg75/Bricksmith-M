@@ -27,23 +27,23 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum {
-	ScopeFile      = 1,
-	ScopeModel     = 2,
-	ScopeStep      = 3,
-	ScopeSelection = 4
-} ScopeT;
+	LDrawSearchScopeFile      = 1,
+	LDrawSearchScopeModel     = 2,
+	LDrawSearchScopeStep      = 3,
+	LDrawSearchScopeSelection = 4
+} LDrawSearchScope;
 
 typedef enum {
-	ColorNoFilter        = 1,
-	ColorSelectionFilter = 2,
-	ColorFilter          = 3
-} ColorFilterT;
+	LDrawSearchColorNone          = 1,
+	LDrawSearchColorFromSelection = 2,
+	LDrawSearchColorSpecified     = 3
+} LDrawSearchColorFilter;
 
 typedef enum {
-	SearchAllParts      = 1,
-	SearchSpecificPart  = 2,
-	SearchSelectedParts = 3
-} SearchPartCriteriaT;
+	LDrawSearchAllParts      = 1,
+	LDrawSearchSpecificPart  = 2,
+	LDrawSearchSelectedParts = 3
+} LDrawSearchPartCriteria;
 
 
 //------------------------------------------------------------------------------
@@ -58,17 +58,17 @@ typedef enum {
 
 /// When the selection is empty, Step/Selection become File, color-from-selection
 /// becomes no filter, and selected-parts becomes all parts.
-+ (void)normalizeEmptySelectionScope:(ScopeT *)ioScope
-						 colorFilter:(ColorFilterT *)ioColor
-					   partCriterion:(SearchPartCriteriaT *)ioCriterion;
++ (void)normalizeEmptySelectionScope:(LDrawSearchScope *)ioScope
+						 colorFilter:(LDrawSearchColorFilter *)ioColor
+					   partCriterion:(LDrawSearchPartCriteria *)ioCriterion;
 
 /// Localization keys for the empty-selection warning, in order: root, what,
 /// color, where. Nil when the selection is non-empty or the options would
 /// not silently remap. The host still localizes each key.
 + (nullable NSArray<NSString *> *)emptySelectionWarningKeysWithCount:(NSUInteger)selectionCount
-															   scope:(ScopeT)scope
-														 colorFilter:(ColorFilterT)colorFilter
-													   partCriterion:(SearchPartCriteriaT)partCriterion;
+															   scope:(LDrawSearchScope)scope
+														 colorFilter:(LDrawSearchColorFilter)colorFilter
+													   partCriterion:(LDrawSearchPartCriteria)partCriterion;
 
 /// Joins four localized parts with English “of”/“in” and a period. Nil if
 /// parts is not four items. The host still localizes and shows the text.
@@ -77,21 +77,21 @@ typedef enum {
 /// Collect the containers to search given the panel's scope radio, the current
 /// selection, and the active model / file.
 ///
-/// An empty selection at ScopeModel searches the active model; at ScopeFile
+/// An empty selection at LDrawSearchScopeModel searches the active model; at LDrawSearchScopeFile
 /// it searches the whole file.
-+ (NSArray *)searchableObjectsForScope:(ScopeT)scope
++ (NSArray *)searchableObjectsForScope:(LDrawSearchScope)scope
 							 selection:(NSArray *)selectedObjects
 						   activeModel:(nullable LDrawModel *)activeModel
 								  file:(nullable LDrawFile *)file;
 
 /// Build the color list used to filter search hits, or nil for no color filter.
-+ (nullable NSArray *)colorFilterForCriterion:(ColorFilterT)colorCriterion
++ (nullable NSArray *)colorFilterForCriterion:(LDrawSearchColorFilter)colorCriterion
 									wellColor:(nullable LDrawColor *)wellColor
 									selection:(NSArray *)selectedObjects;
 
 /// nil means “any part”. Specific names are comma-separated, trimmed, lowercased,
 /// with .dat added when there is no .dat/.ldr suffix.
-+ (nullable NSArray *)partFilterForCriterion:(SearchPartCriteriaT)criterion
++ (nullable NSArray *)partFilterForCriterion:(LDrawSearchPartCriteria)criterion
 							   specificNames:(nullable NSString *)commaSeparatedNames
 								   selection:(NSArray *)selectedObjects;
 

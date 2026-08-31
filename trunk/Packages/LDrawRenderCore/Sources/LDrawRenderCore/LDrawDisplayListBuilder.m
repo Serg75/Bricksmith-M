@@ -38,13 +38,13 @@ static int	supported_primitives(void)
 struct LDrawDLBuilder * LDrawDLBuilderCreate(void)
 {
 	// All allocs for the builder come from one pool.
-	struct LDrawBDP * alloc = LDrawBDPCreate();
+	struct LDrawPool * alloc = LDrawPoolCreate();
 
 	// Build one tex struct now for the untextured set of meshes, which are the default state.
-	struct LDrawDLBuilderPerTex * untex = (struct LDrawDLBuilderPerTex *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLBuilderPerTex));
+	struct LDrawDLBuilderPerTex * untex = (struct LDrawDLBuilderPerTex *) LDrawPoolAllocate(alloc,sizeof(struct LDrawDLBuilderPerTex));
 	memset((void*)untex, 0, sizeof(struct LDrawDLBuilderPerTex));
 
-	struct LDrawDLBuilder * bld = (struct LDrawDLBuilder *) LDrawBDPAllocate(alloc,sizeof(struct LDrawDLBuilder));
+	struct LDrawDLBuilder * bld = (struct LDrawDLBuilder *) LDrawPoolAllocate(alloc,sizeof(struct LDrawDLBuilder));
 	bld->cur = bld->head = untex;
 	
 	bld->alloc = alloc;
@@ -76,7 +76,7 @@ void LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec *
 	{
 		// If we get here, we have never seen this texture before in this builder and
 		// we need to allocate a new per-texture chunk of build state.
-		struct LDrawDLBuilderPerTex * new_tex = (struct LDrawDLBuilderPerTex *) LDrawBDPAllocate(ctx->alloc,sizeof(struct LDrawDLBuilderPerTex));
+		struct LDrawDLBuilderPerTex * new_tex = (struct LDrawDLBuilderPerTex *) LDrawPoolAllocate(ctx->alloc,sizeof(struct LDrawDLBuilderPerTex));
 		memset((void*)new_tex, 0, sizeof(struct LDrawDLBuilderPerTex));
 		memcpy((void*)&new_tex->spec, (void*)spec, sizeof(struct LDrawTextureSpec));
 		prev->next = new_tex;
@@ -104,7 +104,7 @@ void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const float v[9], float n
 	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
 	
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
 	nl->next = NULL;
 	nl->vcount = 3;
 	for (i = 0; i < 3; ++i)
@@ -137,7 +137,7 @@ void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const float v[9], float n
 static void add_quad_as_tris(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4])
 {
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
 	nl->next = NULL;
 	nl->vcount = 3;
 	for (i = 0; i < 3; ++i)
@@ -158,7 +158,7 @@ static void add_quad_as_tris(struct LDrawDLBuilder * ctx, const float v[12], flo
 		ctx->cur->tri_tail = nl;
 	}
 
-	nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
+	nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
 	nl->next = NULL;
 	nl->vcount = 3;
 	for (i = 0; i < 3; ++i)
@@ -195,7 +195,7 @@ static void add_quad_as_tris(struct LDrawDLBuilder * ctx, const float v[12], flo
 static void add_quad_as_quad(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4])
 {
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(
 												ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 4);
 	nl->next = NULL;
 	nl->vcount = 4;
@@ -249,7 +249,7 @@ void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const float v[6], float 
 	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
 
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 2);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 2);
 	nl->next = NULL;
 	nl->vcount = 2;
 	for (i = 0; i < 2; ++i)
@@ -291,7 +291,7 @@ void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[12], f
 	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
 
 	int i;
-	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawBDPAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 4);
+	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 4);
 	nl->next = NULL;
 	nl->vcount = 4;
 	for (i = 0; i < 4; ++i)

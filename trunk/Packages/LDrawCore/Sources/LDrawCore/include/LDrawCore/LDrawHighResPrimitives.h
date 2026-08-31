@@ -17,17 +17,17 @@
 #import <LDrawCore/MatrixMath.h>
 
 
-typedef NS_ENUM(int, Axis) {
-	AxisX		= 0,
-	AxisY,
-	AxisZ,
-	AxisUnknown	= -1
+typedef NS_ENUM(int, LDrawAxis) {
+	LDrawAxisX       = 0,
+	LDrawAxisY,
+	LDrawAxisZ,
+	LDrawAxisUnknown = -1
 };
 
 
 typedef struct
 {
-	Axis axis;
+	LDrawAxis axis;
 	Matrix4 rotationMatrix;
 } RotationParameters;
 
@@ -70,10 +70,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) RotationParameters rotation;
 
 /// YES if at least two vertices among primitives rotate around the given axis.
-+ (BOOL)hasRotationByAxis:(Axis)axis forPrimitives:(NSArray *)directives;
++ (BOOL)hasRotationByAxis:(LDrawAxis)axis forPrimitives:(NSArray *)directives;
 
 /// High-resolution replacements for primitive around axis; nil if unsupported.
-+ (LDrawHighResPrimitives *)highResPrimitivesFor:(LDrawDirective *)directive axis:(Axis)axis;
++ (LDrawHighResPrimitives *)highResPrimitivesFor:(LDrawDirective *)directive axis:(LDrawAxis)axis;
 
 /// YES if primitive (quad or triangle) contains an edge that matches line.
 + (BOOL)isPrimitive:(LDrawDirective *)directive includesLine:(LDrawLine *)line;
@@ -91,7 +91,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// replacements. Lines that do not convert are appended to unknownLines (the
 /// host should keep that array across axes). Does not mutate the tree.
 + (NSArray<LDrawHighResReplacement *> *)replacementsForDirectives:(NSArray *)directives
-															 axis:(Axis)axis
+															 axis:(LDrawAxis)axis
 													 unknownLines:(NSMutableArray *)unknownLines;
 
 @end

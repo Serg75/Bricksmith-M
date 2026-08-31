@@ -70,8 +70,8 @@ struct	LDrawTextureSpec {
 // The cleanup function defines a function ptr used to dispose of the display list that a directive
 // might be retaining.
 
-typedef void *  LDrawDLHandle;							// Opaque handle to some kind of cached drawing representation.
-typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);	// Cleanup function associated with a given DL.
+typedef void *  LDrawMeshHandle;							// Opaque handle to some kind of cached drawing representation.
+typedef void (* LDrawMeshCleanup_f)(LDrawMeshHandle  who);	// Cleanup function associated with a given DL.
 
 
 //------------------------------------------------------------------------------
@@ -147,9 +147,9 @@ typedef void (* LDrawDLCleanup_f)(LDrawDLHandle  who);	// Cleanup function assoc
 // display list can be accumulated into at one time.  (This is a bit of a defect of the API that we
 // should consider some day fixing.)
 - (id<LDrawCollector>)beginDL;
-- (void)endDL:(LDrawDLHandle *) outHandle cleanupFunc:(LDrawDLCleanup_f *)func;     // Returns NULL if the display list is empty (e.g. no calls between begin/end)
+- (void)endDL:(LDrawMeshHandle *) outHandle cleanupFunc:(LDrawMeshCleanup_f *)func;     // Returns NULL if the display list is empty (e.g. no calls between begin/end)
 
-- (void)drawDL:(LDrawDLHandle)dl;
+- (void)drawDL:(LDrawMeshHandle)dl;
 
 @end
 

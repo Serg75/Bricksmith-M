@@ -14,7 +14,7 @@
 #import <Cocoa/Cocoa.h>
 
 @class Inspector;
-@class PartLibrary;
+@class LDrawPartLibrary;
 @class PartLibraryController;
 @class LSynthConfiguration;
 

@@ -13,13 +13,13 @@
 
 @class LDrawFile;
 @class LDrawMPDModel;
-@class PartReport;
+@class LDrawPartReport;
 
 @interface PieceCountPanel : DialogPanel
 {
 	__weak LDrawFile		*file;
 	__weak LDrawMPDModel	*activeModel;
-	PartReport				*partReport;
+	LDrawPartReport			*partReport;
 	NSMutableArray			*flattenedReport;
 }
 
@@ -30,11 +30,11 @@
 //Accessors
 - (LDrawMPDModel *) activeModel;
 - (LDrawFile *) file;
-- (PartReport *) partReport;
+- (LDrawPartReport *) partReport;
 
 - (void) setActiveModel:(LDrawMPDModel *)newModel;
 - (void) setFile:(LDrawFile *)newFile;
-- (void) setPartReport:(PartReport *)newPartReport;
+- (void) setPartReport:(LDrawPartReport *)newPartReport;
 - (void) setTableDataSource:(NSMutableArray *) newReport;
 
 //Actions

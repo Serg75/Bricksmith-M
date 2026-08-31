@@ -15,12 +15,14 @@
 @import MetalKit;
 #endif
 
-#import <LDrawCore/ColorLibrary.h>
-#import <LDrawFeatures/LDrawGrid.h>
-#import <LDrawRenderCore/LDrawRenderer.h>
-#import <LDrawRenderCore/LDrawCamera.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MatrixMath.h>
+
+#import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawRenderCore/LDrawCamera.h>
+#import <LDrawRenderCore/LDrawRenderer.h>
+
 #import "ToolPalette.h"
 
 //Forward declarations
@@ -67,7 +69,7 @@
 	BOOL                    canBeginDragAndDrop;	// the next mouse-dragged will initiate a drag-and-drop.  This is based on the timeout for delayed drag mode.
 	BOOL                    dragEndedInOurDocument;	// YES if the drag we initiated ended in the document we display
 	BOOL					selectionIsMarquee;		// Remembers when a select-click misses and can thus start a marquee.  Only if we HIT an object can we start dragging.
-	SelectionModeT			marqueeSelectionMode;
+	LDrawSelectionMode		marqueeSelectionMode;
 	NSEventType				startingGestureType;
 	Vector3					nudgeVector;			// direction of nudge action (valid only in nudgeAction callback)
 	
@@ -77,8 +79,8 @@
 // Accessors
 - (LDrawDirective *) LDrawDirective;
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix;
-- (ProjectionModeT) projectionMode;
-- (LocationModeT) locationMode;
+- (LDrawProjectionMode) projectionMode;
+- (LDrawLocationMode) locationMode;
 - (Tuple3) viewingAngle;
 - (ViewOrientationT) viewOrientation;
 - (CGFloat) zoomPercentage;
@@ -91,8 +93,8 @@
 - (void) setGridSpacingMode:(gridSpacingModeT)newMode;
 - (void) setLDrawDirective:(LDrawDirective *) newFile;
 - (void) setNudgeAction:(SEL)newAction;
-- (void) setProjectionMode:(ProjectionModeT) newProjectionMode;
-- (void) setLocationMode:(LocationModeT) newLocationMode;
+- (void) setProjectionMode:(LDrawProjectionMode) newProjectionMode;
+- (void) setLocationMode:(LDrawLocationMode) newLocationMode;
 - (void) setTarget:(id)target;
 - (void) setViewOrientation:(ViewOrientationT) newAngle;
 - (void) setZoomPercentage:(CGFloat) newPercentage;
@@ -162,7 +164,7 @@
 // left entirely to the delegate. Some may rightly question the design of this 
 // system.
 - (void) LDrawView:(LDrawView *)glView wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
-- (void) LDrawView:(LDrawView*)glView wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(SelectionModeT) selectionMode;
+- (void) LDrawView:(LDrawView*)glView wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(LDrawSelectionMode) selectionMode;
 - (void) LDrawView:(LDrawView *)glView willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
 - (void) LDrawView:(LDrawView *)glView dragHandleDidMove:(LDrawDragHandle *)dragHandle;
 - (void) LDrawView:(LDrawView *)glView mouseIsOverPoint:(Point3)modelPoint confidence:(Tuple3)confidence;

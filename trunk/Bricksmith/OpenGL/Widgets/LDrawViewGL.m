@@ -24,14 +24,15 @@
 
 #import "LDrawViewGL.h"
 
+#include <OpenGL/gl.h>
+
 #import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
 #import <LDrawEditing/LDrawSceneController.h>
+#import <LDrawRenderOpenGL/LDrawRendererGL.h>
+
 #import "FocusRingView.h"
 #import "LDrawApplicationGL.h"
-#import <LDrawRenderOpenGL/LDrawRendererGL.h>
 #import "OverlayViewCategory.h"
-
-#include <OpenGL/gl.h>
 
 
 @implementation LDrawView (OpenGL)
@@ -93,7 +94,7 @@
 	NSNotificationCenter    *notificationCenter = [NSNotificationCenter defaultCenter];
 
 	selectionIsMarquee = NO;
-	marqueeSelectionMode = SelectionReplace;
+	marqueeSelectionMode = LDrawSelectionReplace;
 
 	//---------- Load UI -------------------------------------------------------
 
@@ -146,7 +147,7 @@
 
 	renderer = [[LDrawRenderer alloc] initWithBounds:[self bounds].size];
 	[renderer setDelegate:self withScroller:self];
-	[renderer setLDrawColor:[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
+	[renderer setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 	sceneController = [[LDrawSceneController alloc] initWithRendererBridge:renderer];
 	[renderer prepareOpenGL];
 

@@ -14,7 +14,7 @@
 
 #import <LDrawCore/LDrawDrawableElement.h>
 
-#import <LDrawCore/ColorLibrary.h>
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawUtilities.h>
@@ -66,8 +66,8 @@
 	//		 retrieve the model's local color library. Currently we have no 
 	//		 hooks for that operation; we need a -directiveDidMoveToModel: call 
 	//		 and distribute it to all children. 
-	ColorLibrary    *colorLibrary   = [ColorLibrary sharedColorLibrary];
-	LDrawColor      *libraryColor   = [colorLibrary colorForCode:[self->color colorCode]];
+	LDrawColorLibrary   *colorLibrary   = [LDrawColorLibrary sharedColorLibrary];
+	LDrawColor          *libraryColor   = [colorLibrary colorForCode:[self->color colorCode]];
 	if(libraryColor)
 	{
 		[self setLDrawColor:libraryColor];

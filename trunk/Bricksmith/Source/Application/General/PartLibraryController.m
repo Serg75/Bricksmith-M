@@ -2,7 +2,7 @@
 //
 // File:		PartLibraryController.h
 //
-// Purpose:		UI layerings on top of PartLibrary.
+// Purpose:		UI layerings on top of LDrawPartLibrary.
 //
 // Modified:	01/28/2009 Allen Smith. Creation Date.
 //
@@ -32,7 +32,7 @@
 	self = [super init];
 	
 	// Create the part library
-	PartLibrary *library = [PartLibrary sharedPartLibrary];
+	LDrawPartLibrary *library = [LDrawPartLibrary sharedPartLibrary];
 	[library setDelegate:self];
 	
 	return self;
@@ -52,9 +52,9 @@
 //==============================================================================
 - (void) loadPartCatalog:(void (^)(BOOL success))completionHandler
 {
-	PartLibrary *library    = [PartLibrary sharedPartLibrary];
-	NSArray     *favorites  = [[NSUserDefaults standardUserDefaults] objectForKey:FAVORITE_PARTS_KEY];
-	BOOL        success     = NO;
+	LDrawPartLibrary *library    = [LDrawPartLibrary sharedPartLibrary];
+	NSArray          *favorites  = [[NSUserDefaults standardUserDefaults] objectForKey:FAVORITE_PARTS_KEY];
+	BOOL             success     = NO;
 	
 	// Try loading an existing library first.
 	[library setFavorites:favorites];
@@ -86,7 +86,7 @@
 	[progressPanel setMessage:@"Loading Parts"];
 	[progressPanel showProgressPanel];
 	
-	[[PartLibrary sharedPartLibrary] reloadPartsWithMaxLoadCountHandler:
+	[[LDrawPartLibrary sharedPartLibrary] reloadPartsWithMaxLoadCountHandler:
 	 ^(NSUInteger maxPartCount)
 	{
 		dispatch_async(dispatch_get_main_queue(), ^{
@@ -112,7 +112,7 @@
 	}];
 	
 	// To print out a list of all categories. For debugging !CATEGORY coverage.
-//	NSArray *categories = [[[PartLibrary sharedPartLibrary] categories] sortedArrayUsingSelector:@selector(compare:)];
+//	NSArray *categories = [[[LDrawPartLibrary sharedPartLibrary] categories] sortedArrayUsingSelector:@selector(compare:)];
 //	NSMutableString* list = [NSMutableString string];
 //	for(NSString* name in categories)
 //	{
@@ -161,7 +161,7 @@
 // Purpose:		Save new favorites into preferences.
 //
 //==============================================================================
-- (void) partLibrary:(PartLibrary *)partLibrary didChangeFavorites:(NSArray *)newFavorites
+- (void) partLibrary:(LDrawPartLibrary *)partLibrary didChangeFavorites:(NSArray *)newFavorites
 {
 	NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
 	

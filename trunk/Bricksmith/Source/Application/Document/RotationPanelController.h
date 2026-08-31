@@ -10,19 +10,20 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-#import "DialogPanel.h"
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawEditing/LDrawSelection.h>
 
+#import "DialogPanel.h"
+
 @interface RotationPanelController : NSWindowController 
 {
-	RotationModeT	rotationMode;
-	float			angleX;
-	float			angleY;
-	float			angleZ;
-	float			fixedPointX;
-	float			fixedPointY;
-	float			fixedPointZ;
+	LDrawRotationMode	rotationMode;
+	float				angleX;
+	float				angleY;
+	float				angleZ;
+	float				fixedPointX;
+	float				fixedPointY;
+	float				fixedPointZ;
 	
 	__weak IBOutlet NSObjectController	*objectController;
 }
@@ -34,7 +35,7 @@
 - (BOOL) enableFixedPointCoordinates;
 - (Tuple3) angles;
 - (Point3) fixedPoint;
-- (RotationModeT) rotationMode;
+- (LDrawRotationMode) rotationMode;
 
 //Actions
 - (IBAction) rotateButtonClicked:(id)sender;
