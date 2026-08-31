@@ -78,6 +78,7 @@ struct	LDrawDragHandleInstance;
 	int								color_stack_top;
 
 	int								wire_frame_count;								// wire frame stack is just a count.
+	BOOL							boundsOnlyDrawing;								// fast interaction: draw AABBs only.
 
 
 	struct LDrawTextureSpec			tex_stack[TEXTURE_STACK_DEPTH];					// Texture stack from push/pop texture.
@@ -102,5 +103,7 @@ struct	LDrawDragHandleInstance;
 	// Metal
 	LDrawRenderEncoder				_renderEncoder;
 }
+
+- (void)setBoundsOnlyDrawing:(BOOL)boundsOnly;
 
 @end

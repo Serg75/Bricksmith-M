@@ -3,7 +3,7 @@
 //  File:       LDrawRenderer.h
 //  Package:    LDrawRenderCore
 //
-//  Purpose:    Draws an LDrawFile with OpenGL.
+//  Purpose:    Viewport camera and drawing coordinator for LDraw models.
 //
 //  Modified:   4/17/05 Allen Smith. Creation Date.
 //
@@ -14,7 +14,6 @@
 #import <LDrawCore/ColorLibrary.h>
 #import <LDrawCore/MacLDraw.h>
 #import <LDrawCore/MatrixMath.h>
-#import <LDrawRenderCore/GPUTypes.h>
 #import <LDrawRenderCore/LDrawCamera.h>
 #import <LDrawCore/LDrawUtilities.h>
 
@@ -32,20 +31,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 
-// Draw Mode
+// Level of geometric detail while the user is interactively moving the camera
+// or dragging parts. When full-detail frames are too slow, the renderer drops
+// to bounds-only until interaction ends.
 typedef enum
 {
-	LDrawGLDrawNormal			= 0,	//full draw
-	LDrawGLDrawExtremelyFast	= 1		//bounds only
+	LDrawDetailNormal			= 0,	// full draw
+	LDrawDetailFast				= 1		// bounds only
 
-} RotationDrawModeT;
+} LDrawDetailModeT;
 
 
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawRenderer
 ///
-/// @abstract   Draws an LDrawFile with OpenGL.
+/// @abstract   Viewport camera and drawing coordinator for LDraw models.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawRenderer : NSObject <LDrawColorable>
@@ -61,7 +62,7 @@ typedef enum
 
 	float				backgroundColor[4];
 	Box2				selectionMarquee;		// in view coordinates. ZeroBox2 means no marquee.
-	RotationDrawModeT	rotationDrawMode;		// drawing detail while rotating.
+	LDrawDetailModeT	detailMode;				// full geometry vs bounds-only during interaction
 	ViewOrientationT	viewOrientation;		// our orientation
 	NSInteger			framesSinceStartTime;
 	NSTimeInterval		fpsStartTime;
@@ -69,13 +70,6 @@ typedef enum
 	// Event Tracking
 	BOOL				isGesturing;			// true if performing a multitouch trackpad gesture.
 	BOOL				isTrackingDrag;			// true if the last mousedown was followed by a drag, and we're tracking it (drag-and-drop doesn't count)
-
-	// GPU resources (Metal renderer uses these; OpenGL ignores them)
-	LDrawGPUBuffer		_vertexUniformBuffer;
-	LDrawGPUBuffer		_fragmentUniformBuffer;
-	LDrawGPUTexture		_msaaColorTexture;
-	LDrawGPUTexture		_depthTexture;
-	CGSize				_lastDrawableSize;
 }
 
 // Initialization
@@ -92,7 +86,7 @@ typedef enum
 - (ViewOrientationT)viewOrientation;
 - (Box2)viewport;
 - (CGFloat)zoomPercentage;
-- (CGFloat)zoomPercentageForGL;
+- (CGFloat)zoomPercentageForViewport;
 
 - (void)setAllowsEditing:(BOOL)flag;
 - (BOOL)allowsEditing;
@@ -137,9 +131,7 @@ typedef enum
 
 // Utilities
 - (BOOL)autoscrollPoint:(Point2)point_view relativeToRect:(Box2)viewRect;
-//- (NSArray *) getDirectivesUnderPoint:(Point2)point_view amongDirectives:(NSArray *)directives fastDraw:(BOOL)fastDraw;
 - (NSArray *)getDirectivesUnderRect:(Box2)rect_view amongDirectives:(NSArray *)directives fastDraw:(BOOL)fastDraw;
-//- (NSArray *) getPartsFromHits:(NSDictionary *)hits;
 - (void)publishMouseOverPoint:(Point2)viewPoint;
 - (void)setZoomPercentage:(CGFloat)newPercentage preservePoint:(Point2)viewPoint;		// This and setZoomPercentage are how we zoom.
 - (void)scrollBy:(Vector2)scrollDelta;

@@ -34,11 +34,45 @@
 #import <LDrawRenderMetal/MetalGPU.h>
 #import "MetalUtilities.h"
 #import "SIMDConversions.h"
+#import <objc/runtime.h>
+
+
+#pragma mark -
+#pragma mark LDrawRendererMetalDrawState
+#pragma mark -
+
+
+//========== LDrawRendererMetalDrawState =======================================
+//
+// Purpose:        Metal draw resources for one renderer instance.
+//
+// Notes:        Kept off LDrawRenderer via an associated object so RenderCore
+//                does not need Metal buffer or multisample texture ivars.
+//
+//==============================================================================
+@interface LDrawRendererMetalDrawState : NSObject
+
+@property (nonatomic, strong) id<MTLBuffer>        fragmentUniformBuffer;
+@property (nonatomic, strong) id<MTLTexture>    msaaColorTexture;
+@property (nonatomic, strong) id<MTLTexture>    depthTexture;
+@property (nonatomic, assign) CGSize            lastDrawableSize;
+
+@end
+
+@implementation LDrawRendererMetalDrawState
+@end
+
+
+#pragma mark -
+#pragma mark LDrawRenderer
+#pragma mark -
 
 
 #define WANT_TWOPASS_BOXTEST		0	// this enables the two-pass box-test.  It is actually faster to _not_ do this now that hit testing is optimized.
 
-#define DEBUG_DRAWING				1	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
+// Keep at 0 in normal builds so slow interactive frames can drop to bounds-only.
+// Set to 1 only when debugging: logs FPS and forces full-detail draws.
+#define DEBUG_DRAWING				0
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
 
 static id<MTLCommandQueue>			_commandQueue;
@@ -53,6 +87,20 @@ static const NSUInteger				MaxBuffersInFlight = 3;		// The maximum number of com
 
 static id<MTLBuffer>				_vertexUniformBuffers[MaxBuffersInFlight];
 static NSUInteger					_currentUniformBufferIndex = 0;
+
+
+static const void * kLDrawRendererMetalDrawStateKey = &kLDrawRendererMetalDrawStateKey;
+
+static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
+{
+	LDrawRendererMetalDrawState * state = objc_getAssociatedObject(renderer, kLDrawRendererMetalDrawStateKey);
+	if (state == nil)
+	{
+		state = [LDrawRendererMetalDrawState new];
+		objc_setAssociatedObject(renderer, kLDrawRendererMetalDrawStateKey, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+	}
+	return state;
+}
 
 
 @implementation LDrawRenderer (Metal)
@@ -168,7 +216,7 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 	fragmentUniform.light_source[1]	= light_source1;
 	fragmentUniform.light_model		= lightModel;
 
-	_fragmentUniformBuffer = [device newBufferWithBytes:&fragmentUniform length:sizeof(fragmentUniform) options:MTLResourceStorageModeShared];
+	metalDrawState(self).fragmentUniformBuffer = [device newBufferWithBytes:&fragmentUniform length:sizeof(fragmentUniform) options:MTLResourceStorageModeShared];
 
 	[self setupMarquee: defaultLibrary];
 
@@ -213,7 +261,9 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 //==============================================================================
 - (void)createTexturesForSize:(CGSize)size
 {
-	if (CGSizeEqualToSize(size, _lastDrawableSize)) { return; }
+	LDrawRendererMetalDrawState * state = metalDrawState(self);
+
+	if (CGSizeEqualToSize(size, state.lastDrawableSize)) { return; }
 
 	id<MTLDevice> device = MetalGPU.device;
 
@@ -237,8 +287,8 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 		msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
 	}
 
-	_msaaColorTexture = [device newTextureWithDescriptor:msaaColorTextureDescriptor];
-	[(id<MTLTexture>)_msaaColorTexture setLabel:@"MSAA Color Texture"];
+	state.msaaColorTexture = [device newTextureWithDescriptor:msaaColorTextureDescriptor];
+	[state.msaaColorTexture setLabel:@"MSAA Color Texture"];
 	
 	// Depth texture (also multisampled)
 	MTLTextureDescriptor *depthTextureDescriptor =
@@ -261,10 +311,10 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 		depthTextureDescriptor.storageMode = MTLStorageModePrivate;
 	}
 
-	_depthTexture = [device newTextureWithDescriptor:depthTextureDescriptor];
-	[(id<MTLTexture>)_depthTexture setLabel:@"Depth Texture"];
-	
-	_lastDrawableSize = size;
+	state.depthTexture = [device newTextureWithDescriptor:depthTextureDescriptor];
+	[state.depthTexture setLabel:@"Depth Texture"];
+
+	state.lastDrawableSize = size;
 }
 
 
@@ -303,12 +353,26 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 	NSDate			*startTime			= nil;
 	NSTimeInterval	drawTime			= 0;
 	BOOL			considerFastDraw	= NO;
+	BOOL			boundsOnly			= NO;
 
 	// Wait to ensure only a maximum of `MaxBuffersInFlight` frames are being processed by the GPU at any time.
 	// This prevents the CPU from overwriting buffer data still in use by the GPU, avoiding rendering artefacts.
 	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
 
 	startTime	= [NSDate date];
+
+	// We may need to simplify large models during interactive manipulation.
+	considerFastDraw =		self->isTrackingDrag == YES
+						||	self->isGesturing == YES
+						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
+							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
+							);
+#if DEBUG_DRAWING == 0
+	if (considerFastDraw == YES && self->detailMode == LDrawDetailFast)
+	{
+		boundsOnly = YES;
+	}
+#endif //DEBUG_DRAWING
 
 	id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 	commandBuffer.label = @"Drawable Command Buffer";
@@ -349,7 +413,9 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 		bgColor[3] = backgroundColor[3];
 	}
 
-	renderPassDescriptor.colorAttachments[0].texture = _msaaColorTexture;
+	LDrawRendererMetalDrawState * state = metalDrawState(self);
+
+	renderPassDescriptor.colorAttachments[0].texture = state.msaaColorTexture;
 	renderPassDescriptor.colorAttachments[0].resolveTexture = currentDrawable.texture;
 	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
 	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
@@ -358,7 +424,7 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 																			bgColor[2],
 																			bgColor[3]);
 
-	renderPassDescriptor.depthAttachment.texture = _depthTexture;
+	renderPassDescriptor.depthAttachment.texture = state.depthTexture;
 	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
 	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
 	renderPassDescriptor.depthAttachment.clearDepth = 1.0;
@@ -383,15 +449,16 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 
 	[renderEncoder setVertexBuffer:vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
 
-	[renderEncoder setFragmentBuffer:_fragmentUniformBuffer offset:0 atIndex:BufferIndexFragmentUniforms];
+	[renderEncoder setFragmentBuffer:state.fragmentUniformBuffer offset:0 atIndex:BufferIndexFragmentUniforms];
 
 	// DRAW!
 
 	LDrawShaderRenderer *ren = [[LDrawShaderRenderer alloc] initWithEncoder:renderEncoder
-																	  scale:[self zoomPercentageForGL] / 100.
+																	  scale:[self zoomPercentageForViewport] / 100.
 																  modelView:[camera getModelView]
 																 projection:[camera getProjection]];
 
+	[ren setBoundsOnlyDrawing:boundsOnly];
 	[self->fileBeingDrawn drawSelf:ren];
 
 	[ren finishDraw];
@@ -414,15 +481,15 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 	// send the commands to the GPU
 	[commandBuffer commit];
 
-	// If we just did a full draw, let's see if rotating needs to be
-	// done simply.
+	// If we just did a full draw, see whether interactive manipulation should
+	// drop to bounds-only on the next frame.
 	drawTime = -[startTime timeIntervalSinceNow];
 	if (considerFastDraw == NO)
 	{
 		if ( drawTime > SIMPLIFICATION_THRESHOLD )
-			rotationDrawMode = LDrawGLDrawExtremelyFast;
+			detailMode = LDrawDetailFast;
 		else
-			rotationDrawMode = LDrawGLDrawNormal;
+			detailMode = LDrawDetailNormal;
 	}
 
 	// Timing info

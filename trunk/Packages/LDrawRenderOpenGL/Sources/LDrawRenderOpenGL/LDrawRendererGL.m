@@ -35,7 +35,9 @@
 #define DEBUG_BOUNDING_BOX			0	// attempts to draw debug bounding box visualization on the model.
 
 
-#define DEBUG_DRAWING				0	// print fps of drawing, and never fall back to bounding boxes no matter how slow.
+// Keep at 0 in normal builds so slow interactive frames can drop to bounds-only.
+// Set to 1 only when debugging: logs FPS and forces full-detail draws.
+#define DEBUG_DRAWING				0
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
 
 
@@ -174,23 +176,22 @@
 - (void)draw
 {
 	NSDate			*startTime			= nil;
-	NSUInteger		options 			= DRAW_NO_OPTIONS;
 	NSTimeInterval	drawTime			= 0;
 	BOOL			considerFastDraw	= NO;
+	BOOL			boundsOnly			= NO;
 	
 	startTime	= [NSDate date];
 
-	// We may need to simplify large models if we are spinning the model
-	// or doing part drag-and-drop.
+	// We may need to simplify large models during interactive manipulation.
 	considerFastDraw =		self->isTrackingDrag == YES
 						||	self->isGesturing == YES
 						||	(	[self->fileBeingDrawn respondsToSelector:@selector(draggingDirectives)]
 							 &&	[(id)self->fileBeingDrawn draggingDirectives] != nil
 							);
 #if DEBUG_DRAWING == 0
-	if (considerFastDraw == YES && self->rotationDrawMode == LDrawGLDrawExtremelyFast)
+	if (considerFastDraw == YES && self->detailMode == LDrawDetailFast)
 	{
-		options |= DRAW_BOUNDS_ONLY;
+		boundsOnly = YES;
 	}
 #endif //DEBUG_DRAWING
 
@@ -205,7 +206,7 @@
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	// Make lines look a little nicer; Max width 1.0; 0.5 at 100% zoom
-	glLineWidth(MIN([self zoomPercentageForGL]/100 * 0.5, 1.0));
+	glLineWidth(MIN([self zoomPercentageForViewport]/100 * 0.5, 1.0));
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf([camera getProjection]);
@@ -213,8 +214,9 @@
 	glLoadMatrixf([camera getModelView]);
 
 	// DRAW!
-	LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForGL]/100. modelView:[camera getModelView] projection:[camera getProjection]];
+	LDrawShaderRenderer * ren = [[LDrawShaderRenderer alloc] initWithScale:[self zoomPercentageForViewport]/100. modelView:[camera getModelView] projection:[camera getProjection]];
 	if (ren != nil) {
+		[ren setBoundsOnlyDrawing:boundsOnly];
 		[self->fileBeingDrawn drawSelf:ren];
 		[ren finishDraw];
 	}
@@ -294,15 +296,15 @@
 		[self->delegate LDrawRendererNeedsFlush:self];
 	}
 	
-	// If we just did a full draw, let's see if rotating needs to be
-	// done simply.
+	// If we just did a full draw, see whether interactive manipulation should
+	// drop to bounds-only on the next frame.
 	drawTime = -[startTime timeIntervalSinceNow];
 	if (considerFastDraw == NO)
 	{
 		if ( drawTime > SIMPLIFICATION_THRESHOLD )
-			rotationDrawMode = LDrawGLDrawExtremelyFast;
+			detailMode = LDrawDetailFast;
 		else
-			rotationDrawMode = LDrawGLDrawNormal;
+			detailMode = LDrawDetailNormal;
 	}
 
 	// Timing info

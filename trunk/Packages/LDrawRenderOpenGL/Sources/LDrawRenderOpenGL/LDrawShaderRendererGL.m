@@ -78,6 +78,7 @@ static const char * attribs[] = {
 	}
 	
 	self->scale = initial_scale;
+	boundsOnlyDrawing = NO;
 	
 	[[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
 	glVertexAttrib1f(attr_texture_mix,0.0f);

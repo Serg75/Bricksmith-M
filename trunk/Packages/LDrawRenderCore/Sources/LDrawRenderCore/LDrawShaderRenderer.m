@@ -12,6 +12,7 @@
 #import <LDrawRenderCore/LDrawShaderRendererGPU.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
 #import <LDrawRenderCore/LDrawBDPAllocator.h>
+
 #import <LDrawCore/MatrixMathEx.h>
 #import <LDrawCore/ColorLibrary.h>
 
@@ -53,6 +54,18 @@ static void set_color4fv(float * c, float storage[4])
 //================================================================================
 @implementation LDrawShaderRenderer
 //================================================================================
+
+
+//========== setBoundsOnlyDrawing: =============================================
+//
+// Purpose:		During interactive manipulation, draw bounding boxes instead of
+//				full geometry. LDrawModel honors this via checkCull:cull_box.
+//
+//==============================================================================
+- (void)setBoundsOnlyDrawing:(BOOL)boundsOnly
+{
+	boundsOnlyDrawing = boundsOnly;
+}
 
 
 //========== pushMatrix: =========================================================
@@ -122,6 +135,11 @@ static void set_color4fv(float * c, float storage[4])
 	   aabb_ndc[1] > 1.0f)
 	{
 		return cull_skip;
+	}
+
+	if (boundsOnlyDrawing)
+	{
+		return cull_box;
 	}
 	
 	int x_pix = (aabb_ndc[3] - aabb_ndc[0]) * 512.0;

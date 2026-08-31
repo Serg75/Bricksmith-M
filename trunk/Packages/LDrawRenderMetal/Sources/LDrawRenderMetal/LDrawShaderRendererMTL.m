@@ -54,6 +54,7 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	_renderEncoder = renderEncoder;
 
 	self->scale = initial_scale;
+	boundsOnlyDrawing = NO;
 
 	[[[ColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
 	complimentColor(color_now, compl_now);
