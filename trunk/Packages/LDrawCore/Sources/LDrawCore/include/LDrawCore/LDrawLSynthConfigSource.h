@@ -31,10 +31,9 @@ typedef NS_ENUM(NSInteger, LDrawLSynthClass) {
 };
 
 // LSynth "selection mode" — how synthesized parts are tinted when the
-// directive is selected. Mirrored from BricksmithMac's
-// PreferencesDialogController.h so LDrawCore can read the user's choice
-// directly from NSUserDefaults under LSYNTH_SELECTION_MODE_KEY without
-// pulling in the AppKit preferences UI.
+// directive is selected. Numeric values match the preferences popup tags
+// and LSYNTH_SELECTION_MODE_KEY. The host injects the live value through
+// LDrawLSynthRuntimeSource; LDrawCore does not read NSUserDefaults.
 typedef NS_ENUM(NSInteger, LDrawLSynthSelectionMode) {
     LDrawLSynthSelectionTransparent         = 0,
     LDrawLSynthSelectionColored             = 1,

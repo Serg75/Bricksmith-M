@@ -13,6 +13,7 @@
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPaths.h>
 
 #import <LDrawFeatures/LDrawMinifigureAssembler.h>
 #import <LDrawFeatures/LDrawMinifigureDefaults.h>
@@ -136,7 +137,8 @@
 {
 	self = [super init];
 	
-	iniFile = [LDrawMLCadIni iniFile]; // KVC: XIB binds array controllers to iniFile.minifigure*
+	NSString *iniPath = [[LDrawPaths sharedPaths] MLCadIniPathWithBundledPath:[LDrawMLCadIni bundledIniPathInBundle:[NSBundle mainBundle]]];
+	iniFile = [LDrawMLCadIni sharedIniFileWithPath:iniPath]; // KVC: XIB binds array controllers to iniFile.minifigure*
 	[self setMinifigureName:NSLocalizedString([LDrawHostChrome untitledMinifigureLocalizationKey], nil)];
 	
 	//we'll call -generateMinifigure: when the dialog is ready and loaded with 
@@ -367,7 +369,7 @@
 	]];
 	[spec takeInclusionAndAnglesFromTarget:self];
 
-	[self setMinifigure:[LDrawMinifigureAssembler assembleSpec:spec]];
+	[self setMinifigure:[LDrawMinifigureAssembler assembleSpec:spec iniFile:iniFile]];
 
 }//end generateMinifigure
 

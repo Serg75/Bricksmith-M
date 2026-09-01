@@ -20,7 +20,7 @@
 
 @implementation LDrawPreferences
 
-//---------- ensureDefaults: -----------------------------------------[static]--
+//---------- ensureDefaults:previousPartCategory: --------------------[static]--
 //
 // Purpose:		Verifies that all expected settings exist in preferences. If a
 //				setting is not found, it is restored to its default value.
@@ -28,12 +28,18 @@
 //				This method should be called upon program launch, so that the
 //				rest of the program need not worry about preference
 //				error-checking. The host passes the store (usually
-//				standardUserDefaults).
+//				standardUserDefaults) and the localized default part-browser
+//				category. This method does not call NSLocalizedString.
 //
 //------------------------------------------------------------------------------
 + (void)ensureDefaults:(NSUserDefaults *)userDefaults
+ previousPartCategory:(NSString *)previousPartCategory
 {
 	NSMutableDictionary *initialDefaults = [NSMutableDictionary dictionary];
+	NSString            *category        = previousPartCategory;
+
+	if ([category length] == 0)
+		category = @"Brick";
 
 	//
 	// General
@@ -73,7 +79,7 @@
 	// Part Browser
 	//
 	[initialDefaults setObject:@(LDrawPartBrowserSearchAllCategories)	forKey:PART_BROWSER_SEARCH_MODE];
-	[initialDefaults setObject:NSLocalizedString(@"Brick", nil)	forKey:PART_BROWSER_PREVIOUS_CATEGORY];
+	[initialDefaults setObject:category							forKey:PART_BROWSER_PREVIOUS_CATEGORY];
 	[initialDefaults setObject:@0								forKey:PART_BROWSER_PREVIOUS_SELECTED_ROW];
 	[initialDefaults setObject:@[]								forKey:FAVORITE_PARTS_KEY];
 

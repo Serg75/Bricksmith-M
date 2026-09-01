@@ -17,6 +17,21 @@
 #import <LDrawCore/NSString+LDraw.h>
 
 @implementation PartCatalogBuilder
+{
+	NSString *catalogVersion;
+}
+
+
+//========== setCatalogVersion: ================================================
+//
+// Purpose:		Host app version written into a newly built catalog. Nil falls
+//				back to @"1.0" when scanning.
+//
+//==============================================================================
+- (void)setCatalogVersion:(NSString *)version
+{
+	catalogVersion = [version copy];
+}
 
 //========== makePartCatalogWithDelegate: ======================================
 ///
@@ -203,18 +218,9 @@
 		  progressIncrementHandler:progressIncrementHandler];
 		}
 		
-		NSDictionary *infoDict = [[NSBundle mainBundle] infoDictionary];
-		NSString *version = [infoDict objectForKey:@"CFBundleVersion"];
-		// Fall back to CFBundleShortVersionString if CFBundleVersion is not available
-		if(version == nil)
-		{
-			version = [infoDict objectForKey:@"CFBundleShortVersionString"];
-		}
-		// Use a default version if neither is available
-		if(version == nil)
-		{
+		NSString *version = catalogVersion;
+		if (version == nil)
 			version = @"1.0";
-		}
 		[newPartCatalog setObject:version forKey:VERSION_KEY];
 		[newPartCatalog setObject:@"1.0"  forKey:COMPATIBILITY_VERSION_KEY];
 		

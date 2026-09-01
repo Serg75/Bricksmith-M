@@ -12,7 +12,13 @@
 #import <LDrawCore/LDrawPaths.h>
 
 #import <LDrawCore/LDrawPathNames.h>
-#import <LDrawCore/LDrawKeys.h>
+
+@interface LDrawPaths ()
+{
+	NSString *internalLDrawPath;
+	NSString *bundledLdconfigPath;
+}
+@end
 
 
 @implementation LDrawPaths
@@ -25,29 +31,47 @@
 + (LDrawPaths *)sharedPaths
 {
 	static LDrawPaths *sharedObject = nil;
-	
-	if (sharedObject == nil)
-	{
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
 		sharedObject = [[LDrawPaths alloc] init];
-	}
-	
+	});
 	return sharedObject;
+}
+
+
+//---------- internalLDrawPathInBundle: ------------------------------[static]--
+//
+// Purpose:		Bundled unofficial LDraw tree used for Bricksmith-distributed
+//				parts. The host still calls setInternalLDrawPath:.
+//
+//------------------------------------------------------------------------------
++ (NSString *)internalLDrawPathInBundle:(NSBundle *)bundle
+{
+	return [[bundle resourcePath] stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
+}
+
+
+//---------- bundledLdconfigPathInBundle: ----------------------------[static]--
+//
+// Purpose:		Bundled LDConfig.ldr. The host still prefers LDraw/LDConfig.ldr
+//				when that file exists.
+//
+//------------------------------------------------------------------------------
++ (NSString *)bundledLdconfigPathInBundle:(NSBundle *)bundle
+{
+	return [bundle pathForResource:LDCONFIG ofType:LDCONFIG_EXTENSION];
 }
 
 
 //========== init ==============================================================
 //
-// Purpose:		Initialize the object.
+// Purpose:		Initialize the object. The host still sets the preferred LDraw
+//				folder, bundled unofficial tree, and bundled ldconfig path.
 //
 //==============================================================================
 - (id)init
 {
 	self = [super init];
-	
-	NSUserDefaults  *userDefaults   = [NSUserDefaults standardUserDefaults];
-	
-	self->preferredLDrawPath = [userDefaults stringForKey:LDRAW_PATH_KEY];
-	
 	return self;
 }
 
@@ -64,13 +88,18 @@
 //==============================================================================
 - (NSString *)internalLDrawPath
 {
-	NSBundle		*mainBundle		= nil;
-	NSString		*builtInPath	= nil;
-	
-	mainBundle	= [NSBundle mainBundle];
-	builtInPath	= [[mainBundle resourcePath] stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
-	
-	return builtInPath;
+	return self->internalLDrawPath;
+}
+
+
+//========== setInternalLDrawPath: =============================================
+//
+// Purpose:		Bundled unofficial LDraw tree (host Resources/LDraw).
+//
+//==============================================================================
+- (void)setInternalLDrawPath:(NSString *)pathIn
+{
+	self->internalLDrawPath = pathIn;
 }
 
 
@@ -90,6 +119,17 @@
 - (void)setPreferredLDrawPath:(NSString *)pathIn
 {
 	self->preferredLDrawPath = pathIn;
+}
+
+
+//========== setBundledLdconfigPath: ===========================================
+//
+// Purpose:		Fallback LDConfig.ldr when LDraw/LDConfig.ldr is missing.
+//
+//==============================================================================
+- (void)setBundledLdconfigPath:(NSString *)pathIn
+{
+	self->bundledLdconfigPath = pathIn;
 }
 
 
@@ -180,9 +220,7 @@
 - (NSString *)ldconfigPath
 {
 	NSFileManager	*fileManager	= [[NSFileManager alloc] init];
-	NSBundle		*mainBundle		= nil;
 	NSString		*installedPath	= nil;
-	NSString		*builtInPath	= nil;
 	NSString		*ldconfigPath	= nil;
 	
 	// Try in the LDraw folder first
@@ -196,71 +234,37 @@
 		}
 	}
 	
-	// Try inside the application bundle instead
+	// Try the host-provided bundled copy
 	if (ldconfigPath == nil)
-	{
-		mainBundle	= [NSBundle mainBundle];
-		builtInPath	= [mainBundle pathForResource:LDCONFIG ofType:LDCONFIG_EXTENSION];
-		
-		// Attempt to install it
-		if (builtInPath != nil)
-		{
-			ldconfigPath = builtInPath;
-		}
-	}
-	
+		ldconfigPath = self->bundledLdconfigPath;
+
 	return ldconfigPath;
 	
 } // end ldconfigPath
 
 
-//========== MLCadIniPath ======================================================
+//========== MLCadIniPathWithBundledPath: ======================================
 //
-// Purpose:		Returns the path to a valid MLCad.ini file. By default, this is 
-//				LDraw/MLCad.ini. 
+// Purpose:		Returns the path to a valid MLCad.ini file. By default, this is
+//				LDraw/MLCad.ini.
 //
-//				Because MLCad.ini is a third-party add-on not distributed with 
-//				LDraw, Bricksmith comes bundled with its own copy. But it will 
-//				use the one in LDraw/ if it exists. 
+//				Because MLCad.ini is a third-party add-on not distributed with
+//				LDraw, the host typically bundles its own copy and passes that
+//				path as bundledPath. Prefer the copy in LDraw/ when it exists.
 //
 //==============================================================================
-- (NSString *)MLCadIniPath
+- (NSString *)MLCadIniPathWithBundledPath:(NSString *)bundledPath
 {
 	NSFileManager	*fileManager		= [[NSFileManager alloc] init];
 	NSString		*preferredPath		= [[self preferredLDrawPath] stringByAppendingPathComponent:MLCAD_INI_FILE_NAME];
-	NSString		*actualPath			= nil;
-	
+
 	// we want MLCad.ini to be in the LDraw folder.
 	if ([fileManager isReadableFileAtPath:preferredPath] == YES)
-	{
-		actualPath = preferredPath;
-	}
-	else
-	{
-		// we have to fish it out of the application bundle and install it.
-		NSBundle	*mainBundle		= [NSBundle mainBundle];
-		NSString	*builtInPath	= [mainBundle pathForResource:MLCAD ofType:MLCAD_EXTENSION];
+		return preferredPath;
 
-		actualPath = builtInPath;
-		
-		// Bricksmith used to install MLCad.ini if the user didn't have it. But 
-		// I decided that didn't make a lot of since, since MLCad.ini is not 
-		// part of the official LDraw distribution. People probably wouldn't 
-		// realize they had to upgrade this file. 
-//		BOOL		 installSuccess	= NO;
-//		
-//		installSuccess = [fileManager copyPath:builtInPath toPath:preferredPath handler:nil];
-//		
-//		if (installSuccess == YES)
-//			actualPath = preferredPath;
-//		else
-//			actualPath = builtInPath; //couldn't install; just use our internal copy.
-		
-	}
-	
-	return actualPath;
-	
-} // end preferredPath
+	return bundledPath;
+
+} // end MLCadIniPathWithBundledPath:
 
 
 //========== partCatalogPath ===================================================
@@ -299,48 +303,51 @@
 #pragma mark UTILITIES
 #pragma mark -
 
-//========== findLDrawPath =====================================================
+//========== findLDrawPathRelativeToApplicationPath: ===========================
 //
 // Purpose:		Attempts to search out an LDraw path on the system.
+//				applicationPath is the host app bundle path; nil skips the
+//				two candidates next to the application.
 //
 //==============================================================================
-- (NSString *)findLDrawPath
+- (NSString *)findLDrawPathRelativeToApplicationPath:(NSString *)applicationPath
 {
 	NSInteger   counter                 = 0;
 	BOOL        foundAPath              = NO;
-	
-	NSString    *applicationPath        = [[NSBundle mainBundle] bundlePath];
+
 	NSString    *applicationFolder      = [applicationPath stringByDeletingLastPathComponent];
 	NSString    *siblingFolder          = [applicationFolder stringByDeletingLastPathComponent];
 	NSString    *library                = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSLocalDomainMask, YES) objectAtIndex:0];
 	NSString    *userLibrary            = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask,  YES) objectAtIndex:0];
 	NSString    *applicationSupport     = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSLocalDomainMask,  YES) objectAtIndex:0];
 	NSString    *userApplicationSupport = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask,  YES) objectAtIndex:0];
-	
+
 	// Try User Defaults first; maybe we've already saved one.
 	NSString    *preferencePath         = self->preferredLDrawPath;
 	NSString    *ldrawPath              = preferencePath;
-	
+
 	if (preferencePath == nil)
 		preferencePath = @""; //we're going to add this to an array. Can't have a nil object.
-	
+
 	applicationFolder       = [applicationFolder		stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
 	siblingFolder           = [siblingFolder			stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
 	library                 = [library					stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
 	userLibrary             = [userLibrary				stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
 	applicationSupport      = [applicationSupport		stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
 	userApplicationSupport  = [userApplicationSupport	stringByAppendingPathComponent:LDRAW_DIRECTORY_NAME];
-	
-	// Tries user defaults first, then others
-	NSArray *potentialPaths = @[
-		preferencePath,
-		applicationFolder,
-		siblingFolder,
+
+	NSMutableArray *potentialPaths = [NSMutableArray arrayWithObject:preferencePath];
+	if (applicationPath != nil)
+	{
+		[potentialPaths addObject:applicationFolder];
+		[potentialPaths addObject:siblingFolder];
+	}
+	[potentialPaths addObjectsFromArray:@[
 		applicationSupport,
 		userApplicationSupport,
 		library,
 		userLibrary,
-	];
+	]];
 	for (counter = 0; counter < [potentialPaths count] && foundAPath == NO; counter++)
 	{
 		ldrawPath   = [potentialPaths objectAtIndex:counter];
@@ -352,10 +359,10 @@
 	{
 		ldrawPath = nil;
 	}
-	
+
 	return ldrawPath;
-	
-} // end findLDrawPath
+
+} // end findLDrawPathRelativeToApplicationPath:
 
 
 //========== pathForPartName: ==================================================

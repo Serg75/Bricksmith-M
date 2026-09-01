@@ -1094,6 +1094,8 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
+	[[self->renderer camera] setUseTurntable:USE_TURNTABLE];
+
 	if(self->sceneController != nil)
 	{
 		NSPoint pointInWindow = [theEvent locationInWindow];
@@ -1253,6 +1255,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 		[self makeCurrentContext];
 
+		[[self->renderer camera] setUseTurntable:USE_TURNTABLE];
 		[self->renderer mouseDragged];
 		[self->renderer rotationDragged:dragDelta];
 	}

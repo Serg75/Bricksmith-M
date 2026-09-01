@@ -22,11 +22,10 @@
 #import <LDrawCore/NSString+LDraw.h>
 #import <TargetConditionals.h>
 
-// AppKit/preferences indirection removed (Phase 2e). LDrawCore reads the
-// LSynth selection color from a NSUserDefaults key holding a 4-element
-// array of NSNumber floats (RGBA). The Bricksmith macOS preferences UI
-// keeps writing both this and the legacy archived-NSColor key for
-// backwards compatibility. The selection mode is still a plain integer.
+// AppKit/preferences indirection removed. The host injects an
+// LDrawLSynthRuntimeSource for lsynthcp, the custom config path, and
+// selection-tint settings. Bricksmith's preferences UI still writes the
+// LSYNTH_* keys; this class does not read them.
 
 @implementation LDrawLSynth
 
@@ -35,6 +34,7 @@
 // Stored as a strong reference because the adapter is owned by the
 // application layer.
 static id<LDrawLSynthConfigSource> config_source = nil;
+static id<LDrawLSynthRuntimeSource> runtime_source = nil;
 
 //---------- configSource -------------------------------------------[static]--
 //
@@ -61,14 +61,37 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 }
 
 
+//---------- runtimeSource ------------------------------------------[static]--
+//
+// Purpose:		Return the process-wide LSynth runtime settings installed by
+//				the host at launch.
+//
+//------------------------------------------------------------------------------
++ (id<LDrawLSynthRuntimeSource>)runtimeSource
+{
+    return runtime_source;
+}
+
+
+//---------- setRuntimeSource: --------------------------------------[static]--
+//
+// Purpose:		Install the host's LSynth executable, config, and
+//				selection-tint adapter. LDrawCore does not look up the app
+//				main bundle or standardUserDefaults for those values.
+//
+//------------------------------------------------------------------------------
++ (void)setRuntimeSource:(id<LDrawLSynthRuntimeSource>)source
+{
+    runtime_source = source;
+}
+
+
 //========== getSelectionColorRGBA: ============================================
 //
-// Purpose:		Foundation-only LSynth selection color lookup. Reads an
-//				NSArray of four NSNumber floats from
-//				LSYNTH_SELECTION_COLOR_RGBA_KEY in standard user defaults
-//				and writes the result into the supplied 4-element float
-//				array. Falls back to opaque red if the key is missing or
-//				malformed.
+// Purpose:		Foundation-only LSynth selection color lookup. Delegates to
+//				the injected runtime source and writes the result into the
+//				supplied 4-element float array. Falls back to opaque red if
+//				no source is installed.
 //
 //==============================================================================
 + (void)getSelectionColorRGBA:(float *)outRGBA
@@ -80,17 +103,8 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     outRGBA[2] = 0.0f;
     outRGBA[3] = 1.0f;
 
-    NSArray *components = [[NSUserDefaults standardUserDefaults] arrayForKey:LSYNTH_SELECTION_COLOR_RGBA_KEY];
-    if ([components count] >= 3)
-    {
-        outRGBA[0] = [[components objectAtIndex:0] floatValue];
-        outRGBA[1] = [[components objectAtIndex:1] floatValue];
-        outRGBA[2] = [[components objectAtIndex:2] floatValue];
-        if ([components count] >= 4)
-        {
-            outRGBA[3] = [[components objectAtIndex:3] floatValue];
-        }
-    }
+    if (runtime_source != nil)
+        [runtime_source getSelectionColorRGBA:outRGBA];
 }
 
 
@@ -666,7 +680,10 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     NSString		*commandString	= nil;
     NSUInteger      numberCommands  = 0;
     NSUInteger      counter         = 0;
-    NSUserDefaults *userDefaults    = [NSUserDefaults standardUserDefaults];
+    BOOL            saveSynthesized = YES;
+
+    if (runtime_source != nil)
+        saveSynthesized = [runtime_source saveSynthesizedParts];
     
     // Start
 
@@ -688,7 +705,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 
     // Write out synthesized parts, if there are any to write out
     if ([self->synthesizedParts count] > 0
-        && [userDefaults integerForKey:LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY] == YES) {
+        && saveSynthesized == YES) {
         [written appendString:@"0 SYNTH SYNTHESIZED BEGIN"];
         [written appendString:CRLF];
         for (LDrawPart *part in self->synthesizedParts) {
@@ -1014,17 +1031,10 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     NSString *input = @"";
     Class CommandClass = Nil;
 
-    // Path to lsynth.  If it's unset or whitespace use the built-in default
-    NSUserDefaults *userDefaults   = [NSUserDefaults standardUserDefaults];
-    NSString       *executablePath = [userDefaults stringForKey:LSYNTH_EXECUTABLE_PATH_KEY];
-    NSString       *configPath     = [userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY];
-    NSString       *lsynthPath;
-    if ([executablePath length] == 0 || [executablePath isMatchedByRegex:@"^\\s+$"]) {
-        lsynthPath = [[NSBundle mainBundle] pathForAuxiliaryExecutable:@"lsynthcp"];
-    }
-    else {
-        lsynthPath = executablePath;
-    }
+    // Path to lsynth. Empty/whitespace user preference falls back to the
+    // bundled auxiliary executable on the injected runtime source.
+    NSString *lsynthPath = [runtime_source executablePath];
+    NSString *configPath = [runtime_source configurationPath];
 
     // We run LSynth as follows:
     // - Create an LDraw file in memory
@@ -1051,6 +1061,9 @@ static id<LDrawLSynthConfigSource> config_source = nil;
     (void)lsynthPath;
     return;
 #else
+
+    if ([lsynthPath length] == 0)
+        return;
 
     // Setup the STDIN/OUT pipes and NSTask
     NSTask *task = [[NSTask alloc] init];
@@ -1386,10 +1399,15 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 //==============================================================================
 - (void)colorSelectedSynthesizedParts:(BOOL)yesNo
 {
-    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    LDrawLSynthSelectionMode selectionMode = (LDrawLSynthSelectionMode)[userDefaults integerForKey:LSYNTH_SELECTION_MODE_KEY];
+    LDrawLSynthSelectionMode selectionMode = LDrawLSynthSelectionTransparent;
+    NSInteger transparencyPercent = 20;
     float rgba[4]; // a temporary RGBA color we create and manipulate
     LDrawColor *theColor = [[LDrawColor alloc] init]; // an LDrawColor to set the part's color with
+
+    if (runtime_source != nil) {
+        selectionMode = [runtime_source selectionMode];
+        transparencyPercent = [runtime_source selectionTransparencyPercent];
+    }
 
     // Is the part selected?
     if (yesNo == YES) {
@@ -1397,7 +1415,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
         // Modify the transparency, but use the object's existing color
         if (selectionMode == LDrawLSynthSelectionTransparent) {
             [color getColorRGBA:rgba];
-            rgba[3] = ((float)[userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]) / 100;
+            rgba[3] = ((float)transparencyPercent) / 100;
         }
 
         // Modify the color, with full opacity/no transparency
@@ -1417,7 +1435,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
             rgba[0] = selectionRGBA[0];
             rgba[1] = selectionRGBA[1];
             rgba[2] = selectionRGBA[2];
-            rgba[3] = ((float)[userDefaults integerForKey:LSYNTH_SELECTION_TRANSPARENCY_KEY]) / 100;
+            rgba[3] = ((float)transparencyPercent) / 100;
         }
 
         [theColor setColorRGBA:rgba];

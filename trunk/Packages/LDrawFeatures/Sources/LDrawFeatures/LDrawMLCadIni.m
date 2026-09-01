@@ -26,7 +26,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/LDrawPaths.h>
+#import <LDrawCore/LDrawPathNames.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/NSString+LDraw.h>
 
@@ -53,41 +53,39 @@
 
 @implementation LDrawMLCadIni
 
-static LDrawMLCadIni *sharedIniFile = nil;
-
 #pragma mark -
 #pragma mark INITIALIZATION
 #pragma mark -
 
-//---------- iniFile -------------------------------------------------[static]--
+//---------- bundledIniPathInBundle: ---------------------------------[static]--
 //
-// Purpose:		Parses the MLCad.ini file at the standard location (installing 
-//				it if necessary) and returns an object containing all the known
-//				information therein.
+// Purpose:		Bundled MLCad.ini. The host still prefers LDraw/MLCad.ini when
+//				that file exists (LDrawPaths MLCadIniPathWithBundledPath:).
 //
 //------------------------------------------------------------------------------
-+ (LDrawMLCadIni *) iniFile
++ (NSString *)bundledIniPathInBundle:(NSBundle *)bundle
 {
-	LDrawMLCadIni	*mlcadini	= nil;
-	NSString	    *filePath	= nil;
-	
-	//only parse MLCad.ini once; future invocations will just reuse the shared 
-	// object.
-	if(sharedIniFile == nil)
-	{
-		mlcadini	= [LDrawMLCadIni new];
-		filePath	= [[LDrawPaths sharedPaths] MLCadIniPath];
-		
-		[mlcadini parseFromPath:filePath];
-		
-		sharedIniFile = mlcadini;
-	}
-	else
-		mlcadini = sharedIniFile;
-	
-	return mlcadini;
-	
-}//end iniFile
+	return [bundle pathForResource:MLCAD ofType:MLCAD_EXTENSION];
+}
+
+
+//---------- sharedIniFileWithPath: ----------------------------------[static]--
+//
+// Purpose:		Parses the MLCad.ini file at the given path once and reuses it.
+//				Nil path yields an empty database.
+//
+//------------------------------------------------------------------------------
++ (instancetype)sharedIniFileWithPath:(NSString *)filePath
+{
+	static LDrawMLCadIni *shared = nil;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		shared = [LDrawMLCadIni new];
+		if (filePath != nil)
+			[shared parseFromPath:filePath];
+	});
+	return shared;
+}
 
 //========== init ==============================================================
 //
@@ -391,8 +389,8 @@ static LDrawMLCadIni *sharedIniFile = nil;
 //==============================================================================
 - (void) parseFromPath:(NSString *) path
 {
-	NSString		*fileString 		= [LDrawUtilities stringFromFile:path];
-	NSArray 		*rawLines			= [fileString separateByLine];
+	NSString		*fileString 		= nil;
+	NSArray 		*rawLines			= nil;
 	NSDictionary	*sections			= 0;
 	
 	NSDictionary	*listsForSections	= nil;
@@ -400,7 +398,16 @@ static LDrawMLCadIni *sharedIniFile = nil;
 	NSString		*currentSectionKey	= nil;
 	NSArray 		*sectionLines		= nil;
 	NSArray 		*sectionParts		= nil;
-	
+
+	if (path == nil)
+		return;
+
+	fileString = [LDrawUtilities stringFromFile:path];
+	if (fileString == nil)
+		return;
+
+	rawLines = [fileString separateByLine];
+
 	//---------- cull out all the comments and blank lines ---------------------
 	
 	sections = [self sectionsFromLines:rawLines];

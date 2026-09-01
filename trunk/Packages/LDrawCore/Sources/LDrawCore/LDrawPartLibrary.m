@@ -440,6 +440,47 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 } // end setPartCatalog
 
 
+//========== catalogVersion ====================================================
+//
+// Purpose:		Host app version stamped into a newly scanned catalog.
+//
+//==============================================================================
+- (NSString *)catalogVersion
+{
+	return self->catalogVersion;
+}
+
+
+//========== setCatalogVersion: ================================================
+//
+// Purpose:		Set the version string written when scanning parts. Does not
+//				look up the app main bundle.
+//
+//==============================================================================
+- (void)setCatalogVersion:(NSString *)version
+{
+	self->catalogVersion = [version copy];
+}
+
+
+//---------- catalogVersionInBundle: ---------------------------------[static]--
+//
+// Purpose:		CFBundleVersion, else CFBundleShortVersionString, else @"1.0".
+//
+//------------------------------------------------------------------------------
++ (NSString *)catalogVersionInBundle:(NSBundle *)bundle
+{
+	NSDictionary *infoDict = [bundle infoDictionary];
+	NSString     *version  = [infoDict objectForKey:@"CFBundleVersion"];
+
+	if (version == nil)
+		version = [infoDict objectForKey:@"CFBundleShortVersionString"];
+	if (version == nil)
+		version = @"1.0";
+	return version;
+}
+
+
 #pragma mark -
 #pragma mark ACTIONS
 #pragma mark -
@@ -502,6 +543,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 						 completionHandler:(void (^)(BOOL success))completionHandler
 {
 	PartCatalogBuilder* catalogBuilder = [[PartCatalogBuilder alloc] init];
+	[catalogBuilder setCatalogVersion:self->catalogVersion];
 	
 	[catalogBuilder makePartCatalogWithMaxLoadCountHandler:maxLoadCountHandler
 								  progressIncrementHandler:progressIncrementHandler

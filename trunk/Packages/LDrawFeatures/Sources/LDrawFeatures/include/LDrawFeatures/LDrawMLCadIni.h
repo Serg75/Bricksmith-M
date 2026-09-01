@@ -6,6 +6,10 @@
 //  Purpose:    Parses the contents of LDraw/MLCad.ini, the file which defines
 //              settings for the minifigure generator.
 //
+//  Info:       The host passes a file path, usually LDraw/MLCad.ini when it
+//              exists, otherwise +bundledIniPathInBundle:. Parse does not look
+//              up the app main bundle.
+//
 //  Created by Allen Smith on 7/2/06.
 //  Copyright 2006. All rights reserved.
 //
@@ -47,7 +51,12 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 //Initialization
-+ (LDrawMLCadIni *) iniFile;
+/// Bundled MLCad.ini, or nil if the bundle has no such resource.
++ (nullable NSString *)bundledIniPathInBundle:(NSBundle *)bundle;
+
+/// Process-wide parsed ini. First path wins. Host passes
+/// MLCadIniPathWithBundledPath: plus bundledIniPathInBundle:.
++ (instancetype)sharedIniFileWithPath:(nullable NSString *)filePath;
 
 //Accessors
 - (NSArray *) lsynthVisibleTypes;

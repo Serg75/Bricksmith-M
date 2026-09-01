@@ -979,7 +979,8 @@ PreferencesDialogController *preferencesDialog = nil;
 //------------------------------------------------------------------------------
 + (void) ensureDefaults
 {
-	[LDrawPreferences ensureDefaults:[NSUserDefaults standardUserDefaults]];
+	[LDrawPreferences ensureDefaults:[NSUserDefaults standardUserDefaults]
+				previousPartCategory:NSLocalizedString(@"Brick", nil)];
 
 	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
 	NSMutableDictionary	*initialDefaults	= [NSMutableDictionary dictionary];

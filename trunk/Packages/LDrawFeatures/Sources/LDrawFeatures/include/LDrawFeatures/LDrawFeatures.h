@@ -7,7 +7,8 @@
 //
 //  Info:       Bricksmith feature data layers reusable in an editing host:
 //              LSynth, MLCad, related parts, part browser model, color-panel
-//              packing, LSynth menu/inspector packing, tool mode, grid policy,
+//              packing, LSynth menu/inspector packing, LSynth runtime
+//              (lsynthcp and selection prefs), tool mode, grid policy,
 //              minifigure pose, spec, assembly, and saved settings, and
 //              preferences schema.
 //              Host chrome keys live in LDrawHostKeys.h.
@@ -25,6 +26,7 @@
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
 #import <LDrawFeatures/LDrawLSynthPanelModel.h>
+#import <LDrawFeatures/LDrawLSynthRuntime.h>
 #import <LDrawFeatures/LDrawMinifigureAssembler.h>
 #import <LDrawFeatures/LDrawMinifigureDefaults.h>
 #import <LDrawFeatures/LDrawMinifigurePose.h>

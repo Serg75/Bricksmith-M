@@ -13,17 +13,11 @@
 
 #import <LDrawRenderCore/LDrawCamera.h>
 
-#import <LDrawCore/LDrawKeys.h>
-
 // Normally the doc size is rounded so that it doesn't jump per frame as we nudge; we can turn this OFF to debug editing.
 #define NO_ROUNDING_DOC_SIZE	0
 
 // controls perspective; cameraLocation = modelSize * CAMERA_DISTANCE_FACTOR
 #define CAMERA_DISTANCE_FACTOR	6.5
-
-// Turn-table view changes how rotations work 
-#define USE_TURNTABLE			([[NSUserDefaults standardUserDefaults] integerForKey:ROTATE_MODE_KEY] == LDrawRotateStyleTurntable)
-
 
 #define WALKTHROUGH_NEAR	20.0
 #define WALKTHROUGH_FAR		20000.0
@@ -963,7 +957,7 @@
 				// as we need to convert our drag into a proper rotation 
 				// direction. See notes in function header.
 
-	if (USE_TURNTABLE)
+	if (self.useTurntable)
 	{
 		Tuple3 view_now = [self viewingAngle];
 		if (view_now.x * view_now.y * view_now.z < 0.0)
@@ -994,7 +988,7 @@
 	transformedVectorX = V4MulPointByMatrix(vectorX, inversed);
 	transformedVectorY = V4MulPointByMatrix(vectorY, inversed);
 
-	if (USE_TURNTABLE)
+	if (self.useTurntable)
 	{
 		rotationAboutY = -rotationAboutY;
 		transformedVectorY = vectorY;

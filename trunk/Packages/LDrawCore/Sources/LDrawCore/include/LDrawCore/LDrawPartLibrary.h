@@ -6,6 +6,10 @@
 //  Purpose:    This is the centralized repository for obtaining information
 //              about the contents of the LDraw folder.
 //
+//  Info:       Newly scanned catalogs stamp a host-provided version string
+//              (usually CFBundleVersion). This class does not look up the
+//              app main bundle.
+//
 //  Created by Allen Smith on 3/12/05.
 //  Copyright 2005. All rights reserved.
 //
@@ -66,6 +70,7 @@ extern NSString	*Category_Subparts;
 	NSMutableDictionary		*loadedImages;
 	NSMutableDictionary		*optimizedTextures;
 	NSMutableDictionary     *optimizedRepresentations;	// access stored vertex objects by part name, then color.
+	NSString                *catalogVersion;			// host app version stamped into a newly built catalog
 }
 
 // Shared renderer instance. Renderer packages (LDrawRenderMetal,
@@ -88,6 +93,14 @@ extern NSString	*Category_Subparts;
 - (void)setDelegate:(nullable id<LDrawPartLibraryDelegate>)delegateIn;
 - (void)setFavorites:(NSArray *)favoritesIn;
 - (void)setPartCatalog:(NSDictionary *)newCatalog;
+
+/// Host app version written into a newly scanned catalog. Nil falls back to
+/// @"1.0". Does not change the on-disk catalog key name (Version).
+- (nullable NSString *)catalogVersion;
+- (void)setCatalogVersion:(nullable NSString *)version;
+
+/// CFBundleVersion, else CFBundleShortVersionString, else @"1.0".
++ (NSString *)catalogVersionInBundle:(NSBundle *)bundle;
 
 // Actions
 - (BOOL)load;

@@ -6,6 +6,10 @@
 //  Purpose:    Computes the modelview and projection matrices from viewport
 //              dimensions and user viewing options.
 //
+//  Info:       Turntable vs trackball rotation is a host-injected BOOL
+//              (useTurntable). This class does not read standardUserDefaults
+//              or ROTATE_MODE_KEY.
+//
 //  Created by bsupnik on 9/23/13.
 //  Copyright 2013 __MyCompanyName__. All rights reserved.
 //
@@ -68,6 +72,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, assign) Size2 graphicsSurfaceSize;
 @property (nonatomic, assign) BOOL usesZeroToOneDepth;
+/// YES for turntable orbit (constrain yaw to world up). Host sets this from
+/// ROTATE_MODE_KEY; factory default is NO (trackball).
+@property (nonatomic, assign) BOOL useTurntable;
 
 - (void)	setScroller:(nullable id<LDrawCameraScroller>)newScroller;
 

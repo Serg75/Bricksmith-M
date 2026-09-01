@@ -35,6 +35,7 @@
 // Protocol surface consumed by renderer / feature packages
 #import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawCore/LDrawLSynthConfigSource.h>
+#import <LDrawCore/LDrawLSynthRuntimeSource.h>
 #import <LDrawCore/LDrawMovableDirective.h>
 #import <LDrawCore/LDrawGroupedObject.h>
 

@@ -11,6 +11,7 @@
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawLSynthConfigSource.h>
+#import <LDrawCore/LDrawLSynthRuntimeSource.h>
 #import <LDrawCore/LDrawMovableDirective.h>
 
 // The LSynth LDraw format extensions have several mandatory and several optional directives.
@@ -110,9 +111,14 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable id<LDrawLSynthConfigSource>)configSource;
 + (void)setConfigSource:(nullable id<LDrawLSynthConfigSource>)source;
 
-// Foundation-only selection color lookup; reads
-// LSYNTH_SELECTION_COLOR_RGBA_KEY from standard user defaults. Falls back
-// to opaque red when no preference is set.
+// Host-injected executable/config paths and selection-tint settings. Must
+// be set before synthesize, write, or selection coloring. This class does
+// not look up the app main bundle or standardUserDefaults.
++ (nullable id<LDrawLSynthRuntimeSource>)runtimeSource;
++ (void)setRuntimeSource:(nullable id<LDrawLSynthRuntimeSource>)source;
+
+// Selection color from the injected runtime source. Falls back to opaque
+// red when no source is installed or the preference is missing.
 + (void)getSelectionColorRGBA:(float *)outRGBA;
 
 @end

@@ -33,6 +33,7 @@
 	
 	// Create the part library
 	LDrawPartLibrary *library = [LDrawPartLibrary sharedPartLibrary];
+	[library setCatalogVersion:[LDrawPartLibrary catalogVersionInBundle:[NSBundle mainBundle]]];
 	[library setDelegate:self];
 	
 	return self;

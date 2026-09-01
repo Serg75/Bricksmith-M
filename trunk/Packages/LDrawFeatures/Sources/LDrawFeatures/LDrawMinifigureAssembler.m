@@ -81,6 +81,7 @@ static void RotateParts(Tuple3 degrees, LDrawPart *firstPart, ...)
 //
 //==============================================================================
 + (LDrawMPDModel *)assembleSpec:(LDrawMinifigureSpec *)spec
+						iniFile:(LDrawMLCadIni *)iniFile
 {
 	LDrawMPDModel	*newMinifigure	= [LDrawMPDModel model];
 	LDrawStep		*firstStep		= [[newMinifigure steps] objectAtIndex:0];
@@ -110,7 +111,7 @@ static void RotateParts(Tuple3 degrees, LDrawPart *firstPart, ...)
 	float		armAngle			= 0.0f;
 	if (torso != nil)
 	{
-		armAngle = [[LDrawMLCadIni iniFile] armAngleForTorsoName:[torso referenceName]];
+		armAngle = [iniFile armAngleForTorsoName:[torso referenceName]];
 	}
 
 	///////////////////////////////////////

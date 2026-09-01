@@ -26,6 +26,7 @@
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
 #import <LDrawFeatures/LDrawLSynthPanelModel.h>
+#import <LDrawFeatures/LDrawLSynthRuntime.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
@@ -367,10 +368,16 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 - (void) applicationWillFinishLaunching:(NSNotification *)aNotification
 {
 	NSUserDefaults      *userDefaults   = [NSUserDefaults standardUserDefaults];
-	
+	NSBundle            *bundle         = [NSBundle mainBundle];
+	LDrawPaths          *paths          = [LDrawPaths sharedPaths];
+
 	//Make sure the standard preferences exist so they will be available 
 	// throughout the application.
 	[PreferencesDialogController ensureDefaults];
+
+	[paths setPreferredLDrawPath:[userDefaults stringForKey:LDRAW_PATH_KEY]];
+	[paths setInternalLDrawPath:[LDrawPaths internalLDrawPathInBundle:bundle]];
+	[paths setBundledLdconfigPath:[LDrawPaths bundledLdconfigPathInBundle:bundle]];
 	
 	[LDrawUtilities setColumnizesOutput:[userDefaults boolForKey:COLUMNIZE_OUTPUT_KEY]];
 	[LDrawUtilities setDefaultAuthor:[self userName]];
@@ -381,9 +388,12 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
     self->lsynthConfiguration       = [LSynthConfiguration sharedInstance];
 
     // LDrawCore is AppKit-free, so it cannot reach into LDrawApplication to
-    // resolve the LSynth configuration. Wire the shared LSynthConfiguration
-    // into LDrawLSynth's config-source singleton here.
+    // resolve the LSynth configuration or the bundled lsynthcp. Wire the
+    // shared LSynthConfiguration and a defaults-backed runtime here.
     [LDrawLSynth setConfigSource:self->lsynthConfiguration];
+    [LDrawLSynth setRuntimeSource:[[LDrawLSynthRuntime alloc]
+        initWithUserDefaults:userDefaults
+        bundledExecutablePath:[LDrawLSynthRuntime bundledExecutablePathInBundle:bundle]]];
 
 	[self makeSharedContext];
 	
@@ -601,7 +611,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	NSString        *ldrawPath      = nil;
 	
 	// Search
-	ldrawPath = [paths findLDrawPath];
+	ldrawPath = [paths findLDrawPathRelativeToApplicationPath:[[NSBundle mainBundle] bundlePath]];
 	
 	//We found one.
 	if(ldrawPath != nil)
@@ -630,6 +640,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
     NSMenu				*modelMenu      = [[mainMenu itemWithTag:LDrawModelsMenuTag] submenu];
 	NSMenu				*lsynthMenu     = [[modelMenu itemWithTag:LDrawLSynthMenuTag] submenu];
     NSUserDefaults	    *userDefaults   = [NSUserDefaults standardUserDefaults];
+	NSString			*iniPath		= [[LDrawPaths sharedPaths] MLCadIniPathWithBundledPath:[LDrawMLCadIni bundledIniPathInBundle:[NSBundle mainBundle]]];
+	NSArray				*lsynthMLCADDefaults = [[LDrawMLCadIni sharedIniFileWithPath:iniPath] lsynthVisibleTypes];
 
 	// A declarative encoding of our LSynth menus
 	NSArray *menus = [LDrawLSynthPanelModel applicationMenuSpecs];
@@ -643,7 +655,6 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
         
 		// Retrieve the appropriate data for each menu entry
 
-        NSArray *lsynthMLCADDefaults = [[LDrawMLCadIni iniFile] lsynthVisibleTypes];
         BOOL showOnlyOfficial = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
         NSArray *entries = [self->lsynthConfiguration entriesForMenuKind:(LDrawLSynthMenuKind)[[menuSpec objectForKey:@"kind"] integerValue]];
         BOOL shouldFilter = [[menuSpec valueForKey:@"shouldFilter"] boolValue];

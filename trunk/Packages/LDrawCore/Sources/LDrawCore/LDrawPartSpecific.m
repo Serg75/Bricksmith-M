@@ -22,23 +22,31 @@ static NSDictionary *parts;
 @implementation LDrawPartSpecific
 
 
-//---------- initialize ---------------------------------------------[static]--
+//---------- LoadIfNeeded ------------------------------------------------------
 //
 // Purpose:		Load part-specific rotation data from the bundled JSON file
-//				the first time this class is used.
+//				the first time this class is used after the host has set
+//				internalLDrawPath.
 //
 //------------------------------------------------------------------------------
-+ (void) initialize
+static void LDrawPartSpecificLoadIfNeeded(void)
 {
-	if (self == [LDrawPartSpecific class]) {
+	if (parts != nil)
+		return;
 
-		NSString *filePath = [[[LDrawPaths sharedPaths] internalLDrawPath] stringByAppendingPathComponent:@"parts rotation.json"];
-		NSData *data = [NSData dataWithContentsOfFile:filePath];
-		NSError *error;
-		parts = [NSJSONSerialization JSONObjectWithData:data
-												options:kNilOptions
-												  error:&error];
+	NSString *root = [[LDrawPaths sharedPaths] internalLDrawPath];
+	if (root == nil)
+		return;
+
+	NSString *filePath = [root stringByAppendingPathComponent:@"parts rotation.json"];
+	NSData   *data     = [NSData dataWithContentsOfFile:filePath];
+	if (data == nil)
+	{
+		parts = @{};
+		return;
 	}
+
+	parts = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:NULL] ?: @{};
 }
 
 
@@ -51,6 +59,7 @@ static NSDictionary *parts;
 //==============================================================================
 + (BOOL) hasRotationCenter:(NSString *)partName
 {
+	LDrawPartSpecificLoadIfNeeded();
 	return parts[partName] != nil;
 }
 
@@ -65,6 +74,7 @@ static NSDictionary *parts;
 //==============================================================================
 + (Point3) rotationCenterForPart:(NSString *)partName
 {
+	LDrawPartSpecificLoadIfNeeded();
 	NSString *center = parts[partName];
 	if (center != nil) {
 		NSArray *componets = [center componentsSeparatedByString:@","];
@@ -88,6 +98,7 @@ static NSDictionary *parts;
 //==============================================================================
 + (Point3) rotationPlaneForPart:(NSString *)partName
 {
+	LDrawPartSpecificLoadIfNeeded();
 	NSString *center = parts[partName];
 	if (center != nil) {
 		NSArray *componets = [center componentsSeparatedByString:@","];
