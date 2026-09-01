@@ -14,7 +14,7 @@
 
 #import <objc/message.h>
 #import <LDrawEditing/LDrawInsertion.h>
-#import <LDrawEditing/LDrawViewDrop.h>
+#import <LDrawEditing/LDrawViewportDrop.h>
 
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDirective.h>
@@ -175,7 +175,7 @@
 + (NSArray<NSData *> *)archivedDraggingDataFromSelection:(NSArray *)selection
 									   drawableOriginals:(NSArray * _Nullable * _Nullable)outDrawables
 {
-	NSArray *drawables = [LDrawViewDrop drawableDirectivesInSelection:selection];
+	NSArray *drawables = [LDrawViewportDrop drawableDirectivesInSelection:selection];
 	if (outDrawables != NULL)
 	{
 		*outDrawables = drawables;
@@ -253,18 +253,19 @@
 }
 
 
-//---------- viewDragKindFromSource:destination: ---------------------[static]--
+//---------- viewportDragKindFromSource:destination: -----------------[static]--
 //
 // Purpose:		A drag-and-drop part operation. Local drag is a move; otherwise
 //				copy. The host still maps that to NSDragOperation.
 //
 //------------------------------------------------------------------------------
-+ (LDrawViewDragKind)viewDragKindFromSource:(id)source
++ (LDrawViewportDragKind)viewportDragKindFromSource:(id)source
 								destination:(id)destination
 {
 	if ([self dragOriginatedLocallyFromSource:source destination:destination])
-		return LDrawViewDragKindMove;
-	return LDrawViewDragKindCopy;
+		return LDrawViewportDragKindMove;
+
+	return LDrawViewportDragKindCopy;
 }
 
 
@@ -407,14 +408,14 @@
 }
 
 
-//---------- viewDropPasteboardName ----------------------------------[static]--
+//---------- viewportDropPasteboardName ------------------------------[static]--
 //
 // Purpose:		Just like in -duplicate: and
 //				-outlineView:acceptDrop:item:childIndex:, we appropriate the
 //				pasting architecture to simplify importing the parts.
 //
 //------------------------------------------------------------------------------
-+ (NSString *)viewDropPasteboardName
++ (NSString *)viewportDropPasteboardName
 {
 	return @"BricksmithDragAndDropPboard";
 }
@@ -441,24 +442,24 @@
 }
 
 
-//---------- viewRegisteredDragTypes ---------------------------------[static]--
+//---------- viewportRegisteredDragTypes -----------------------------[static]--
 //
 // Purpose:		Dragging parts around in or between viewports.
 //
 //------------------------------------------------------------------------------
-+ (NSArray<NSString *> *)viewRegisteredDragTypes
++ (NSArray<NSString *> *)viewportRegisteredDragTypes
 {
 	return @[LDrawDraggingPboardType];
 }
 
 
-//---------- viewDragOffsetPasteboardTypes ---------------------------[static]--
+//---------- viewportDragOffsetPasteboardTypes -----------------------[static]--
 //
 // Purpose:		Offset between the click location which originated the drag and
 //				the position of the first dragged directive.
 //
 //------------------------------------------------------------------------------
-+ (NSArray<NSString *> *)viewDragOffsetPasteboardTypes
++ (NSArray<NSString *> *)viewportDragOffsetPasteboardTypes
 {
 	return @[LDrawDraggingInitialOffsetPboardType];
 }

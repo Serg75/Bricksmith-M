@@ -26,6 +26,16 @@ typedef struct {
 	BOOL colorWellEnabled;
 } LSynthSelectionControlEnablement;
 
+/// Model → LSynth submenu contents. Used by +applicationMenuSpecs instead of
+/// getter-selector name strings.
+typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
+	LDrawLSynthMenuParts            = 0,
+	LDrawLSynthMenuHoseTypes        = 1,
+	LDrawLSynthMenuHoseConstraints  = 2,
+	LDrawLSynthMenuBandTypes        = 3,
+	LDrawLSynthMenuBandConstraints  = 4
+};
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LSynthConfiguration
@@ -89,7 +99,7 @@ typedef struct {
 #pragma mark -
 
 /// Configured synthesizable parts.
-- (NSMutableArray *)getParts;
+- (NSArray *)parts;
 
 /// Look up a constraint by part type. Not especially performant.
 - (nullable NSDictionary *)constraintDefinitionForPart:(LDrawPart *)directive;
@@ -109,11 +119,11 @@ typedef struct {
 /// Colored = well only, both = both. The host still sets NSControl enabled.
 + (LSynthSelectionControlEnablement)selectionControlEnablementForMode:(LDrawLSynthSelectionMode)mode;
 
-/// Parts / hose / band types or constraints for an application-menu getter
-/// name (`getParts`, `getHoseTypes`, …). Empty array if unrecognized.
-- (NSArray *)entriesForMenuGetter:(NSString *)getter;
+/// Parts / hose / band types or constraints for a Model → LSynth submenu.
+/// Empty array if unrecognized.
+- (NSArray *)entriesForMenuKind:(LDrawLSynthMenuKind)kind;
 
-/// Declarative encoding of the application Model → LSynth menus: tag, getter,
+/// Declarative encoding of the application Model → LSynth menus: tag, kind,
 /// entry_key, action selector name, and shouldFilter. The host still builds
 /// NSMenuItems.
 + (NSArray *)applicationMenuSpecs;
@@ -178,12 +188,6 @@ typedef struct {
 
 /// New LDrawLSynth with type, class, and color set. The host still inserts it.
 - (LDrawLSynth *)synthesizableDirectiveWithType:(NSString *)type color:(LDrawColor *)color;
-
-/// Preferences open-panel localization keys. The host still localizes.
-+ (NSString *)chooseLSynthExecutableTitleKey;
-+ (NSString *)lsynthExecutableChooserMessageKey;
-+ (NSString *)chooseLSynthConfigurationTitleKey;
-+ (NSString *)lsynthConfigurationChooserMessageKey;
 
 /// Inspector: “(approx. %i pieces)” format. The host still localizes.
 + (NSString *)approximatePieceCountFormatKey;

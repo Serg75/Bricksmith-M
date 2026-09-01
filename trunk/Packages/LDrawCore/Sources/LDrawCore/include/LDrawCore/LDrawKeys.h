@@ -198,7 +198,7 @@ typedef NS_ENUM(NSInteger, LDrawMenuTag)
 //
 // Data types which would otherwise be homeless. LDrawSelectionMode is on
 // LDrawRenderer's delegate (RenderCore cannot depend on Editing). LDrawRotateStyle
-// is read by LDrawCamera. Mouse-drag enums are read by LDrawViewPolicy.
+// is read by LDrawCamera. Mouse-drag enums are read by LDrawViewportPolicy.
 //
 ////////////////////////////////////////////////////////////////////////////////
 

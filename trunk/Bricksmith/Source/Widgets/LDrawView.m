@@ -34,7 +34,7 @@
 #import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
 #import <LDrawEditing/LDrawSceneController.h>
 #import <LDrawEditing/LDrawSelection.h>
-#import <LDrawEditing/LDrawViewPolicy.h>
+#import <LDrawEditing/LDrawViewportPolicy.h>
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
@@ -43,6 +43,7 @@
 #import "FocusRingView.h"
 #import "LDrawApplication.h"
 #import "LDrawDocument.h"
+#import "LDrawHostChrome.h"
 #import "LDrawViewerContainer.h"
 #import "OverlayViewCategory.h"
 #import "UserDefaultsCategory.h"
@@ -267,7 +268,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Drag and Drop support. We only accept drags if we have a document to add 
 	// them to. 
 	if([self->ldrawDelegate respondsToSelector:@selector(LDrawView:acceptDrop:directives:)])
-		[self registerForDraggedTypes:[LDrawClipboard viewRegisteredDragTypes]];
+		[self registerForDraggedTypes:[LDrawClipboard viewportRegisteredDragTypes]];
 	else
 		[self unregisterDraggedTypes];
 		
@@ -567,8 +568,8 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	//We treat 3D as a request for perspective, but any straight-on view can
 	// logically be expected to be displayed orthographically.
-	[self->renderer setProjectionMode:[LDrawViewPolicy projectionModeForViewOrientation:newAngle]];
-	[self->renderer setLocationMode:[LDrawViewPolicy locationModeForViewOrientation:newAngle]];
+	[self->renderer setProjectionMode:[LDrawViewportPolicy projectionModeForViewOrientation:newAngle]];
+	[self->renderer setLocationMode:[LDrawViewportPolicy locationModeForViewOrientation:newAngle]];
 
 	[self saveConfiguration];
 
@@ -892,11 +893,11 @@ static Box2 NSRectToBox2(NSRect rect)
 			case '0':
 			{
 				LDrawViewOrientation orientation = LDrawViewOrientation3D;
-				if([LDrawViewPolicy viewOrientation:&orientation fromHotkeyCharacter:firstCharacter])
+				if([LDrawViewportPolicy viewOrientation:&orientation fromHotkeyCharacter:firstCharacter])
 				{
-					[self setProjectionMode:[LDrawViewPolicy projectionModeForViewOrientation:orientation]];
+					[self setProjectionMode:[LDrawViewportPolicy projectionModeForViewOrientation:orientation]];
 					[self setViewOrientation:orientation];
-					[self setLocationMode:[LDrawViewPolicy locationModeForViewOrientation:orientation]];
+					[self setLocationMode:[LDrawViewportPolicy locationModeForViewOrientation:orientation]];
 				}
 				break;
 			}
@@ -980,7 +981,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	if(self->sceneController != nil)
 	{
-		[self->sceneController mouseMovedToPoint:view_point];
+		[self->sceneController hoverAtPoint:view_point];
 	}
 	else
 	{
@@ -1022,7 +1023,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	{
 		NSPoint pointInWindow = [theEvent locationInWindow];
 		NSPoint pointInView = [self convertPoint:pointInWindow fromView:nil];
-		[self->sceneController mouseDownAtPoint:V2Make(pointInView.x, pointInView.y)];
+		[self->sceneController beginTrackingAtPoint:V2Make(pointInView.x, pointInView.y)];
 	}
 
 	// Reset event tracking flags.
@@ -1059,14 +1060,14 @@ static Box2 NSRectToBox2(NSRect rect)
 
 			// Try waiting for a click-and-hold; that means "begin
 			// drag-and-drop"
-			self->mouseDownTimer = [NSTimer scheduledTimerWithTimeInterval:[LDrawViewPolicy clickAndHoldDelayInterval]
+			self->mouseDownTimer = [NSTimer scheduledTimerWithTimeInterval:[LDrawViewportPolicy clickAndHoldDelayInterval]
 																	target:self
 																  selector:@selector(clickAndHoldTimerFired:)
 																  userInfo:theEvent
 																   repeats:NO ];
 		}
-		else if([LDrawViewPolicy shouldSelectPartsOnMouseDownForDraggingBehavior:draggingBehavior
-																  isOrthographic:([self->renderer projectionMode] == LDrawProjectionModeOrthographic)])
+		else if([LDrawViewportPolicy shouldSelectPartsOnPointerDownForDraggingBehavior:draggingBehavior
+																		isOrthographic:([self->renderer projectionMode] == LDrawProjectionModeOrthographic)])
 		{
 			[self mousePartSelection:theEvent];
 		}
@@ -1097,7 +1098,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	{
 		NSPoint pointInWindow = [theEvent locationInWindow];
 		NSPoint pointInView = [self convertPoint:pointInWindow fromView:nil];
-		[self->sceneController mouseDraggedToPoint:V2Make(pointInView.x, pointInView.y)];
+		[self->sceneController continueTrackingAtPoint:V2Make(pointInView.x, pointInView.y)];
 	}
 
 	[self->renderer mouseDragged];
@@ -1123,10 +1124,10 @@ static Box2 NSRectToBox2(NSRect rect)
 	else if(toolMode == LDrawToolModeRotateSelect)
 	{
 		LDrawRotateSelectDragAction dragAction =
-			[LDrawViewPolicy rotateSelectDragActionForBehavior:draggingBehavior
-										   canBeginDragAndDrop:self->canBeginDragAndDrop
-											selectionIsMarquee:selectionIsMarquee
-												 isPerspective:([self->renderer projectionMode] == LDrawProjectionModePerspective)];
+			[LDrawViewportPolicy rotateSelectDragActionForBehavior:draggingBehavior
+											   canBeginDragAndDrop:self->canBeginDragAndDrop
+												selectionIsMarquee:selectionIsMarquee
+													 isPerspective:([self->renderer projectionMode] == LDrawProjectionModePerspective)];
 		switch(dragAction)
 		{
 			case LDrawRotateSelectDragRotateCamera:
@@ -1162,7 +1163,7 @@ static Box2 NSRectToBox2(NSRect rect)
 
 	[self makeCurrentContext];
 
-	// Snapshot editor drag before mouseUpAtPoint, which clears isTrackingDrag.
+	// Snapshot editor drag before endTrackingAtPoint, which clears isTrackingDrag.
 	// Renderer tracking stays set until renderer mouseUp so camera tools can
 	// still read it for cursors and fast-draw. The marquee stays until
 	// renderer mouseUp so that method can still see it and request a redraw.
@@ -1174,7 +1175,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		didPartSelection      = [self->sceneController didPartSelection];
 		NSPoint pointInWindow = [theEvent locationInWindow];
 		NSPoint pointInView = [self convertPoint:pointInWindow fromView:nil];
-		[self->sceneController mouseUpAtPoint:V2Make(pointInView.x, pointInView.y)];
+		[self->sceneController endTrackingAtPoint:V2Make(pointInView.x, pointInView.y)];
 	}
 
 	[self cancelClickAndHoldTimer];
@@ -1384,7 +1385,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		NSPoint windowPoint     = [theEvent locationInWindow];
 		NSPoint viewPoint       = [self convertPoint:windowPoint fromView:nil];
 		CGFloat scrollDelta		= [theEvent deltaY];
-		CGFloat zoomChange      = [LDrawViewPolicy zoomChangeFactorFromScrollDeltaY:(float)scrollDelta];
+		CGFloat zoomChange      = [LDrawViewportPolicy zoomChangeFactorFromScrollDeltaY:(float)scrollDelta];
 		CGFloat currentZoom     = [self->renderer zoomPercentage];
 
 		[self->renderer setZoomPercentage:(currentZoom * zoomChange)
@@ -1396,11 +1397,11 @@ static Box2 NSRectToBox2(NSRect rect)
 
 		Vector2 scrollDelta = V2Make(theEvent.scrollingDeltaX, theEvent.scrollingDeltaY);
 		scrollDelta = V2MulScalar(scrollDelta,
-			[LDrawViewPolicy scrollDeltaScaleForPreciseScrolling:theEvent.hasPreciseScrollingDeltas]);
+			[LDrawViewportPolicy scrollDeltaScaleForPreciseScrolling:theEvent.hasPreciseScrollingDeltas]);
 
 		Vector2 scrollDelta_viewport =
-			[LDrawViewPolicy scrollDeltaViewportFromEventDelta:scrollDelta
-												   viewFlipped:[self isFlipped]];
+			[LDrawViewportPolicy scrollDeltaViewportFromEventDelta:scrollDelta
+													   viewFlipped:[self isFlipped]];
 
 		[self->renderer scrollBy:scrollDelta_viewport];
 	}
@@ -1472,7 +1473,7 @@ static Box2 NSRectToBox2(NSRect rect)
 																 firstPosition:firstPosition];
 
 			// write displacement to private pasteboard.
-			[pasteboard addTypes:[LDrawClipboard viewDragOffsetPasteboardTypes] owner:self];
+			[pasteboard addTypes:[LDrawClipboard viewportDragOffsetPasteboardTypes] owner:self];
 			[pasteboard setData:[NSData dataWithBytes:&displacement length:sizeof(Vector3)]
 						forType:LDrawDraggingInitialOffsetPboardType];
 
@@ -1587,8 +1588,8 @@ static Box2 NSRectToBox2(NSRect rect)
 	if([theEvent type] == NSEventTypeLeftMouseDragged)
 	{
 
-		[self->sceneController mouseSelectionDragToPoint:V2Make(viewPoint.x, viewPoint.y)
-										   selectionMode:marqueeSelectionMode];
+		[self->sceneController selectionDragToPoint:V2Make(viewPoint.x, viewPoint.y)
+									  selectionMode:marqueeSelectionMode];
 
 		[self setNeedsDisplay:YES];
 	}
@@ -1605,8 +1606,8 @@ static Box2 NSRectToBox2(NSRect rect)
 
 		// This click is a click down to see what we hit - record whether we hit something so
 		// we can then marquee or drag and drop.
-		selectionIsMarquee = ![self->sceneController mouseSelectionClickAtPoint:V2Make(viewPoint.x, viewPoint.y)
-																  selectionMode:selectionMode]
+		selectionIsMarquee = ![self->sceneController selectionClickAtPoint:V2Make(viewPoint.x, viewPoint.y)
+															 selectionMode:selectionMode]
 						&& [self->ldrawDelegate respondsToSelector:@selector(markPreviousSelection)];
 		if(selectionIsMarquee)
 		{
@@ -1615,7 +1616,7 @@ static Box2 NSRectToBox2(NSRect rect)
 			// scroll zone this will continuously scroll.  I do _not_ know what the correct scrolling interval should be...
 			// auto-scroll seems jerky.
 			self->marqueeSelectionMode = selectionMode;
-			self->autoscrollTimer = [NSTimer scheduledTimerWithTimeInterval:[LDrawViewPolicy marqueeAutoscrollInterval]
+			self->autoscrollTimer = [NSTimer scheduledTimerWithTimeInterval:[LDrawViewportPolicy marqueeAutoscrollInterval]
 																	 target:self
 																   selector:@selector(autoscrollTimerFired:)
 																   userInfo:self
@@ -1781,7 +1782,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	NSPoint windowPoint     = [theEvent locationInWindow];
 	NSPoint viewPoint       = [self convertPoint:windowPoint fromView:nil];
 	CGFloat magnification   = [theEvent magnification]; // 1 = increase 100%; -1 = decrease 100%
-	CGFloat zoomChange      = [LDrawViewPolicy zoomChangeFactorFromMagnification:magnification];
+	CGFloat zoomChange      = [LDrawViewportPolicy zoomChangeFactorFromMagnification:magnification];
 	CGFloat currentZoom     = [self->renderer zoomPercentage];
 
 	//Negative means down
@@ -1828,7 +1829,7 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) swipeWithEvent:(NSEvent *)theEvent
 {
-	switch([LDrawViewPolicy stepActionForSwipeDeltaX:[theEvent deltaX]])
+	switch([LDrawViewportPolicy stepActionForSwipeDeltaX:[theEvent deltaX]])
 	{
 		case LDrawSwipeStepNone:
 			// vertical swipe; we don't recognize them.
@@ -1872,7 +1873,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	BOOL					originatedLocally	= [LDrawClipboard dragOriginatedLocallyFromSource:sourceView
 																					  destination:self];
 
-	if([LDrawClipboard viewDragKindFromSource:sourceView destination:self] == LDrawViewDragKindMove)
+	if([LDrawClipboard viewportDragKindFromSource:sourceView destination:self] == LDrawViewportDragKindMove)
 		dragOperation = NSDragOperationMove;
 	else
 		dragOperation = NSDragOperationCopy;
@@ -1918,7 +1919,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	// Drag point is always inside view. But if it's close to the edges, we
 	// autoscroll. This matches the out-of-box behavior provided by AppKit for
 	// views within an NSScrollView.
-	float autoscrollInset = [LDrawViewPolicy autoscrollInset];
+	float autoscrollInset = [LDrawViewportPolicy autoscrollInset];
 	NSRect noAutoscrollZone = NSInsetRect(self.bounds, autoscrollInset, autoscrollInset);
 	BOOL needsAutoscroll = NSPointInRect(viewPoint, noAutoscrollZone) == NO; // implies we are in the margin
 	if(needsAutoscroll)
@@ -1927,7 +1928,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	}
 	
 	// local drag?
-	if([LDrawClipboard viewDragKindFromSource:sourceView destination:self] == LDrawViewDragKindMove)
+	if([LDrawClipboard viewportDragKindFromSource:sourceView destination:self] == LDrawViewportDragKindMove)
 		dragOperation = NSDragOperationMove;
 	else
 		dragOperation = NSDragOperationCopy;
@@ -2403,9 +2404,9 @@ static Box2 NSRectToBox2(NSRect rect)
 	
 	if(newColor == nil)
 	{
-		switch([LDrawPreferences colorFallbackForPreferenceKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY])
+		switch([LDrawHostChrome colorFallbackForPreferenceKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY])
 		{
-			case LDrawPreferenceColorFallbackControlBackground:
+			case LDrawHostColorFallbackControlBackground:
 			default:
 				newColor = [NSColor controlBackgroundColor];
 				break;

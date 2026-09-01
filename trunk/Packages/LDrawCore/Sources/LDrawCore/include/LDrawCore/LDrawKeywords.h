@@ -12,6 +12,8 @@
 #ifndef LDrawKeywords_h
 #define LDrawKeywords_h
 
+#import <Foundation/Foundation.h>
+
 // MPD
 #define LDRAW_MPD_SUBMODEL_START				@"FILE"
 #define LDRAW_MPD_SUBMODEL_END					@"NOFILE"

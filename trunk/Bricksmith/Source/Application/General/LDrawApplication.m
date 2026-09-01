@@ -24,14 +24,15 @@
 #import <LDrawCore/LDrawPaths.h>
 
 #import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawHostKeys.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
-#import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
 #import "DonationDialogController.h"
 #import "Inspector.h"
 #import "LDrawColorPanelController.h"
 #import "LDrawDocument.h"
+#import "LDrawHostChrome.h"
 #import "PartBrowserPanelController.h"
 #import "PartLibraryController.h"
 #import "PreferencesDialogController.h"
@@ -433,7 +434,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		[[[PartBrowserPanelController sharedPartBrowserPanel] window] makeKeyAndOrderFront:self];
 	}
 	
-	[[NSDocumentController sharedDocumentController] setAutosavingDelay:[LDrawPreferences documentAutosavingDelay]];
+	[[NSDocumentController sharedDocumentController] setAutosavingDelay:[LDrawHostChrome documentAutosavingDelay]];
 	
 }//end applicationDidFinishLaunching:
 
@@ -639,11 +640,11 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		
         [elementMenu removeAllItems];
         
-		// Retrieve the appropriate data for each menu entry, based on the getter given above
+		// Retrieve the appropriate data for each menu entry
 
         NSArray *lsynthMLCADDefaults = [[LDrawMLCadIni iniFile] lsynthVisibleTypes];
         BOOL showOnlyOfficial = [userDefaults boolForKey:LSYNTH_SHOW_BASIC_PARTS_LIST_KEY];
-        NSArray *entries = [self->lsynthConfiguration entriesForMenuGetter:[menuSpec objectForKey:@"getter"]];
+        NSArray *entries = [self->lsynthConfiguration entriesForMenuKind:(LDrawLSynthMenuKind)[[menuSpec objectForKey:@"kind"] integerValue]];
         BOOL shouldFilter = [[menuSpec valueForKey:@"shouldFilter"] boolValue];
         
         for (NSDictionary *entry in entries)

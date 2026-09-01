@@ -17,11 +17,12 @@
 #import <LDrawCore/NSString+LDraw.h>
 
 #import <LDrawEditing/LDrawInspection.h>
-#import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LDrawColorPanelModel.h>
 
 #import "LDrawColorBar.h"
 #import "LDrawColorCell.h"
 #import "LDrawColorWell.h"
+#import "LDrawHostChrome.h"
 
 @implementation LDrawColorPanelController
 
@@ -123,8 +124,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (LDrawColor *) LDrawColor
 {
 	NSArray		*selection			= [self->colorListController selectedObjects];
-	LDrawColor	*selectedColor		= [LDrawColorLibrary colorFromListSelection:selection
-															 fallbackColor:[colorBar LDrawColor]];
+	LDrawColor	*selectedColor		= [LDrawColorPanelModel colorFromListSelection:selection
+																fallbackColor:[colorBar LDrawColor]];
 	
 	return selectedColor;
 	
@@ -143,7 +144,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	//Try to find the color we are after in the current list.
 	NSInteger rowToSelect = [self indexOfColor:newColor]; //will be the row index for the color we want.
 	
-	if([LDrawColorLibrary shouldClearColorFilterWhenIndexNotFound:rowToSelect])
+	if([LDrawColorPanelModel shouldClearColorFilterWhenIndexNotFound:rowToSelect])
 	{
 		//It wasn't in the currently-displayed list. Search the master list.
 		[self->colorListController setFilterPredicate:nil];
@@ -151,7 +152,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	}
 	
 	//We'd better have found it by now!
-	if([LDrawColorLibrary canSelectColorAtRowIndex:rowToSelect])
+	if([LDrawColorPanelModel canSelectColorAtRowIndex:rowToSelect])
 	{
 		[self->colorListController setSelectionIndex:rowToSelect];
 		[colorBar setLDrawColor:newColor];
@@ -289,8 +290,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (NSInteger) indexOfColor:(LDrawColor *)colorSought
 {
-	return [LDrawColorLibrary indexOfColor:colorSought
-								  inColors:[self->colorListController arrangedObjects]];
+	return [LDrawColorPanelModel indexOfColor:colorSought
+									 inColors:[self->colorListController arrangedObjects]];
 }//end indexOfColor:
 
 
@@ -314,7 +315,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	NSUserDefaults		*userDefaults			= [NSUserDefaults standardUserDefaults];
 	
 	// Get the object from preferences.
-	savedDescriptorData = [userDefaults objectForKey:[LDrawPreferences colorTableSortDescriptorsPreferenceKey]];
+	savedDescriptorData = [userDefaults objectForKey:[LDrawHostChrome colorTableSortDescriptorsPreferenceKey]];
 	if(savedDescriptorData != nil) {
 		NSError *unarchiveError = nil;
 		NSSet *allowedClasses = [NSSet setWithObjects:[NSArray class], [NSSortDescriptor class], nil];
@@ -351,7 +352,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	LDrawColor			*currentColor				= [self LDrawColor];
 	NSInteger			indexOfPreviousSelection	= 0;
 	
-	searchPredicate = [LDrawColorLibrary predicateForSearchString:searchString material:materialType];
+	searchPredicate = [LDrawColorPanelModel predicateForSearchString:searchString material:materialType];
 	
 	//Update the table with our results.
 	[self->colorListController setFilterPredicate:searchPredicate];
@@ -359,7 +360,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	// The array controller will automatically maintain the selection if it can.
 	// But if it can't, we need to come up a reasonable new answer.
 	indexOfPreviousSelection = [self indexOfColor:currentColor];
-	if([LDrawColorLibrary shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
+	if([LDrawColorPanelModel shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
 	{
 		[self->colorListController setSelectionIndex:0];
 	}
@@ -404,7 +405,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 		NSUserDefaults	*userDefaults			= [NSUserDefaults standardUserDefaults];
 		
 		// Set the object in preferences.
-		[userDefaults setObject:savedDescriptorData forKey:[LDrawPreferences colorTableSortDescriptorsPreferenceKey]];
+		[userDefaults setObject:savedDescriptorData forKey:[LDrawHostChrome colorTableSortDescriptorsPreferenceKey]];
 	}
 	
 }//end observeValueForKeyPath:ofObject:change:context:

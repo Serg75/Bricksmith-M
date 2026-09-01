@@ -25,10 +25,11 @@
 
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/NSString+LDraw.h>
-#import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LDrawHostKeys.h>
 
 #import "LDrawColorPanelController.h"
 #import "LDrawColorWell.h"
+#import "LDrawHostChrome.h"
 
 ToolPalette *sharedToolPalette = nil;
 
@@ -212,7 +213,7 @@ ToolPalette *sharedToolPalette = nil;
 - (void) hideToolPalette:(id)sender
 {
 	//record this preference.
-	[LDrawPreferences setToolPaletteHidden:YES];
+	[LDrawHostChrome setToolPaletteHidden:YES];
 	
 	//open the window.
 	[palettePanel close];
@@ -228,7 +229,7 @@ ToolPalette *sharedToolPalette = nil;
 - (void) showToolPalette:(id)sender
 {
 	//record this preference.
-	[LDrawPreferences setToolPaletteHidden:NO];
+	[LDrawHostChrome setToolPaletteHidden:NO];
 	
 	//open the window.
 	[palettePanel orderFront:self];
@@ -406,7 +407,7 @@ ToolPalette *sharedToolPalette = nil;
 //==============================================================================
 - (BOOL) windowShouldClose:(id)sender
 {
-	[LDrawPreferences setToolPaletteHidden:YES];
+	[LDrawHostChrome setToolPaletteHidden:YES];
 	
 	return YES;
 	

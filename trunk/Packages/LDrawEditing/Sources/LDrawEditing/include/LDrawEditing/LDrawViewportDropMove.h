@@ -1,10 +1,10 @@
 //==============================================================================
 //
-//  File:       LDrawViewDropMove.h
+//  File:       LDrawViewportDropMove.h
 //  Package:    LDrawEditing
 //
 //  Purpose:    Drawable original plus the displacement to apply after a
-//              same-document 3D-view drop.
+//              same-document 3D-viewport drop.
 //
 //  Created by Sergey Slobodenyuk on 2023-02-10.
 //
@@ -20,13 +20,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawViewDropMove
+/// @class      LDrawViewportDropMove
 ///
 /// @abstract   Drawable original plus the displacement to apply after a
-///             same-document 3D-view drop.
+///             same-document 3D-viewport drop.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawViewDropMove : NSObject
+@interface LDrawViewportDropMove : NSObject
 
 @property (nonatomic, strong) LDrawDrawableElement *directive;
 @property (nonatomic, assign) Vector3 displacement;

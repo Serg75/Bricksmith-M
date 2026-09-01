@@ -1,39 +1,40 @@
 //==============================================================================
 //
-//  File:       LDrawViewDrop.m
+//  File:       LDrawViewportDrop.m
 //  Package:    LDrawEditing
 //
-//  Purpose:    3D-view drop moves and hidden originals after a drag leaves the document.
+//  Purpose:    3D-viewport drop moves and hidden originals after a drag leaves
+//              the document.
 //
 //  Created by Sergey Slobodenyuk on 2023-02-10.
 //
 //==============================================================================
 
-#import <LDrawEditing/LDrawViewDrop.h>
+#import <LDrawEditing/LDrawViewportDrop.h>
 
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/MatrixMath.h>
 
-@implementation LDrawViewDrop
+@implementation LDrawViewportDrop
 
-//---------- viewDropPasteUndoActionKey ------------------------------[static]--
+//---------- viewportDropPasteUndoActionKey --------------------------[static]--
 //
-// Purpose:		The user has deposited some drag-and-drop parts into an
-//				LDrawView (paste path, not same-document move). The host still
+// Purpose:		The user has deposited some drag-and-drop parts into a 3D
+//				viewport (paste path, not same-document move). The host still
 //				localizes.
 //
 //------------------------------------------------------------------------------
-+ (NSString *)viewDropPasteUndoActionKey
++ (NSString *)viewportDropPasteUndoActionKey
 {
 	return @"UndoDrop";
 }
 
 
-//---------- viewDropIsSameDocumentMoveFromSource:toDocument:selectionCount:
+//---------- viewportDropIsSameDocumentMoveFromSource:toDocument:selectionCount:
 //																     [static]--
 //
-// Purpose:		The user has deposited some drag-and-drop parts into an
-//				LDrawView. Now they need to be imported into the model.
+// Purpose:		The user has deposited some drag-and-drop parts into a 3D
+//				viewport. Now they need to be imported into the model.
 //
 // Notes:		Just like in -duplicate: and
 //				-outlineView:acceptDrop:item:childIndex:, we appropriate the
@@ -48,9 +49,9 @@
 //				the AppKit dragging source and pastes or moves (undo).
 //
 //------------------------------------------------------------------------------
-+ (BOOL)viewDropIsSameDocumentMoveFromSource:(nullable id)sourceFile
-								  toDocument:(nullable id)documentFile
-							  selectionCount:(NSInteger)selectionCount
++ (BOOL)viewportDropIsSameDocumentMoveFromSource:(nullable id)sourceFile
+									  toDocument:(nullable id)documentFile
+								  selectionCount:(NSInteger)selectionCount
 {
 	return sourceFile != nil
 		&& sourceFile == documentFile
@@ -58,15 +59,15 @@
 }
 
 
-//---------- viewDropMovesForSelection:droppedCopies: ----------------[static]--
+//---------- viewportDropMovesForSelection:droppedCopies: ------------[static]--
 //
 // Purpose:		Pair selected drawables with dropped copies in order, then
 //				compute the displacement from each original to its drag copy.
 //				The host still applies the move (undo) and unhides the original.
 //
 //------------------------------------------------------------------------------
-+ (NSArray *)viewDropMovesForSelection:(NSArray *)selection
-						 droppedCopies:(NSArray *)droppedCopies
++ (NSArray *)viewportDropMovesForSelection:(NSArray *)selection
+							 droppedCopies:(NSArray *)droppedCopies
 {
 	NSMutableArray *moves              = [NSMutableArray array];
 	NSInteger       dropDirectiveIndex = 0;
@@ -85,8 +86,8 @@
 			Point3  dragPosition     = [(LDrawDrawableElement *)dragPart position];
 			Vector3 displacement     = V3Sub(dragPosition, originalPosition);
 
-			[moves addObject:[[LDrawViewDropMove alloc] initWithDirective:currentDirective
-															 displacement:displacement]];
+			[moves addObject:[[LDrawViewportDropMove alloc] initWithDirective:currentDirective
+																 displacement:displacement]];
 			dropDirectiveIndex++;
 		}
 	}
@@ -94,31 +95,31 @@
 }
 
 
-//---------- viewDragOblivionDirectivesFromSelection: ----------------[static]--
+//---------- viewportDragOblivionDirectivesFromSelection: ------------[static]--
 //
 // Purpose:		Now that we know they are really truly gone, we need to delete
 //				their hidden ghosts.
 //
 //------------------------------------------------------------------------------
-+ (NSArray *)viewDragOblivionDirectivesFromSelection:(NSArray *)selection
++ (NSArray *)viewportDragOblivionDirectivesFromSelection:(NSArray *)selection
 {
 	return [self drawableDirectivesInSelection:selection];
 }
 
 
-//---------- unhideDirectivesInViewDropMoves: ------------------------[static]--
+//---------- unhideDirectivesInViewportDropMoves: --------------------[static]--
 //
 // Purpose:		The host still moveDirective: (undo) after a same-document drop.
 //
 //------------------------------------------------------------------------------
-+ (void)unhideDirectivesInViewDropMoves:(NSArray *)moves
++ (void)unhideDirectivesInViewportDropMoves:(NSArray *)moves
 {
-	for (LDrawViewDropMove *move in moves)
+	for (LDrawViewportDropMove *move in moves)
 		[move.directive setHidden:NO];
 }
 
 
-//---------- restoreVisibilityBeforeDeletingViewDragOblivionDirectives:
+//---------- restoreVisibilityBeforeDeletingViewportDragOblivionDirectives:
 //                                                          [static]--
 //
 // Purpose:		Even though the directive has been drag-deleted, we still need
@@ -127,7 +128,7 @@
 //				began.
 //
 //------------------------------------------------------------------------------
-+ (void)restoreVisibilityBeforeDeletingViewDragOblivionDirectives:(NSArray *)directives
++ (void)restoreVisibilityBeforeDeletingViewportDragOblivionDirectives:(NSArray *)directives
 {
 	for (id directive in directives)
 	{

@@ -1,23 +1,23 @@
 //==============================================================================
 //
-//  File:       LDrawViewDropMove.m
+//  File:       LDrawViewportDropMove.m
 //  Package:    LDrawEditing
 //
 //  Purpose:    Drawable original plus the displacement to apply after a
-//              same-document 3D-view drop.
+//              same-document 3D-viewport drop.
 //
 //  Created by Sergey Slobodenyuk on 2023-02-10.
 //
 //==============================================================================
 
-#import <LDrawEditing/LDrawViewDropMove.h>
+#import <LDrawEditing/LDrawViewportDropMove.h>
 
-@implementation LDrawViewDropMove
+@implementation LDrawViewportDropMove
 
 //========== initWithDirective:displacement: ==================================
 //
 // Purpose:		Record one drawable and the displacement applied during a 3D-
-//				view drop so the host can undo the move.
+//				viewport drop so the host can undo the move.
 //
 //==============================================================================
 - (instancetype)initWithDirective:(LDrawDrawableElement *)directive

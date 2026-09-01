@@ -1,10 +1,11 @@
 //==============================================================================
 //
-//  File:       LDrawViewPolicy.h
+//  File:       LDrawViewportPolicy.h
 //  Package:    LDrawEditing
 //
-//  Purpose:    Foundation-only zoom, scroll, and mouse-drag policies for the 3D
-//              view. The host still reads NSEvent and drives the renderer.
+//  Purpose:    Foundation-only zoom, scroll, and pointer-drag policies for the
+//              3D viewport. The host still reads platform events and drives
+//              the renderer.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-27.
 //
@@ -18,7 +19,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// What LDrawToolModeRotateSelect does during mouseDragged for the current drag prefs.
+/// What LDrawToolModeRotateSelect does during a pointer-drag for the current drag prefs.
 typedef NS_ENUM(NSInteger, LDrawRotateSelectDragAction) {
 	LDrawRotateSelectDragRotateCamera       = 0,
 	LDrawRotateSelectDragDirectInteraction  = 1,
@@ -35,13 +36,14 @@ typedef NS_ENUM(NSInteger, LDrawSwipeStepAction) {
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawViewPolicy
+/// @class      LDrawViewportPolicy
 ///
-/// @abstract   Foundation-only zoom, scroll, and mouse-drag policies for the 3D
-///             view. The host still reads NSEvent and drives the renderer.
+/// @abstract   Foundation-only zoom, scroll, and pointer-drag policies for the
+///             3D viewport. The host still reads platform events and drives
+///             the renderer.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawViewPolicy : NSObject
+@interface LDrawViewportPolicy : NSObject
 
 /// Magnification asymptote: delta / (|delta| + 17). Zoom change is 1 + that.
 /// Preserves the Purpose comment from LDrawView scrollWheel:.
@@ -58,13 +60,13 @@ typedef NS_ENUM(NSInteger, LDrawSwipeStepAction) {
 + (float)autoscrollInset;
 
 /// BeginImmediately, or ImmediatelyInOrtho when orthographic → select now.
-+ (BOOL)shouldSelectPartsOnMouseDownForDraggingBehavior:(LDrawMouseDragBehavior)behavior
-										 isOrthographic:(BOOL)orthographic;
++ (BOOL)shouldSelectPartsOnPointerDownForDraggingBehavior:(LDrawMouseDragBehavior)behavior
+										   isOrthographic:(BOOL)orthographic;
 
 /// Delay before click-and-hold becomes drag-and-drop (0.25 s).
 + (NSTimeInterval)clickAndHoldDelayInterval;
 
-/// Rotate-select mouseDragged action from drag prefs and tracking state.
+/// Rotate-select pointer-drag action from drag prefs and tracking state.
 + (LDrawRotateSelectDragAction)rotateSelectDragActionForBehavior:(LDrawMouseDragBehavior)behavior
 											 canBeginDragAndDrop:(BOOL)canBeginDragAndDrop
 											  selectionIsMarquee:(BOOL)selectionIsMarquee

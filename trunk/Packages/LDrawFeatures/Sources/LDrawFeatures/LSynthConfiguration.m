@@ -16,16 +16,6 @@
 #import <LDrawCore/LDrawLSynth.h>
 #import <LDrawCore/LDrawPart.h>
 
-@interface LSynthConfiguration ()
-- (NSMutableArray *)getHoseTypes;
-- (NSMutableArray *)getBandTypes;
-- (NSMutableArray *)getHoseConstraints;
-- (NSMutableArray *)getBandConstraints;
-- (NSMutableArray *)getQuickRefBands;
-- (NSMutableArray *)getQuickRefHoses;
-- (NSMutableArray *)getQuickRefParts;
-@end
-
 @implementation LSynthConfiguration
 
 #pragma mark -
@@ -372,10 +362,10 @@ static LSynthConfiguration* instance = nil;
     // based on a matching band or hose type.  Not performant, but run only once at startup.
 
     for (NSMutableDictionary *part in tmp_parts) {
-        if ([[self getQuickRefBands] containsObject:part[@"method"]]) {
+        if ([self->quickRefBands containsObject:part[@"method"]]) {
             part[@"LSYNTH_CLASS"] = @(LDrawLSynthClassBand);
         }
-        else if ([[self getQuickRefHoses] containsObject:part[@"method"]]) {
+        else if ([self->quickRefHoses containsObject:part[@"method"]]) {
             part[@"LSYNTH_CLASS"] = @(LDrawLSynthClassHose);
         }
         [parts addObject:part];
@@ -404,84 +394,14 @@ static LSynthConfiguration* instance = nil;
 
 // TODO: move to properties
 
-//========== getParts =========================================================
+//========== parts ============================================================
 //
 // Purpose:		Return configured synthesizable parts.
 //
 //==============================================================================
-- (NSMutableArray *)getParts
+- (NSArray *)parts
 {
     return self->parts;
-}
-
-//========== getHoseTypes =====================================================
-//
-// Purpose:		Return configured hose types.
-//
-//==============================================================================
-- (NSMutableArray *)getHoseTypes
-{
-    return self->hose_types;
-}
-
-//========== getHoseConstraints ===============================================
-//
-// Purpose:		Return configured hose constraints.
-//
-//==============================================================================
-- (NSMutableArray *)getHoseConstraints
-{
-    return self->hose_constraints;
-}
-
-//========== getBandTypes =====================================================
-//
-// Purpose:		Return configured band types.
-//
-//==============================================================================
-- (NSMutableArray *)getBandTypes
-{
-    return self->band_types;
-}
-
-//========== getBandConstraints ===============================================
-//
-// Purpose:		Return configured band constraints.
-//
-//==============================================================================
-- (NSMutableArray *)getBandConstraints
-{
-    return self->band_constraints;
-}
-
-//========== getQuickRefBands =================================================
-//
-// Purpose:		Return the band types shown in the quick-reference menu.
-//
-//==============================================================================
-- (NSMutableArray *)getQuickRefBands
-{
-    return self->quickRefBands;
-}
-
-//========== getQuickRefHoses =================================================
-//
-// Purpose:		Return the hose types shown in the quick-reference menu.
-//
-//==============================================================================
-- (NSMutableArray *)getQuickRefHoses
-{
-    return self->quickRefHoses;
-}
-
-//========== getQuickRefParts =================================================
-//
-// Purpose:		Return the parts shown in the quick-reference menu.
-//
-//==============================================================================
-- (NSMutableArray *)getQuickRefParts
-{
-    return self->quickRefParts;
 }
 
 //========== constraintDefinitionForPart: ======================================
@@ -537,9 +457,9 @@ static LSynthConfiguration* instance = nil;
 //==============================================================================
 - (NSArray *)typesForLSynthClass:(LDrawLSynthClass)classTag
 {
-	if (classTag == LDrawLSynthClassPart) return [self getParts];
-	if (classTag == LDrawLSynthClassHose) return [self getHoseTypes];
-	if (classTag == LDrawLSynthClassBand) return [self getBandTypes];
+	if (classTag == LDrawLSynthClassPart) return self->parts;
+	if (classTag == LDrawLSynthClassHose) return self->hose_types;
+	if (classTag == LDrawLSynthClassBand) return self->band_types;
 	return nil;
 }
 
@@ -588,19 +508,22 @@ static LSynthConfiguration* instance = nil;
 }
 
 
-//========== entriesForMenuGetter: ============================================
+//========== entriesForMenuKind: ==============================================
 //
-// Purpose:		Return menu entries by invoking a getQuickRef* accessor by name.
+// Purpose:		Return Model → LSynth submenu entries for the given kind.
 //
 //==============================================================================
-- (NSArray *)entriesForMenuGetter:(NSString *)getter
+- (NSArray *)entriesForMenuKind:(LDrawLSynthMenuKind)kind
 {
-	if ([getter isEqualToString:@"getParts"]) return [self getParts];
-	if ([getter isEqualToString:@"getHoseTypes"]) return [self getHoseTypes];
-	if ([getter isEqualToString:@"getHoseConstraints"]) return [self getHoseConstraints];
-	if ([getter isEqualToString:@"getBandTypes"]) return [self getBandTypes];
-	if ([getter isEqualToString:@"getBandConstraints"]) return [self getBandConstraints];
-	return @[];
+	switch (kind)
+	{
+		case LDrawLSynthMenuParts:           return self->parts;
+		case LDrawLSynthMenuHoseTypes:       return self->hose_types;
+		case LDrawLSynthMenuHoseConstraints: return self->hose_constraints;
+		case LDrawLSynthMenuBandTypes:       return self->band_types;
+		case LDrawLSynthMenuBandConstraints: return self->band_constraints;
+		default:                             return @[];
+	}
 }
 
 
@@ -617,35 +540,35 @@ static LSynthConfiguration* instance = nil;
 	return @[
 		@{
 			@"tag": @(LDrawLSynthPartMenuTag),
-			@"getter": @"getParts",
+			@"kind": @(LDrawLSynthMenuParts),
 			@"entry_key": @"title",
 			@"action": NSStringFromSelector(@selector(insertSynthesizableDirective:)),
 			@"shouldFilter": @YES,
 		},
 		@{
 			@"tag": @(LDrawLSynthHoseMenuTag),
-			@"getter": @"getHoseTypes",
+			@"kind": @(LDrawLSynthMenuHoseTypes),
 			@"entry_key": @"title",
 			@"action": NSStringFromSelector(@selector(insertSynthesizableDirective:)),
 			@"shouldFilter": @YES,
 		},
 		@{
 			@"tag": @(LDrawLSynthHoseConstraintMenuTag),
-			@"getter": @"getHoseConstraints",
+			@"kind": @(LDrawLSynthMenuHoseConstraints),
 			@"entry_key": @"description",
 			@"action": NSStringFromSelector(@selector(insertLSynthConstraint:)),
 			@"shouldFilter": @NO,
 		},
 		@{
 			@"tag": @(LDrawLSynthBandMenuTag),
-			@"getter": @"getBandTypes",
+			@"kind": @(LDrawLSynthMenuBandTypes),
 			@"entry_key": @"title",
 			@"action": NSStringFromSelector(@selector(insertSynthesizableDirective:)),
 			@"shouldFilter": @YES,
 		},
 		@{
 			@"tag": @(LDrawLSynthBandConstraintMenuTag),
-			@"getter": @"getBandConstraints",
+			@"kind": @(LDrawLSynthMenuBandConstraints),
 			@"entry_key": @"description",
 			@"action": NSStringFromSelector(@selector(insertLSynthConstraint:)),
 			@"shouldFilter": @NO,
@@ -734,8 +657,8 @@ static LSynthConfiguration* instance = nil;
 //==============================================================================
 - (NSArray *)constraintsForClass:(LDrawLSynthClass)classType
 {
-	if (classType == LDrawLSynthClassBand) return [self getBandConstraints];
-	if (classType == LDrawLSynthClassHose) return [self getHoseConstraints];
+	if (classType == LDrawLSynthClassBand) return self->band_constraints;
+	if (classType == LDrawLSynthClassHose) return self->hose_constraints;
 	return nil;
 }
 
@@ -909,15 +832,15 @@ static LSynthConfiguration* instance = nil;
 //==============================================================================
 - (LDrawLSynthClass)classForType:(NSString *)type
 {
-	if ([[self getQuickRefHoses] containsObject:type])
+	if ([self->quickRefHoses containsObject:type])
 	{
 		return LDrawLSynthClassHose;
 	}
-	if ([[self getQuickRefBands] containsObject:type])
+	if ([self->quickRefBands containsObject:type])
 	{
 		return LDrawLSynthClassBand;
 	}
-	if ([[self getQuickRefParts] containsObject:type])
+	if ([self->quickRefParts containsObject:type])
 	{
 		return LDrawLSynthClassPart;
 	}
@@ -938,54 +861,6 @@ static LSynthConfiguration* instance = nil;
 	[synthesizedObject setLsynthType:type];
 	[self setLSynthClassForDirective:synthesizedObject withType:type];
 	return synthesizedObject;
-}
-
-
-//---------- chooseLSynthExecutableTitleKey --------------------------[static]--
-//
-// Purpose:		Preferences open-panel localization keys. The host still
-//				localizes.
-//
-//------------------------------------------------------------------------------
-+ (NSString *)chooseLSynthExecutableTitleKey
-{
-	return @"Choose an LSynth executable";
-}
-
-
-//---------- lsynthExecutableChooserMessageKey ----------------------[static]--
-//
-// Purpose:		Localization key for the LSynth executable open panel. The host
-//				still localizes.
-//
-//------------------------------------------------------------------------------
-+ (NSString *)lsynthExecutableChooserMessageKey
-{
-	return @"lsynthExecutableChooserMessage";
-}
-
-
-//---------- chooseLSynthConfigurationTitleKey ----------------------[static]--
-//
-// Purpose:		Localization key for the LSynth config-file chooser title. The
-//				host still localizes.
-//
-//------------------------------------------------------------------------------
-+ (NSString *)chooseLSynthConfigurationTitleKey
-{
-	return @"Choose an LSynth configuration file";
-}
-
-
-//---------- lsynthConfigurationChooserMessageKey -------------------[static]--
-//
-// Purpose:		Localization key for the LSynth config-file chooser message.
-//				The host still localizes.
-//
-//------------------------------------------------------------------------------
-+ (NSString *)lsynthConfigurationChooserMessageKey
-{
-	return @"lsynthConfigurationChooserMessage";
 }
 
 

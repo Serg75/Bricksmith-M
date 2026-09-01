@@ -1,17 +1,18 @@
 //==============================================================================
 //
-//  File:       LDrawViewPolicy.m
+//  File:       LDrawViewportPolicy.m
 //  Package:    LDrawEditing
 //
-//  Purpose:    Foundation-only zoom and scroll policies for the 3D view.
+//  Purpose:    Foundation-only zoom, scroll, and pointer-drag policies for the
+//              3D viewport.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-27.
 //
 //==============================================================================
 
-#import <LDrawEditing/LDrawViewPolicy.h>
+#import <LDrawEditing/LDrawViewportPolicy.h>
 
-@implementation LDrawViewPolicy
+@implementation LDrawViewportPolicy
 
 
 //---------- zoomChangeFactorFromScrollDeltaY: -----------------------[static]--
@@ -55,8 +56,8 @@
 //				   	• shift origin -y in flipped coordinate system
 //				   	• shift origin +y in non-flipped coordinate system
 //
-//				For, um, reasons?, the x delta from NSEvent is always backward
-//				compared to how we want to move the origin.
+//				Host scroll-event delta X is inverted relative to origin
+//				motion (AppKit NSEvent matches this).
 //
 //------------------------------------------------------------------------------
 + (Vector2)scrollDeltaViewportFromEventDelta:(Vector2)scrollDelta
@@ -84,14 +85,14 @@
 
 
 
-//---------- shouldSelectPartsOnMouseDownForDraggingBehavior:… -------[static]--
+//---------- shouldSelectPartsOnPointerDownForDraggingBehavior:… -----[static]--
 //
 // Purpose:		BeginImmediately always selects. ImmediatelyInOrthoNeverIn-
 //				Perspective selects only when orthographic.
 //
 //------------------------------------------------------------------------------
-+ (BOOL)shouldSelectPartsOnMouseDownForDraggingBehavior:(LDrawMouseDragBehavior)behavior
-										 isOrthographic:(BOOL)orthographic
++ (BOOL)shouldSelectPartsOnPointerDownForDraggingBehavior:(LDrawMouseDragBehavior)behavior
+										   isOrthographic:(BOOL)orthographic
 {
 	switch (behavior)
 	{
@@ -120,7 +121,7 @@
 
 //---------- rotateSelectDragActionForBehavior:… ---------------------[static]--
 //
-// Purpose:		Rotate-select mouseDragged action from drag prefs and tracking
+// Purpose:		Rotate-select pointer-drag action from drag prefs and tracking
 //				state. The host still calls rotationDragged / marquee /
 //				directInteraction.
 //
@@ -313,7 +314,7 @@
 
 //---------- marqueeAutoscrollInterval -------------------------------[static]--
 //
-// Purpose:		Start a timer to fire…if the user parks the mouse in the auto
+// Purpose:		Start a timer to fire…if the user parks the pointer in the auto
 //				scroll zone this will continuously scroll. I do _not_ know what
 //				the correct scrolling interval should be…auto-scroll seems
 //				jerky.

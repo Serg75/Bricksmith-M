@@ -58,6 +58,7 @@
 #import <LDrawFeatures/LSynthConfiguration.h>
 
 #import "LDrawApplication.h"
+#import "LDrawHostChrome.h"
 #import "LDrawView.h"				//for LDrawViewOrientation
 #import "PartLibraryController.h"
 #import "UserDefaultsCategory.h"
@@ -67,28 +68,28 @@ static inline NSData *archivedData(id object) {
     return [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:nil];
 }
 
-/// Maps LDrawPreferences colorFallbackForPreferenceKey: to NSColor.
+/// Maps LDrawHostChrome colorFallbackForPreferenceKey: to NSColor.
 static NSColor *FallbackColorForPreferenceKey(NSString *key)
 {
-	switch([LDrawPreferences colorFallbackForPreferenceKey:key])
+	switch([LDrawHostChrome colorFallbackForPreferenceKey:key])
 	{
-		case LDrawPreferenceColorFallbackControlBackground:
+		case LDrawHostColorFallbackControlBackground:
 			return [NSColor controlBackgroundColor];
-		case LDrawPreferenceColorFallbackText:
+		case LDrawHostColorFallbackText:
 			return [NSColor textColor];
-		case LDrawPreferenceColorFallbackSystemBlue:
+		case LDrawHostColorFallbackSystemBlue:
 			return [NSColor systemBlueColor];
-		case LDrawPreferenceColorFallbackTeal:
+		case LDrawHostColorFallbackTeal:
 		{
 			float rgba[4];
-			[LDrawPreferences getTealSyntaxColorRGBA:rgba];
+			[LDrawHostChrome getTealSyntaxColorRGBA:rgba];
 			return [NSColor colorWithDeviceRed:rgba[0] green:rgba[1] blue:rgba[2] alpha:rgba[3]];
 		}
-		case LDrawPreferenceColorFallbackSystemGreen:
+		case LDrawHostColorFallbackSystemGreen:
 			return [NSColor systemGreenColor];
-		case LDrawPreferenceColorFallbackSystemGray:
+		case LDrawHostColorFallbackSystemGray:
 			return [NSColor systemGrayColor];
-		case LDrawPreferenceColorFallbackSystemRed:
+		case LDrawHostColorFallbackSystemRed:
 			return [NSColor systemRedColor];
 	}
 	return [NSColor textColor];
@@ -449,10 +450,10 @@ PreferencesDialogController *preferencesDialog = nil;
 	[folderChooser setCanChooseDirectories:YES];
 	
 	//Tell the poor user what this dialog does!
-	[folderChooser setTitle:NSLocalizedString([LDrawPreferences chooseLDrawFolderTitleKey], nil)];
-	[folderChooser setMessage:NSLocalizedString([LDrawPreferences ldrawFolderChooserMessageKey], nil)];
+	[folderChooser setTitle:NSLocalizedString([LDrawHostChrome chooseLDrawFolderTitleKey], nil)];
+	[folderChooser setMessage:NSLocalizedString([LDrawHostChrome ldrawFolderChooserMessageKey], nil)];
 	[folderChooser setAccessoryView:folderChooserAccessoryView];
-	[folderChooser setPrompt:NSLocalizedString([LDrawPreferences choosePromptKey], nil)];
+	[folderChooser setPrompt:NSLocalizedString([LDrawHostChrome choosePromptKey], nil)];
 	
 	//Run the dialog.
 	if([folderChooser runModal] == NSModalResponseOK)
@@ -672,10 +673,10 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthExecutableChooser setCanChooseDirectories:NO];
 
     //Tell the poor user what this dialog does!
-    [lsynthExecutableChooser setTitle:NSLocalizedString([LSynthConfiguration chooseLSynthExecutableTitleKey], nil)];
-    [lsynthExecutableChooser setMessage:NSLocalizedString([LSynthConfiguration lsynthExecutableChooserMessageKey], nil)];
+    [lsynthExecutableChooser setTitle:NSLocalizedString([LDrawHostChrome chooseLSynthExecutableTitleKey], nil)];
+    [lsynthExecutableChooser setMessage:NSLocalizedString([LDrawHostChrome lsynthExecutableChooserMessageKey], nil)];
     [lsynthExecutableChooser setAccessoryView:lsynthExecutableChooserAccessoryView];
-    [lsynthExecutableChooser setPrompt:NSLocalizedString([LDrawPreferences choosePromptKey], nil)];
+    [lsynthExecutableChooser setPrompt:NSLocalizedString([LDrawHostChrome choosePromptKey], nil)];
 
     //Run the dialog.
     if([lsynthExecutableChooser runModal] == NSModalResponseOK)
@@ -710,10 +711,10 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthConfigurationChooser setCanChooseDirectories:NO];
     
     //Tell the poor user what this dialog does!
-    [lsynthConfigurationChooser setTitle:NSLocalizedString([LSynthConfiguration chooseLSynthConfigurationTitleKey], nil)];
-    [lsynthConfigurationChooser setMessage:NSLocalizedString([LSynthConfiguration lsynthConfigurationChooserMessageKey], nil)];
+    [lsynthConfigurationChooser setTitle:NSLocalizedString([LDrawHostChrome chooseLSynthConfigurationTitleKey], nil)];
+    [lsynthConfigurationChooser setMessage:NSLocalizedString([LDrawHostChrome lsynthConfigurationChooserMessageKey], nil)];
     [lsynthConfigurationChooser setAccessoryView:lsynthConfigurationChooserAccessoryView];
-    [lsynthConfigurationChooser setPrompt:NSLocalizedString([LDrawPreferences choosePromptKey], nil)];
+    [lsynthConfigurationChooser setPrompt:NSLocalizedString([LDrawHostChrome choosePromptKey], nil)];
     
     //Run the dialog.
     if([lsynthConfigurationChooser runModal] == NSModalResponseOK)

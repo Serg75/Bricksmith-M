@@ -11,9 +11,9 @@
 //==============================================================================
 #import "ViewportArranger.h"
 
+#import "LDrawHostChrome.h"
 #import "LDrawViewerContainer.h"
 #import "LDrawView.h"
-#import <LDrawFeatures/LDrawPreferences.h>
 
 
 // provides a way to look up the enclosing view pane
@@ -167,8 +167,8 @@
 		
 		// Split the current viewport frame in two.
 		newViewFrame                = sourceViewFrame;
-		newViewFrame.size.width     = [LDrawPreferences evenSplitPaneSizeFromTotal:NSWidth(sourceViewFrame)
-																  dividerThickness:[arrangementView dividerThickness]];
+		newViewFrame.size.width     = [LDrawHostChrome evenSplitPaneSizeFromTotal:NSWidth(sourceViewFrame)
+																 dividerThickness:[arrangementView dividerThickness]];
 		newViewFrame.origin.x       += NSWidth(newViewFrame) + [arrangementView dividerThickness];
 		newViewFrame				= NSIntegralRect(newViewFrame);
 		
@@ -189,8 +189,8 @@
 		
 		// Split the current viewport frame in two.
 		newViewFrame                = sourceViewFrame;
-		newViewFrame.size.height    = [LDrawPreferences evenSplitPaneSizeFromTotal:NSHeight(sourceViewFrame)
-																  dividerThickness:[sourceColumn dividerThickness]];
+		newViewFrame.size.height    = [LDrawHostChrome evenSplitPaneSizeFromTotal:NSHeight(sourceViewFrame)
+																 dividerThickness:[sourceColumn dividerThickness]];
 		newViewFrame				= NSIntegralRect(newViewFrame);
 		
 		sourceViewFrame.origin.y    += NSHeight(newViewFrame) + [sourceColumn dividerThickness];
@@ -253,7 +253,7 @@
 		// If removing the first column, the column to the right grows leftward 
 		// to fill the empty space. Otherwise, the column to the left grows 
 		// rightward. 
-		preceedingColumn	= [columns objectAtIndex:[LDrawPreferences inheritIndexWhenRemovingAt:sourceViewIndex]];
+		preceedingColumn	= [columns objectAtIndex:[LDrawHostChrome inheritIndexWhenRemovingAt:sourceViewIndex]];
 
 		newViewFrame            = [preceedingColumn frame];
 		newViewFrame.size.width += [arrangementView dividerThickness] + NSWidth([sourceColumn frame]);
@@ -282,7 +282,7 @@
 		
 		// If removing the first row, the row underneath it grows upward to fill 
 		// the empty space. Otherwise, the row above it grows downward. 
-		preceedingRow	= (LDrawViewerContainer*)[rows objectAtIndex:[LDrawPreferences inheritIndexWhenRemovingAt:sourceViewIndex]];
+		preceedingRow	= (LDrawViewerContainer*)[rows objectAtIndex:[LDrawHostChrome inheritIndexWhenRemovingAt:sourceViewIndex]];
 				
 		newViewFrame                = [preceedingRow frame];
 		newViewFrame.size.height	+= NSHeight([sourceViewport frame]) + [sourceColumn dividerThickness];
@@ -353,7 +353,7 @@
 	[closeButton setBordered:NO];
 	[closeButton setImagePosition:NSImageOnly];
 	[closeButton setImage:[NSImage imageNamed:@"PlacardButtonClose"]];
-	[closeButton setToolTip:NSLocalizedString([LDrawPreferences viewportArrangerCloseButtonTooltipKey], nil)];
+	[closeButton setToolTip:NSLocalizedString([LDrawHostChrome viewportArrangerCloseButtonTooltipKey], nil)];
 	[closeButton setTarget:self];
 	[closeButton setAction:@selector(closeViewportClicked:)];
 	
@@ -377,7 +377,7 @@
 	[splitButton setBordered:NO];
 	[splitButton setImagePosition:NSImageOnly];
 	[splitButton setImage:[NSImage imageNamed:@"PlacardButtonSplit"]];
-	[splitButton setToolTip:NSLocalizedString([LDrawPreferences viewportArrangerSplitButtonTooltipKey], nil)];
+	[splitButton setToolTip:NSLocalizedString([LDrawHostChrome viewportArrangerSplitButtonTooltipKey], nil)];
 	[splitButton setTarget:self];
 	[splitButton setAction:@selector(splitViewportClicked:)];
 	
@@ -535,7 +535,7 @@
 - (void) restoreViewportsWithAutosaveName:(NSString *)autosaveNameIn
 {
 	NSUserDefaults			*userDefaults		= [NSUserDefaults standardUserDefaults];
-	NSString				*preferenceKey		= [LDrawPreferences viewsPerColumnPreferenceKeyForAutosaveName:autosaveNameIn];
+	NSString				*preferenceKey		= [LDrawHostChrome viewsPerColumnPreferenceKeyForAutosaveName:autosaveNameIn];
 	NSArray 				*viewCountPerColumn = [userDefaults objectForKey:preferenceKey];
 	ExtendedSplitView		*columnView 		= nil;
 	LDrawViewerContainer	*rowView			= nil;
@@ -546,7 +546,7 @@
 	// Defaults: 1 main viewer; 3 detail views to the right
 	if(viewCountPerColumn == nil || [viewCountPerColumn count] == 0)
 	{
-		viewCountPerColumn = [LDrawPreferences defaultViewsPerColumnCounts];
+		viewCountPerColumn = [LDrawHostChrome defaultViewsPerColumnCounts];
 	}
 	
 	// Remove all existing views
@@ -585,8 +585,8 @@
 		NSRect  firstColumnFrame    = [[[self subviews] objectAtIndex:0] frame];
 		NSRect  secondColumnFrame   = [[[self subviews] objectAtIndex:1] frame];
 		
-		firstColumnFrame.size.width     = NSWidth([self frame]) * [LDrawPreferences defaultMainViewportColumnWidthFraction];
-		secondColumnFrame.size.width    = NSWidth([self frame]) * [LDrawPreferences defaultDetailViewportColumnWidthFraction];
+		firstColumnFrame.size.width     = NSWidth([self frame]) * [LDrawHostChrome defaultMainViewportColumnWidthFraction];
+		secondColumnFrame.size.width    = NSWidth([self frame]) * [LDrawHostChrome defaultDetailViewportColumnWidthFraction];
 		
 		firstColumnFrame    = NSIntegralRect(firstColumnFrame);
 		secondColumnFrame   = NSIntegralRect(secondColumnFrame);
@@ -626,7 +626,7 @@
 	}
 	
 	// Save it
-	preferenceKey = [LDrawPreferences viewsPerColumnPreferenceKeyForAutosaveName:[self autosaveName]];
+	preferenceKey = [LDrawHostChrome viewsPerColumnPreferenceKeyForAutosaveName:[self autosaveName]];
 	[userDefaults setObject:viewCountPerColumn forKey:preferenceKey];
 	
 }//end storeViewports
@@ -649,7 +649,7 @@
 	for(counter = 0; counter < [columns count]; counter++)
 	{
 		currentColumn       = [columns objectAtIndex:counter];
-		columnAutosaveName  = [LDrawPreferences columnAutosaveNameForBase:baseAutosaveName columnIndex:counter];
+		columnAutosaveName  = [LDrawHostChrome columnAutosaveNameForBase:baseAutosaveName columnIndex:counter];
 		
 		[currentColumn setAutosaveName:columnAutosaveName];
 	}

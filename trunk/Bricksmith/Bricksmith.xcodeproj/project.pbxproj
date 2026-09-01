@@ -47,6 +47,8 @@
 		0B2DD14F0CD810F20093E8E5 /* BezierPathCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2DD14D0CD810F20093E8E5 /* BezierPathCategory.m */; };
 		0B2FADD310196C2E007BA948 /* DonationDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FADD110196C2E007BA948 /* DonationDialogController.h */; };
 		0B2FADD410196C2E007BA948 /* DonationDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FADD210196C2E007BA948 /* DonationDialogController.m */; };
+		B5C01B031A2B3C4D5E6F7083 /* LDrawHostChrome.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */; };
+		B5C01B041A2B3C4D5E6F7084 /* LDrawHostChrome.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */; };
 		0B2FAE2F10196F8C007BA948 /* BackgroundColorView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */; };
 		0B2FAE3010196F8C007BA948 /* BackgroundColorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */; };
 		0B2FAE60101972DF007BA948 /* Bum.ldr in Resources */ = {isa = PBXBuildFile; fileRef = 0B2FAE5F101972DF007BA948 /* Bum.ldr */; };
@@ -220,6 +222,7 @@
 		956D9BCE2A30768000FA956B /* PartLibraryController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B4F5E0F0F31632C00355631 /* PartLibraryController.h */; };
 		956D9BCF2A30768000FA956B /* ExtendedTableView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B06F7150F633FD2004E7DD7 /* ExtendedTableView.h */; };
 		956D9BD02A30768000FA956B /* DonationDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FADD110196C2E007BA948 /* DonationDialogController.h */; };
+		B5C01B051A2B3C4D5E6F7085 /* LDrawHostChrome.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */; };
 		956D9BD12A30768000FA956B /* BackgroundColorView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */; };
 		956D9BD22A30768000FA956B /* ViewportArranger.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BFC4CFB1076F61900293B60 /* ViewportArranger.h */; };
 		956D9BD32A30768000FA956B /* FocusRingView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B04EF3510A6A38E00E201EE /* FocusRingView.h */; };
@@ -312,6 +315,7 @@
 		956D9C5E2A30768000FA956B /* PartLibraryController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B4F5E100F31632C00355631 /* PartLibraryController.m */; };
 		956D9C5F2A30768000FA956B /* ExtendedTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B06F7160F633FD2004E7DD7 /* ExtendedTableView.m */; };
 		956D9C602A30768000FA956B /* DonationDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FADD210196C2E007BA948 /* DonationDialogController.m */; };
+		B5C01B061A2B3C4D5E6F7086 /* LDrawHostChrome.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */; };
 		956D9C612A30768000FA956B /* BackgroundColorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */; };
 		956D9C622A30768000FA956B /* ViewportArranger.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BFC4CFC1076F61900293B60 /* ViewportArranger.m */; };
 		956D9C632A30768000FA956B /* FocusRingView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B04EF3610A6A38E00E201EE /* FocusRingView.m */; };
@@ -512,6 +516,8 @@
 		0B2DD14D0CD810F20093E8E5 /* BezierPathCategory.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BezierPathCategory.m; sourceTree = "<group>"; };
 		0B2FADD110196C2E007BA948 /* DonationDialogController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DonationDialogController.h; sourceTree = "<group>"; };
 		0B2FADD210196C2E007BA948 /* DonationDialogController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DonationDialogController.m; sourceTree = "<group>"; };
+		B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawHostChrome.h; sourceTree = "<group>"; };
+		B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawHostChrome.m; sourceTree = "<group>"; };
 		0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BackgroundColorView.h; sourceTree = "<group>"; };
 		0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BackgroundColorView.m; sourceTree = "<group>"; };
 		0B2FAE5F101972DF007BA948 /* Bum.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Bum.ldr; sourceTree = "<group>"; };
@@ -910,6 +916,8 @@
 				0B25F03F093D5F960099D85E /* BricksmithApplication.m */,
 				0B2FADD110196C2E007BA948 /* DonationDialogController.h */,
 				0B2FADD210196C2E007BA948 /* DonationDialogController.m */,
+				B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */,
+				B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */,
 				0BF729AC08AD849300E3DA53 /* LDrawApplication.h */,
 				0BF729AD08AD849300E3DA53 /* LDrawApplication.m */,
 				0BF729AE08AD849300E3DA53 /* LDrawColorPanelController.h */,
@@ -1402,6 +1410,7 @@
 				0B4F5E110F31632C00355631 /* PartLibraryController.h in Headers */,
 				0B06F7170F633FD2004E7DD7 /* ExtendedTableView.h in Headers */,
 				0B2FADD310196C2E007BA948 /* DonationDialogController.h in Headers */,
+				B5C01B031A2B3C4D5E6F7083 /* LDrawHostChrome.h in Headers */,
 				0B2FAE2F10196F8C007BA948 /* BackgroundColorView.h in Headers */,
 				0BFC4CFD1076F61900293B60 /* ViewportArranger.h in Headers */,
 				0B04EF3710A6A38E00E201EE /* FocusRingView.h in Headers */,
@@ -1469,6 +1478,7 @@
 				956D9BCE2A30768000FA956B /* PartLibraryController.h in Headers */,
 				956D9BCF2A30768000FA956B /* ExtendedTableView.h in Headers */,
 				956D9BD02A30768000FA956B /* DonationDialogController.h in Headers */,
+				B5C01B051A2B3C4D5E6F7085 /* LDrawHostChrome.h in Headers */,
 				956D9BD12A30768000FA956B /* BackgroundColorView.h in Headers */,
 				956D9BD22A30768000FA956B /* ViewportArranger.h in Headers */,
 				956D9BD32A30768000FA956B /* FocusRingView.h in Headers */,
@@ -1798,6 +1808,7 @@
 				0B4F5E120F31632C00355631 /* PartLibraryController.m in Sources */,
 				0B06F7180F633FD2004E7DD7 /* ExtendedTableView.m in Sources */,
 				0B2FADD410196C2E007BA948 /* DonationDialogController.m in Sources */,
+				B5C01B041A2B3C4D5E6F7084 /* LDrawHostChrome.m in Sources */,
 				0B2FAE3010196F8C007BA948 /* BackgroundColorView.m in Sources */,
 				0BFC4CFE1076F61900293B60 /* ViewportArranger.m in Sources */,
 				0B04EF3810A6A38E00E201EE /* FocusRingView.m in Sources */,
@@ -1868,6 +1879,7 @@
 				956D9C5E2A30768000FA956B /* PartLibraryController.m in Sources */,
 				956D9C5F2A30768000FA956B /* ExtendedTableView.m in Sources */,
 				956D9C602A30768000FA956B /* DonationDialogController.m in Sources */,
+				B5C01B061A2B3C4D5E6F7086 /* LDrawHostChrome.m in Sources */,
 				956D9C612A30768000FA956B /* BackgroundColorView.m in Sources */,
 				956D9C622A30768000FA956B /* ViewportArranger.m in Sources */,
 				956D9C632A30768000FA956B /* FocusRingView.m in Sources */,

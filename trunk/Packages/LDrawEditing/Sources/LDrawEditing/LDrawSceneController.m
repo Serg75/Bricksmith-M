@@ -80,24 +80,24 @@
 
 
 #pragma mark -
-#pragma mark Mouse Events
+#pragma mark Pointer tracking
 #pragma mark -
 
-//========== mouseMovedToPoint: ===============================================
+//========== hoverAtPoint: ====================================================
 //
-// Purpose:		Mouse is hovering in the view. Forward the point so the host
-//				can show model coordinates under the cursor.
+// Purpose:		Pointer is hovering in the viewport. Forward the point so the
+//				host can show model coordinates under the cursor.
 //
 //==============================================================================
-- (void)mouseMovedToPoint:(Point2)point_view
+- (void)hoverAtPoint:(Point2)point_view
 {
 	[self.rendererBridge publishMouseOverPoint:point_view];
 }
 
 
-//========== mouseDownAtPoint: ================================================
+//========== beginTrackingAtPoint: ============================================
 //
-// Purpose:		Signals that a mouse-down has been received; clear various state
+// Purpose:		Signals that pointer tracking has begun; clear various state
 //				flags in preparation for selection or dragging.
 //
 //				The host view is responsible for correct interpretation of the
@@ -105,7 +105,7 @@
 //				tools stay on LDrawRenderer.
 //
 //==============================================================================
-- (void)mouseDownAtPoint:(Point2)point_view
+- (void)beginTrackingAtPoint:(Point2)point_view
 {
 	_isTrackingDrag   = NO;
 	_didPartSelection = NO;
@@ -113,16 +113,16 @@
 }
 
 
-//========== mouseDraggedToPoint: =============================================
+//========== continueTrackingAtPoint: =========================================
 //
-// Purpose:		Signals that a mouse-drag has been received; set tracking flags
-//				used to distinguish a click from a drag on mouse-up.
+// Purpose:		Signals that the pointer has moved while tracking; set flags
+//				used to distinguish a click from a drag on tracking end.
 //
 //				The host view is responsible for correct interpretation of the
 //				event and routing it here.
 //
 //==============================================================================
-- (void)mouseDraggedToPoint:(Point2)point_view
+- (void)continueTrackingAtPoint:(Point2)point_view
 {
 	_isStartingDrag = (_isTrackingDrag == NO);
 	_isTrackingDrag = YES;
@@ -130,16 +130,16 @@
 }
 
 
-//========== mouseUpAtPoint: ==================================================
+//========== endTrackingAtPoint: ==============================================
 //
-// Purpose:		Signals that a mouse-up has been received; clear tracking and
+// Purpose:		Signals that pointer tracking has ended; clear tracking and
 //				drag-handle state in preparation for selection or dragging.
 //
 //				The marquee is left in place. -[LDrawRenderer mouseUp] inspects
 //				its size to decide whether to redisplay, then zeros it.
 //
 //==============================================================================
-- (void)mouseUpAtPoint:(Point2)point_view
+- (void)endTrackingAtPoint:(Point2)point_view
 {
 	// Leave the marquee in place. -[LDrawRenderer mouseUp] inspects its size
 	// to decide whether to redisplay, then zeros it. Clearing here (which also
@@ -151,7 +151,7 @@
 }
 
 
-//========== mouseSelectionClickAtPoint:selectionMode: ========================
+//========== selectionClickAtPoint:selectionMode: =============================
 //
 // Purpose:		Attempt to select the part under the click, or start a zero-size
 //				marquee if nothing was hit.
@@ -162,7 +162,7 @@
 // Returns:		YES if a directive was hit, NO otherwise.
 //
 //==============================================================================
-- (BOOL)mouseSelectionClickAtPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode
+- (BOOL)selectionClickAtPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode
 {
 	id<LDrawSceneControllerRendererBridge> bridge = self.rendererBridge;
 	LDrawDirective *clickedDirective = nil;
@@ -239,7 +239,7 @@
 }
 
 
-//========== mouseSelectionDragToPoint:selectionMode: =========================
+//========== selectionDragToPoint:selectionMode: ==============================
 //
 // Purpose:		Update the selection marquee to the dragged point and select
 //				every directive under the rectangle.
@@ -248,7 +248,7 @@
 //				subtract, intersection).
 //
 //==============================================================================
-- (void)mouseSelectionDragToPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode
+- (void)selectionDragToPoint:(Point2)point_view selectionMode:(LDrawSelectionMode)selectionMode
 {
 	id<LDrawSceneControllerRendererBridge> bridge = self.rendererBridge;
 
@@ -269,7 +269,7 @@
 
 //========== dragHandleDraggedToPoint:constrainDragAxis: ======================
 //
-// Purpose:		Move the active drag handle (and its vertex) with the mouse.
+// Purpose:		Move the active drag handle (and its vertex) during the drag.
 //
 //				If constrainDragAxis is YES, motion is isolated to the greatest
 //				component so the handle tracks one world axis.
@@ -312,7 +312,7 @@
 //
 // Purpose:		Record the offset from the first dragged part to the click, so
 //				re-entering the originating view does not snap part 0 under the
-//				mouse.
+//				pointer.
 //
 //==============================================================================
 - (void)setDraggingOffset:(Vector3)offset
@@ -372,7 +372,7 @@
 
 //========== updateDragWithPosition:constrainAxis: ============================
 //
-// Purpose:		Move currently-dragged parts as the mouse moves.
+// Purpose:		Move currently-dragged parts as the pointer moves.
 //
 //				Displacement is snapped to the current grid. LDrawAxis constraint
 //				isolates the greatest component of the cumulative move.

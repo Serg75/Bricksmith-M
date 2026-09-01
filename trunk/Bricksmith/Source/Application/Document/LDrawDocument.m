@@ -54,8 +54,8 @@
 #import <LDrawEditing/LDrawSearch.h>
 #import <LDrawEditing/LDrawSelection.h>
 #import <LDrawEditing/LDrawStructure.h>
-#import <LDrawEditing/LDrawViewDrop.h>
-#import <LDrawEditing/LDrawViewPolicy.h>
+#import <LDrawEditing/LDrawViewportPolicy.h>
+#import <LDrawEditing/LDrawViewportDrop.h>
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
@@ -71,6 +71,7 @@
 #import "LDrawColorPanelController.h"
 #import "LDrawDocumentWindow.h"
 #import "LDrawFileOutlineView.h"
+#import "LDrawHostChrome.h"
 #import "LDrawViewerContainer.h"
 #import "MinifigureDialogController.h"
 #import "MovePanel.h"
@@ -184,7 +185,7 @@ void AppendChoicesToNewItem(
     [super windowControllerDidLoadNib:aController];
 	
 	// Create the toolbar.
-	toolbar = [[NSToolbar alloc] initWithIdentifier:[LDrawPreferences documentToolbarIdentifier]];
+	toolbar = [[NSToolbar alloc] initWithIdentifier:[LDrawHostChrome documentToolbarIdentifier]];
 	[toolbar setAutosavesConfiguration:YES];
 	[toolbar setAllowsUserCustomization:YES];
 	[toolbar setDelegate:self->toolbarController];
@@ -211,8 +212,8 @@ void AppendChoicesToNewItem(
 	// We have to do the splitview saving manually. C'mon Apple, get with it!
 	// Note: They did in Leopard. These calls will use the system function 
 	//		 there. 
-	[fileContentsSplitView	setAutosaveName:[LDrawPreferences fileContentsSplitAutosaveName]];
-	[viewportArranger		setAutosaveName:[LDrawPreferences documentViewportArrangerAutosaveName]];
+	[fileContentsSplitView	setAutosaveName:[LDrawHostChrome fileContentsSplitAutosaveName]];
+	[viewportArranger		setAutosaveName:[LDrawHostChrome documentViewportArrangerAutosaveName]];
 	[self updateViewportAutosaveNamesAndRestore:YES];
 	
 	// Mouse hover coordinates
@@ -245,7 +246,7 @@ void AppendChoicesToNewItem(
 			
 			// For brand new viewports which are not yet displaying a model, set 
 			// the default zoom factor. 
-			[currentViewport setZoomPercentage:[LDrawViewPolicy openingZoomPercentageForMainViewport:(currentViewport == mainViewport)]];
+			[currentViewport setZoomPercentage:[LDrawViewportPolicy openingZoomPercentageForMainViewport:(currentViewport == mainViewport)]];
 
 			// Scrolling to center doesn't seem to work at restoration time, so 
 			// do it again here. 
@@ -260,7 +261,7 @@ void AppendChoicesToNewItem(
 			fitZoom = [currentViewport zoomPercentage];
 
 			// Back out a wee bit so the user has some room to work with his model
-			CGFloat adjustedZoom = [LDrawViewPolicy fittedZoomPercentageAfterFit:fitZoom previousZoom:unfitZoom];
+			CGFloat adjustedZoom = [LDrawViewportPolicy fittedZoomPercentageAfterFit:fitZoom previousZoom:unfitZoom];
 			if(adjustedZoom != unfitZoom)
 			{
 				[currentViewport setZoomPercentage:adjustedZoom];
@@ -2191,7 +2192,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (IBAction) useSelectionForRotationCenter:(id)sender
 {
-	NSArray *selectedDrawables = [LDrawViewDrop drawableDirectivesInSelection:self->selectedDirectives];
+	NSArray *selectedDrawables = [LDrawViewportDrop drawableDirectivesInSelection:self->selectedDirectives];
 	Point3   center            = [LDrawSelection rotationCenterFromFirstDrawable:selectedDrawables];
 
 	[[self->documentContents activeModel] setRotationCenter:center];
@@ -3604,25 +3605,25 @@ void AppendChoicesToNewItem(
 		acceptDrop:(id < NSDraggingInfo >)info
 		directives:(NSArray *)directives
 {
-	NSPasteboard    *pasteboard         = [NSPasteboard pasteboardWithName:[LDrawClipboard viewDropPasteboardName]];
+	NSPasteboard    *pasteboard         = [NSPasteboard pasteboardWithName:[LDrawClipboard viewportDropPasteboardName]];
 	NSUndoManager   *undoManager        = [self undoManager];
 	id               sourceFile         = nil;
 
 	if([[info draggingSource] respondsToSelector:@selector(LDrawDirective)])
 		sourceFile = [[info draggingSource] LDrawDirective];
 
-	if([LDrawViewDrop viewDropIsSameDocumentMoveFromSource:sourceFile
-												toDocument:[self documentContents]
-											selectionCount:[self->selectedDirectives count]])
+	if([LDrawViewportDrop viewportDropIsSameDocumentMoveFromSource:sourceFile
+														toDocument:[self documentContents]
+													selectionCount:[self->selectedDirectives count]])
 	{
-		NSArray *moves = [LDrawViewDrop viewDropMovesForSelection:self->selectedDirectives
-													droppedCopies:directives];
+		NSArray *moves = [LDrawViewportDrop viewportDropMovesForSelection:self->selectedDirectives
+															droppedCopies:directives];
 
-		for(LDrawViewDropMove *move in moves)
+		for(LDrawViewportDropMove *move in moves)
 		{
 			[self moveDirective:move.directive inDirection:move.displacement];
 		}
-		[LDrawViewDrop unhideDirectivesInViewDropMoves:moves];
+		[LDrawViewportDrop unhideDirectivesInViewportDropMoves:moves];
 	}
 	else
 	{
@@ -3633,7 +3634,7 @@ void AppendChoicesToNewItem(
 							index:NSNotFound
 					nextToSimilar:NO];
 
-		[undoManager setActionName:NSLocalizedString([LDrawViewDrop viewDropPasteUndoActionKey], nil)];
+		[undoManager setActionName:NSLocalizedString([LDrawViewportDrop viewportDropPasteUndoActionKey], nil)];
 	}
 	
 }//end LDrawView:acceptDrop:
@@ -3698,9 +3699,9 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) LDrawViewPartsWereDraggedIntoOblivion:(LDrawView *)glView
 {
-	NSArray *directivesToDelete = [LDrawViewDrop viewDragOblivionDirectivesFromSelection:self->selectedDirectives];
+	NSArray *directivesToDelete = [LDrawViewportDrop viewportDragOblivionDirectivesFromSelection:self->selectedDirectives];
 
-	[LDrawViewDrop restoreVisibilityBeforeDeletingViewDragOblivionDirectives:directivesToDelete];
+	[LDrawViewportDrop restoreVisibilityBeforeDeletingViewportDragOblivionDirectives:directivesToDelete];
 
 	for(id currentDirective in directivesToDelete)
 	{
@@ -3855,7 +3856,7 @@ void AppendChoicesToNewItem(
 	// Set up pasteboard
 	if([archivedParts count] > 0)
 	{
-		[pasteboard declareTypes:[LDrawClipboard viewRegisteredDragTypes] owner:self];
+		[pasteboard declareTypes:[LDrawClipboard viewportRegisteredDragTypes] owner:self];
 		[pasteboard setPropertyList:archivedParts forType:LDrawDraggingPboardType];
 		return YES;
 	}
@@ -3909,9 +3910,9 @@ void AppendChoicesToNewItem(
  constrainMinCoordinate:(CGFloat)proposedMin
 			ofSubviewAt:(NSInteger)offset
 {
-	return [LDrawPreferences constrainedSplitMinCoordinate:proposedMin
-										   forFileContents:(sender == self->fileContentsSplitView)
-											 subviewOffset:offset];
+	return [LDrawHostChrome constrainedSplitMinCoordinate:proposedMin
+										  forFileContents:(sender == self->fileContentsSplitView)
+											subviewOffset:offset];
 	
 }//end splitView:constrainMinCoordinate:ofSubviewAt:
 
@@ -3927,10 +3928,10 @@ void AppendChoicesToNewItem(
  constrainMaxCoordinate:(CGFloat)proposedMax
 			ofSubviewAt:(NSInteger)offset
 {
-	return [LDrawPreferences constrainedSplitMaxCoordinate:proposedMax
-									   forViewportArranger:(sender == self->viewportArranger)
-											 subviewOffset:offset
-											 containerMaxX:NSMaxX([sender frame])];
+	return [LDrawHostChrome constrainedSplitMaxCoordinate:proposedMax
+									  forViewportArranger:(sender == self->viewportArranger)
+											subviewOffset:offset
+											containerMaxX:NSMaxX([sender frame])];
 	
 }//end splitView:constrainMinCoordinate:ofSubviewAt:
 
@@ -4776,7 +4777,7 @@ void AppendChoicesToNewItem(
 		[areas addObject:[NSNumber numberWithDouble:currentSize.width * currentSize.height]];
 	}
 
-	NSUInteger largestIndex = [LDrawViewPolicy indexOfLargestViewportAmongAreas:areas];
+	NSUInteger largestIndex = [LDrawViewportPolicy indexOfLargestViewportAmongAreas:areas];
 	if(largestIndex == NSNotFound)
 		return nil;
 	return [allViewports objectAtIndex:largestIndex];
@@ -5405,7 +5406,7 @@ void AppendChoicesToNewItem(
 	LDrawView            *affectedViewport   = [self main3DViewport];
 	
 	// Set the Viewing angle
-	[affectedViewport setProjectionMode:[LDrawViewPolicy projectionModeForViewOrientation:viewOrientation]];
+	[affectedViewport setProjectionMode:[LDrawViewportPolicy projectionModeForViewOrientation:viewOrientation]];
 	
 	[affectedViewport setViewOrientation:viewOrientation];
 	[affectedViewport setViewingAngle:viewingAngle];

@@ -69,7 +69,7 @@ typedef NS_ENUM(NSInteger, LDrawLSynthSelectionMode) {
 // Returns all configured "PART"-class LSynth definitions. Each element is a
 // dictionary describing one part; the LSYNTH_CLASS key holds an
 // integer-valued NSNumber compatible with LDrawLSynthClass.
-- (NSArray *)getParts;
+- (NSArray *)parts;
 
 // Look up the constraint definition (radius / orientation) for a given
 // constraint part. Returns nil if the part is not a registered constraint.

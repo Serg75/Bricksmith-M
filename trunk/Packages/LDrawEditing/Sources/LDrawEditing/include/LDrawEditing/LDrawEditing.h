@@ -5,9 +5,9 @@
 //
 //  Purpose:    Host-facing umbrella for the LDrawEditing Swift Package.
 //
-//  Info:       Selection, document structure, outline and 3D-view drop, paste
+//  Info:       Selection, document structure, outline and 3D-viewport drop, paste
 //              placement, MLCAD groups, inspector packing, clipboard packing,
-//              search matching, primitive insert placement, 3D-view zoom/scroll
+//              search matching, primitive insert placement, 3D-viewport zoom/scroll
 //              policy, and the portable scene controller. Result DTOs are
 //              pulled in by the types that return them, not re-exported here.
 //              Pasteboard type names are in LDrawPasteboard.h. No AppKit or UIKit.
@@ -31,5 +31,5 @@
 #import <LDrawEditing/LDrawSearch.h>
 #import <LDrawEditing/LDrawSelection.h>
 #import <LDrawEditing/LDrawStructure.h>
-#import <LDrawEditing/LDrawViewDrop.h>
-#import <LDrawEditing/LDrawViewPolicy.h>
+#import <LDrawEditing/LDrawViewportDrop.h>
+#import <LDrawEditing/LDrawViewportPolicy.h>

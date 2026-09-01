@@ -10,12 +10,13 @@
 //==============================================================================
 #import "DonationDialogController.h"
 
+#import <LDrawCore/LDrawFile.h>
+
 #import "BackgroundColorView.h"
 #import "LDrawApplication.h"
-#import <LDrawCore/LDrawFile.h>
+#import "LDrawHostChrome.h"
 #import "LDrawView.h"
 #import "LDrawViewerContainer.h"
-#import <LDrawFeatures/LDrawPreferences.h>
 
 @interface DonationDialogController ()
 
@@ -99,7 +100,7 @@
 	[NSApp runModalForWindow:[self window]];
 	
 	// Record for next time
-	[[LDrawPreferences sharedPreferences] recordDonationDialogShownForBundleVersion:bundleVersion];
+	[LDrawHostChrome recordDonationDialogShownForBundleVersion:bundleVersion];
 	
 }//end runModal
 
@@ -114,7 +115,7 @@
 	CFBundleRef     mainBundle                  = CFBundleGetMainBundle();
 	UInt32          bundleVersion               = CFBundleGetVersionNumber(mainBundle);
 
-	return [[LDrawPreferences sharedPreferences] shouldShowDonationDialogForBundleVersion:bundleVersion];
+	return [LDrawHostChrome shouldShowDonationDialogForBundleVersion:bundleVersion];
 	
 }//end shouldShowDialog
 
@@ -159,7 +160,7 @@
 {
 	BOOL userRequestedSuppression = [self->suppressionCheckbox state];
 
-	[[LDrawPreferences sharedPreferences] setDonationSuppressedThisVersion:userRequestedSuppression];
+	[LDrawHostChrome setDonationSuppressedThisVersion:userRequestedSuppression];
 	
 }//end suppressionCheckboxClicked:
 

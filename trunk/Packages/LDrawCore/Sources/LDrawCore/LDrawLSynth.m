@@ -1522,7 +1522,7 @@ static id<LDrawLSynthConfigSource> config_source = nil;
 	LDrawLSynthClass class = self->lsynthClass;
 	
     if (self->lsynthClass == LDrawLSynthClassPart) {
-        NSArray *partTypes = [[LDrawLSynth configSource] getParts];
+        NSArray *partTypes = [[LDrawLSynth configSource] parts];
 
         // Loop over the parts from config, and when we find one matching ourselves
         // use that part's class.

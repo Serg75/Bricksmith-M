@@ -13,7 +13,7 @@
 #import "LDrawColorBar.h"
 
 #import <LDrawCore/LDrawColor.h>
-#import <LDrawCore/LDrawColorLibrary.h>
+#import <LDrawFeatures/LDrawColorPanelModel.h>
 
 @implementation LDrawColorBar
 
@@ -107,7 +107,7 @@
 	
 	//Create a tool tip to identify the LDraw color code.
 	description	= [newColor localizedName];
-	[self setToolTip:[LDrawColorLibrary tooltipForColorCode:[newColor colorCode] localizedName:description]];
+	[self setToolTip:[LDrawColorPanelModel tooltipForColorCode:[newColor colorCode] localizedName:description]];
 	
 	[self setNeedsDisplay:YES];
 	

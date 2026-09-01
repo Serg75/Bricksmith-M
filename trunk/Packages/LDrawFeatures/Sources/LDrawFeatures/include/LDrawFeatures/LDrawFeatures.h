@@ -6,10 +6,12 @@
 //  Purpose:    Umbrella header for the LDrawFeatures Swift Package.
 //
 //  Info:       Bricksmith feature data layers reusable in an editing host:
-//              LSynth, MLCad, related parts, part browser model, tool mode,
-//              grid policy, minifigure assembly and persistence, and
-//              preferences schema. Host chrome keys live in LDrawHostKeys.h.
-//              Document-toolbar labels live in the Bricksmith app.
+//              LSynth, MLCad, related parts, part browser model, color-panel
+//              packing, tool mode, grid policy, minifigure assembly and
+//              persistence, and preferences schema. Host chrome keys live in
+//              LDrawHostKeys.h.
+//              Document-toolbar labels, donation nag, split-view geometry, and
+//              LDraw/LSynth open-panel strings live in the Bricksmith app.
 //              Read-only hosts can omit this package.
 //
 //  Created by Sergey Slobodenyuk on 2026-05-26.
@@ -23,6 +25,7 @@
 #import <LDrawFeatures/LDrawRelatedParts.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
+#import <LDrawFeatures/LDrawColorPanelModel.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawToolMode.h>
 #import <LDrawFeatures/LDrawGrid.h>

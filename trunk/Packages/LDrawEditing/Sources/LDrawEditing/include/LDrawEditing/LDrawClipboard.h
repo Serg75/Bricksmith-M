@@ -26,10 +26,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Local 3D-view drag is a move; otherwise copy. The host maps to NSDragOperation.
-typedef NS_ENUM(NSInteger, LDrawViewDragKind) {
-	LDrawViewDragKindMove = 0,
-	LDrawViewDragKindCopy = 1
+/// Local 3D-viewport drag is a move; otherwise copy. The host maps to NSDragOperation.
+typedef NS_ENUM(NSInteger, LDrawViewportDragKind) {
+	LDrawViewportDragKindMove = 0,
+	LDrawViewportDragKindCopy = 1
 };
 
 
@@ -62,7 +62,7 @@ typedef NS_ENUM(NSInteger, LDrawViewDragKind) {
 														   color:(LDrawColor *)color;
 
 /// Offset of the originating click from the first dragged part’s position.
-/// Re-entering the originating view must not snap part 0 under the mouse.
+/// Re-entering the originating view must not snap part 0 under the pointer.
 /// The host still writes LDrawDraggingInitialOffsetPboardType.
 + (Vector3)draggingOffsetFromModelPoint:(Point3)modelPoint
 						  firstPosition:(Point3)firstPosition;
@@ -73,8 +73,8 @@ typedef NS_ENUM(NSInteger, LDrawViewDragKind) {
 							destination:(nullable id)destination;
 
 /// Move when local; otherwise copy. The host still maps to NSDragOperation.
-+ (LDrawViewDragKind)viewDragKindFromSource:(nullable id)source
-								destination:(nullable id)destination;
++ (LDrawViewportDragKind)viewportDragKindFromSource:(nullable id)source
+                                        destination:(nullable id)destination;
 
 
 /// LDrawDirectivePboardType plus the host’s string type (NSPasteboardTypeString
@@ -108,8 +108,8 @@ typedef NS_ENUM(NSInteger, LDrawViewDragKind) {
 /// Private pasteboard for -duplicate: (avoids clobbering the general board).
 + (NSString *)duplicationPasteboardName;
 
-/// Private pasteboard for 3D-view drop import via pasteFromPasteboard:.
-+ (NSString *)viewDropPasteboardName;
+/// Private pasteboard for 3D-viewport drop import via pasteFromPasteboard:.
++ (NSString *)viewportDropPasteboardName;
 
 /// Root-filter, archive, and LDR string for copy/paste. The host still
 /// declareTypes: and writes both pasteboard representations.
@@ -117,11 +117,11 @@ typedef NS_ENUM(NSInteger, LDrawViewDragKind) {
 					 archivedData:(NSArray<NSData *> * _Nullable * _Nullable)outArchived
 						ldrString:(NSString * _Nullable * _Nullable)outString;
 
-/// 3D view registerForDraggedTypes: / declareTypes: for a viewport drag.
-+ (NSArray<NSString *> *)viewRegisteredDragTypes;
+/// 3D viewport registerForDraggedTypes: / declareTypes: for a viewport drag.
++ (NSArray<NSString *> *)viewportRegisteredDragTypes;
 
 /// Private offset written once a viewport drag starts.
-+ (NSArray<NSString *> *)viewDragOffsetPasteboardTypes;
++ (NSArray<NSString *> *)viewportDragOffsetPasteboardTypes;
 
 /// Part browser: LDrawDraggingPboardType plus uninitialized flag.
 + (NSArray<NSString *> *)partBrowserDeclaredDragTypes;
