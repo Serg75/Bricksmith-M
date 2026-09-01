@@ -469,4 +469,37 @@
 	return index - 1;
 }
 
+
+//---------- untitledMinifigureLocalizationKey -----------------------[static]--
+//
+// Purpose:		Default generator model name. The host still localizes.
+//
+//------------------------------------------------------------------------------
++ (NSString *)untitledMinifigureLocalizationKey
+{
+	return @"UntitledMinifigure";
+}
+
+
+//---------- minifigureGeneratorPreviewDefaultZoomPercentage ---------[static]--
+//
+// Purpose:		Generator preview starts at this zoom percentage.
+//
+//------------------------------------------------------------------------------
++ (CGFloat)minifigureGeneratorPreviewDefaultZoomPercentage
+{
+	return 180;
+}
+
+
+//---------- minifigureGeneratorPreviewAutosaveName ------------------[static]--
+//
+// Purpose:		Autosave name for the generator preview viewport.
+//
+//------------------------------------------------------------------------------
++ (NSString *)minifigureGeneratorPreviewAutosaveName
+{
+	return @"MinifigureGeneratorView";
+}
+
 @end

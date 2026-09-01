@@ -54,4 +54,44 @@
 }//end selectObjects:
 
 
+//========== rowIndexesForItems: ===============================================
+//
+// Purpose:		Now write the row indexes out. We'll use them to delete the
+//				original objects in the event of a successful drag.
+//
+//==============================================================================
+- (NSArray<NSNumber *> *)rowIndexesForItems:(NSArray *)items
+{
+	NSMutableArray *rowIndexes = [NSMutableArray arrayWithCapacity:[items count]];
+	id              item       = nil;
+	
+	for(item in items)
+	{
+		[rowIndexes addObject:@([self rowForItem:item])];
+	}
+	return rowIndexes;
+	
+}//end rowIndexesForItems:
+
+
+//========== itemsAtRowIndexes: ================================================
+//
+// Purpose:		Gather up the objects we'll be removing. Note we're doing this
+//				*before* moving, so that the indexes are still correct.
+//
+//==============================================================================
+- (NSArray *)itemsAtRowIndexes:(NSIndexSet *)indexes
+{
+	NSMutableArray *items = [NSMutableArray arrayWithCapacity:[indexes count]];
+	
+	[indexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
+		id object = [self itemAtRow:(NSInteger)idx];
+		if(object != nil)
+			[items addObject:object];
+	}];
+	return items;
+	
+}//end itemsAtRowIndexes:
+
+
 @end

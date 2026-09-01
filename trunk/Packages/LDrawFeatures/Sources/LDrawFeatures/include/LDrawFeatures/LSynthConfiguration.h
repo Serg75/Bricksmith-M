@@ -4,7 +4,8 @@
 //  Package:    LDrawFeatures
 //
 //  Purpose:    Parsed LSynth configuration (lsynth.ldr / lsynth.mpd): types,
-//              constraints, and quick-reference menus.
+//              constraints, and model mutation. Menu and inspector packing
+//              live in LDrawLSynthPanelModel.
 //
 //  Created by Robin Macharg on 24/09/2012.
 //
@@ -20,14 +21,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Enablement of the LSynth selection-tinting controls in preferences.
-typedef struct {
-	BOOL transparencyEnabled;
-	BOOL colorWellEnabled;
-} LSynthSelectionControlEnablement;
-
-/// Model → LSynth submenu contents. Used by +applicationMenuSpecs instead of
-/// getter-selector name strings.
+/// Model → LSynth submenu contents. Used by LDrawLSynthPanelModel
+/// +applicationMenuSpecs instead of getter-selector name strings.
 typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
 	LDrawLSynthMenuParts            = 0,
 	LDrawLSynthMenuHoseTypes        = 1,
@@ -41,7 +36,7 @@ typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
 /// @class      LSynthConfiguration
 ///
 /// @abstract   Parsed lsynth.ldr configuration: types, constraints, and
-///             quick-reference menus for hoses, bands, and parts.
+///             lookup used when synthesizing hoses, bands, and parts.
 ///
 //------------------------------------------------------------------------------
 @interface LSynthConfiguration : NSObject <LDrawLSynthConfigSource>
@@ -69,9 +64,6 @@ typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
 #pragma mark -
 #pragma mark Instance Methods
 #pragma mark -
-
-/// Return the default config path in the main bundle.
-- (NSString *)defaultConfigPath;
 
 /// Parse an LSynth lsynth.mpd configuration file in order that we can a)
 /// validate incoming ldraw files if required and b) populate parts menus
@@ -111,34 +103,9 @@ typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
 /// Parts, hose types, or band types for the class; nil if unrelated.
 - (nullable NSArray *)typesForLSynthClass:(LDrawLSynthClass)classTag;
 
-/// Inspector type-popup caption: "Part Type:", "Hose Type:", or "Band Type:".
-/// Nil if the class is unrecognized.
-+ (nullable NSString *)typeLabelForClass:(LDrawLSynthClass)classType;
-
-/// Transparency slider/text vs color well. Transparent = slider only,
-/// Colored = well only, both = both. The host still sets NSControl enabled.
-+ (LSynthSelectionControlEnablement)selectionControlEnablementForMode:(LDrawLSynthSelectionMode)mode;
-
 /// Parts / hose / band types or constraints for a Model → LSynth submenu.
 /// Empty array if unrecognized.
 - (NSArray *)entriesForMenuKind:(LDrawLSynthMenuKind)kind;
-
-/// Declarative encoding of the application Model → LSynth menus: tag, kind,
-/// entry_key, action selector name, and shouldFilter. The host still builds
-/// NSMenuItems.
-+ (NSArray *)applicationMenuSpecs;
-
-/// Insert INSIDE / OUTSIDE / CROSS items: title, action selector name, tag.
-/// The host still builds NSMenuItems.
-+ (NSArray *)insideOutsideInsertMenuSpecs;
-
-/// The MLCad.ini file lists semi-official LSynth types; lsynth.mpd also has
-/// legacy entries. Filter non-official types unless shouldFilter is NO or
-/// the user turned off “basic parts only”. Constraints should not filter.
-+ (BOOL)shouldIncludeMenuEntry:(NSDictionary *)entry
-				  shouldFilter:(BOOL)shouldFilter
-				  visibleTypes:(NSArray *)visibleTypes
-			  showOnlyOfficial:(BOOL)showOnlyOfficial;
 
 /// For a complete Part the constraints depend on the part’s LSYNTH_CLASS.
 /// Hose/band classes pass through. The host still reads the type popup.
@@ -147,30 +114,6 @@ typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
 
 /// Band or hose constraint dictionaries; nil if the class has none.
 - (nullable NSArray *)constraintsForClass:(LDrawLSynthClass)classType;
-
-/// Case-insensitive match on `partName`. NSNotFound if none.
-+ (NSUInteger)indexOfConstraintNamed:(NSString *)name inConstraints:(NSArray *)constraints;
-
-/// First type whose LSYNTH_TYPE equals typeName. NSNotFound if none.
-+ (NSUInteger)indexOfTypeNamed:(NSString *)typeName inTypes:(NSArray *)types;
-
-/// Titles for the inspector type popup (valueForKey:@"title").
-+ (NSArray<NSString *> *)typePopupTitlesFromTypes:(NSArray *)types;
-
-/// Descriptions for the inspector default-constraint popup.
-+ (NSArray<NSString *> *)constraintPopupDescriptionsFromConstraints:(NSArray *)constraints;
-
-/// LSYNTH_TYPE at index, or nil if the index is out of range.
-+ (nullable NSString *)typeNameAtIndex:(NSInteger)index inTypes:(NSArray *)types;
-
-/// Dictionary at index, or nil if the index is out of range.
-+ (nullable NSDictionary *)entryAtIndex:(NSInteger)index inEntries:(NSArray *)entries;
-
-/// For a complete Part, the type at the popup index. Hose/band classes return
-/// nil (constraints do not depend on the type popup). The host still reads
-/// the popup index.
-+ (nullable NSDictionary *)selectedTypeForClass:(LDrawLSynthClass)classTag
-										atIndex:(NSInteger)index;
 
 /// Sets each constraint part’s display name. Hoses only work with hose
 /// constraints, bands similarly. The host still finishes editing.
@@ -188,9 +131,6 @@ typedef NS_ENUM(NSInteger, LDrawLSynthMenuKind) {
 
 /// New LDrawLSynth with type, class, and color set. The host still inserts it.
 - (LDrawLSynth *)synthesizableDirectiveWithType:(NSString *)type color:(LDrawColor *)color;
-
-/// Inspector: “(approx. %i pieces)” format. The host still localizes.
-+ (NSString *)approximatePieceCountFormatKey;
 
 @end
 

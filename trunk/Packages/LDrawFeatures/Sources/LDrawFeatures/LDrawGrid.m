@@ -16,19 +16,17 @@
 
 @implementation LDrawGrid
 
-//---------- gridSpacingForMode: -------------------------------------[static]--
+//---------- spacingForMode:fromUserDefaults: ------------------------[static]--
 //
-// Purpose:		Translates the given grid spacing granularity into an actual 
-//				number of LDraw units, according to the user's preferences. 
+// Purpose:		Translates the given grid spacing granularity into an actual
+//				number of LDraw units, according to the given user defaults.
 //
-// Notes:		This value represents distances "along the studs"--that is, 
-//			    horizontal along the brick. Vertical distances may be adjusted. 
+// Notes:		This value represents distances "along the studs"--that is,
+//			    horizontal along the brick. Vertical distances may be adjusted.
 //
 //------------------------------------------------------------------------------
-+ (float)spacingForMode:(LDrawGridSpacingMode)mode
++ (float)spacingForMode:(LDrawGridSpacingMode)mode fromUserDefaults:(NSUserDefaults *)userDefaults
 {
-	NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-
 	switch (mode)
 	{
 		case LDrawGridModeFine:

@@ -3,6 +3,12 @@
 //  File:       LDrawRelatedParts.h
 //  Package:    LDrawFeatures
 //
+//  Purpose:    Related-parts database loaded from related.ldr.
+//
+//  Info:       The host passes a file path, usually from
+//              +databasePathInBundle:. Parse does not look up the app
+//              main bundle.
+//
 //  Created by bsupnik on 2/24/13.
 //  Copyright 2013. All rights reserved.
 //
@@ -94,7 +100,7 @@ typedef NS_ENUM(NSInteger, LDrawRelatedPartsMenuStyle) {
 ///
 /// @class      LDrawRelatedParts
 ///
-/// @abstract   Singleton related-parts database loaded from related.ldr.
+/// @abstract   Related-parts database loaded from related.ldr.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawRelatedParts : NSObject 
@@ -103,8 +109,16 @@ typedef NS_ENUM(NSInteger, LDrawRelatedPartsMenuStyle) {
 
 }
 
-/// Singleton; parts are loaded from an LDR file stored in the bundle.
-+ (LDrawRelatedParts*)sharedRelatedParts;
+/// Bundled related.ldr, or nil if the bundle has no such resource.
++ (nullable NSString *)databasePathInBundle:(NSBundle *)bundle;
+
+/// Loads related.ldr from filePath. Nil or unreadable path yields an empty
+/// database.
+- (instancetype)initWithFilePath:(nullable NSString *)filePath;
+
+/// Process-wide database. First path wins. Host passes databasePathInBundle:
+/// or a test file.
++ (instancetype)sharedRelatedPartsWithFilePath:(nullable NSString *)filePath;
 
 // If we only have one role or one child type of part, don't build two-level
 // menus — there's no need. roleGroups is then empty (no separator / second

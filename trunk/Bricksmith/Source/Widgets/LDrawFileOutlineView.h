@@ -16,4 +16,12 @@
 
 - (NSIndexSet *) selectObjects:(NSArray *)objects;
 
+/// Row indexes for an outline drag, written to LDrawDragSourceRowsPboardType
+/// so a successful drop can delete the originals.
+- (NSArray<NSNumber *> *)rowIndexesForItems:(NSArray *)items;
+
+/// Items at the given rows. Same-outline acceptDrop gathers these *before*
+/// moving so the indexes are still correct.
+- (NSArray *)itemsAtRowIndexes:(NSIndexSet *)indexes;
+
 @end

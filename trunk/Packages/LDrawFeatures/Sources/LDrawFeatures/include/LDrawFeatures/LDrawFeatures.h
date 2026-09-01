@@ -7,9 +7,10 @@
 //
 //  Info:       Bricksmith feature data layers reusable in an editing host:
 //              LSynth, MLCad, related parts, part browser model, color-panel
-//              packing, tool mode, grid policy, minifigure assembly and
-//              persistence, and preferences schema. Host chrome keys live in
-//              LDrawHostKeys.h.
+//              packing, LSynth menu/inspector packing, tool mode, grid policy,
+//              minifigure pose, spec, assembly, and saved settings, and
+//              preferences schema.
+//              Host chrome keys live in LDrawHostKeys.h.
 //              Document-toolbar labels, donation nag, split-view geometry, and
 //              LDraw/LSynth open-panel strings live in the Bricksmith app.
 //              Read-only hosts can omit this package.
@@ -20,14 +21,17 @@
 
 #import <Foundation/Foundation.h>
 
+#import <LDrawFeatures/LDrawColorPanelModel.h>
+#import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
-#import <LDrawFeatures/LSynthConfiguration.h>
-#import <LDrawFeatures/LDrawRelatedParts.h>
+#import <LDrawFeatures/LDrawLSynthPanelModel.h>
+#import <LDrawFeatures/LDrawMinifigureAssembler.h>
+#import <LDrawFeatures/LDrawMinifigureDefaults.h>
+#import <LDrawFeatures/LDrawMinifigurePose.h>
+#import <LDrawFeatures/LDrawMinifigureSpec.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
-#import <LDrawFeatures/LDrawColorPanelModel.h>
 #import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LDrawRelatedParts.h>
 #import <LDrawFeatures/LDrawToolMode.h>
-#import <LDrawFeatures/LDrawGrid.h>
-#import <LDrawFeatures/LDrawMinifigureAssembler.h>
-#import <LDrawFeatures/LDrawMinifigureSnapshot.h>
+#import <LDrawFeatures/LSynthConfiguration.h>

@@ -5,8 +5,8 @@
 // Purpose:		Bricksmith window, dialog, and layout policy that used to live
 //				on LDrawPreferences. Preference *keys* stay in LDrawHostKeys /
 //				LDrawPreferences; this type owns localization keys, split-view
-//				geometry, donation nag, toolbar/autosave names, and LSynth
-//				open-panel strings.
+//				geometry, donation nag, toolbar/autosave names, minifigure
+//				generator preview, and LSynth open-panel strings.
 //
 // Created by Sergey Slobodenyuk on 2026-09-01.
 //
@@ -123,6 +123,15 @@ typedef NS_ENUM(NSInteger, LDrawHostColorFallback) {
 
 /// Removing index 0 → inherit index 1; otherwise inherit index − 1.
 + (NSUInteger)inheritIndexWhenRemovingAt:(NSUInteger)index;
+
+/// Default generator model name. The host still localizes.
++ (NSString *)untitledMinifigureLocalizationKey;
+
+/// Generator preview starts at this zoom percentage.
++ (CGFloat)minifigureGeneratorPreviewDefaultZoomPercentage;
+
+/// Autosave name for the generator preview viewport.
++ (NSString *)minifigureGeneratorPreviewAutosaveName;
 
 @end
 

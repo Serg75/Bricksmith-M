@@ -135,7 +135,7 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (id) init
 {
-//	[[LDrawRelatedParts sharedRelatedParts] dump];
+//	[[LDrawRelatedParts sharedRelatedPartsWithFilePath:[LDrawRelatedParts databasePathInBundle:[NSBundle mainBundle]]] dump];
     self = [super init];
     if (self)
 	{
@@ -830,7 +830,8 @@ void AppendChoicesToNewItem(
 	Vector3 worldNudge = ZeroPoint3;
 	if([LDrawSelection worldNudge:&worldNudge
 				  fromScreenNudge:nudgeVector
-					  gridSpacing:[LDrawGrid spacingForMode:self->gridMode]
+					  gridSpacing:[LDrawGrid spacingForMode:self->gridMode
+										   fromUserDefaults:[NSUserDefaults standardUserDefaults]]
 						selection:[self selectedObjects]] == NO)
 	{
 		return;
@@ -2293,7 +2294,8 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) snapSelectionToGrid:(id)sender
 {	
-	float gridSpacing     = [LDrawGrid spacingForMode:[self gridSpacingMode]];
+	float gridSpacing     = [LDrawGrid spacingForMode:[self gridSpacingMode]
+									 fromUserDefaults:[NSUserDefaults standardUserDefaults]];
 	float degreesToRotate = [LDrawGrid rotationDegreesForMode:[self gridSpacingMode]
 														 kind:LDrawGridRotationSnap];
 
@@ -2349,7 +2351,8 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) snapSelectionByAxis:(Vector3)axis
 {
-	float gridSpacing = [LDrawGrid spacingForMode:[self gridSpacingMode]];
+	float gridSpacing = [LDrawGrid spacingForMode:[self gridSpacingMode]
+								 fromUserDefaults:[NSUserDefaults standardUserDefaults]];
 
 	for(LDrawPartTransformUpdate *update in [LDrawSelection snappedTransformUpdatesForSelection:[self selectedObjects]
 																					gridSpacing:gridSpacing
@@ -3370,8 +3373,7 @@ void AppendChoicesToNewItem(
 	
 	//Now write the row indexes out. We'll use them to delete the original 
 	// objects in the event of a successful drag.
-	rowIndexes = [LDrawClipboard outlineDragSourceRowIndexesForItems:items
-													rowForItemTarget:outlineView];
+	rowIndexes = [(LDrawFileOutlineView *)outlineView rowIndexesForItems:items];
 	[pboard addTypes:[LDrawClipboard outlineDragSourcePasteboardTypes]
 			   owner:nil];
 	[pboard setPropertyList:rowIndexes forType:LDrawDragSourceRowsPboardType];
@@ -3469,8 +3471,7 @@ void AppendChoicesToNewItem(
 		//
 		// Note we're doing this *before* moving, so that the indexes are 
 		// still correct.
-		doomedObjects = [LDrawClipboard outlineItemsAtRowIndexes:outlineView.selectedRowIndexes
-												 itemAtRowTarget:outlineView];
+		doomedObjects = [(LDrawFileOutlineView *)outlineView itemsAtRowIndexes:outlineView.selectedRowIndexes];
 	}
 
 	NSSet *donatingParents = [LDrawOutline donatingParentsFromMovedDirectives:doomedObjects];
@@ -4680,7 +4681,9 @@ void AppendChoicesToNewItem(
 	
 	if(parentName != nil)
 	{
-		LDrawRelatedPartsMenuPlan *plan = [[LDrawRelatedParts sharedRelatedParts] menuPlanForParentName:parentName];
+		NSString *relatedPath = [LDrawRelatedParts databasePathInBundle:[NSBundle mainBundle]];
+		LDrawRelatedPartsMenuPlan *plan = [[LDrawRelatedParts sharedRelatedPartsWithFilePath:relatedPath]
+											menuPlanForParentName:parentName];
 
 		if(plan != nil)
 		{

@@ -12,7 +12,6 @@
 
 #import <LDrawEditing/LDrawClipboard.h>
 
-#import <objc/message.h>
 #import <LDrawEditing/LDrawInsertion.h>
 #import <LDrawEditing/LDrawViewportDrop.h>
 
@@ -341,56 +340,6 @@
 {
 	return [types containsObject:LDrawDisallowDragToSourcePboardType]
 		&& [disallowPropertyList boolValue];
-}
-
-
-//---------- outlineDragSourceRowIndexesForItems:rowForItemTarget: ----[static]--
-//
-// Purpose:		Now write the row indexes out. We'll use them to delete the
-//				original objects in the event of a successful drag.
-//
-//------------------------------------------------------------------------------
-+ (NSArray<NSNumber *> *)outlineDragSourceRowIndexesForItems:(NSArray *)items
-											rowForItemTarget:(id)rowForItemTarget
-{
-	NSMutableArray *rowIndexes = [NSMutableArray arrayWithCapacity:[items count]];
-
-	if ([rowForItemTarget respondsToSelector:@selector(rowForItem:)] == NO)
-		return rowIndexes;
-
-	for (id item in items)
-	{
-		NSInteger row = ((NSInteger (*)(id, SEL, id))objc_msgSend)(rowForItemTarget,
-																   @selector(rowForItem:),
-																   item);
-		[rowIndexes addObject:@(row)];
-	}
-	return rowIndexes;
-}
-
-
-//---------- outlineItemsAtRowIndexes:itemAtRowTarget: ---------------[static]--
-//
-// Purpose:		Gather up the objects we'll be removing. Note we're doing this
-//				*before* moving, so that the indexes are still correct.
-//
-//------------------------------------------------------------------------------
-+ (NSArray *)outlineItemsAtRowIndexes:(NSIndexSet *)indexes
-					  itemAtRowTarget:(id)itemAtRowTarget
-{
-	NSMutableArray *items = [NSMutableArray arrayWithCapacity:[indexes count]];
-
-	if ([itemAtRowTarget respondsToSelector:@selector(itemAtRow:)] == NO)
-		return items;
-
-	[indexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-		id object = ((id (*)(id, SEL, NSInteger))objc_msgSend)(itemAtRowTarget,
-															   @selector(itemAtRow:),
-															   (NSInteger)idx);
-		if (object != nil)
-			[items addObject:object];
-	}];
-	return items;
 }
 
 

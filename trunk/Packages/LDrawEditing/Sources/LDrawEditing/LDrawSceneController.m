@@ -18,7 +18,9 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
+#import <LDrawEditing/LDrawSceneEditing.h>
 #import <LDrawRenderCore/LDrawCamera.h>
+#import <LDrawRenderCore/LDrawRenderer.h>
 
 #define HANDLE_SIZE 3
 
@@ -40,10 +42,23 @@
 
 @implementation LDrawSceneController
 
+//========== initWithRenderer: ================================================
+//
+// Purpose:		Wrap the host view's renderer in LDrawSceneEditing. Camera
+//				tools stay on LDrawRenderer.
+//
+//==============================================================================
+- (instancetype)initWithRenderer:(LDrawRenderer *)renderer
+{
+	LDrawSceneEditing *editing = [[LDrawSceneEditing alloc] initWithRenderer:renderer];
+	return [self initWithRendererBridge:editing];
+}
+
+
 //========== initWithRendererBridge: ==========================================
 //
-// Purpose:		Create a scene controller that talks to the renderer through
-//				the given bridge. Camera tools stay on LDrawRenderer.
+// Purpose:		Create a scene controller that talks to the given bridge.
+//				Camera tools stay on LDrawRenderer.
 //
 //==============================================================================
 - (instancetype)initWithRendererBridge:(id<LDrawSceneControllerRendererBridge>)bridge

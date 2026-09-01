@@ -6,12 +6,14 @@
 //  Purpose:    Foundation-only archive / unarchive for copy, paste, and
 //              drag-and-drop of LDraw directives.
 //
-//  Info:       The host still owns NSPasteboard / UIPasteboard. This class
-//              turns a selection into NSData (and back), drops children whose
-//              parent is already in the selection so a container is archived
-//              once, packs drawable originals for a 3D-view drag, packs a new
-//              named part for a part-browser drag, and names the pasteboard
-//              type arrays. The host still calls declareTypes: / addTypes:.
+//  Info:       Pack step of drag/drop: archive / unarchive, root-filter, and
+//              pasteboard type names. Classify is LDrawClipboard (viewport
+//              move vs copy) or LDrawOutline (tree drop kind). Apply is the
+//              host outline plus LDrawOutline, or LDrawViewportDrop /
+//              LDrawSceneController. NSOutlineView rowForItem:/itemAtRow:
+//              live on the host (LDrawFileOutlineView). The host still owns
+//              NSPasteboard / UIPasteboard and still calls declareTypes: /
+//              addTypes:.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //
@@ -94,16 +96,6 @@ typedef NS_ENUM(NSInteger, LDrawViewportDragKind) {
 /// YES when the pasteboard types include the disallow flag and it is true.
 + (BOOL)outlinePasteboardDisallowsDragToSourceFromTypes:(NSArray *)types
 								   disallowPropertyList:(nullable id)disallowPropertyList;
-
-/// Collects rowForItem: for each item. rowForItemTarget must respond to
-/// rowForItem:. The host still addTypes: and setPropertyList:forType:.
-+ (NSArray<NSNumber *> *)outlineDragSourceRowIndexesForItems:(NSArray *)items
-											rowForItemTarget:(id)rowForItemTarget;
-
-/// Collects itemAtRow: for each index. itemAtRowTarget must respond to
-/// itemAtRow:. Used when same-outline acceptDrop gathers originals to delete.
-+ (NSArray *)outlineItemsAtRowIndexes:(NSIndexSet *)indexes
-					  itemAtRowTarget:(id)itemAtRowTarget;
 
 /// Private pasteboard for -duplicate: (avoids clobbering the general board).
 + (NSString *)duplicationPasteboardName;

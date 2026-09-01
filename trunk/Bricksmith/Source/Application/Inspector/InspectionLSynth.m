@@ -15,6 +15,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 
+#import <LDrawFeatures/LDrawLSynthPanelModel.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
 #import "LDrawView.h"
@@ -63,8 +64,8 @@
 	NSArray 		 *types		= [[LSynthConfiguration sharedInstance] typesForLSynthClass:classType];
 
     [representedObject setLsynthClass:(LDrawLSynthClass)[[lsynthClassChooserMatrix selectedCell] tag]];
-    [representedObject setLsynthType:[LSynthConfiguration typeNameAtIndex:[typePopup indexOfSelectedItem]
-																  inTypes:types]];
+    [representedObject setLsynthType:[LDrawLSynthPanelModel typeNameAtIndex:[typePopup indexOfSelectedItem]
+                                                                    inTypes:types]];
 
     [[LSynthConfiguration sharedInstance] applyDefaultConstraintsToLSynth:representedObject
 																classType:(LDrawLSynthClass)[[sender selectedCell] tag]];
@@ -107,7 +108,7 @@
     [lsynthPartLabel setStringValue:[representedObject browsingDescription]];
     
     // Set the synthesized part count
-    [synthesizedPartCount setStringValue:[NSString stringWithFormat:NSLocalizedString([LSynthConfiguration approximatePieceCountFormatKey], nil), [representedObject synthesizedPartsCount]]];
+    [synthesizedPartCount setStringValue:[NSString stringWithFormat:NSLocalizedString([LDrawLSynthPanelModel approximatePieceCountFormatKey], nil), [representedObject synthesizedPartsCount]]];
     
     // Set the Type label
     [self updateSynthTypeLabel:[representedObject lsynthClass]];
@@ -140,7 +141,7 @@
 - (void) populateTypes:(int)classTag
 {
     NSArray *types = [[LSynthConfiguration sharedInstance] typesForLSynthClass:classTag];
-    NSArray *titles = [LSynthConfiguration typePopupTitlesFromTypes:types];
+    NSArray *titles = [LDrawLSynthPanelModel typePopupTitlesFromTypes:types];
 
     // Populate the dropdown
     [typePopup removeAllItems];
@@ -154,8 +155,8 @@
             index++;
         }
 
-        NSUInteger selected = [LSynthConfiguration indexOfTypeNamed:[[self object] lsynthType]
-                                                            inTypes:types];
+        NSUInteger selected = [LDrawLSynthPanelModel indexOfTypeNamed:[[self object] lsynthType]
+                                                              inTypes:types];
         if(selected != NSNotFound)
         {
             [typePopup selectItemAtIndex:selected];
@@ -171,14 +172,17 @@
 
 - (void) populateDefaultConstraint:(int)classTag
 {
-    NSDictionary *selectedType = [LSynthConfiguration selectedTypeForClass:(LDrawLSynthClass)classTag
-                                                                   atIndex:[typePopup indexOfSelectedItem]];
+    NSArray *types = [[LSynthConfiguration sharedInstance] typesForLSynthClass:classTag];
+    NSDictionary *selectedType = [LDrawLSynthPanelModel selectedTypeForClass:(LDrawLSynthClass)classTag
+                                                                     atIndex:[typePopup indexOfSelectedItem]
+                                                                     inTypes:types];
 
     LDrawLSynthClass constraintClass = [LSynthConfiguration constraintClassForSynthClass:(LDrawLSynthClass)classTag
                                                                             selectedType:selectedType];
+
     NSArray *constraints = [[LSynthConfiguration sharedInstance] constraintsForClass:constraintClass];
     NSString *defaultConstraint = [LSynthConfiguration defaultConstraintForClass:constraintClass];
-    NSArray *descriptions = [LSynthConfiguration constraintPopupDescriptionsFromConstraints:constraints];
+    NSArray *descriptions = [LDrawLSynthPanelModel constraintPopupDescriptionsFromConstraints:constraints];
 
     [constraintDefaultPopup removeAllItems];
 
@@ -194,8 +198,8 @@
             constraintIndex++;
         }
 
-        NSUInteger defaultIndex = [LSynthConfiguration indexOfConstraintNamed:defaultConstraint
-                                                                inConstraints:constraints];
+        NSUInteger defaultIndex = [LDrawLSynthPanelModel indexOfConstraintNamed:defaultConstraint
+                                                                  inConstraints:constraints];
         if(defaultIndex != NSNotFound)
         {
             [constraintDefaultPopup selectItemAtIndex:defaultIndex];
@@ -303,7 +307,7 @@
 //==============================================================================
 - (void) updateSynthTypeLabel:(LDrawLSynthClass)tag
 {
-    NSString *label = [LSynthConfiguration typeLabelForClass:tag];
+    NSString *label = [LDrawLSynthPanelModel typeLabelForClass:tag];
     if(label != nil)
     {
         [SynthTypeLabel setStringValue:label];

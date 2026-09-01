@@ -31,7 +31,6 @@
 #import <LDrawCore/LDrawKeys.h>
 
 #import <LDrawEditing/LDrawClipboard.h>
-#import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
 #import <LDrawEditing/LDrawSceneController.h>
 #import <LDrawEditing/LDrawSelection.h>
 #import <LDrawEditing/LDrawViewportPolicy.h>
@@ -361,7 +360,8 @@ static Box2 NSRectToBox2(NSRect rect)
 - (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode
 {
 	[self makeCurrentContext];
-	[self->renderer setGridSpacing:[LDrawGrid spacingForMode:newMode]];
+	[self->renderer setGridSpacing:[LDrawGrid spacingForMode:newMode
+											fromUserDefaults:[NSUserDefaults standardUserDefaults]]];
 
 }//end setGridSpacingMode:
 

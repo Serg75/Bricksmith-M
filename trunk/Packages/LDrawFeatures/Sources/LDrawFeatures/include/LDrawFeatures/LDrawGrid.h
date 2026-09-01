@@ -5,10 +5,10 @@
 //
 //  Purpose:    Foundation-only grid spacing and rotation policy.
 //
-//  Info:       Reads GRID_SPACING_* keys from NSUserDefaults (seeded by
-//              LDrawPreferences). Rotation step sizes are the compile-time
-//              GRID_ROTATION_* constants below. Hosts use this instead of
-//              duplicating the fine/medium/coarse switches.
+//  Info:       Reads GRID_SPACING_* keys from a host-provided NSUserDefaults
+//              (seeded by LDrawPreferences). Rotation step sizes are the
+//              compile-time GRID_ROTATION_* constants below. Hosts use this
+//              instead of duplicating the fine/medium/coarse switches.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //
@@ -61,7 +61,7 @@ typedef NS_ENUM(NSInteger, LDrawGridRotationKind) {
 //------------------------------------------------------------------------------
 @interface LDrawGrid : NSObject
 
-+ (float)spacingForMode:(LDrawGridSpacingMode)mode;
++ (float)spacingForMode:(LDrawGridSpacingMode)mode fromUserDefaults:(NSUserDefaults *)userDefaults;
 + (float)rotationDegreesForMode:(LDrawGridSpacingMode)mode kind:(LDrawGridRotationKind)kind;
 + (float)rotationDegreesForMode:(LDrawGridSpacingMode)mode
 						   kind:(LDrawGridRotationKind)kind

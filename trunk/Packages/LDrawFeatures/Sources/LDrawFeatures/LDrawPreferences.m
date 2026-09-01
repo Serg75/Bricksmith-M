@@ -20,33 +20,18 @@
 
 @implementation LDrawPreferences
 
-//---------- sharedPreferences --------------------------------------[static]--
+//---------- ensureDefaults: -----------------------------------------[static]--
 //
-// Purpose:		Return the process-wide preferences accessor.
-//
-//------------------------------------------------------------------------------
-+ (instancetype)sharedPreferences
-{
-	static LDrawPreferences *shared = nil;
-	static dispatch_once_t   onceToken;
-	dispatch_once(&onceToken, ^{
-		shared = [[LDrawPreferences alloc] init];
-	});
-	return shared;
-}
-
-
-//---------- ensureDefaults ------------------------------------------[static]--
-//
-// Purpose:		Verifies that all expected settings exist in preferences. If a 
+// Purpose:		Verifies that all expected settings exist in preferences. If a
 //				setting is not found, it is restored to its default value.
 //
-//				This method should be called upon program launch, so that the 
-//				rest of the program need not worry about preference 
-//				error-checking.
+//				This method should be called upon program launch, so that the
+//				rest of the program need not worry about preference
+//				error-checking. The host passes the store (usually
+//				standardUserDefaults).
 //
 //------------------------------------------------------------------------------
-- (void)ensureDefaults
++ (void)ensureDefaults:(NSUserDefaults *)userDefaults
 {
 	NSMutableDictionary *initialDefaults = [NSMutableDictionary dictionary];
 
@@ -176,7 +161,7 @@
 	[initialDefaults setObject:@(LDrawViewOrientationFront)		forKey:[LDRAW_VIEW_ANGLE stringByAppendingString:@" MinifigureGeneratorView"]];
 	[initialDefaults setObject:@1								forKey:[LDRAW_VIEW_PROJECTION stringByAppendingString:@" MinifigureGeneratorView"]];
 
-	[[NSUserDefaults standardUserDefaults] registerDefaults:initialDefaults];
+	[userDefaults registerDefaults:initialDefaults];
 }
 
 

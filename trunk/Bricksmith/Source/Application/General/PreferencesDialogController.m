@@ -54,6 +54,7 @@
 #import <LDrawCore/LDrawRegex.h>
 
 #import <LDrawFeatures/LDrawGrid.h>
+#import <LDrawFeatures/LDrawLSynthPanelModel.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
@@ -330,7 +331,7 @@ PreferencesDialogController *preferencesDialog = nil;
     [lsynthShowBasicPartsList   setState:showBasicPartsList];
     
     LSynthSelectionControlEnablement enablement =
-		[LSynthConfiguration selectionControlEnablementForMode:selectionMode];
+		[LDrawLSynthPanelModel selectionControlEnablementForMode:selectionMode];
     [lsynthTransparencySlider setEnabled:enablement.transparencyEnabled];
     [lsynthTransparencyText setEnabled:enablement.transparencyEnabled];
     [lsynthSelectionColorWell setEnabled:enablement.colorWellEnabled];
@@ -978,7 +979,7 @@ PreferencesDialogController *preferencesDialog = nil;
 //------------------------------------------------------------------------------
 + (void) ensureDefaults
 {
-	[[LDrawPreferences sharedPreferences] ensureDefaults];
+	[LDrawPreferences ensureDefaults:[NSUserDefaults standardUserDefaults]];
 
 	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
 	NSMutableDictionary	*initialDefaults	= [NSMutableDictionary dictionary];
@@ -1146,7 +1147,7 @@ PreferencesDialogController *preferencesDialog = nil;
         else if (!configPathAsURL || [[configPathAsURL path] length] == 0)
 		{
             [userDefaults setObject:@"" forKey:LSYNTH_CONFIGURATION_PATH_KEY];
-            [[LSynthConfiguration sharedInstance] parseLsynthConfig:[[LSynthConfiguration sharedInstance] defaultConfigPath]];
+            [[LSynthConfiguration sharedInstance] parseLsynthConfig:[LDrawLSynthPanelModel configPathInBundle:[NSBundle mainBundle]]];
             [[LDrawApplication shared] populateLSynthModelMenus];
             [self lsynthRequiresResynthesis];
         }

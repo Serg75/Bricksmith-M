@@ -22,6 +22,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawDirective.h>
+#import <LDrawCore/LDrawDragHandle.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawMPDModel.h>
@@ -142,6 +143,19 @@
 	return self->fileBeingDrawn;
 	
 } // end LDrawDirective
+
+
+//========== camera ============================================================
+//
+// Purpose:		Returns the camera that owns projection, zoom, and scrolling
+//				for this renderer.
+//
+//==============================================================================
+- (LDrawCamera *)camera
+{
+	return camera;
+	
+} // end camera
 
 
 //========== projectionMode ====================================================
@@ -281,6 +295,93 @@
 - (BOOL)allowsEditing
 {
 	return self->allowsEditing;
+}
+
+
+//========== preferredPartTransform ===========================================
+//
+// Purpose:		Ask the renderer delegate for the transform to apply to newly
+//				dropped parts. Returns identity if the delegate does not
+//				implement the optional method.
+//
+//==============================================================================
+- (TransformComponents)preferredPartTransform
+{
+	if ([delegate respondsToSelector:@selector(LDrawRendererPreferredPartTransform:)])
+	{
+		return [delegate LDrawRendererPreferredPartTransform:self];
+	}
+	return IdentityComponents;
+}
+
+
+//========== wantsToSelectDirective:byExtendingSelection: =====================
+//
+// Purpose:		Forward a single-directive selection request to the renderer
+//				delegate when it implements the optional method.
+//
+//==============================================================================
+- (void)wantsToSelectDirective:(LDrawDirective *)directive byExtendingSelection:(BOOL)shouldExtend
+{
+	if ([delegate respondsToSelector:@selector(LDrawRenderer:wantsToSelectDirective:byExtendingSelection:)])
+	{
+		[delegate LDrawRenderer:self wantsToSelectDirective:directive byExtendingSelection:shouldExtend];
+	}
+}
+
+
+//========== wantsToSelectDirectives:selectionMode: ===========================
+//
+// Purpose:		Forward a multi-directive selection request to the renderer
+//				delegate when it implements the optional method.
+//
+//==============================================================================
+- (void)wantsToSelectDirectives:(NSArray *)directives selectionMode:(LDrawSelectionMode)selectionMode
+{
+	if ([delegate respondsToSelector:@selector(LDrawRenderer:wantsToSelectDirectives:selectionMode:)])
+	{
+		[delegate LDrawRenderer:self wantsToSelectDirectives:directives selectionMode:selectionMode];
+	}
+}
+
+
+//========== willBeginDraggingHandle: =========================================
+//
+// Purpose:		Tell the renderer delegate a drag-handle drag is starting.
+//
+//==============================================================================
+- (void)willBeginDraggingHandle:(LDrawDragHandle *)handle
+{
+	if ([delegate respondsToSelector:@selector(LDrawRenderer:willBeginDraggingHandle:)])
+	{
+		[delegate LDrawRenderer:self willBeginDraggingHandle:handle];
+	}
+}
+
+
+//========== dragHandleDidMove: ===============================================
+//
+// Purpose:		Tell the renderer delegate the drag handle moved.
+//
+//==============================================================================
+- (void)dragHandleDidMove:(LDrawDragHandle *)handle
+{
+	if ([delegate respondsToSelector:@selector(LDrawRenderer:dragHandleDidMove:)])
+	{
+		[delegate LDrawRenderer:self dragHandleDidMove:handle];
+	}
+}
+
+
+//========== noteNeedsDisplay =================================================
+//
+// Purpose:		Ask the file being drawn to mark itself dirty so the view
+//				redisplays.
+//
+//==============================================================================
+- (void)noteNeedsDisplay
+{
+	[[self LDrawDirective] noteNeedsDisplay];
 }
 
 

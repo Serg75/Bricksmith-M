@@ -25,6 +25,7 @@
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
+#import <LDrawFeatures/LDrawLSynthPanelModel.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
@@ -405,7 +406,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
     // Parse the LSynth config file, using the bundled lsynth.mpd or a custom config file
     NSString *lsynthConfigPath;
     if ([[userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY] length] == 0) {
-        lsynthConfigPath = [[LSynthConfiguration sharedInstance] defaultConfigPath];
+        lsynthConfigPath = [LDrawLSynthPanelModel configPathInBundle:[NSBundle mainBundle]];
     }
     else {
         lsynthConfigPath = [userDefaults stringForKey:LSYNTH_CONFIGURATION_PATH_KEY];
@@ -631,7 +632,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
     NSUserDefaults	    *userDefaults   = [NSUserDefaults standardUserDefaults];
 
 	// A declarative encoding of our LSynth menus
-	NSArray *menus = [LSynthConfiguration applicationMenuSpecs];
+	NSArray *menus = [LDrawLSynthPanelModel applicationMenuSpecs];
 	
 	for (NSDictionary *menuSpec in menus)
 	{
@@ -649,10 +650,10 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
         
         for (NSDictionary *entry in entries)
 		{
-            if([LSynthConfiguration shouldIncludeMenuEntry:entry
-                                              shouldFilter:shouldFilter
-                                              visibleTypes:lsynthMLCADDefaults
-                                          showOnlyOfficial:showOnlyOfficial])
+            if([LDrawLSynthPanelModel shouldIncludeMenuEntry:entry
+                                                shouldFilter:shouldFilter
+                                                visibleTypes:lsynthMLCADDefaults
+                                            showOnlyOfficial:showOnlyOfficial])
             {
                 NSMenuItem *entryMenuItem = [[NSMenuItem alloc] init];
                 [entryMenuItem setTitle:[entry objectForKey:[menuSpec objectForKey:@"entry_key"]]];
@@ -688,7 +689,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 //  [invertSelectionItem setTag:LDrawLSynthInvertInsideOutsideTag];
 //  [insideOutsideMenu addItem:invertSelectionItem];
 	
-	for(NSDictionary *spec in [LSynthConfiguration insideOutsideInsertMenuSpecs])
+	for(NSDictionary *spec in [LDrawLSynthPanelModel insideOutsideInsertMenuSpecs])
 	{
 		NSMenuItem *item = [[NSMenuItem alloc] init];
 		[item setTitle:[spec objectForKey:@"title"]];
@@ -939,7 +940,8 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 						// is set to zero. This helps ignore "noise" when you primarily move along one axis,
 						// but the controller still detects minor motion along others.
 						LDrawGridSpacingMode mode = [currentDocument gridSpacingMode];
-						int translationQuantum = (int)[LDrawGrid spacingForMode:mode];
+						int translationQuantum = (int)[LDrawGrid spacingForMode:mode
+                                                               fromUserDefaults:[NSUserDefaults standardUserDefaults]];
 						if (!controlDown)
 						{
 							translation.x = ((int)(translation.x / translationQuantum)) * translationQuantum;

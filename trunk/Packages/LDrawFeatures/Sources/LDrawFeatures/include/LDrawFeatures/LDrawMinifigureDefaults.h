@@ -1,14 +1,15 @@
 //==============================================================================
 //
-//  File:       LDrawMinifigureSnapshot.h
+//  File:       LDrawMinifigureDefaults.h
 //  Package:    LDrawFeatures
 //
-//  Purpose:    Foundation-only persistence for the minifigure generator.
+//  Purpose:    Saved minifigure generator settings (NSUserDefaults packing).
 //
 //  Info:       Maps MINIFIGURE_* user-default keys (has-flags, angles,
-//              elevation, color codes, part names). Color codes and part names
-//              are addressed in prefs slot order. The host still maps wells and
-//              array controllers, and synchronizes defaults.
+//              elevation, color codes, part names). Pose fields come from
+//              LDrawMinifigurePose. Color codes and part names are addressed
+//              in prefs slot order. The host still maps wells and array
+//              controllers, and synchronizes defaults.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //
@@ -16,45 +17,19 @@
 
 #import <Foundation/Foundation.h>
 
+#import <LDrawFeatures/LDrawMinifigurePose.h>
+
 NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawMinifigureSnapshot
+/// @class      LDrawMinifigureDefaults
 ///
-/// @abstract   Foundation-only persistence for the minifigure generator.
+/// @abstract   Saved generator settings: pose plus color codes and part names.
+///             Preference keys are unchanged.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawMinifigureSnapshot : NSObject
-
-@property (nonatomic) BOOL hasHat;
-@property (nonatomic) BOOL hasNeckAccessory;
-@property (nonatomic) BOOL hasHips;
-@property (nonatomic) BOOL hasRightArm;
-@property (nonatomic) BOOL hasRightHand;
-@property (nonatomic) BOOL hasRightHandAccessory;
-@property (nonatomic) BOOL hasRightLeg;
-@property (nonatomic) BOOL hasRightLegAccessory;
-@property (nonatomic) BOOL hasLeftArm;
-@property (nonatomic) BOOL hasLeftHand;
-@property (nonatomic) BOOL hasLeftHandAccessory;
-@property (nonatomic) BOOL hasLeftLeg;
-@property (nonatomic) BOOL hasLeftLegAccessory;
-
-@property (nonatomic) float headElevation;
-@property (nonatomic) float angleOfHat;
-@property (nonatomic) float angleOfHead;
-@property (nonatomic) float angleOfNeck;
-@property (nonatomic) float angleOfRightArm;
-@property (nonatomic) float angleOfRightHand;
-@property (nonatomic) float angleOfRightHandAccessory;
-@property (nonatomic) float angleOfRightLeg;
-@property (nonatomic) float angleOfRightLegAccessory;
-@property (nonatomic) float angleOfLeftArm;
-@property (nonatomic) float angleOfLeftHand;
-@property (nonatomic) float angleOfLeftHandAccessory;
-@property (nonatomic) float angleOfLeftLeg;
-@property (nonatomic) float angleOfLeftLegAccessory;
+@interface LDrawMinifigureDefaults : LDrawMinifigurePose
 
 @property (nonatomic) NSInteger colorHat;
 @property (nonatomic) NSInteger colorHead;
@@ -90,16 +65,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 /// Reads previous values out of preferences.
-+ (instancetype)snapshotFromUserDefaults:(NSUserDefaults *)defaults;
++ (instancetype)fromUserDefaults:(NSUserDefaults *)defaults;
 
 /// Writes current values out of preferences. The host still synchronizes.
 - (void)writeToUserDefaults:(NSUserDefaults *)defaults;
-
-/// Copies has-flags, elevation, and joint angles onto the generator (KVC).
-- (void)applyInclusionAndAnglesToTarget:(id)target;
-
-/// Copies has-flags, elevation, and joint angles from the generator (KVC).
-- (void)takeInclusionAndAnglesFromTarget:(id)target;
 
 /// Slot-order color codes from LDrawColor objects. Extra entries ignored.
 - (void)setColorCodesFromColors:(NSArray *)colors;

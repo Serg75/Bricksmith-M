@@ -47,8 +47,6 @@
 		0B2DD14F0CD810F20093E8E5 /* BezierPathCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2DD14D0CD810F20093E8E5 /* BezierPathCategory.m */; };
 		0B2FADD310196C2E007BA948 /* DonationDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FADD110196C2E007BA948 /* DonationDialogController.h */; };
 		0B2FADD410196C2E007BA948 /* DonationDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FADD210196C2E007BA948 /* DonationDialogController.m */; };
-		B5C01B031A2B3C4D5E6F7083 /* LDrawHostChrome.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */; };
-		B5C01B041A2B3C4D5E6F7084 /* LDrawHostChrome.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */; };
 		0B2FAE2F10196F8C007BA948 /* BackgroundColorView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */; };
 		0B2FAE3010196F8C007BA948 /* BackgroundColorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */; };
 		0B2FAE60101972DF007BA948 /* Bum.ldr in Resources */ = {isa = PBXBuildFile; fileRef = 0B2FAE5F101972DF007BA948 /* Bum.ldr */; };
@@ -133,8 +131,6 @@
 		0BE84A201300F91F004E7626 /* BricksmithUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BE84A1E1300F91F004E7626 /* BricksmithUtilities.m */; };
 		0BF729B808AD849300E3DA53 /* DocumentToolbarController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */; };
 		0BF729B908AD849300E3DA53 /* DocumentToolbarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */; };
-		B5C01A031A2B3C4D5E6F7083 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
-		B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
 		0BF729BA08AD849300E3DA53 /* LDrawDocument.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A908AD849300E3DA53 /* LDrawDocument.h */; };
 		0BF729BB08AD849300E3DA53 /* LDrawDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AA08AD849300E3DA53 /* LDrawDocument.m */; };
 		0BF729BC08AD849300E3DA53 /* LDrawApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AC08AD849300E3DA53 /* LDrawApplication.h */; };
@@ -178,7 +174,6 @@
 		956D9B872A30768000FA956B /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
 		956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 32DBCF750370BD2300C91783 /* Mac LDraw_Prefix.pch */; };
 		956D9B8E2A30768000FA956B /* DocumentToolbarController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */; };
-		B5C01A051A2B3C4D5E6F7085 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
 		956D9B8F2A30768000FA956B /* LDrawDocument.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A908AD849300E3DA53 /* LDrawDocument.h */; };
 		956D9B902A30768000FA956B /* LDrawApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AC08AD849300E3DA53 /* LDrawApplication.h */; };
 		956D9B922A30768000FA956B /* LDrawColorPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729AE08AD849300E3DA53 /* LDrawColorPanelController.h */; };
@@ -222,7 +217,6 @@
 		956D9BCE2A30768000FA956B /* PartLibraryController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B4F5E0F0F31632C00355631 /* PartLibraryController.h */; };
 		956D9BCF2A30768000FA956B /* ExtendedTableView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B06F7150F633FD2004E7DD7 /* ExtendedTableView.h */; };
 		956D9BD02A30768000FA956B /* DonationDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FADD110196C2E007BA948 /* DonationDialogController.h */; };
-		B5C01B051A2B3C4D5E6F7085 /* LDrawHostChrome.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */; };
 		956D9BD12A30768000FA956B /* BackgroundColorView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */; };
 		956D9BD22A30768000FA956B /* ViewportArranger.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BFC4CFB1076F61900293B60 /* ViewportArranger.h */; };
 		956D9BD32A30768000FA956B /* FocusRingView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B04EF3510A6A38E00E201EE /* FocusRingView.h */; };
@@ -271,7 +265,6 @@
 		956D9C1B2A30768000FA956B /* lsynth.mpd in Resources */ = {isa = PBXBuildFile; fileRef = 95D893AD1655334500AA055B /* lsynth.mpd */; };
 		956D9C1D2A30768000FA956B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2A37F4B0FDCFA73011CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		956D9C2E2A30768000FA956B /* DocumentToolbarController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */; };
-		B5C01A061A2B3C4D5E6F7086 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
 		956D9C2F2A30768000FA956B /* LDrawDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AA08AD849300E3DA53 /* LDrawDocument.m */; };
 		956D9C302A30768000FA956B /* LDrawApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AD08AD849300E3DA53 /* LDrawApplication.m */; };
 		956D9C312A30768000FA956B /* LDrawColorPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729AF08AD849300E3DA53 /* LDrawColorPanelController.m */; };
@@ -315,7 +308,6 @@
 		956D9C5E2A30768000FA956B /* PartLibraryController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B4F5E100F31632C00355631 /* PartLibraryController.m */; };
 		956D9C5F2A30768000FA956B /* ExtendedTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B06F7160F633FD2004E7DD7 /* ExtendedTableView.m */; };
 		956D9C602A30768000FA956B /* DonationDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FADD210196C2E007BA948 /* DonationDialogController.m */; };
-		B5C01B061A2B3C4D5E6F7086 /* LDrawHostChrome.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */; };
 		956D9C612A30768000FA956B /* BackgroundColorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */; };
 		956D9C622A30768000FA956B /* ViewportArranger.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BFC4CFC1076F61900293B60 /* ViewportArranger.m */; };
 		956D9C632A30768000FA956B /* FocusRingView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B04EF3610A6A38E00E201EE /* FocusRingView.m */; };
@@ -359,6 +351,14 @@
 		95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
 		95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
 		95FBD68129C4A5A900E84D2F /* LDrawClassInspectorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */; };
+		B5C01A031A2B3C4D5E6F7083 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
+		B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
+		B5C01A051A2B3C4D5E6F7085 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
+		B5C01A061A2B3C4D5E6F7086 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
+		B5C01B031A2B3C4D5E6F7083 /* LDrawHostChrome.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */; };
+		B5C01B041A2B3C4D5E6F7084 /* LDrawHostChrome.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */; };
+		B5C01B051A2B3C4D5E6F7085 /* LDrawHostChrome.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */; };
+		B5C01B061A2B3C4D5E6F7086 /* LDrawHostChrome.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */; };
 		BB0300000000000000000001 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000001 /* LDrawCore */; };
 		BB0300000000000000000002 /* LDrawRenderCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000002 /* LDrawRenderCore */; };
 		BB0300000000000000000003 /* LDrawRenderMetal in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000003 /* LDrawRenderMetal */; };
@@ -516,8 +516,6 @@
 		0B2DD14D0CD810F20093E8E5 /* BezierPathCategory.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BezierPathCategory.m; sourceTree = "<group>"; };
 		0B2FADD110196C2E007BA948 /* DonationDialogController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DonationDialogController.h; sourceTree = "<group>"; };
 		0B2FADD210196C2E007BA948 /* DonationDialogController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DonationDialogController.m; sourceTree = "<group>"; };
-		B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawHostChrome.h; sourceTree = "<group>"; };
-		B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawHostChrome.m; sourceTree = "<group>"; };
 		0B2FAE2D10196F8C007BA948 /* BackgroundColorView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BackgroundColorView.h; sourceTree = "<group>"; };
 		0B2FAE2E10196F8C007BA948 /* BackgroundColorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BackgroundColorView.m; sourceTree = "<group>"; };
 		0B2FAE5F101972DF007BA948 /* Bum.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Bum.ldr; sourceTree = "<group>"; };
@@ -599,12 +597,10 @@
 		0BE84A1E1300F91F004E7626 /* BricksmithUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BricksmithUtilities.m; sourceTree = "<group>"; };
 		0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DocumentToolbarController.h; sourceTree = "<group>"; };
 		0BF729A808AD849300E3DA53 /* DocumentToolbarController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DocumentToolbarController.m; sourceTree = "<group>"; };
-		B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawToolbarLabels.h; sourceTree = "<group>"; };
-		B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawToolbarLabels.m; sourceTree = "<group>"; };
 		0BF729A908AD849300E3DA53 /* LDrawDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawDocument.h; sourceTree = "<group>"; };
 		0BF729AA08AD849300E3DA53 /* LDrawDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawDocument.m; sourceTree = "<group>"; usesTabs = 1; };
 		0BF729AC08AD849300E3DA53 /* LDrawApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawApplication.h; sourceTree = "<group>"; };
-		0BF729AD08AD849300E3DA53 /* LDrawApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawApplication.m; sourceTree = "<group>"; };
+		0BF729AD08AD849300E3DA53 /* LDrawApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawApplication.m; sourceTree = "<group>"; usesTabs = 0; };
 		0BF729AE08AD849300E3DA53 /* LDrawColorPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawColorPanelController.h; sourceTree = "<group>"; };
 		0BF729AF08AD849300E3DA53 /* LDrawColorPanelController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawColorPanelController.m; sourceTree = "<group>"; };
 		0BF729B008AD849300E3DA53 /* PartBrowserDataSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartBrowserDataSource.h; sourceTree = "<group>"; };
@@ -672,6 +668,10 @@
 		95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubRemoveGroup.m; sourceTree = "<group>"; };
 		95FBD67C29C46BC100E84D2F /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorRemoveGroup.xib; sourceTree = "<group>"; };
 		95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawClassInspectorTests.m; sourceTree = "<group>"; };
+		B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawToolbarLabels.h; sourceTree = "<group>"; };
+		B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawToolbarLabels.m; sourceTree = "<group>"; };
+		B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawHostChrome.h; sourceTree = "<group>"; };
+		B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawHostChrome.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -2217,9 +2217,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1";
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
@@ -2260,9 +2258,7 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					NDEBUG,
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
@@ -2522,10 +2518,6 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREFIX_HEADER = UnitTests/Other/UnitTests_Prefix.pch;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
-				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2537,6 +2529,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 4.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -2591,10 +2587,6 @@
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREFIX_HEADER = UnitTests/Other/UnitTests_Prefix.pch;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
-				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -2602,6 +2594,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 4.0;
 				MTL_ENABLE_DEBUG_INFO = NO;

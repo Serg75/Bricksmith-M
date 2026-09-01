@@ -79,6 +79,7 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (BOOL)isTrackingDrag;
 - (Matrix4)getMatrix;
 - (nullable LDrawDirective *)LDrawDirective;
+- (LDrawCamera *)camera;
 - (LDrawProjectionMode)projectionMode;
 - (LDrawLocationMode)locationMode;
 - (Box2)selectionMarquee;
@@ -90,6 +91,12 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 
 - (void)setAllowsEditing:(BOOL)flag;
 - (BOOL)allowsEditing;
+- (TransformComponents)preferredPartTransform;
+- (void)wantsToSelectDirective:(nullable LDrawDirective *)directive byExtendingSelection:(BOOL)shouldExtend;
+- (void)wantsToSelectDirectives:(NSArray *)directives selectionMode:(LDrawSelectionMode)selectionMode;
+- (void)willBeginDraggingHandle:(LDrawDragHandle *)handle;
+- (void)dragHandleDidMove:(LDrawDragHandle *)handle;
+- (void)noteNeedsDisplay;
 - (void)setDelegate:(nullable id<LDrawRendererDelegate>)object withScroller:(nullable id<LDrawCameraScroller>)scroller;
 - (void)setGridSpacing:(float)newValue;
 - (float)gridSpacing;

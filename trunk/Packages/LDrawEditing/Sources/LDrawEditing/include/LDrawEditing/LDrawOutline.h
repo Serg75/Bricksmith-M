@@ -4,7 +4,8 @@
 //  Package:    LDrawEditing
 //
 //  Purpose:    Outline data source, drop validation, and syntax coloring.
-//              The host still owns NSOutlineView.
+//              The host still owns NSOutlineView. Tree apply after classify
+//              uses these helpers plus host row lookup (LDrawFileOutlineView).
 //
 //  Created by Sergey Slobodenyuk on 2023-02-10.
 //

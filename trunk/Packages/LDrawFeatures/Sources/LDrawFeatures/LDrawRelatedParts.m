@@ -3,6 +3,8 @@
 //  File:       LDrawRelatedParts.m
 //  Package:    LDrawFeatures
 //
+//  Purpose:    Parses related.ldr and builds related-parts menu plans.
+//
 //  Created by bsupnik on 2/24/13.
 //  Copyright 2013. All rights reserved.
 //
@@ -291,7 +293,6 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 
 
 @interface LDrawRelatedParts ()
-- (id)initWithFilePath:(NSString *)filePath;
 - (void)dump;
 - (NSArray*)getChildPartList:(NSString *)parent;
 - (NSArray*)getChildRoleList:(NSString *)parent;
@@ -301,38 +302,41 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 
 @implementation LDrawRelatedParts
 
-static LDrawRelatedParts * SharedRelatedParts = nil;
-
-
-//---------- sharedRelatedParts --------------------------------------[static]--
+//---------- databasePathInBundle: -----------------------------------[static]--
 //
-// Purpose:		Returns the singleton of the related parts; parts are loaded 
-//				from an LDR file stored in our bundle.
+// Purpose:		Bundled related.ldr. The host still decides whether to use this
+//				or another file.
 //
 //------------------------------------------------------------------------------
-+ (LDrawRelatedParts*)sharedRelatedParts
++ (NSString *)databasePathInBundle:(NSBundle *)bundle
 {
-	if (SharedRelatedParts == nil)
-	{
-	
-		NSBundle * mainBundle	= [NSBundle mainBundle];
-		NSString * path	= [mainBundle pathForResource:@"related.ldr" ofType:nil];
-	
-		SharedRelatedParts = [[LDrawRelatedParts alloc] initWithFilePath:path];
-	}
-	
-	return SharedRelatedParts;
-	
-} // end sharedRelatedParts
+	return [bundle pathForResource:@"related.ldr" ofType:nil];
+}
+
+
+//---------- sharedRelatedPartsWithFilePath: -------------------------[static]--
+//
+// Purpose:		Process-wide related-parts database. First path wins.
+//
+//------------------------------------------------------------------------------
++ (instancetype)sharedRelatedPartsWithFilePath:(NSString *)filePath
+{
+	static LDrawRelatedParts *shared = nil;
+	static dispatch_once_t    onceToken;
+	dispatch_once(&onceToken, ^{
+		shared = [[LDrawRelatedParts alloc] initWithFilePath:filePath];
+	});
+	return shared;
+}
 
 
 //========== initWithFilePath: =================================================
 //
 // Purpose:		Create our new related-parts DB, loading related parts from
-//				an LDR file.
+//				an LDR file. Nil or unreadable path yields an empty database.
 //
 //==============================================================================
-- (id)initWithFilePath:(NSString *)filePath
+- (instancetype)initWithFilePath:(NSString *)filePath
 {
 	NSUInteger			i;
 	NSUInteger			count;
@@ -345,7 +349,19 @@ static LDrawRelatedParts * SharedRelatedParts = nil;
 	NSMutableArray *	arr				= nil;
 
 	self = [super init];
+	if (filePath == nil)
+	{
+		self->relatedParts = [[NSArray alloc] init];
+		return self;
+	}
+
 	fileContents	= [LDrawUtilities stringFromFile:filePath];
+	if (fileContents == nil)
+	{
+		self->relatedParts = [[NSArray alloc] init];
+		return self;
+	}
+
 	lines			= [fileContents separateByLine];			
 	count			= [lines count];
 	arr				= [[NSMutableArray alloc] initWithCapacity:count];

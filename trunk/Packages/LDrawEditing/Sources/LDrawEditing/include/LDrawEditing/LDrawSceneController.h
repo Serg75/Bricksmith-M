@@ -23,6 +23,7 @@
 
 @class LDrawDirective;
 @class LDrawDragHandle;
+@class LDrawRenderer;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -34,22 +35,26 @@ NS_ASSUME_NONNULL_BEGIN
 /// @class      LDrawSceneController
 ///
 /// @abstract   Editor-side scene controller. Holds selection / marquee state
-///             and consumes the read-only camera + viewport state from
-///             `LDrawRenderer` (LDrawRenderCore).
+///             and talks to the renderer through LDrawSceneEditing (or any
+///             LDrawSceneControllerRendererBridge).
 ///
 //------------------------------------------------------------------------------
 @interface LDrawSceneController : NSObject
 
 @property (nonatomic, weak, nullable)   id<LDrawSceneControllerDelegate>          delegate;
-@property (nonatomic, weak, nullable)   id<LDrawSceneControllerRendererBridge>    rendererBridge;
+@property (nonatomic, strong, nullable) id<LDrawSceneControllerRendererBridge>    rendererBridge;
 
 @property (nonatomic, readonly)         Box2                                      selectionMarquee;
 @property (nonatomic, readonly)         BOOL                                      isTrackingDrag;
 @property (nonatomic, readonly)         BOOL                                      didPartSelection;
 @property (nonatomic, readonly, nullable) LDrawDragHandle                        *activeDragHandle;
 
-/// Create a scene controller that talks to the renderer through the given
-/// bridge. Camera tools stay on LDrawRenderer.
+/// Wraps the renderer in LDrawSceneEditing. Preferred for host views.
+/// Camera tools stay on LDrawRenderer.
+- (instancetype)initWithRenderer:(LDrawRenderer *)renderer;
+
+/// Create a scene controller that talks to the given bridge. Tests and
+/// fakes can pass a custom object. Camera tools stay on LDrawRenderer.
 - (instancetype)initWithRendererBridge:(id<LDrawSceneControllerRendererBridge>)bridge NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
@@ -167,10 +172,9 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @protocol   LDrawSceneControllerRendererBridge
 ///
-/// @abstract   Read-only camera / viewport queries the scene controller needs
-///             from the renderer. Implemented by LDrawRenderer (in
-///             LDrawRenderCore) so the controller does not pull in the renderer
-///             package.
+/// @abstract   Camera / viewport queries the scene controller needs from the
+///             renderer. LDrawSceneEditing implements this by forwarding to
+///             LDrawRenderer so RenderCore does not depend on Editing.
 ///
 //------------------------------------------------------------------------------
 @protocol LDrawSceneControllerRendererBridge <NSObject>

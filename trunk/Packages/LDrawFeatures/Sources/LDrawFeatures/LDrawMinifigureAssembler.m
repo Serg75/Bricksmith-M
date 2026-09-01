@@ -4,7 +4,8 @@
 //  Package:    LDrawFeatures
 //
 //  Purpose:    Positions minifigure parts the same way the AppKit generator
-//              dialog did, using MLCad.ini torso arm angles.
+//              dialog did, using MLCad.ini torso arm angles. Generator preview
+//              zoom and autosave names live in Bricksmith LDrawHostChrome.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //
@@ -18,152 +19,8 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/MatrixMath.h>
+#import <LDrawFeatures/LDrawMinifigureSpec.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
-
-@interface LDrawMinifigureSpec ()
-+ (NSArray<NSString *> *)partSlotKeys;
-@end
-
-@implementation LDrawMinifigureSpec
-
-//---------- inclusionAndAngleKeys -----------------------------------[static]--
-//
-// Purpose:		Has-flags, elevation, and joint-angle property names copied
-//				onto the spec from the generator (KVC).
-//
-//------------------------------------------------------------------------------
-+ (NSArray<NSString *> *)inclusionAndAngleKeys
-{
-	return @[
-		@"hasHat",
-		@"hasNeckAccessory",
-		@"hasHips",
-		@"hasRightArm",
-		@"hasRightHand",
-		@"hasRightHandAccessory",
-		@"hasRightLeg",
-		@"hasRightLegAccessory",
-		@"hasLeftArm",
-		@"hasLeftHand",
-		@"hasLeftHandAccessory",
-		@"hasLeftLeg",
-		@"hasLeftLegAccessory",
-		@"headElevation",
-		@"angleOfHat",
-		@"angleOfHead",
-		@"angleOfNeck",
-		@"angleOfRightArm",
-		@"angleOfRightHand",
-		@"angleOfRightHandAccessory",
-		@"angleOfRightLeg",
-		@"angleOfRightLegAccessory",
-		@"angleOfLeftArm",
-		@"angleOfLeftHand",
-		@"angleOfLeftHandAccessory",
-		@"angleOfLeftLeg",
-		@"angleOfLeftLegAccessory",
-	];
-}
-
-
-//---------- takeInclusionAndAnglesFromTarget: -----------------------[instance]
-//
-// Purpose:		Copies has-flags, elevation, and joint angles from the
-//				generator (KVC).
-//
-//------------------------------------------------------------------------------
-- (void)takeInclusionAndAnglesFromTarget:(id)target
-{
-	for (NSString *key in [[self class] inclusionAndAngleKeys])
-	{
-		[self setValue:[target valueForKey:key] forKey:key];
-	}
-}
-
-
-//---------- partSlotKeys --------------------------------------------[static]--
-//
-// Purpose:		Part property names in generator-dialog slot order.
-//
-//------------------------------------------------------------------------------
-+ (NSArray<NSString *> *)partSlotKeys
-{
-	return @[
-		@"hat",
-		@"head",
-		@"neck",
-		@"torso",
-		@"leftArm",
-		@"leftHand",
-		@"leftHandAccessory",
-		@"rightArm",
-		@"rightHand",
-		@"rightHandAccessory",
-		@"hips",
-		@"leftLeg",
-		@"leftLegAccessory",
-		@"rightLeg",
-		@"rightLegAccessory",
-	];
-}
-
-
-//---------- copiedPartsFromSlotSelections: --------------------------[static]--
-//
-// Purpose:		This is it! Copy the selected catalog part from each generator
-//				slot. The host still reads NSArrayControllers.
-//
-//------------------------------------------------------------------------------
-+ (NSArray *)copiedPartsFromSlotSelections:(NSArray *)selections
-{
-	NSMutableArray *parts = [NSMutableArray array];
-	for (NSArray *selection in selections)
-	{
-		[parts addObject:[[selection objectAtIndex:0] copy]];
-	}
-	return parts;
-}
-
-
-//---------- setPartsInSlotOrder: ------------------------------------[instance]
-//
-// Purpose:		Assigns copied catalog parts in partSlotKeys order.
-//
-//------------------------------------------------------------------------------
-- (void)setPartsInSlotOrder:(NSArray *)parts
-{
-	NSArray    *keys = [[self class] partSlotKeys];
-	NSUInteger  count = MIN([parts count], [keys count]);
-	NSUInteger  i;
-
-	for (i = 0; i < count; i++)
-	{
-		[self setValue:[parts objectAtIndex:i] forKey:[keys objectAtIndex:i]];
-	}
-}
-
-
-//---------- applyColorsInSlotOrder: ---------------------------------[instance]
-//
-// Purpose:		Applies colors onto those parts in the same order. The host
-//				still owns color wells.
-//
-//------------------------------------------------------------------------------
-- (void)applyColorsInSlotOrder:(NSArray *)colors
-{
-	NSArray    *keys = [[self class] partSlotKeys];
-	NSUInteger  count = MIN([colors count], [keys count]);
-	NSUInteger  i;
-
-	for (i = 0; i < count; i++)
-	{
-		LDrawPart *part = [self valueForKey:[keys objectAtIndex:i]];
-		[part setLDrawColor:[colors objectAtIndex:i]];
-	}
-}
-
-@end
-
 
 //========== moveBy:parts: =====================================================
 //
@@ -472,39 +329,6 @@ static void RotateParts(Tuple3 degrees, LDrawPart *firstPart, ...)
 
 	// this is it! We've got a minifigure!
 	return newMinifigure;
-}
-
-
-//---------- untitledMinifigureLocalizationKey -----------------------[static]--
-//
-// Purpose:		Default generator model name. The host still localizes.
-//
-//------------------------------------------------------------------------------
-+ (NSString *)untitledMinifigureLocalizationKey
-{
-	return @"UntitledMinifigure";
-}
-
-
-//---------- generatorPreviewDefaultZoomPercentage -------------------[static]--
-//
-// Purpose:		Generator GL preview starts at this zoom percentage.
-//
-//------------------------------------------------------------------------------
-+ (CGFloat)generatorPreviewDefaultZoomPercentage
-{
-	return 180;
-}
-
-
-//---------- generatorPreviewAutosaveName ----------------------------[static]--
-//
-// Purpose:		Autosave name for the generator preview viewport.
-//
-//------------------------------------------------------------------------------
-+ (NSString *)generatorPreviewAutosaveName
-{
-	return @"MinifigureGeneratorView";
 }
 
 @end

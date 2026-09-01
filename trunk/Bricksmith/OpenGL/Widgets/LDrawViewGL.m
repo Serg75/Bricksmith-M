@@ -26,7 +26,6 @@
 
 #include <OpenGL/gl.h>
 
-#import <LDrawEditing/LDrawRenderer+SceneControllerBridge.h>
 #import <LDrawEditing/LDrawSceneController.h>
 #import <LDrawRenderOpenGL/LDrawRendererGL.h>
 
@@ -148,7 +147,7 @@
 	renderer = [[LDrawRenderer alloc] initWithBounds:[self bounds].size];
 	[renderer setDelegate:self withScroller:self];
 	[renderer setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
-	sceneController = [[LDrawSceneController alloc] initWithRendererBridge:renderer];
+	sceneController = [[LDrawSceneController alloc] initWithRenderer:renderer];
 	[renderer prepareOpenGL];
 
 	[self takeBackgroundColorFromUserDefaults];

@@ -1,23 +1,22 @@
 //==============================================================================
 //
-//  File:       LDrawMinifigureSnapshot.m
+//  File:       LDrawMinifigureDefaults.m
 //  Package:    LDrawFeatures
 //
-//  Purpose:    NSUserDefaults packing for the minifigure generator.
+//  Purpose:    Saved minifigure generator settings (NSUserDefaults packing).
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //
 //==============================================================================
 
-#import <LDrawFeatures/LDrawMinifigureSnapshot.h>
-#import <LDrawFeatures/LDrawMinifigureAssembler.h>
+#import <LDrawFeatures/LDrawMinifigureDefaults.h>
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
 
 
-@interface LDrawMinifigureSnapshot ()
+@interface LDrawMinifigureDefaults ()
 + (NSArray<NSString *> *)colorKeys;
 + (NSArray<NSString *> *)partNameKeys;
 - (NSInteger)colorCodeAtIndex:(NSUInteger)index;
@@ -26,82 +25,82 @@
 - (void)setPartName:(nullable NSString *)name atIndex:(NSUInteger)index;
 @end
 
-@implementation LDrawMinifigureSnapshot
+@implementation LDrawMinifigureDefaults
 
-//---------- snapshotFromUserDefaults: -------------------------------[static]--
+//---------- fromUserDefaults: ---------------------------------------[static]--
 //
 // Purpose:		Reads previous values out of preferences.
 //
 // Notes:		Wow what a horrific method.
 //
 //------------------------------------------------------------------------------
-+ (instancetype)snapshotFromUserDefaults:(NSUserDefaults *)defaults
++ (instancetype)fromUserDefaults:(NSUserDefaults *)defaults
 {
-	LDrawMinifigureSnapshot *snap = [[self alloc] init];
+	LDrawMinifigureDefaults *saved = [[self alloc] init];
 
-	snap.hasHat                 = [defaults boolForKey:MINIFIGURE_HAS_HAT];
-	snap.hasNeckAccessory       = [defaults boolForKey:MINIFIGURE_HAS_NECK];
-	snap.hasHips                = [defaults boolForKey:MINIFIGURE_HAS_HIPS];
-	snap.hasRightArm            = [defaults boolForKey:MINIFIGURE_HAS_ARM_RIGHT];
-	snap.hasRightHand           = [defaults boolForKey:MINIFIGURE_HAS_HAND_RIGHT];
-	snap.hasRightHandAccessory  = [defaults boolForKey:MINIFIGURE_HAS_HAND_RIGHT_ACCESSORY];
-	snap.hasLeftArm             = [defaults boolForKey:MINIFIGURE_HAS_ARM_LEFT];
-	snap.hasLeftHand            = [defaults boolForKey:MINIFIGURE_HAS_HAND_LEFT];
-	snap.hasLeftHandAccessory   = [defaults boolForKey:MINIFIGURE_HAS_HAND_LEFT_ACCESSORY];
-	snap.hasRightLeg            = [defaults boolForKey:MINIFIGURE_HAS_LEG_RIGHT];
-	snap.hasRightLegAccessory   = [defaults boolForKey:MINIFIGURE_HAS_LEG_RIGHT_ACCESSORY];
-	snap.hasLeftLeg             = [defaults boolForKey:MINIFIGURE_HAS_LEG_LEFT];
-	snap.hasLeftLegAccessory    = [defaults boolForKey:MINIFIGURE_HAS_LEG_LEFT_ACCESSORY];
+	saved.hasHat                 = [defaults boolForKey:MINIFIGURE_HAS_HAT];
+	saved.hasNeckAccessory       = [defaults boolForKey:MINIFIGURE_HAS_NECK];
+	saved.hasHips                = [defaults boolForKey:MINIFIGURE_HAS_HIPS];
+	saved.hasRightArm            = [defaults boolForKey:MINIFIGURE_HAS_ARM_RIGHT];
+	saved.hasRightHand           = [defaults boolForKey:MINIFIGURE_HAS_HAND_RIGHT];
+	saved.hasRightHandAccessory  = [defaults boolForKey:MINIFIGURE_HAS_HAND_RIGHT_ACCESSORY];
+	saved.hasLeftArm             = [defaults boolForKey:MINIFIGURE_HAS_ARM_LEFT];
+	saved.hasLeftHand            = [defaults boolForKey:MINIFIGURE_HAS_HAND_LEFT];
+	saved.hasLeftHandAccessory   = [defaults boolForKey:MINIFIGURE_HAS_HAND_LEFT_ACCESSORY];
+	saved.hasRightLeg            = [defaults boolForKey:MINIFIGURE_HAS_LEG_RIGHT];
+	saved.hasRightLegAccessory   = [defaults boolForKey:MINIFIGURE_HAS_LEG_RIGHT_ACCESSORY];
+	saved.hasLeftLeg             = [defaults boolForKey:MINIFIGURE_HAS_LEG_LEFT];
+	saved.hasLeftLegAccessory    = [defaults boolForKey:MINIFIGURE_HAS_LEG_LEFT_ACCESSORY];
 
-	snap.headElevation          = [defaults floatForKey:MINIFIGURE_HEAD_ELEVATION];
+	saved.headElevation          = [defaults floatForKey:MINIFIGURE_HEAD_ELEVATION];
 
-	snap.angleOfHat             = [defaults floatForKey:MINIFIGURE_ANGLE_HAT];
-	snap.angleOfHead            = [defaults floatForKey:MINIFIGURE_ANGLE_HEAD];
-	snap.angleOfNeck            = [defaults floatForKey:MINIFIGURE_ANGLE_NECK];
-	snap.angleOfLeftArm         = [defaults floatForKey:MINIFIGURE_ANGLE_ARM_LEFT];
-	snap.angleOfRightArm        = [defaults floatForKey:MINIFIGURE_ANGLE_ARM_RIGHT];
-	snap.angleOfLeftHand        = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_LEFT];
-	snap.angleOfLeftHandAccessory  = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_LEFT_ACCESSORY];
-	snap.angleOfRightHand       = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_RIGHT];
-	snap.angleOfRightHandAccessory = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_RIGHT_ACCESSORY];
-	snap.angleOfLeftLeg         = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_LEFT];
-	snap.angleOfLeftLegAccessory    = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_LEFT_ACCESSORY];
-	snap.angleOfRightLeg        = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_RIGHT];
-	snap.angleOfRightLegAccessory   = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_RIGHT_ACCESSORY];
+	saved.angleOfHat             = [defaults floatForKey:MINIFIGURE_ANGLE_HAT];
+	saved.angleOfHead            = [defaults floatForKey:MINIFIGURE_ANGLE_HEAD];
+	saved.angleOfNeck            = [defaults floatForKey:MINIFIGURE_ANGLE_NECK];
+	saved.angleOfLeftArm         = [defaults floatForKey:MINIFIGURE_ANGLE_ARM_LEFT];
+	saved.angleOfRightArm        = [defaults floatForKey:MINIFIGURE_ANGLE_ARM_RIGHT];
+	saved.angleOfLeftHand        = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_LEFT];
+	saved.angleOfLeftHandAccessory  = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_LEFT_ACCESSORY];
+	saved.angleOfRightHand       = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_RIGHT];
+	saved.angleOfRightHandAccessory = [defaults floatForKey:MINIFIGURE_ANGLE_HAND_RIGHT_ACCESSORY];
+	saved.angleOfLeftLeg         = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_LEFT];
+	saved.angleOfLeftLegAccessory    = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_LEFT_ACCESSORY];
+	saved.angleOfRightLeg        = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_RIGHT];
+	saved.angleOfRightLegAccessory   = [defaults floatForKey:MINIFIGURE_ANGLE_LEG_RIGHT_ACCESSORY];
 
-	snap.colorHat               = [defaults integerForKey:MINIFIGURE_COLOR_HAT];
-	snap.colorHead              = [defaults integerForKey:MINIFIGURE_COLOR_HEAD];
-	snap.colorNeck              = [defaults integerForKey:MINIFIGURE_COLOR_NECK];
-	snap.colorTorso             = [defaults integerForKey:MINIFIGURE_COLOR_TORSO];
-	snap.colorArmRight          = [defaults integerForKey:MINIFIGURE_COLOR_ARM_RIGHT];
-	snap.colorHandRight         = [defaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT];
-	snap.colorHandRightAccessory = [defaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT_ACCESSORY];
-	snap.colorArmLeft           = [defaults integerForKey:MINIFIGURE_COLOR_ARM_LEFT];
-	snap.colorHandLeft          = [defaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT];
-	snap.colorHandLeftAccessory  = [defaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT_ACCESSORY];
-	snap.colorHips              = [defaults integerForKey:MINIFIGURE_COLOR_HIPS];
-	snap.colorLegRight          = [defaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT];
-	snap.colorLegRightAccessory  = [defaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT_ACCESSORY];
-	snap.colorLegLeft           = [defaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT];
-	snap.colorLegLeftAccessory   = [defaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY];
+	saved.colorHat               = [defaults integerForKey:MINIFIGURE_COLOR_HAT];
+	saved.colorHead              = [defaults integerForKey:MINIFIGURE_COLOR_HEAD];
+	saved.colorNeck              = [defaults integerForKey:MINIFIGURE_COLOR_NECK];
+	saved.colorTorso             = [defaults integerForKey:MINIFIGURE_COLOR_TORSO];
+	saved.colorArmRight          = [defaults integerForKey:MINIFIGURE_COLOR_ARM_RIGHT];
+	saved.colorHandRight         = [defaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT];
+	saved.colorHandRightAccessory = [defaults integerForKey:MINIFIGURE_COLOR_HAND_RIGHT_ACCESSORY];
+	saved.colorArmLeft           = [defaults integerForKey:MINIFIGURE_COLOR_ARM_LEFT];
+	saved.colorHandLeft          = [defaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT];
+	saved.colorHandLeftAccessory  = [defaults integerForKey:MINIFIGURE_COLOR_HAND_LEFT_ACCESSORY];
+	saved.colorHips              = [defaults integerForKey:MINIFIGURE_COLOR_HIPS];
+	saved.colorLegRight          = [defaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT];
+	saved.colorLegRightAccessory  = [defaults integerForKey:MINIFIGURE_COLOR_LEG_RIGHT_ACCESSORY];
+	saved.colorLegLeft           = [defaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT];
+	saved.colorLegLeftAccessory   = [defaults integerForKey:MINIFIGURE_COLOR_LEG_LEFT_ACCESSORY];
 
-	snap.partNameHat            = [defaults stringForKey:MINIFIGURE_PARTNAME_HAT];
-	snap.partNameHead           = [defaults stringForKey:MINIFIGURE_PARTNAME_HEAD];
-	snap.partNameNeck           = [defaults stringForKey:MINIFIGURE_PARTNAME_NECK];
-	snap.partNameTorso          = [defaults stringForKey:MINIFIGURE_PARTNAME_TORSO];
-	snap.partNameArmRight       = [defaults stringForKey:MINIFIGURE_PARTNAME_ARM_RIGHT];
-	snap.partNameHandRight      = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_RIGHT];
-	snap.partNameHandRightAccessory = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_RIGHT_ACCESSORY];
-	snap.partNameArmLeft        = [defaults stringForKey:MINIFIGURE_PARTNAME_ARM_LEFT];
-	snap.partNameHandLeft       = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_LEFT];
-	snap.partNameHandLeftAccessory  = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_LEFT_ACCESSORY];
-	snap.partNameHips           = [defaults stringForKey:MINIFIGURE_PARTNAME_HIPS];
-	snap.partNameLegRight       = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_RIGHT];
-	snap.partNameLegRightAccessory  = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_RIGHT_ACCESSORY];
-	snap.partNameLegLeft        = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_LEFT];
-	snap.partNameLegLeftAccessory   = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_LEFT_ACCESSORY];
+	saved.partNameHat            = [defaults stringForKey:MINIFIGURE_PARTNAME_HAT];
+	saved.partNameHead           = [defaults stringForKey:MINIFIGURE_PARTNAME_HEAD];
+	saved.partNameNeck           = [defaults stringForKey:MINIFIGURE_PARTNAME_NECK];
+	saved.partNameTorso          = [defaults stringForKey:MINIFIGURE_PARTNAME_TORSO];
+	saved.partNameArmRight       = [defaults stringForKey:MINIFIGURE_PARTNAME_ARM_RIGHT];
+	saved.partNameHandRight      = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_RIGHT];
+	saved.partNameHandRightAccessory = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_RIGHT_ACCESSORY];
+	saved.partNameArmLeft        = [defaults stringForKey:MINIFIGURE_PARTNAME_ARM_LEFT];
+	saved.partNameHandLeft       = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_LEFT];
+	saved.partNameHandLeftAccessory  = [defaults stringForKey:MINIFIGURE_PARTNAME_HAND_LEFT_ACCESSORY];
+	saved.partNameHips           = [defaults stringForKey:MINIFIGURE_PARTNAME_HIPS];
+	saved.partNameLegRight       = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_RIGHT];
+	saved.partNameLegRightAccessory  = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_RIGHT_ACCESSORY];
+	saved.partNameLegLeft        = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_LEFT];
+	saved.partNameLegLeftAccessory   = [defaults stringForKey:MINIFIGURE_PARTNAME_LEG_LEFT_ACCESSORY];
 
-	return snap;
+	return saved;
 }
 
 
@@ -175,30 +174,6 @@
 	[defaults setObject:self.partNameLegRightAccessory   forKey:MINIFIGURE_PARTNAME_LEG_RIGHT_ACCESSORY];
 	[defaults setObject:self.partNameLegLeft             forKey:MINIFIGURE_PARTNAME_LEG_LEFT];
 	[defaults setObject:self.partNameLegLeftAccessory    forKey:MINIFIGURE_PARTNAME_LEG_LEFT_ACCESSORY];
-}
-
-
-//---------- applyInclusionAndAnglesToTarget: ------------------------[instance]
-//
-//------------------------------------------------------------------------------
-- (void)applyInclusionAndAnglesToTarget:(id)target
-{
-	for (NSString *key in [LDrawMinifigureSpec inclusionAndAngleKeys])
-	{
-		[target setValue:[self valueForKey:key] forKey:key];
-	}
-}
-
-
-//---------- takeInclusionAndAnglesFromTarget: -----------------------[instance]
-//
-//------------------------------------------------------------------------------
-- (void)takeInclusionAndAnglesFromTarget:(id)target
-{
-	for (NSString *key in [LDrawMinifigureSpec inclusionAndAngleKeys])
-	{
-		[self setValue:[target valueForKey:key] forKey:key];
-	}
 }
 
 

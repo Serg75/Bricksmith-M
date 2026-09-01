@@ -15,10 +15,12 @@
 #import <LDrawCore/LDrawPart.h>
 
 #import <LDrawFeatures/LDrawMinifigureAssembler.h>
-#import <LDrawFeatures/LDrawMinifigureSnapshot.h>
+#import <LDrawFeatures/LDrawMinifigureDefaults.h>
+#import <LDrawFeatures/LDrawMinifigureSpec.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 
 #import "LDrawColorWell.h"
+#import "LDrawHostChrome.h"
 #import "LDrawView.h"
 #import "LDrawViewerContainer.h"
 
@@ -113,9 +115,9 @@
 - (void) awakeFromNib
 {
 	[_minifigurePreview.glView setAcceptsFirstResponder:NO];
-	[_minifigurePreview.glView setZoomPercentage:[LDrawMinifigureAssembler generatorPreviewDefaultZoomPercentage]];
+	[_minifigurePreview.glView setZoomPercentage:[LDrawHostChrome minifigureGeneratorPreviewDefaultZoomPercentage]];
 	
-	[_minifigurePreview.glView	setAutosaveName:[LDrawMinifigureAssembler generatorPreviewAutosaveName]];
+	[_minifigurePreview.glView	setAutosaveName:[LDrawHostChrome minifigureGeneratorPreviewAutosaveName]];
 	[_minifigurePreview.glView	restoreConfiguration];
 	
 }//end awakeFromNib
@@ -135,7 +137,7 @@
 	self = [super init];
 	
 	iniFile = [LDrawMLCadIni iniFile]; // KVC: XIB binds array controllers to iniFile.minifigure*
-	[self setMinifigureName:NSLocalizedString([LDrawMinifigureAssembler untitledMinifigureLocalizationKey], nil)];
+	[self setMinifigureName:NSLocalizedString([LDrawHostChrome untitledMinifigureLocalizationKey], nil)];
 	
 	//we'll call -generateMinifigure: when the dialog is ready and loaded with 
 	// all its values.
@@ -401,9 +403,9 @@
 {
 	NSUserDefaults            *userDefaults = [NSUserDefaults standardUserDefaults];
 	LDrawColorLibrary         *colorLibrary = [LDrawColorLibrary sharedColorLibrary];
-	LDrawMinifigureSnapshot   *snap         = [LDrawMinifigureSnapshot snapshotFromUserDefaults:userDefaults];
+	LDrawMinifigureDefaults   *saved        = [LDrawMinifigureDefaults fromUserDefaults:userDefaults];
 
-	[snap applyInclusionAndAnglesToTarget:self];
+	[saved applyInclusionAndAnglesToTarget:self];
 
 	NSArray *wells = @[
 		_hatsColorWell,
@@ -422,7 +424,7 @@
 		_leftLegsColorWell,
 		_leftLegAccessoriesColorWell,
 	];
-	NSArray *codes = [snap colorCodesInSlotOrder];
+	NSArray *codes = [saved colorCodesInSlotOrder];
 	NSUInteger i;
 	NSUInteger wellCount = MIN([wells count], [codes count]);
 	for(i = 0; i < wellCount; i++)
@@ -448,7 +450,7 @@
 		_leftLegsController,
 		_leftLegAccessoriesController,
 	];
-	NSArray *names = [snap partNamesInSlotOrder];
+	NSArray *names = [saved partNamesInSlotOrder];
 	NSUInteger nameCount = MIN([controllers count], [names count]);
 	for(i = 0; i < nameCount; i++)
 	{
@@ -469,11 +471,11 @@
 - (void) saveToPreferences
 {
 	NSUserDefaults          *userDefaults = [NSUserDefaults standardUserDefaults];
-	LDrawMinifigureSnapshot *snap         = [LDrawMinifigureSnapshot new];
+	LDrawMinifigureDefaults *saved        = [LDrawMinifigureDefaults new];
 
-	[snap takeInclusionAndAnglesFromTarget:self];
+	[saved takeInclusionAndAnglesFromTarget:self];
 
-	[snap setColorCodesFromColors:@[
+	[saved setColorCodesFromColors:@[
 		[_hatsColorWell					LDrawColor],
 		[_headsColorWell				LDrawColor],
 		[_necksColorWell				LDrawColor],
@@ -490,7 +492,7 @@
 		[_leftLegsColorWell				LDrawColor],
 		[_leftLegAccessoriesColorWell	LDrawColor],
 	]];
-	[snap setPartNamesFromSlotSelections:@[
+	[saved setPartNamesFromSlotSelections:@[
 		[_hatsController					selectedObjects],
 		[_headsController					selectedObjects],
 		[_necksController					selectedObjects],
@@ -508,7 +510,7 @@
 		[_leftLegAccessoriesController		selectedObjects],
 	]];
 
-	[snap writeToUserDefaults:userDefaults];
+	[saved writeToUserDefaults:userDefaults];
 
 	//and write it out at last!
 	[userDefaults synchronize];
@@ -526,7 +528,7 @@
 - (void) selectPartWithName:(NSString *) name
 			   inController:(NSArrayController *)controller
 {
-	NSUInteger index = [LDrawMinifigureSnapshot indexOfPartNamed:name
+	NSUInteger index = [LDrawMinifigureDefaults indexOfPartNamed:name
 														 inParts:[controller arrangedObjects]];
 	if(index != NSNotFound)
 	{
