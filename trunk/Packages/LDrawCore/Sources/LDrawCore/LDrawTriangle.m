@@ -27,6 +27,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MatrixMath.h>
@@ -454,7 +455,7 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	return NSLocalizedString(@"Triangle", nil);
+	return [LDrawLocalization stringForKey:@"Triangle"];
 	
 }//end browsingDescription
 
@@ -749,7 +750,7 @@
 	[[undoManager prepareWithInvocationTarget:self] setVertex2:[self vertex2]];
 	[[undoManager prepareWithInvocationTarget:self] setVertex1:[self vertex1]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesTriangle", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesTriangle"]];
 	
 }//end registerUndoActions:
 

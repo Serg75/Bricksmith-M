@@ -10,6 +10,7 @@
 #import "PartCatalogBuilder.h"
 
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawPathNames.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawUtilities.h>
@@ -121,71 +122,71 @@
 		// Primitives
 		[searchPaths addObject:@{
 			@"path": [paths primitivesPathForDomain:LDrawUserOfficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 		}];
 									
 		[searchPaths addObject:@{
 			@"path": [paths primitivesPathForDomain:LDrawUserUnofficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 		}];
 		
 		[searchPaths addObject:@{
 			@"path": [paths primitivesPathForDomain:LDrawInternalOfficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 		}];
 									
 		[searchPaths addObject:@{
 			@"path": [paths primitivesPathForDomain:LDrawInternalUnofficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 		}];
 		
 		// Primitives 48
 		[searchPaths addObject:@{
 			@"path": [paths primitives48PathForDomain:LDrawUserOfficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 			@"prefix": prefix_primitives48,
 		}];
 
 		[searchPaths addObject:@{
 			@"path": [paths primitives48PathForDomain:LDrawUserUnofficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 			@"prefix": prefix_primitives48,
 		}];
 
 		[searchPaths addObject:@{
 			@"path": [paths primitives48PathForDomain:LDrawInternalOfficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 			@"prefix": prefix_primitives48,
 		}];
 
 		[searchPaths addObject:@{
 			@"path": [paths primitives48PathForDomain:LDrawInternalUnofficial],
-			@"category": NSLocalizedString(Category_Primitives, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Primitives],
 			@"prefix": prefix_primitives48,
 		}];
 
 		// Subparts
 		[searchPaths addObject:@{
 			@"path": [paths subpartsPathForDomain:LDrawUserOfficial],
-			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Subparts],
 			@"prefix": prefix_subparts,
 		}];
 
 		[searchPaths addObject:@{
 			@"path": [paths subpartsPathForDomain:LDrawUserUnofficial],
-			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Subparts],
 			@"prefix": prefix_subparts,
 		}];
 
 		[searchPaths addObject:@{
 			@"path": [paths subpartsPathForDomain:LDrawInternalOfficial],
-			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Subparts],
 			@"prefix": prefix_subparts,
 		}];
 
 		[searchPaths addObject:@{
 			@"path": [paths subpartsPathForDomain:LDrawInternalUnofficial],
-			@"category": NSLocalizedString(Category_Subparts, nil),
+			@"category": [LDrawLocalization stringForKey:Category_Subparts],
 			@"prefix": prefix_subparts,
 		}];
 

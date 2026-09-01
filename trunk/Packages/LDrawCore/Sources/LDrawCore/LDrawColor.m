@@ -17,6 +17,7 @@
 #import <LDrawCore/LDrawColor.h>
 
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawStep.h>
 
@@ -608,7 +609,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	//Find the color's name in the localized string file.
 	// Color names are conveniently keyed.
 	nameKey		= [NSString stringWithFormat:@"LDraw: %d", (int)colorCode];
-	colorName	= NSLocalizedString(nameKey , nil);
+	colorName	= [LDrawLocalization stringForKey:nameKey];
 	
 	// If no localization was defined, then fall back on the name defined in the 
 	// color directive. 

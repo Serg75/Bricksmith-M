@@ -21,6 +21,7 @@
 
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPathNames.h>
@@ -70,6 +71,10 @@ NSString	*Category_Alias 			= @"Alias";
 NSString	*Category_Moved 			= @"Moved";
 NSString	*Category_Primitives		= @"Primitives";
 NSString	*Category_Subparts			= @"Subparts";
+
+@interface LDrawPartLibrary ()
+- (void)notifyDelegateFavoritesChanged;
+@end
 
 @implementation LDrawPartLibrary
 
@@ -188,7 +193,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 							 
 	[fullCategoryList addObject:@{
 		CategoryNameKey: @"Library",
-		CategoryDisplayNameKey: NSLocalizedString(@"CategoryGroup_Library",nil),
+		CategoryDisplayNameKey: [LDrawLocalization stringForKey:@"CategoryGroup_Library"],
 		CategoryChildrenKey: libraryItems,
 	}];
 	
@@ -209,7 +214,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	}
 	[fullCategoryList addObject:@{
 		CategoryNameKey: @"Part Categories",
-		CategoryDisplayNameKey: NSLocalizedString(@"CategoryGroup_PartCategories",nil),
+		CategoryDisplayNameKey: [LDrawLocalization stringForKey:@"CategoryGroup_PartCategories"],
 		CategoryChildrenKey: categoryItems,
 	}];
 	
@@ -237,7 +242,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	
 	[fullCategoryList addObject:@{
 		CategoryNameKey: @"Other",
-		CategoryDisplayNameKey: NSLocalizedString(@"CategoryGroup_Other",nil),
+		CategoryDisplayNameKey: [LDrawLocalization stringForKey:@"CategoryGroup_Other"],
 		CategoryChildrenKey: otherItems,
 	}];
 								 
@@ -285,15 +290,15 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	
 	if ([categoryName isEqualToString:Category_All])
 	{
-		displayName = NSLocalizedString(@"AllCategories", nil);
+		displayName = [LDrawLocalization stringForKey:@"AllCategories"];
 	}
 	else if ([categoryName isEqualToString:Category_Favorites])
 	{
-		displayName = NSLocalizedString(@"FavoritesCategory", nil);
+		displayName = [LDrawLocalization stringForKey:@"FavoritesCategory"];
 	}
 	else
 	{
-		displayName = NSLocalizedString(categoryName, nil);
+		displayName = [LDrawLocalization stringForKey:categoryName];
 	}
 	return displayName;
 }
@@ -580,7 +585,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 - (void)addPartNameToFavorites:(NSString *)partName
 {
 	[self->favorites addObject:partName];
-	[self saveFavoritesToUserDefaults];
+	[self notifyDelegateFavoritesChanged];
 	
 	// Inform any open parts browsers of the change.
 	[[NSNotificationCenter defaultCenter] 
@@ -598,7 +603,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 - (void)removePartNameFromFavorites:(NSString *)partName
 {
 	[self->favorites removeObject:partName];
-	[self saveFavoritesToUserDefaults];
+	[self notifyDelegateFavoritesChanged];
 	
 	// Inform any open parts browsers of the change.
 	[[NSNotificationCenter defaultCenter] 
@@ -608,16 +613,17 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 } // end removePartNameFromFavorites:
 
 
-//========== saveFavoritesToUserDefaults =======================================
+//========== notifyDelegateFavoritesChanged ====================================
 //
-// Purpose:		Writes the favorite parts list to preferences.
+// Purpose:		Tell the host the in-memory favorites list changed. The host
+//				writes FAVORITE_PARTS_KEY; this class does not.
 //
 //==============================================================================
-- (void)saveFavoritesToUserDefaults
+- (void)notifyDelegateFavoritesChanged
 {
 	[self->delegate partLibrary:self didChangeFavorites:(self->favorites)];
 	
-} // end saveFavoritesToUserDefaults
+} // end notifyDelegateFavoritesChanged
 
 
 #pragma mark -

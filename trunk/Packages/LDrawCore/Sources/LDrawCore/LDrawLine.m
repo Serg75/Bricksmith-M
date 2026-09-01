@@ -24,6 +24,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
 
@@ -399,7 +400,7 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	return NSLocalizedString(@"Line", nil);
+	return [LDrawLocalization stringForKey:@"Line"];
 	
 }//end browsingDescription
 
@@ -635,7 +636,7 @@
 	[[undoManager prepareWithInvocationTarget:self] setVertex2:[self vertex2]];
 	[[undoManager prepareWithInvocationTarget:self] setVertex1:[self vertex1]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesLine", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesLine"]];
 	
 }//end registerUndoActions:
 

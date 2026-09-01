@@ -27,6 +27,7 @@
 #import <string.h>
 
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
@@ -1519,7 +1520,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	[[undoManager prepareWithInvocationTarget:self] setTransformComponents:[self transformComponents]];
 	[[undoManager prepareWithInvocationTarget:self] setDisplayName:[self displayName]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesPart", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesPart"]];
 
 }//end registerUndoActions:
 

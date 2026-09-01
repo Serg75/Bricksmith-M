@@ -26,6 +26,7 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MatrixMath.h>
@@ -499,7 +500,7 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	return NSLocalizedString(@"Quadrilateral", nil);
+	return [LDrawLocalization stringForKey:@"Quadrilateral"];
 	
 }//end browsingDescription
 
@@ -893,7 +894,7 @@
 	[[undoManager prepareWithInvocationTarget:self] setVertex2:[self vertex2]];
 	[[undoManager prepareWithInvocationTarget:self] setVertex1:[self vertex1]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesQuadrilateral", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesQuadrilateral"]];
 	
 }//end registerUndoActions:
 

@@ -26,6 +26,7 @@
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawPathNames.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawRegex.h>

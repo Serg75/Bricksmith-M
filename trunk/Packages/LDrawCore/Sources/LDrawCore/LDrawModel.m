@@ -26,6 +26,7 @@
 #import <LDrawCore/LDrawConditionalLine.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawLine.h>
 #import <LDrawCore/LDrawQuadrilateral.h>
 #import <LDrawCore/LDrawStep.h>
@@ -62,7 +63,7 @@
 	LDrawModel *newModel = [[[self class] alloc] init];
 	
 	//Then fill it up with useful initial attributes
-	[newModel setModelDescription:NSLocalizedString(@"UntitledModel", nil)];
+	[newModel setModelDescription:[LDrawLocalization stringForKey:@"UntitledModel"]];
 	[newModel setFileName:@""];
 	
 	[newModel setAuthor:[LDrawUtilities defaultAuthor]];
@@ -1531,7 +1532,7 @@
 	[[undoManager prepareWithInvocationTarget:self] setFileName:[self fileName]];
 	[[undoManager prepareWithInvocationTarget:self] setModelDescription:[self modelDescription]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesModel", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesModel"]];
 	
 }//end registerUndoActions:
 

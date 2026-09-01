@@ -19,6 +19,7 @@
 #import <LDrawCore/LPubRemoveGroup.h>
 
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCommand.h>
 
@@ -178,7 +179,7 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 	
 	[[undoManager prepareWithInvocationTarget:self] setGroupName:self.groupName];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesRemoveGroup", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesRemoveGroup"]];
 	
 }//end registerUndoActions:
 

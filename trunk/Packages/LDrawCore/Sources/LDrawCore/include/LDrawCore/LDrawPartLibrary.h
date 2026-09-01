@@ -8,7 +8,8 @@
 //
 //  Info:       Newly scanned catalogs stamp a host-provided version string
 //              (usually CFBundleVersion). This class does not look up the
-//              app main bundle.
+//              app main bundle. Favorites stay in memory; add/remove notify
+//              the delegate. The host writes FAVORITE_PARTS_KEY.
 //
 //  Created by Allen Smith on 3/12/05.
 //  Copyright 2005. All rights reserved.
@@ -111,7 +112,6 @@ extern NSString	*Category_Subparts;
 // Favorites
 - (void)addPartNameToFavorites:(NSString *)partName;
 - (void)removePartNameFromFavorites:(NSString *)partName;
-- (void)saveFavoritesToUserDefaults;
 
 // Finding Parts
 - (void)loadImageForName:(NSString *)imageName inGroup:(nullable dispatch_group_t)parentGroup;

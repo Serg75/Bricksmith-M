@@ -28,6 +28,7 @@
 
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/NSString+LDraw.h>
 
@@ -49,7 +50,7 @@
 	NSString        *name       = nil;
 	
 	// Set the spec-compliant model name with extension
-	name = NSLocalizedString(@"UntitledModel", nil);
+	name = [LDrawLocalization stringForKey:@"UntitledModel"];
 	[newModel setModelDisplayName:name];
 	
 	return newModel;

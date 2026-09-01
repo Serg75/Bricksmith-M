@@ -29,6 +29,7 @@
 
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 
@@ -367,10 +368,10 @@ NSString    *PART_REPORT_PART_QUANTITY  = @"QuantityKey";
 
 	// the Header
 	[text appendFormat: lineFormat,
-									NSLocalizedString(@"PieceCountQuantityColumnName", nil),
-									NSLocalizedString(@"PieceCountPartNumberColumnName", nil),
-									NSLocalizedString(@"PieceCountColorColumnName", nil),
-									NSLocalizedString(@"PieceCountDescriptionColumnName", nil) ];
+									[LDrawLocalization stringForKey:@"PieceCountQuantityColumnName"],
+									[LDrawLocalization stringForKey:@"PieceCountPartNumberColumnName"],
+									[LDrawLocalization stringForKey:@"PieceCountColorColumnName"],
+									[LDrawLocalization stringForKey:@"PieceCountDescriptionColumnName"] ];
 	// Part Rows
 	for (counter = 0; counter < [flattenedReport count]; counter++)
 	{

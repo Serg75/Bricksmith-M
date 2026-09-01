@@ -28,6 +28,7 @@
 #import <LDrawCore/LDrawConditionalLine.h>
 
 #import <LDrawCore/LDrawDragHandle.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawUtilities.h>
 
 @implementation LDrawConditionalLine
@@ -317,7 +318,7 @@
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	return NSLocalizedString(@"ConditionalLine", nil);
+	return [LDrawLocalization stringForKey:@"ConditionalLine"];
 	
 }//end browsingDescription
 
@@ -464,7 +465,7 @@
 	[[undoManager prepareWithInvocationTarget:self] setConditionalVertex2:[self conditionalVertex2]];
 	[[undoManager prepareWithInvocationTarget:self] setConditionalVertex1:[self conditionalVertex1]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesConditionalLine", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesConditionalLine"]];
 	
 }//end registerUndoActions:
 

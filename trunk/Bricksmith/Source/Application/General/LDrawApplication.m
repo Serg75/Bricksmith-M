@@ -19,6 +19,7 @@
 #import <Sparkle/Sparkle.h>
 
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawLSynth.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPaths.h>
@@ -370,6 +371,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	NSUserDefaults      *userDefaults   = [NSUserDefaults standardUserDefaults];
 	NSBundle            *bundle         = [NSBundle mainBundle];
 	LDrawPaths          *paths          = [LDrawPaths sharedPaths];
+
+	[LDrawLocalization setStringsBundle:bundle];
 
 	//Make sure the standard preferences exist so they will be available 
 	// throughout the application.

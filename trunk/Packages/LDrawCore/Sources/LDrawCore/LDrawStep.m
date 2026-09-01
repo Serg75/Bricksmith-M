@@ -31,6 +31,7 @@
 #import <LDrawCore/LDrawStep.h>
 
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
@@ -587,7 +588,7 @@
 	// If there is no parent model, just display the word step. This situtation 
 	// would be highly irregular.
 	if (enclosingModel == nil)
-		description = NSLocalizedString(@"Step", nil);
+		description = [LDrawLocalization stringForKey:@"Step"];
 	
 	else {
 		// Return the step number.
@@ -595,7 +596,7 @@
 		NSUInteger  stepIndex   = [modelSteps indexOfObjectIdenticalTo:self];
 		
 		description = [NSString stringWithFormat:
-							NSLocalizedString(@"StepDisplayWithNumber", nil),
+							[LDrawLocalization stringForKey:@"StepDisplayWithNumber"],
 							(long)stepIndex + 1] ;
 	}
 	
@@ -1082,7 +1083,7 @@
 	[[undoManager prepareWithInvocationTarget:self] setRotationAngle:[self rotationAngle]];
 	[[undoManager prepareWithInvocationTarget:self] setStepRotationType:[self stepRotationType]];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesStep", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesStep"]];
 	
 } // end registerUndoActions:
 

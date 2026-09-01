@@ -18,6 +18,7 @@
 //==============================================================================
 
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/NSScanner+LDraw.h>
@@ -255,7 +256,7 @@ static NSArray<Class>		*subclasses;
 	
 	[[undoManager prepareWithInvocationTarget:self] setLPubCommandString:self.lPubCommandString];
 	
-	[undoManager setActionName:NSLocalizedString(@"UndoAttributesLPubCommand", nil)];
+	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesLPubCommand"]];
 	
 }//end registerUndoActions:
 
