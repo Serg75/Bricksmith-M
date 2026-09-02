@@ -115,94 +115,56 @@
 	
 	dispatch_queue_t catalogAccessQueue = dispatch_queue_create("com.AllenSmith.Bricksmith.CatalogLoader", NULL);
 	dispatch_async(catalogAccessQueue, ^{
-		
+
+		void (^addSearchPath)(NSString *, NSString *, NSString *) =
+			^(NSString *path, NSString *category, NSString *prefix)
+		{
+			// partsPathForDomain: returns nil when the host never set the
+			// corresponding base (preferred vs internal). A nil value in a
+			// dictionary literal throws; skip the domain instead.
+			if (path.length == 0)
+			{
+				return;
+			}
+			NSMutableDictionary *record = [NSMutableDictionary dictionaryWithObject:path
+																			 forKey:@"path"];
+			if (category != nil)
+			{
+				record[@"category"] = category;
+			}
+			if (prefix != nil)
+			{
+				record[@"prefix"] = prefix;
+			}
+			[searchPaths addObject:record];
+		};
+
+		NSString *primitivesCategory = [LDrawLocalization stringForKey:Category_Primitives];
+		NSString *subpartsCategory   = [LDrawLocalization stringForKey:Category_Subparts];
+
 		// Parts
-		[searchPaths addObject:@{
-			@"path": [paths partsPathForDomain:LDrawUserOfficial],
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths partsPathForDomain:LDrawUserUnofficial],
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths partsPathForDomain:LDrawInternalOfficial],
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths partsPathForDomain:LDrawInternalUnofficial],
-		}];
+		addSearchPath([paths partsPathForDomain:LDrawUserOfficial], nil, nil);
+		addSearchPath([paths partsPathForDomain:LDrawUserUnofficial], nil, nil);
+		addSearchPath([paths partsPathForDomain:LDrawInternalOfficial], nil, nil);
+		addSearchPath([paths partsPathForDomain:LDrawInternalUnofficial], nil, nil);
 
 		// Primitives
-		[searchPaths addObject:@{
-			@"path": [paths primitivesPathForDomain:LDrawUserOfficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-		}];
-									
-		[searchPaths addObject:@{
-			@"path": [paths primitivesPathForDomain:LDrawUserUnofficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-		}];
-		
-		[searchPaths addObject:@{
-			@"path": [paths primitivesPathForDomain:LDrawInternalOfficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-		}];
-									
-		[searchPaths addObject:@{
-			@"path": [paths primitivesPathForDomain:LDrawInternalUnofficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-		}];
-		
+		addSearchPath([paths primitivesPathForDomain:LDrawUserOfficial], primitivesCategory, nil);
+		addSearchPath([paths primitivesPathForDomain:LDrawUserUnofficial], primitivesCategory, nil);
+		addSearchPath([paths primitivesPathForDomain:LDrawInternalOfficial], primitivesCategory, nil);
+		addSearchPath([paths primitivesPathForDomain:LDrawInternalUnofficial], primitivesCategory, nil);
+
 		// Primitives 48
-		[searchPaths addObject:@{
-			@"path": [paths primitives48PathForDomain:LDrawUserOfficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-			@"prefix": prefix_primitives48,
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths primitives48PathForDomain:LDrawUserUnofficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-			@"prefix": prefix_primitives48,
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths primitives48PathForDomain:LDrawInternalOfficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-			@"prefix": prefix_primitives48,
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths primitives48PathForDomain:LDrawInternalUnofficial],
-			@"category": [LDrawLocalization stringForKey:Category_Primitives],
-			@"prefix": prefix_primitives48,
-		}];
+		addSearchPath([paths primitives48PathForDomain:LDrawUserOfficial], primitivesCategory, prefix_primitives48);
+		addSearchPath([paths primitives48PathForDomain:LDrawUserUnofficial], primitivesCategory, prefix_primitives48);
+		addSearchPath([paths primitives48PathForDomain:LDrawInternalOfficial], primitivesCategory, prefix_primitives48);
+		addSearchPath([paths primitives48PathForDomain:LDrawInternalUnofficial], primitivesCategory, prefix_primitives48);
 
 		// Subparts
-		[searchPaths addObject:@{
-			@"path": [paths subpartsPathForDomain:LDrawUserOfficial],
-			@"category": [LDrawLocalization stringForKey:Category_Subparts],
-			@"prefix": prefix_subparts,
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths subpartsPathForDomain:LDrawUserUnofficial],
-			@"category": [LDrawLocalization stringForKey:Category_Subparts],
-			@"prefix": prefix_subparts,
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths subpartsPathForDomain:LDrawInternalOfficial],
-			@"category": [LDrawLocalization stringForKey:Category_Subparts],
-			@"prefix": prefix_subparts,
-		}];
-
-		[searchPaths addObject:@{
-			@"path": [paths subpartsPathForDomain:LDrawInternalUnofficial],
-			@"category": [LDrawLocalization stringForKey:Category_Subparts],
-			@"prefix": prefix_subparts,
-		}];
+		addSearchPath([paths subpartsPathForDomain:LDrawUserOfficial], subpartsCategory, prefix_subparts);
+		addSearchPath([paths subpartsPathForDomain:LDrawUserUnofficial], subpartsCategory, prefix_subparts);
+		addSearchPath([paths subpartsPathForDomain:LDrawInternalOfficial], subpartsCategory, prefix_subparts);
+		addSearchPath([paths subpartsPathForDomain:LDrawInternalUnofficial], subpartsCategory, prefix_subparts);
 
 		NSString							*partCatalogPath	= [paths partCatalogPath];
 		NSMutableDictionary<NSString*, id>	*newPartCatalog 	= [NSMutableDictionary dictionary];

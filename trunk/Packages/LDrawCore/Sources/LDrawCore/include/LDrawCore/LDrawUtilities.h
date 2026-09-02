@@ -71,7 +71,10 @@ enum {
 + (void)setDefaultAuthor:(NSString *)nameIn;
 
 // Parsing
-+ (Class)classForDirectiveBeginningWithLine:(NSString *)line;
+/// Nil when the line's type code is not one the parser knows (anything but
+/// 0-5). Callers must check: messaging the returned Nil yields zeroed structs,
+/// which has silently broken parse loops that assumed a class came back.
++ (nullable Class)classForDirectiveBeginningWithLine:(NSString *)line;
 + (LDrawColor *)parseColorFromField:(NSString *)colorField;
 + (NSString *)readNextField:(NSString *) partialDirective
 				  remainder:(NSString * _Nullable * _Nullable) remainder;

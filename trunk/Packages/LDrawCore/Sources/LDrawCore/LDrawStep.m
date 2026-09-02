@@ -161,6 +161,17 @@
 			}
 			
 			CommandClass = [LDrawUtilities classForDirectiveBeginningWithLine:currentLine];
+			if (CommandClass == Nil)
+			{
+				// Unrecognized line type -- any code outside 0-5, which
+				// +classForDirectiveBeginningWithLine: reports by returning Nil.
+				// Messaging that Nil below would hand back a zeroed range, so
+				// lineIndex would rewind to 0 and this scan would spin, running
+				// insertIndex past the end of `directives`. Skip the line.
+				lineIndex += 1;
+				continue;
+			}
+
 			commandRange = [CommandClass rangeOfDirectiveBeginningAtIndex:lineIndex
 																  inLines:lines
 																 maxIndex:NSMaxRange(range) - 1];
@@ -174,7 +185,10 @@
 			// (NSMutableArray is NOT). Since it doesn't retain, we mustn't 
 			// autorelease newDirective. 
 			directives[insertIndex] = newDirective;
-			lineIndex     = NSMaxRange(commandRange);
+			// Always advance. A subclass reporting a zero-length range would
+			// otherwise leave the cursor where it is and spin as above, and the
+			// monotonic step is what bounds insertIndex to range.length.
+			lineIndex     = MAX(NSMaxRange(commandRange), lineIndex + 1);
 			insertIndex += 1;
 		}
 		else
@@ -191,8 +205,15 @@
 	for (counter = 0; counter < insertIndex; counter++)
 	{
 		currentDirective = directives[counter];
-		
-		[self addDirective:currentDirective];
+		// A line whose -initWithLines:inRange:parentGroup: gave up returns nil
+		// (LDrawPart does this from its @catch), and NSMutableArray will not
+		// accept nil. Note this is NOT the unresolved-part case: a reference to
+		// a missing part still yields a valid LDrawPart, because resolution is
+		// deferred and -loadModelForName: tolerates a miss.
+		if (currentDirective != nil)
+		{
+			[self addDirective:currentDirective];
+		}
 		
 		// Tell ARC to release the object
 		directives[counter] = nil;
