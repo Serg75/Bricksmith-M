@@ -11,13 +11,32 @@
 
 #import <LDrawCore/LDrawPaths.h>
 
+#import <os/lock.h>
+
 #import <LDrawCore/LDrawPathNames.h>
 
 @interface LDrawPaths ()
 {
-	NSString *internalLDrawPath;
-	NSString *bundledLdconfigPath;
+	// Guards the three host-supplied paths. The host can reassign the preferred
+	// folder from Preferences on the main thread while a background catalog scan
+	// or part load is reading it, and these are strong ivars under ARC, so an
+	// unsynchronized read racing a write risks an over-release, not merely a
+	// stale value.
+	//
+	// os_unfair_lock is not recursive, so it is only ever held across a bare
+	// pointer read or write -- never across a file-system call, and never while
+	// calling another method on self. Every reader below goes through these
+	// accessors rather than touching the ivars directly.
+	os_unfair_lock	pathsLock;
+
+	NSString		*preferredLDrawPath;
+	NSString		*internalLDrawPath;
+	NSString		*bundledLdconfigPath;
 }
+
+/// Host-provided fallback LDConfig.ldr. Thread-safe.
+- (NSString *)bundledLdconfigPath;
+
 @end
 
 
@@ -72,6 +91,10 @@
 - (id)init
 {
 	self = [super init];
+	if (self != nil)
+	{
+		pathsLock = OS_UNFAIR_LOCK_INIT;
+	}
 	return self;
 }
 
@@ -88,7 +111,11 @@
 //==============================================================================
 - (NSString *)internalLDrawPath
 {
-	return self->internalLDrawPath;
+	os_unfair_lock_lock(&pathsLock);
+	NSString *path = internalLDrawPath;	// retained by ARC while locked
+	os_unfair_lock_unlock(&pathsLock);
+
+	return path;
 }
 
 
@@ -99,7 +126,13 @@
 //==============================================================================
 - (void)setInternalLDrawPath:(NSString *)pathIn
 {
-	self->internalLDrawPath = pathIn;
+	// Copy outside the lock: a mutable string retained by reference would let
+	// the caller change the path out from under a reader the lock can't help.
+	NSString *newPath = [pathIn copy];
+
+	os_unfair_lock_lock(&pathsLock);
+	internalLDrawPath = newPath;
+	os_unfair_lock_unlock(&pathsLock);
 }
 
 
@@ -107,7 +140,11 @@
 //==============================================================================
 - (NSString *)preferredLDrawPath
 {
-	return self->preferredLDrawPath;
+	os_unfair_lock_lock(&pathsLock);
+	NSString *path = preferredLDrawPath;	// retained by ARC while locked
+	os_unfair_lock_unlock(&pathsLock);
+
+	return path;
 }
 
 
@@ -118,7 +155,11 @@
 //==============================================================================
 - (void)setPreferredLDrawPath:(NSString *)pathIn
 {
-	self->preferredLDrawPath = pathIn;
+	NSString *newPath = [pathIn copy];
+
+	os_unfair_lock_lock(&pathsLock);
+	preferredLDrawPath = newPath;
+	os_unfair_lock_unlock(&pathsLock);
 }
 
 
@@ -129,7 +170,26 @@
 //==============================================================================
 - (void)setBundledLdconfigPath:(NSString *)pathIn
 {
-	self->bundledLdconfigPath = pathIn;
+	NSString *newPath = [pathIn copy];
+
+	os_unfair_lock_lock(&pathsLock);
+	bundledLdconfigPath = newPath;
+	os_unfair_lock_unlock(&pathsLock);
+}
+
+
+//========== bundledLdconfigPath ===============================================
+//
+// Purpose:		Fallback LDConfig.ldr supplied by the host.
+//
+//==============================================================================
+- (NSString *)bundledLdconfigPath
+{
+	os_unfair_lock_lock(&pathsLock);
+	NSString *path = bundledLdconfigPath;	// retained by ARC while locked
+	os_unfair_lock_unlock(&pathsLock);
+
+	return path;
 }
 
 
@@ -146,7 +206,7 @@
 	
 	if (domain == LDrawUserOfficial || domain == LDrawUserUnofficial)
 	{
-		baseLDrawPath = self->preferredLDrawPath;
+		baseLDrawPath = [self preferredLDrawPath];
 	}
 	else
 	{
@@ -176,13 +236,13 @@
 	
 	if (domain == LDrawUserOfficial || domain == LDrawUserUnofficial)
 	{
-		baseLDrawPath = self->preferredLDrawPath;
+		baseLDrawPath = [self preferredLDrawPath];
 	}
 	else
 	{
 		baseLDrawPath = [self internalLDrawPath];
 	}
-	
+
 	if (domain == LDrawUserOfficial || domain == LDrawInternalOfficial)
 	{
 		path = [baseLDrawPath stringByAppendingPathComponent:PRIMITIVES_DIRECTORY_NAME];
@@ -224,7 +284,7 @@
 	NSString		*ldconfigPath	= nil;
 	
 	// Try in the LDraw folder first
-	installedPath	= [self->preferredLDrawPath stringByAppendingPathComponent:LDCONFIG_FILE_NAME];
+	installedPath	= [[self preferredLDrawPath] stringByAppendingPathComponent:LDCONFIG_FILE_NAME];
 	
 	if (installedPath != nil) // could be nil if no LDraw folder is set in prefs
 	{
@@ -236,7 +296,7 @@
 	
 	// Try the host-provided bundled copy
 	if (ldconfigPath == nil)
-		ldconfigPath = self->bundledLdconfigPath;
+		ldconfigPath = [self bundledLdconfigPath];
 
 	return ldconfigPath;
 	
@@ -276,11 +336,12 @@
 - (NSString *)partCatalogPath
 {
 	NSString        *pathToPartList = nil;
-	
+	NSString        *ldrawPath      = [self preferredLDrawPath];	// read once
+
 	// Do we have an LDraw folder?
-	if (self->preferredLDrawPath != nil)
+	if (ldrawPath != nil)
 	{
-		pathToPartList = [self->preferredLDrawPath stringByAppendingPathComponent:PART_CATALOG_NAME];
+		pathToPartList = [ldrawPath stringByAppendingPathComponent:PART_CATALOG_NAME];
 	}
 	
 	return pathToPartList;
@@ -323,7 +384,7 @@
 	NSString    *userApplicationSupport = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask,  YES) objectAtIndex:0];
 
 	// Try User Defaults first; maybe we've already saved one.
-	NSString    *preferencePath         = self->preferredLDrawPath;
+	NSString    *preferencePath         = [self preferredLDrawPath];
 	NSString    *ldrawPath              = preferencePath;
 
 	if (preferencePath == nil)

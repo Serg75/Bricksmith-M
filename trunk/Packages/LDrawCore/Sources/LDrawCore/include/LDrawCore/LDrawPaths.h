@@ -10,6 +10,13 @@
 //              folder takes the application path. This class does not look up
 //              the app main bundle or standardUserDefaults.
 //
+//              All methods are safe to call from any thread. That matters for
+//              +sharedPaths, whose paths the host can change (from Preferences,
+//              on the main thread) while background part loads and catalog
+//              scans are reading them. Each call still reads the paths as they
+//              stand at that moment; a caller that needs a stable view across
+//              several lookups should snapshot into its own instance.
+//
 //  Modified:   05/03/2011 Allen Smith. Creation Date.
 //
 //==============================================================================
@@ -36,9 +43,6 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPaths : NSObject
-{
-	NSString	*preferredLDrawPath;
-}
 
 + (LDrawPaths *)sharedPaths;
 

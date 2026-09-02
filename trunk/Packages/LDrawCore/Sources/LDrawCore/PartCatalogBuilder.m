@@ -85,19 +85,33 @@
 							  completionHandler:(void (^)(NSDictionary<NSString*, id> *newCatalog))completionHandler
 {
 	NSFileManager	*fileManager			= [[NSFileManager alloc] init];
-	LDrawPaths		*paths					= [[LDrawPaths alloc] init];
-	NSString		*ldrawPath				= [paths preferredLDrawPath];
+	// Must be the shared instance: the host configures the library location by
+	// calling -setPreferredLDrawPath: on +sharedPaths, and a freshly allocated
+	// LDrawPaths no longer discovers it for itself.
+	LDrawPaths		*sharedPaths			= [LDrawPaths sharedPaths];
+	NSString		*ldrawPath				= [sharedPaths preferredLDrawPath];
 	NSMutableArray	*searchPaths			= [NSMutableArray array];
 	
 	NSString		*prefix_primitives48	= [NSString stringWithFormat:@"%@\\", PRIMITIVES_48_DIRECTORY_NAME];
 	NSString		*prefix_subparts		= [NSString stringWithFormat:@"%@\\", SUBPARTS_DIRECTORY_NAME];
 	
 	//make sure the LDraw folder is still valid; otherwise, why bother doing anything?
-	if([paths validateLDrawFolder:ldrawPath] == NO)
+	if([sharedPaths validateLDrawFolder:ldrawPath] == NO)
 	{
 		completionHandler(nil);
 		return;
 	}
+	
+	// Snapshot the validated configuration. The scan below runs on a background
+	// queue and derives every search path from this object, while the host can
+	// call -setPreferredLDrawPath: on +sharedPaths at any time (changing the
+	// folder in Preferences does exactly that, then kicks off a reload). Copying
+	// the paths we just validated keeps a mid-scan change from retargeting this
+	// scan, and keeps us off the shared object's mutable state. Only these two
+	// locations are read here; nothing below asks for -ldconfigPath.
+	LDrawPaths		*paths					= [[LDrawPaths alloc] init];
+	[paths setPreferredLDrawPath:ldrawPath];
+	[paths setInternalLDrawPath:[sharedPaths internalLDrawPath]];
 	
 	dispatch_queue_t catalogAccessQueue = dispatch_queue_create("com.AllenSmith.Bricksmith.CatalogLoader", NULL);
 	dispatch_async(catalogAccessQueue, ^{
