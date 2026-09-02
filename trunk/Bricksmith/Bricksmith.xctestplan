@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "5511938C-4DE6-43E5-A319-45228083114E",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Bricksmith.xcodeproj",
+        "identifier" : "95D021EC29B1F482001F2B4D",
+        "name" : "UnitTests"
+      }
+    }
+  ],
+  "version" : 1
+}

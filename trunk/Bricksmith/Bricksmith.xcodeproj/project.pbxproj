@@ -402,13 +402,6 @@
 			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
 			remoteInfo = AMSProgressBar;
 		};
-		95D021F129B1F482001F2B4D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 2A37F4A9FDCFA73011CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8D15AC270486D014006FF6A4;
-			remoteInfo = Bricksmith;
-		};
 		95D893A61655325100AA055B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 95D8939E1655325000AA055B /* LSynth.xcodeproj */;
@@ -1566,7 +1559,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				95D021F229B1F482001F2B4D /* PBXTargetDependency */,
 			);
 			name = UnitTests;
 			packageProductDependencies = (
@@ -1925,11 +1917,6 @@
 			isa = PBXTargetDependency;
 			name = AMSProgressBar;
 			targetProxy = 956D9B842A30768000FA956B /* PBXContainerItemProxy */;
-		};
-		95D021F229B1F482001F2B4D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8D15AC270486D014006FF6A4 /* Bricksmith-OpenGL */;
-			targetProxy = 95D021F129B1F482001F2B4D /* PBXContainerItemProxy */;
 		};
 		95D893AA1655328300AA055B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2477,7 +2464,6 @@
 		95D021F429B1F483001F2B4D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -2541,14 +2527,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith.UnitTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Bricksmith.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Bricksmith";
 			};
 			name = Debug;
 		};
 		95D021F529B1F483001F2B4D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -2606,7 +2590,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith.UnitTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Bricksmith.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Bricksmith";
 			};
 			name = Release;
 		};
