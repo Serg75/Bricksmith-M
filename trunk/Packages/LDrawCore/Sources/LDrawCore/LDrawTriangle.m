@@ -289,7 +289,7 @@
 		Vector3 worldVertex1    = V3MulPointByProjMatrix(self->vertex1, transform);
 		Vector3 worldVertex2    = V3MulPointByProjMatrix(self->vertex2, transform);
 		Vector3 worldVertex3    = V3MulPointByProjMatrix(self->vertex3, transform);
-		float   intersectDepth  = 0;
+		double  intersectDepth  = 0;
 		bool    intersects      = false;
 		
 		intersects = V3RayIntersectsTriangle(pickRay,

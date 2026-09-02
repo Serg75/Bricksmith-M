@@ -21,7 +21,7 @@
 
 @interface LDrawRelatedPart ()
 - (id)initWithParent:(NSString *)parentName
-			  offset:(float *)offset
+			  offset:(double *)offset
 			relation:(NSString *)relation
 		   childLine:(NSString *)line;
 - (void)dump;
@@ -97,7 +97,7 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 //
 //==============================================================================
 - (id)initWithParent:(NSString *)parentName
-			  offset:(float *)offset
+			  offset:(double *)offset
 			relation:(NSString *)relation
 		   childLine:(NSString *)line
 {

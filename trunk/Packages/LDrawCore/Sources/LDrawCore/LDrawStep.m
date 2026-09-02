@@ -1027,13 +1027,13 @@
 		{
 			//---------- Angles ------------------------------------------------
 			
-			if ([scanner scanFloat:&(angles.x)] == NO)
+			if ([scanner scanDouble:&(angles.x)] == NO)
 				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 
-			if ([scanner scanFloat:&(angles.y)] == NO)
+			if ([scanner scanDouble:&(angles.y)] == NO)
 				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 
-			if ([scanner scanFloat:&(angles.z)] == NO)
+			if ([scanner scanDouble:&(angles.z)] == NO)
 				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 		
 		

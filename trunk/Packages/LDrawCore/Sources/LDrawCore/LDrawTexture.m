@@ -899,33 +899,33 @@ static Class LDrawTexture_registeredClass = Nil;
 		
 		//---------- Coordinates -----------------------------------------------
 		
-		if ([scanner scanFloat:&(planePoint1.x)] == NO)
+		if ([scanner scanDouble:&(planePoint1.x)] == NO)
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
-		if ([scanner scanFloat:&(planePoint1.y)] == NO)
+		if ([scanner scanDouble:&(planePoint1.y)] == NO)
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
-		if ([scanner scanFloat:&(planePoint1.z)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
-		
-
-		if ([scanner scanFloat:&(planePoint2.x)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
-		
-		if ([scanner scanFloat:&(planePoint2.y)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
-		
-		if ([scanner scanFloat:&(planePoint2.z)] == NO)
+		if ([scanner scanDouble:&(planePoint1.z)] == NO)
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 
-		if ([scanner scanFloat:&(planePoint3.x)] == NO)
+		if ([scanner scanDouble:&(planePoint2.x)] == NO)
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
-		if ([scanner scanFloat:&(planePoint3.y)] == NO)
+		if ([scanner scanDouble:&(planePoint2.y)] == NO)
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
-		if ([scanner scanFloat:&(planePoint3.z)] == NO)
+		if ([scanner scanDouble:&(planePoint2.z)] == NO)
+			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+		
+
+		if ([scanner scanDouble:&(planePoint3.x)] == NO)
+			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+		
+		if ([scanner scanDouble:&(planePoint3.y)] == NO)
+			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+		
+		if ([scanner scanDouble:&(planePoint3.z)] == NO)
 			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		//---------- Name ------------------------------------------------------

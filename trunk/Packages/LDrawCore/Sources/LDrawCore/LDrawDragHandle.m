@@ -181,8 +181,8 @@
 			hits:(NSMutableDictionary *)hits
 {
 	float   handleScale     = 0.0;
-	float   drawRadius      = 0.0;
-	float   intersectDepth  = 0;
+	double  drawRadius      = 0.0;
+	double  intersectDepth  = 0;
 	bool    intersects      = false;
 	
 	handleScale = 1.0 / scaleFactor;

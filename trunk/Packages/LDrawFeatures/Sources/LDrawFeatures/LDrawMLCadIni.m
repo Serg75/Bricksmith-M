@@ -616,19 +616,19 @@
 		
 		//the rest is the transformation matrix, but in a different order from 
 		// an LDraw type 1 part line.
-		[scanner scanFloat:&transformation.element[0][0]];
-		[scanner scanFloat:&transformation.element[1][0]];
-		[scanner scanFloat:&transformation.element[2][0]];
-		[scanner scanFloat:&transformation.element[0][1]];
-		[scanner scanFloat:&transformation.element[1][1]];
-		[scanner scanFloat:&transformation.element[2][1]];
-		[scanner scanFloat:&transformation.element[0][2]];
-		[scanner scanFloat:&transformation.element[1][2]];
-		[scanner scanFloat:&transformation.element[2][2]];
+		[scanner scanDouble:&transformation.element[0][0]];
+		[scanner scanDouble:&transformation.element[1][0]];
+		[scanner scanDouble:&transformation.element[2][0]];
+		[scanner scanDouble:&transformation.element[0][1]];
+		[scanner scanDouble:&transformation.element[1][1]];
+		[scanner scanDouble:&transformation.element[2][1]];
+		[scanner scanDouble:&transformation.element[0][2]];
+		[scanner scanDouble:&transformation.element[1][2]];
+		[scanner scanDouble:&transformation.element[2][2]];
 
-		[scanner scanFloat:&transformation.element[3][0]];
-		[scanner scanFloat:&transformation.element[3][1]];
-		[scanner scanFloat:&transformation.element[3][2]];
+		[scanner scanDouble:&transformation.element[3][0]];
+		[scanner scanDouble:&transformation.element[3][1]];
+		[scanner scanDouble:&transformation.element[3][2]];
 		
 		
 		//---------- Create an LDrawPart for the line --------------------------

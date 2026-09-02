@@ -2697,10 +2697,12 @@ bool	VolumeCanIntersectBox(
 	   bounds.min.y > bounds.max.y ||
 	   bounds.min.z > bounds.max.z)		return false;
 	   
-	double aabb_mv[6] = { bounds.min.x, bounds.min.y, bounds.min.z,
+	// These feed the float-only clipbox helpers in MatrixMathEx.c, so they stay
+	// float and the transform is narrowed here, at that boundary.
+	float aabb_mv[6] = { bounds.min.x, bounds.min.y, bounds.min.z,
 						 bounds.max.x, bounds.max.y, bounds.max.z };
-	double aabb_ndc[6];
-	double m[16];
+	float aabb_ndc[6];
+	float m[16];
 	
 	Matrix4GetFloats(transform, m);
 	
@@ -2748,10 +2750,12 @@ bool		VolumeCanIntersectPoint(
 	// bounding box.  If we don't, geometry behind the camera will mirror around the
 	// XZ and YZ planes and cause chaos.
 	   
-	double aabb_mv[6] = { bounds.min.x, bounds.min.y, bounds.min.z,
+	// These feed the float-only clipbox helpers in MatrixMathEx.c, so they stay
+	// float and the transform is narrowed here, at that boundary.
+	float aabb_mv[6] = { bounds.min.x, bounds.min.y, bounds.min.z,
 						 bounds.max.x, bounds.max.y, bounds.max.z };
-	double aabb_ndc[6];
-	double m[16];
+	float aabb_ndc[6];
+	float m[16];
 	
 	Matrix4GetFloats(transform, m);
 	

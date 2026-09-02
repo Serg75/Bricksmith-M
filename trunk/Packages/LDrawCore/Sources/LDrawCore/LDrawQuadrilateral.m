@@ -304,7 +304,7 @@
 		Vector3 worldVertex2    = V3MulPointByProjMatrix(self->vertex2, transform);
 		Vector3 worldVertex3    = V3MulPointByProjMatrix(self->vertex3, transform);
 		Vector3 worldVertex4    = V3MulPointByProjMatrix(self->vertex4, transform);
-		float   intersectDepth  = 0;
+		double  intersectDepth  = 0;
 		bool    intersects      = false;
 
 		// Tesselate the quad and test both halves for intersections.

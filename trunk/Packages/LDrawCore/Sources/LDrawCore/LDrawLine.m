@@ -263,8 +263,8 @@
 		Vector3     worldVertex1    = V3MulPointByProjMatrix(self->vertex1, transform);
 		Vector3     worldVertex2    = V3MulPointByProjMatrix(self->vertex2, transform);
 		Segment3    segment         = {worldVertex1, worldVertex2};
-		float       tolerance       = 1.0 / scaleFactor;
-		float       intersectDepth  = 0;
+		double      tolerance       = 1.0 / scaleFactor;
+		double      intersectDepth  = 0;
 		bool        intersects      = false;
 		
 		// Lines drawn to 1 pixel regardless of scale, so the pick tolerance must be 
