@@ -44,6 +44,10 @@
 #define MLCAD_EXTENSION							@"ini"
 #define MLCAD_INI_FILE_NAME						MLCAD @"." MLCAD_EXTENSION
 
-#define PART_CATALOG_NAME						@"Bricksmith Parts.plist"
+// Cache file written into the user's LDraw folder. This used to carry the host
+// app's name; since the catalog is derived entirely by scanning that folder,
+// the only cost of renaming it was one rebuild. A catalog under the old name,
+// if any is still sitting beside it, is simply ignored.
+#define PART_CATALOG_NAME						@"LDraw Parts.plist"
 
 #endif

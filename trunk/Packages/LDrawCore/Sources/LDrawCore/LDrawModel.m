@@ -5,7 +5,7 @@
 //
 //  Purpose:    Represents a collection of Lego bricks that form a single model.
 //
-//              Bricksmith imposes an arbitrary requirement that a model be
+//              LDrawCore imposes an arbitrary requirement that a model be
 //              composed of a series of steps. Each model must have at least one
 //              step in it, and only LDrawSteps can be put into the model's
 //              subdirective array. Each LDraw model contains at least one step
@@ -168,7 +168,7 @@
 	free(substeps);
 		
 	// Degenerate case: utterly empty file. Create one empty step, because it is 
-	// illegal to have a 0-step model in Bricksmith. 
+	// illegal to have a 0-step model here. 
 	if([[self steps] count] == 0)
 	{
 		[self addStep];
@@ -679,7 +679,7 @@
 //
 // Notes:		According to the LDraw color spec, local colors having scoping: 
 //				they become active at the point of definition and fall out of 
-//				scope at the end of the model. As a convenience in Bricksmith, 
+//				scope at the end of the model. As a convenience, 
 //				the color library will still contain all the local model colors 
 //				after a draw is complete--the library will not be purged just 
 //				for scoping's sake. It may be purged at the beginning of 
@@ -785,8 +785,8 @@
 //
 //				Neither the step, the model, nor any other data-level class is 
 //				responsible for enforcing this angle when drawing. It is up to 
-//				the document to enforce or ignore the step rotation angle. In 
-//				Bricksmith, the document only sets the step rotation when in 
+//				the document to enforce or ignore the step rotation angle. The
+//				host document typically sets it only when in 
 //				Step Display mode, when the step being viewed is changed. 
 //
 //==============================================================================
@@ -973,7 +973,7 @@
 	{
 		dragStep	= [LDrawStep emptyStep];
 		
-		// The law of Bricksmith is that all parts in a model must be enclosed in a 
+		// The rule here is that all parts in a model must be enclosed in a 
 		// step. Resistance is futile.
 		for(counter = 0; counter < [directives count]; counter++)
 		{
@@ -1233,7 +1233,7 @@
 // Purpose:		Returns the index of the last step which should be displayed.
 //
 // Notes:		This is always supposed to return an index >= 0, simply because 
-//				it is illegal for a model to have no steps in Bricksmith. 
+//				it is illegal for a model to have no steps. 
 //
 //==============================================================================
 - (NSUInteger) maxStepIndexToOutput
@@ -1454,7 +1454,7 @@
 				if(		[payload isEqualToString:@"LDraw.org Official Model Repository"]
 				   ||	[payload isEqualToString:@"Unofficial Model"] )
 				{
-					// Bricksmith followed MLCad spewing out this garbage for 
+					// Older releases followed MLCad in spewing out this garbage for 
 					// years. It is unnecessary. Now I am just stripping it out 
 					// of any file I encounter. 
 					lineValidForHeader = YES;

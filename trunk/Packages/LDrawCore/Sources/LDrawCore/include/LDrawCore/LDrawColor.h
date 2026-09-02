@@ -30,13 +30,13 @@ extern void HSVtoRGB( float h, float s, float v, float *r, float *g, float *b );
 // Notes:       LDraw colors are defined by the ldconfig.ldr file distributed
 //              with LDraw.
 //
-//              The list below is mainly a relic from the days before Bricksmith
+//              The list below is mainly a relic from the days before this code
 //              supported dynamic !COLOUR definitions, but it has been given a
 //              stay of execution due to the fact that it makes debugging
 //              prettier. Its maintenance is not guaranteed.
 //
 //              LDrawColorBogus is not defined by LDraw.org; it is a
-//              Bricksmithism used for uninitialized or error colors. 
+//              local convention for uninitialized or error colors. 
 //
 //------------------------------------------------------------------------------
 // File-format codes: NSScanner scanInt: and NSCoder encodeInt: require int.

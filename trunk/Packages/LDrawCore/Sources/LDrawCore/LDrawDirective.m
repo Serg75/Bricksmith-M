@@ -440,7 +440,7 @@
 
 //========== enclosingDirective ================================================
 //
-// Purpose:		Bricksmith imposes a rigid hierarchy on the data in a file:
+// Purpose:		LDrawCore imposes a rigid hierarchy on the data in a file:
 //
 //				LDrawFile
 //					|

@@ -221,23 +221,23 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	
 	// Color Code
 	if([scanner scanString:LDRAW_COLOR_DEF_CODE intoString:nil] == NO)
-		@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+		@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
 	{
 		int scannedCode = 0;
 		if([scanner scanInt:&scannedCode] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
 		self->colorCode = scannedCode;
 	}
 	
 	// Color Components
 	if([scanner scanString:LDRAW_COLOR_DEF_VALUE intoString:nil] == NO)
-		@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+		@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
 	if([self scanHexString:scanner intoRGB:self->colorRGBA] == NO)
-		@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+		@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
 		
 	// Edge
 	if([scanner scanString:LDRAW_COLOR_DEF_EDGE intoString:nil] == NO)
-		@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
+		@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad !COLOUR syntax" userInfo:nil];
 	if([self scanHexString:scanner intoRGB:parsedColor] == YES)
 		[self setEdgeColorRGBA:parsedColor];
 	else
@@ -322,7 +322,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //				used these dithered colors to model certain stickers and printed 
 //				bricks. 
 //
-//				Bricksmith will grudgingly support blended colors strictly for 
+//				Blended colors are grudgingly supported strictly for 
 //				purposes of displaying those stickers. But it will NOT, EVER 
 //				show these colors in its color picker. This functionality should 
 //				be sent back to the early nineties where it deserved to die. 
@@ -524,7 +524,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //==============================================================================
 - (LDrawColor *) complementColor
 {
-	// LDConfig complement colors look ugly. Bricksmith uses internally-derived 
+	// LDConfig complement colors look ugly. We use internally-derived 
 	// complements which look more like the original LDraw. 
 	if(fakeComplementColor == nil)
 	{
@@ -752,7 +752,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 //
 // Purpose:		Sets the material associated with this color.
 //
-// Notes:		Bricksmith doesn't use this value, it just preserves it in the 
+// Notes:		This value is unused here; it is only preserved in the 
 //				color directive. 
 //
 //==============================================================================
@@ -768,7 +768,7 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 // Purpose:		Custom (implementation-dependent) values associated with a 
 //				custom material. 
 //
-// Notes:		Bricksmith doesn't use this value, it just preserves it in the 
+// Notes:		This value is unused here; it is only preserved in the 
 //				color directive. 
 //
 //==============================================================================

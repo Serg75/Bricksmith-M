@@ -1,6 +1,6 @@
 /*
  *  MeshSmooth.c
- *  Bricksmith
+ *  LDrawRenderCore
  *
  *  Created by bsupnik on 3/10/13.
  *  Copyright 2013 . All rights reserved.

@@ -104,7 +104,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)lineIsLSynthBeginning:(NSString*)line;
 + (BOOL)lineIsLSynthTerminator:(NSString*)line;
 
-// Adapter-injected configuration source. Bricksmith installs an adapter
+// Adapter-injected configuration source. The host installs an adapter
 // around LSynthConfiguration (in LDrawFeatures); LDrawCore itself does not
 // know about LSynthConfiguration. Must be set before LSynth directives are
 // parsed.

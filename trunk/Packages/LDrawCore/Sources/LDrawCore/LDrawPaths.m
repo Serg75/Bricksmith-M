@@ -60,7 +60,7 @@
 
 //---------- internalLDrawPathInBundle: ------------------------------[static]--
 //
-// Purpose:		Bundled unofficial LDraw tree used for Bricksmith-distributed
+// Purpose:		Bundled unofficial LDraw tree used for host-distributed
 //				parts. The host still calls setInternalLDrawPath:.
 //
 //------------------------------------------------------------------------------
@@ -105,7 +105,7 @@
 
 //========== internalLDrawPath =================================================
 //
-// Purpose:		References an LDraw folder baked into Bricksmith to distribute 
+// Purpose:		References an LDraw folder baked into the host app to distribute 
 //				some unofficial parts. 
 //
 //==============================================================================

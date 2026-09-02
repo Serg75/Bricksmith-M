@@ -160,7 +160,7 @@ static NSArray<Class>	*subclasses;
 		else
 		{
 			// nonzero linetype!
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad metacommand syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad metacommand syntax" userInfo:nil];
 		}
 	}		
 	@catch(NSException *exception)

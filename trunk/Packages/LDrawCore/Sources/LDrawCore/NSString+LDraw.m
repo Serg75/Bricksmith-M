@@ -26,7 +26,7 @@
 //				Every string is reported as containing the empty string (@""). 
 //				This is consistent with set theory and other common programming 
 //				APIs, but not Cocoa, which specifically disavows the empty 
-//				string in -[NSString rangeOfString:]. Bricksmith relies on the 
+//				string in -[NSString rangeOfString:]. LDrawCore relies on the 
 //				empty string being a substring.
 //
 // Note:		The absurd name to prevent name collisions with methods which 
@@ -36,7 +36,7 @@
 //				undocumented category method of -containsString:options:. If my 
 //				method had the natural name, it would get replaced at runtime 
 //				with Apple's method, which does not recognize the empty string 
-//				as a subset and would break Bricksmith. 
+//				as a subset and would break parsing. 
 //
 //==============================================================================
 - (BOOL) ldraw_containsString:(NSString *)substring options:(NSUInteger)mask

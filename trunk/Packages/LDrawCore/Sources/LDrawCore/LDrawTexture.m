@@ -885,55 +885,55 @@ static Class LDrawTexture_registeredClass = Nil;
 	@try
 	{
 		if ([scanner scanString:@"0" intoString:NULL] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanString:LDRAW_TEXTURE intoString:NULL] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if (		[scanner scanString:LDRAW_TEXTURE_START intoString:NULL] == NO
 		   &&	[scanner scanString:LDRAW_TEXTURE_NEXT intoString:NULL] == NO )
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanString:LDRAW_TEXTURE_METHOD_PLANAR intoString:NULL] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		//---------- Coordinates -----------------------------------------------
 		
 		if ([scanner scanDouble:&(planePoint1.x)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanDouble:&(planePoint1.y)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanDouble:&(planePoint1.z)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 
 		if ([scanner scanDouble:&(planePoint2.x)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanDouble:&(planePoint2.y)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanDouble:&(planePoint2.z)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 
 		if ([scanner scanDouble:&(planePoint3.x)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanDouble:&(planePoint3.y)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		if ([scanner scanDouble:&(planePoint3.z)] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		
 		//---------- Name ------------------------------------------------------
 		// TEXMAP has different syntax from linetype 1 because Joshua Delahunty 
 		// wouldn't consider synchronizing the two. 
 		NSString *parsedName = [LDrawUtilities scanQuotableToken:scanner];
 		if ([parsedName length] == 0)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 		[self setImageDisplayName:parsedName];
 		[self setImageDisplayName:parsedName parse:YES inGroup:parentGroup];
 		
@@ -945,7 +945,7 @@ static Class LDrawTexture_registeredClass = Nil;
 		{
 			NSString *parsedGlossmapName = [LDrawUtilities scanQuotableToken:scanner];
 			if ([parsedGlossmapName length] == 0)
-				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
+				@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad Planar TEXMAP syntax" userInfo:nil];
 			
 			[self setGlossmapName:parsedGlossmapName];
 		}

@@ -131,7 +131,7 @@
 			[self setConditionalVertex2:workingVertex];
 		}
 		else
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad conditional line syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad conditional line syntax" userInfo:nil];
 	}	
 	@catch(NSException *exception)
 	{

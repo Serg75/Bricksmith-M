@@ -42,7 +42,7 @@
 #define LSYNTH_SELECTION_TRANSPARENCY_KEY           @"LSynth Selection Transparency"
 // Foundation-only mirror of the AppKit LSYNTH_SELECTION_COLOR_KEY storing an
 // NSArray of four NSNumber floats in 0..1 RGBA order. LDrawCore reads this;
-// the AppKit preferences pane in BricksmithMac keeps both in sync.
+// the host's AppKit preferences pane keeps both in sync.
 #define LSYNTH_SELECTION_COLOR_RGBA_KEY             @"LSynth Selection Color RGBA"
 #define LSYNTH_SELECTION_MODE_KEY                   @"LSynth Selection Mode"
 #define LSYNTH_SAVE_SYNTHESIZED_PARTS_KEY           @"LSynth Save Synthesized Parts"

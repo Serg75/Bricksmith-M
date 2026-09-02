@@ -81,7 +81,7 @@
 //				Line format:
 //				0 // comment-text
 //
-// Notes:		Bricksmith only attempts to write out one style of comments.
+// Notes:		Only one style of comments is ever written out.
 //				Per the LDraw File Format 1.0.0, the "0 // comment" form is
 //				preferred. http://ldraw.org/Article218.html#lt0
 //

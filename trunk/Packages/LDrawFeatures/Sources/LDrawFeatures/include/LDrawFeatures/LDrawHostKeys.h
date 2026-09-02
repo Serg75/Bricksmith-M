@@ -3,7 +3,7 @@
 //  File:       LDrawHostKeys.h
 //  Package:    LDrawFeatures
 //
-//  Purpose:    User-defaults keys for Bricksmith host chrome: windows,
+//  Purpose:    User-defaults keys for host chrome: windows,
 //              donation nag, part browser, tool palette, viewport layout,
 //              minifigure generator, and AppKit-only LSynth prefs.
 //

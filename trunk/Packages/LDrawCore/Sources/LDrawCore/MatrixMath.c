@@ -1669,7 +1669,7 @@ double Matrix3x3Determinant( double a1, double a2, double a3, double b1, double 
 //				correct matrix to transform normals for the given vertex 
 //				transform (modelview) matrix. 
 //
-// Notes:		See "Matrices" notes in Bricksmith/Information for derivation.
+// Notes:		See the "Matrices" notes in the project's Information folder.
 //
 //				Also http://www.lighthouse3d.com/opengl/glsl/index.php?normalmatrix
 //				and  http://www.songho.ca/opengl/gl_normaltransform.html
@@ -1979,7 +1979,7 @@ int Matrix4DecomposeTransformation( Matrix4 originalMatrix,
 	
 	
   	//---------- Perspective ---------------------------------------------------
-	// Perspective is not used by Bricksmith.
+	// Perspective is not used here.
 	
  	// pmat is used to solve for perspective, but it also provides an easy way 
  	// to test for singularity of the upper 3x3 component. 

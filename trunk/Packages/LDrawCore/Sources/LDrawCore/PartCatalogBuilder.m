@@ -113,7 +113,7 @@
 	[paths setPreferredLDrawPath:ldrawPath];
 	[paths setInternalLDrawPath:[sharedPaths internalLDrawPath]];
 	
-	dispatch_queue_t catalogAccessQueue = dispatch_queue_create("com.AllenSmith.Bricksmith.CatalogLoader", NULL);
+	dispatch_queue_t catalogAccessQueue = dispatch_queue_create("org.ldraw.LDrawCore.CatalogLoader", NULL);
 	dispatch_async(catalogAccessQueue, ^{
 
 		void (^addSearchPath)(NSString *, NSString *, NSString *) =

@@ -4,15 +4,15 @@
 //  Package:    LDrawFeatures
 //
 //  Purpose:    Foundation-only schema and accessor wrapper around
-//              NSUserDefaults for Bricksmith preference keys.
+//              NSUserDefaults for the host's preference keys.
 //
 //  Info:       Seeds factory defaults that do not require AppKit (NSColor) into
 //              a host-provided NSUserDefaults. The default part-browser
-//              category string comes from the host (localized “Brick” in
-//              Bricksmith). The macOS preferences pane still registers
+//              category string comes from the host (localized “Brick”, for
+//              instance). The macOS preferences pane still registers
 //              archived-color defaults for its own UI. Donation nag,
 //              split-view geometry, toolbar identifier, and open-panel strings
-//              live in the Bricksmith app (LDrawHostChrome).
+//              live in the host app (LDrawHostChrome).
 //
 //  Created by Sergey Slobodenyuk on 2026-05-26.
 //
@@ -29,12 +29,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// @class      LDrawPreferences
 ///
 /// @abstract   Foundation-only schema and accessor wrapper around
-///             NSUserDefaults for Bricksmith preference keys.
+///             NSUserDefaults for the host's preference keys.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPreferences : NSObject
 
-/// Seeds the given store with Bricksmith's factory settings (numeric, boolean,
+/// Seeds the given store with the host's factory settings (numeric, boolean,
 /// and string keys). Safe to call repeatedly. The host still registers
 /// AppKit-only archived-color defaults.
 ///

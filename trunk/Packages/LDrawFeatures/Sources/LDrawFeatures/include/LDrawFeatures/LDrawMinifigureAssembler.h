@@ -6,7 +6,7 @@
 //  Purpose:    Positions minifigure catalog parts from an LDrawMinifigureSpec
 //              and returns an LDrawMPDModel. Torso arm-socket angle comes from
 //              a host-provided LDrawMLCadIni. Generator preview zoom and autosave names live
-//              in the Bricksmith app (LDrawHostChrome).
+//              in the host app (LDrawHostChrome).
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //

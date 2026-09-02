@@ -17,7 +17,7 @@
 //              displayed (for instance, upside-down). However, since steps are
 //              drawn in a pipeline, they can't actually draw their own
 //              rotations. It is the responsibility of the controller object to
-//              enforce the rotation defined by the step. In Bricksmith, step
+//              enforce the rotation defined by the step. In LDrawCore, step
 //              rotations are only honored when the model is being drawn in Step
 //              Display mode.
 //
@@ -139,7 +139,7 @@
 		{
 			// Parse the rotation step.
 			if ([self parseRotationStepFromLine:currentLine] == NO)
-				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad rotstep syntax" userInfo:nil];
+				@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad rotstep syntax" userInfo:nil];
 			
 			range.length -= 1;
 		}
@@ -701,7 +701,7 @@
 //
 // Purpose:		Returns the zyx angle in degrees of the rotation.
 //
-// Notes:		Of of Bricksmith's matrix math functions expect angles to be in 
+// Notes:		All of the matrix math functions expect angles to be in 
 //				x-y-z order, so this value is not useful internally. However, 
 //				the ROTSTEP directive (and the rest of MLCad) uses a z-y-x 
 //				angle, so we have to save to the file in this format.
@@ -821,9 +821,9 @@
 //				applied first, then y, and lastly x. 
 //
 // Notes:		This is the format in which ROTSTEP angles are saved in the 
-//				file, but Bricksmith's matrix functions expect XYZ angles. This 
-//				translates the ZYX angle so that it can be used by the rest of 
-//				Bricksmith. 
+//				file, but the matrix functions expect XYZ angles. This 
+//				translates the ZYX angle so that it can be used by the rest of
+//				the code.
 //
 //==============================================================================
 - (void)setRotationAngleZYX:(Tuple3)newAngleZYX
@@ -1020,7 +1020,7 @@
 //					0 ROTSTEP END
 //
 // Notes:		The angle in ROTSTEPs is in z-y-x order, which is backwards from 
-//				how Bricksmith expects the world to be. 
+//				how this code expects the world to be. 
 //
 // Returns:		YES on success.
 //
@@ -1034,10 +1034,10 @@
 	@try
 	{
 		if ([scanner scanString:@"0" intoString:NULL] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 
 		if ([scanner scanString:LDRAW_ROTATION_STEP_TERMINATOR intoString:NULL] == NO)
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 
 		// Is it an end rotation?
 		if ([scanner scanString:LDRAW_ROTATION_END intoString:NULL] == YES)
@@ -1049,13 +1049,13 @@
 			//---------- Angles ------------------------------------------------
 			
 			if ([scanner scanDouble:&(angles.x)] == NO)
-				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
+				@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 
 			if ([scanner scanDouble:&(angles.y)] == NO)
-				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
+				@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 
 			if ([scanner scanDouble:&(angles.z)] == NO)
-				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
+				@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 		
 		
 			//---------- Rotation Type -----------------------------------------
@@ -1075,7 +1075,7 @@
 			
 			// there is some syntax we don't recognize. Abort parsing attempt.
 			else
-				@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
+				@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad ROTSTEP syntax" userInfo:nil];
 				
 			// Set the parsed angles if we successfully got the type.
 			[self setRotationAngleZYX:angles];

@@ -1,6 +1,6 @@
 //
 //	shaders.metal
-//	Bricksmith-Metal
+//	LDrawRenderMetal
 //
 //	Created by Sergey Slobodenyuk on 2023-06-19.
 //

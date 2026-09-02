@@ -259,7 +259,7 @@
 	if (V3PointsWithinTolerance(angle, V3Make(0, -90, 0)) == YES)
 		return LDrawStepInspectorRotationShortcutCounterClockwise90;
 	if (		V3PointsWithinTolerance(angle, V3Make(0, 180, 0)) == YES
-		||	V3PointsWithinTolerance(angle, V3Make(180, 0, 180)) == YES ) // an alternate decomposition that comes out of Bricksmith's math
+		||	V3PointsWithinTolerance(angle, V3Make(180, 0, 180)) == YES ) // an alternate decomposition that comes out of our math
 		return LDrawStepInspectorRotationShortcutBackside;
 	return LDrawStepInspectorRotationShortcutCustom;
 }

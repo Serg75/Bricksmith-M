@@ -561,7 +561,7 @@
 //				"<Display name>" "<DAT/LDR file name>" <Flags> <Matrix> <Offset>
 //
 //				<Display name>		The name of the element as it is displayed 
-//									in the element list. Bricksmith ignores this 
+//									in the element list. We ignore this 
 //									name!
 //				<DAT/LDR file name>	The file name of the element or "" for 
 //									hidden element 

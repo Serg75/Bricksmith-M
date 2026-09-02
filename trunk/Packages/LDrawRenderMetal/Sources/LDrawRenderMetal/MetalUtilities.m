@@ -46,7 +46,7 @@ matrix_float4x4 simd_matrix4x4_from_array_transposed(const float *matrix) {
 //				correct matrix to transform normals for the given vertex
 //				transform (modelview) matrix.
 //
-// Notes:		See "Matrices" notes in Bricksmith/Information for derivation.
+// Notes:		See the "Matrices" notes in the project's Information folder.
 //
 //				We only need a 3x3 matrix because the translation in the 4x4
 //				transform (row 4) is undesirable anyway (a 4D vector should be

@@ -104,7 +104,7 @@
 			[self setVertex2:workingVertex];
 		}
 		else
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad line syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad line syntax" userInfo:nil];
 	}
 	@catch(NSException *exception)
 	{	

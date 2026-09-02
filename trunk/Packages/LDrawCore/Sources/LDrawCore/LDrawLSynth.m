@@ -24,7 +24,7 @@
 
 // AppKit/preferences indirection removed. The host injects an
 // LDrawLSynthRuntimeSource for lsynthcp, the custom config path, and
-// selection-tint settings. Bricksmith's preferences UI still writes the
+// selection-tint settings. The host's preferences UI still writes the
 // LSYNTH_* keys; this class does not read them.
 
 @implementation LDrawLSynth

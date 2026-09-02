@@ -20,7 +20,7 @@
 //---------- compliantNameChangesForSubmodels: -----------------------[static]--
 //
 // Purpose:		Ensures that the names of all submodels end in a recognized
-//				LDraw extension (.ldr, .dat). Previous versions of Bricksmith
+//				LDraw extension (.ldr, .dat). Previous versions
 //				did not force this, and it was a seemingly sensible, Maclike
 //				thing to do. Alas, MLCad will NOT RECOGNIZE submodels whose
 //				names do not have an extension. (Why...?!) Furthermore,

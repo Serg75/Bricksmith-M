@@ -5,7 +5,7 @@
 //
 //  Purpose:    Positions minifigure parts the same way the AppKit generator
 //              dialog did, using MLCad.ini torso arm angles. Generator preview
-//              zoom and autosave names live in Bricksmith LDrawHostChrome.
+//              zoom and autosave names live in the host's LDrawHostChrome.
 //
 //  Created by Sergey Slobodenyuk on 2026-08-26.
 //

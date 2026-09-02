@@ -8,7 +8,7 @@
 //  Info:       LDrawCore is the Foundation-only LDraw model layer: parser,
 //              file/model/step containers, primitives, color library, math, and
 //              the part library. It has no AppKit, UIKit, or GPU renderer
-//              dependencies and is shared by Bricksmith and other host apps.
+//              dependencies and is shared by its host apps.
 //              Implementation helpers (LDrawFastSet, LDrawClassInspector,
 //              PartCatalogBuilder, ComputationalGeometry, MatrixMathEx.c) are
 //              private next to their .m/.c files, not under include/. Host

@@ -60,7 +60,7 @@
 
 //---------- archivedDataForDirective: -------------------------------[static]--
 //
-// Purpose:		Internally, Bricksmith uses archived LDrawDirectives to
+// Purpose:		Internally, archived LDrawDirectives are used to
 //				copy/paste. NSKeyedArchiver packing of a single directive.
 //
 //------------------------------------------------------------------------------
@@ -285,7 +285,7 @@
 + (NSArray<NSString *> *)copyPasteboardTypesIncludingStringType:(NSString *)stringType
 {
 	return @[
-			LDrawDirectivePboardType, // Bricksmith's preferred type.
+			LDrawDirectivePboardType, // our preferred type.
 			stringType,               // representation for other applications.
 	];
 }
@@ -353,7 +353,7 @@
 //------------------------------------------------------------------------------
 + (NSString *)duplicationPasteboardName
 {
-	return @"BricksmithDuplicationPboard";
+	return @"LDrawDuplicationPboard";
 }
 
 
@@ -366,14 +366,14 @@
 //------------------------------------------------------------------------------
 + (NSString *)viewportDropPasteboardName
 {
-	return @"BricksmithDragAndDropPboard";
+	return @"LDrawDragAndDropPboard";
 }
 
 
 //---------- copyPayloadFromDirectives:archivedData:ldrString: -------[static]--
 //
 // Purpose:		Writes objects to the given pasteboard, ensuring that each
-//				directive is written only once. Internally, Bricksmith uses
+//				directive is written only once. Internally, we use
 //				archived LDrawDirectives; for other applications we provide the
 //				LDraw file contents. The host still declareTypes: and writes.
 //

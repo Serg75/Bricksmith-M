@@ -8,7 +8,7 @@
 //              history. Color-panel search and selection policy live in
 //              LDrawFeatures (LDrawColorPanelModel).
 //
-//              In Bricksmith, the color is represented by the enumeration
+//              Here, the color is represented by the enumeration
 //              LDrawColorT, which can be translated into RGBA or an NSColor by
 //              functions found here.
 //

@@ -4,7 +4,7 @@
 //  Package:    LDrawCore
 //
 //  Purpose:    Represents an LDraw file, composed of one or more models.
-//              In Bricksmith, each file is interpreted as a Multi-Part Document
+//              Here, each file is interpreted as a Multi-Part Document
 //              having multiple submodels. Only LDrawMPDModels can be contained
 //              in the file's subdirective array. However, when the document is
 //              written out, the MPD commands are stripped if there is only
@@ -797,7 +797,7 @@
 			currentPart = [allParts objectAtIndex:counter];
 			
 			// If the part points to the old name, change it to the new one.
-			// Since the user can enter these values and Bricksmith is 
+			// Since the user can enter these values and lookup is 
 			// case-insensitive, make sure to ignore case. 
 			if([[currentPart referenceName] caseInsensitiveCompare:oldName] == NSOrderedSame)
 			{

@@ -117,7 +117,7 @@
 			[self setVertex3:workingVertex];
 		}
 		else
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad triangle syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad triangle syntax" userInfo:nil];
 	}
 	@catch(NSException *exception)
 	{

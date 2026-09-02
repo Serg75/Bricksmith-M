@@ -10,7 +10,7 @@
 //              `default.metallib` instead of assuming shaders live in
 //              +[NSBundle mainBundle]. The implementation prefers the package
 //              resource bundle. There is no app-bundle fallback: shaders are
-//              no longer copied into Bricksmith.app.
+//              no longer copied into the host app bundle.
 //
 //  Created by Sergey Slobodenyuk on 2026-05-26.
 //

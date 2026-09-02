@@ -214,7 +214,7 @@ int floatNearGrid(double v, double grid, double epsi)
 			assert(cacheType == LDrawPartTypeUnresolved);
 		}
 		else
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad part syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad part syntax" userInfo:nil];
 	}
 	@catch(NSException *exception)
 	{
@@ -1663,7 +1663,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //				and swap us to use that part, taking into account the relative
 //				transform offset and "baking" it into our pose.
 //
-// Notes:		Previous versions of Bricksmith simply used a file name
+// Notes:		Previous versions simply used a file name
 //				substitution; when ~Moved directives include a change of origin
 //				that is not enough, and this method is better.
 //

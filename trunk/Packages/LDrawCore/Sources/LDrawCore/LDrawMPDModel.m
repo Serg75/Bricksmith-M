@@ -14,7 +14,7 @@
 //              the entire minifigure driver into his car.)
 //
 //              While the LDraw file format accommodates documents with only one
-//              (non-MPD) model, Bricksmith does not make such a distinction
+//              (non-MPD) model, LDrawCore does not make such a distinction
 //              until the file is actually written to disk. For the sake of
 //              simplicity, all logical models within an LDrawFile *must* be
 //              MPD models.

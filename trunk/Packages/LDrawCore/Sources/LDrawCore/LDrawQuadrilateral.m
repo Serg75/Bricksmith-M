@@ -130,7 +130,7 @@
 			[self fixBowtie];
 		}
 		else
-			@throw [NSException exceptionWithName:@"BricksmithParseException" reason:@"Bad quad syntax" userInfo:nil];
+			@throw [NSException exceptionWithName:@"LDrawParseException" reason:@"Bad quad syntax" userInfo:nil];
 	}
 	@catch(NSException *exception)
 	{

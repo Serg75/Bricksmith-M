@@ -30,8 +30,8 @@ static NSBundle *localizationStringsBundle = nil;
 
 //---------- setStringsBundle: ---------------------------------------[static]--
 //
-// Purpose:		Install the host’s strings table. Pass the app main bundle in
-//				Bricksmith. Nil makes stringForKey: return the key unchanged.
+// Purpose:		Install the host’s strings table. Pass the app main bundle.
+//				Nil makes stringForKey: return the key unchanged.
 //
 //------------------------------------------------------------------------------
 + (void)setStringsBundle:(NSBundle *)bundle
