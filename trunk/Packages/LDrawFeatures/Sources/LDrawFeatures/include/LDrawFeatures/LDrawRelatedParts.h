@@ -51,7 +51,7 @@ typedef NS_ENUM(NSInteger, LDrawRelatedPartsMenuStyle) {
 	NSString		*child;
 	NSString		*childName;
 	NSString		*role;
-	float			transform[16];
+	double			transform[16];			// column-major, see LDrawPart
 }
 
 /// One child per selected LDrawPart. Other selected objects are skipped.

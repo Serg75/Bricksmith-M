@@ -479,11 +479,17 @@ static NSString				*defaultAuthor		= @"anonymous";
 
 //---------- outputStringForFloat: -----------------------------------[static]--
 //
-// Purpose:		Returns a formatted float appropriate for inserting into an 
-//				LDraw file. 
+// Purpose:		Returns a formatted floating-point value appropriate for 
+//				inserting into an LDraw file. 
+//
+// Notes:		The argument is a double so that callers holding a double-precision 
+//				value do not have to narrow it to float first. Narrowing reintroduces 
+//				rounding error at the sixth decimal place -- exactly where %f prints -- 
+//				which is how a coordinate like 1024.15 used to be written out as 
+//				"1024.150024". 
 //
 //------------------------------------------------------------------------------
-+ (NSString *)outputStringForFloat:(float)number
++ (NSString *)outputStringForFloat:(double)number
 {
 	NSString        *outputString   = nil;
 	
@@ -497,13 +503,24 @@ static NSString				*defaultAuthor		= @"anonymous";
 	{
 		// Remove all trailing zeroes (and the decimal point if an integer).
 		
-		char    formattedFloat[16]  = "";
+		char    formattedFloat[64]  = "";
 		char    *endOfString        = NULL;
 		size_t  fullLength          = 0;
+		int     requiredLength      = 0;
 		
 		// First format the number into a string. We could wind up with 
 		// something like "50.090000".
-		snprintf(formattedFloat, sizeof(formattedFloat), "%f", number);
+		requiredLength = snprintf(formattedFloat, sizeof(formattedFloat), "%f", number);
+		
+		// A magnitude too large for the buffer would be silently truncated, and the 
+		// trailing-zero trim below would then eat digits out of the integer part 
+		// (1e20 becoming "1"). Nothing in a real model gets this big, but print it 
+		// untrimmed rather than wrong. 
+		if (requiredLength < 0 || (size_t)requiredLength >= sizeof(formattedFloat))
+		{
+			return [NSString stringWithFormat:@"%f", number];
+		}
+		
 		fullLength  = strlen(formattedFloat);
 		endOfString = &formattedFloat[fullLength - 1];
 		

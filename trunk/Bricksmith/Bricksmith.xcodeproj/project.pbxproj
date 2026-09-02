@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		95AA000329B1F48200000003 /* LDrawUtilitiesOutputStringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA000129B1F48200000001 /* LDrawUtilitiesOutputStringTests.swift */; };
+		95AA000429B1F48200000004 /* LDrawGeometryRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA000229B1F48200000002 /* LDrawGeometryRoundTripTests.swift */; };
 		0B040CD7164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem in Resources */ = {isa = PBXBuildFile; fileRef = 0B040CD6164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem */; };
 		0B04E97B1093BB4200E201EE /* ColorPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9471093BB4200E201EE /* ColorPanel.xib */; };
 		0B04E97C1093BB4200E201EE /* Dimensions.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9491093BB4200E201EE /* Dimensions.xib */; };
@@ -468,6 +470,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		95AA000129B1F48200000001 /* LDrawUtilitiesOutputStringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawUtilitiesOutputStringTests.swift; path = "../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawUtilitiesOutputStringTests.swift"; sourceTree = SOURCE_ROOT; };
+		95AA000229B1F48200000002 /* LDrawGeometryRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawGeometryRoundTripTests.swift; path = "../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawGeometryRoundTripTests.swift"; sourceTree = SOURCE_ROOT; };
 		0B040CBD164F526D000CA89A /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = ../ThirdParty/Sparkle/Sparkle.framework; sourceTree = SOURCE_ROOT; };
 		0B040CD6164F5511000CA89A /* Bricksmith_Sparkle_signature_public.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Bricksmith_Sparkle_signature_public.pem; sourceTree = "<group>"; };
 		0B04E9481093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/ColorPanel.xib; sourceTree = "<group>"; };
@@ -1239,12 +1243,22 @@
 		95D021EE29B1F482001F2B4D /* UnitTests */ = {
 			isa = PBXGroup;
 			children = (
+				95AA000729B1F48200000007 /* LDrawCore Tests */,
 				95D0223A29B68E59001F2B4D /* Test Support */,
 				95D021FE29B3F8C6001F2B4D /* Other */,
 				95D021F929B3F474001F2B4D /* Classes */,
 				95D021F629B1F4DB001F2B4D /* Categories */,
 			);
 			path = UnitTests;
+			sourceTree = "<group>";
+		};
+		95AA000729B1F48200000007 /* LDrawCore Tests */ = {
+			isa = PBXGroup;
+			children = (
+				95AA000229B1F48200000002 /* LDrawGeometryRoundTripTests.swift */,
+				95AA000129B1F48200000001 /* LDrawUtilitiesOutputStringTests.swift */,
+			);
+			name = "LDrawCore Tests";
 			sourceTree = "<group>";
 		};
 		95D021F629B1F4DB001F2B4D /* Categories */ = {
@@ -1897,6 +1911,8 @@
 				95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */,
 				95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */,
 				95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */,
+				95AA000429B1F48200000004 /* LDrawGeometryRoundTripTests.swift in Sources */,
+				95AA000329B1F48200000003 /* LDrawUtilitiesOutputStringTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2527,6 +2543,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith.UnitTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -2590,6 +2607,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.AllenSmith.Bricksmith.UnitTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};

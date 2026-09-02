@@ -1473,7 +1473,7 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
 //==============================================================================
 - (Matrix4)transformationMatrix
 {
-    return Matrix4CreateFromFloats(transformation);
+    return Matrix4CreateFromDoubles(transformation);
 
 } // end transformationMatrix
 

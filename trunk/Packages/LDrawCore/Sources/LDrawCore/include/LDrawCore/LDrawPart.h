@@ -46,7 +46,11 @@ NS_ASSUME_NONNULL_BEGIN
 	NSString		*displayName;
 	NSString		*referenceName; 		//lower-case version of display name
 
-	float			transformation[16];
+	// Column-major, double precision. A coordinate read from a file has to
+	// survive being written back out, and float32 spacing at coordinate 1024 is
+	// ~1.2e-4 -- coarser than the six decimals we print. Narrowed to float only
+	// at the renderer boundary.
+	double			transformation[16];
 
 	LDrawDirective	*cacheDrawable;			// The drawable is the model we link to OR a VBO that represents it from the part library -- a drawable proxy.
 	LDrawModel		*cacheModel;			// The model is the real model we link to.

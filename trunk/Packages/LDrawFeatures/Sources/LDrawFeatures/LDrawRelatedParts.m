@@ -113,34 +113,34 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 
 		// Matrix XYZ
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[12] = [parsedField floatValue] - offset[0];
+		transform[12] = [parsedField doubleValue] - offset[0];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[13] = [parsedField floatValue] - offset[1];
+		transform[13] = [parsedField doubleValue] - offset[1];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[14] = [parsedField floatValue] - offset[2];
+		transform[14] = [parsedField doubleValue] - offset[2];
 		
 		// Matrix rotation 3x3.  LDraw format is transpose of what we are
 		// used to from GPU side.
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[0] = [parsedField floatValue];
+		transform[0] = [parsedField doubleValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[4] = [parsedField floatValue];
+		transform[4] = [parsedField doubleValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[8] = [parsedField floatValue];
+		transform[8] = [parsedField doubleValue];
 
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[1] = [parsedField floatValue];
+		transform[1] = [parsedField doubleValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[5] = [parsedField floatValue];
+		transform[5] = [parsedField doubleValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[9] = [parsedField floatValue];
+		transform[9] = [parsedField doubleValue];
 
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[2] = [parsedField floatValue];
+		transform[2] = [parsedField doubleValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[6] = [parsedField floatValue];
+		transform[6] = [parsedField doubleValue];
 		parsedField = [LDrawUtilities readNextField:line remainder:&line];
-		transform[10] = [parsedField floatValue];
+		transform[10] = [parsedField doubleValue];
 		
 		transform[3]  = 0.0f;
 		transform[7]  = 0.0f;
@@ -244,7 +244,7 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 {
 	TransformComponents ret;
 	Matrix4	parentMatrix = Matrix4CreateTransformation(&parentPosition);
-	Matrix4	childMatrix = Matrix4CreateFromFloats(self->transform);
+	Matrix4	childMatrix = Matrix4CreateFromDoubles(self->transform);
 	Matrix4 effective_position = Matrix4Multiply(childMatrix,parentMatrix);
 	Matrix4DecomposeTransformation(effective_position, &ret);
 	return ret;
@@ -367,7 +367,7 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 	arr				= [[NSMutableArray alloc] initWithCapacity:count];
 
 	NSMutableArray * parents = [NSMutableArray arrayWithCapacity:5];
-	float offset[3] = { 0, 0, 0 };
+	double offset[3] = { 0, 0, 0 };
 	NSString * relName = nil;
 	
 	for (i = 0; i < count; ++i)
@@ -408,11 +408,11 @@ static NSInteger sort_by_role(id a, id b, void * ref)
 
 				// Grab offset
 				parsedField = [LDrawUtilities readNextField:line remainder:&line];
-				offset[0] = [parsedField floatValue];
+				offset[0] = [parsedField doubleValue];
 				parsedField = [LDrawUtilities readNextField:line remainder:&line];
-				offset[1] = [parsedField floatValue];
+				offset[1] = [parsedField doubleValue];
 				parsedField = [LDrawUtilities readNextField:line remainder:&line];
-				offset[2] = [parsedField floatValue];
+				offset[2] = [parsedField doubleValue];
 				
 				// skip matrix
 

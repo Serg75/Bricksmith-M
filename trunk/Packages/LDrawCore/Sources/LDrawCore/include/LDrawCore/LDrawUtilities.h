@@ -82,7 +82,7 @@ enum {
 
 // Writing
 + (NSString *)outputStringForColor:(LDrawColor *)color;
-+ (NSString *)outputStringForFloat:(float)number;
++ (NSString *)outputStringForFloat:(double)number;
 
 // Hit Detection
 + (void)registerHitForObject:(id)hitObject

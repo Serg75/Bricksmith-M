@@ -165,7 +165,7 @@
 		return NO;
 	}
 	
-	float v11, v12, v21, v22;
+	double v11, v12, v21, v22;
 	switch (axis) {
 		case LDrawAxisX:
 			v11 = component(vertex1, LDrawAxisY);
@@ -188,9 +188,9 @@
 		default:
 			return NO;
 	}
-	float R1 = sqrtf(v11 * v11 + v12 * v12);
-	float R2 = sqrtf(v21 * v21 + v22 * v22);
-	float Ra = (R1 + R2) / 2.0f;
+	double R1 = sqrt(v11 * v11 + v12 * v12);
+	double R2 = sqrt(v21 * v21 + v22 * v22);
+	double Ra = (R1 + R2) / 2.0;
 	return Ra > 0.0f ? ABS(R1 - Ra) / Ra < 0.0001f : NO;
 }
 

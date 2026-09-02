@@ -83,14 +83,14 @@
 	// Settle Y first, then X.  Since Y is hacked to not be in screen space for some views, there is
 	// a risk that model Y and screen Z are closely correlated.  Find the "up" vector, then take the
 	// right-most of remaining as X.
-	if (fabsf(xUp) > fabsf(yUp) && fabsf(xUp) > fabsf(zUp))
+	if (fabs(xUp) > fabs(yUp) && fabs(xUp) > fabs(zUp))
 	{
 		// CASE 1: model "X" axis is up.
 		yNudge = xPart;
 		yDot = xUp;
 
 		// Figure out which is more "to the right" - Y or Z
-		if (fabsf(yRight) > fabsf(zRight))
+		if (fabs(yRight) > fabs(zRight))
 		{
 			// Y axis is to the right.
 			xNudge = yPart;
@@ -110,13 +110,13 @@
 		}
 
 	}
-	else if (fabsf(yUp) > fabsf(zUp))
+	else if (fabs(yUp) > fabs(zUp))
 	{
 		// CASE 2: model "Y" axis is up.
 		yNudge = yPart;
 		yDot = yUp;
 
-		if (fabsf(xRight) > fabsf(zRight))
+		if (fabs(xRight) > fabs(zRight))
 		{
 			// X axis is right
 			xNudge = xPart;
@@ -141,7 +141,7 @@
 		yNudge = zPart;
 		yDot = zUp;
 		float yRightZ = V3Dot(xUser,yPart);
-		if (fabsf(xRight) > fabsf(yRightZ))
+		if (fabs(xRight) > fabs(yRightZ))
 		{
 			// X is right
 			xNudge = xPart;

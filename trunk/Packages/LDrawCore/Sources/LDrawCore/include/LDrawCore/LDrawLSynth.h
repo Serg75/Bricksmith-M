@@ -74,7 +74,7 @@ NS_ASSUME_NONNULL_BEGIN
     NSString        *synthType;
     int              lsynthClass;
     LDrawColor      *color;
-    float			 transformation[16];
+    double			 transformation[16];	// column-major, see LDrawPart
     BOOL             hidden;
     BOOL             subdirectiveSelected;
     Box3			 cachedBounds;			// cached bounds of the enclosed directives

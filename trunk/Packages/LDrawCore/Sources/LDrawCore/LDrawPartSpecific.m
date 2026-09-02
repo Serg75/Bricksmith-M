@@ -79,9 +79,9 @@ static void LDrawPartSpecificLoadIfNeeded(void)
 	if (center != nil) {
 		NSArray *componets = [center componentsSeparatedByString:@","];
 		if (componets.count >= 3) {
-			return V3Make(((NSString *)componets[0]).floatValue,
-						  ((NSString *)componets[1]).floatValue,
-						  ((NSString *)componets[2]).floatValue);
+			return V3Make(((NSString *)componets[0]).doubleValue,
+						  ((NSString *)componets[1]).doubleValue,
+						  ((NSString *)componets[2]).doubleValue);
 		}
 	}
 	return V3Make(0, 0, 0);

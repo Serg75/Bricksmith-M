@@ -81,52 +81,52 @@
 			//Read Vertex 1.
 			// (x1)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.x = [parsedField floatValue];
+			workingVertex.x = [parsedField doubleValue];
 			// (y1)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.y = [parsedField floatValue];
+			workingVertex.y = [parsedField doubleValue];
 			// (z1)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.z = [parsedField floatValue];
+			workingVertex.z = [parsedField doubleValue];
 			
 			[self setVertex1:workingVertex];
 				
 			//Read Vertex 2.
 			// (x2)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.x = [parsedField floatValue];
+			workingVertex.x = [parsedField doubleValue];
 			// (y2)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.y = [parsedField floatValue];
+			workingVertex.y = [parsedField doubleValue];
 			// (z2)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.z = [parsedField floatValue];
+			workingVertex.z = [parsedField doubleValue];
 			
 			[self setVertex2:workingVertex];
 			
 			//Read Conditonal Vertex 1.
 			// (x3)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.x = [parsedField floatValue];
+			workingVertex.x = [parsedField doubleValue];
 			// (y3)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.y = [parsedField floatValue];
+			workingVertex.y = [parsedField doubleValue];
 			// (z3)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.z = [parsedField floatValue];
+			workingVertex.z = [parsedField doubleValue];
 			
 			[self setConditionalVertex1:workingVertex];
 			
 			//Read Conditonal Vertex 2.
 			// (x4)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.x = [parsedField floatValue];
+			workingVertex.x = [parsedField doubleValue];
 			// (y4)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.y = [parsedField floatValue];
+			workingVertex.y = [parsedField doubleValue];
 			// (z4)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			workingVertex.z = [parsedField floatValue];
+			workingVertex.z = [parsedField doubleValue];
 			
 			[self setConditionalVertex2:workingVertex];
 		}

@@ -63,10 +63,10 @@
 //				nudges at standard displacements.
 //
 //==============================================================================
-int floatNearGrid(float v, float grid, float epsi)
+int floatNearGrid(double v, double grid, double epsi)
 {
-	float hgrid = grid * 0.5f;
-	return fabsf(fmodf(v+hgrid,grid)-hgrid) < epsi;
+	double hgrid = grid * 0.5;
+	return fabs(fmod(v+hgrid,grid)-hgrid) < epsi;
 }//end floatNearGrid
 
 
@@ -152,49 +152,49 @@ int floatNearGrid(float v, float grid, float epsi)
 			//Read position.
 			// (x)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[3][0] = [parsedField floatValue];
+			transform.element[3][0] = [parsedField doubleValue];
 			// (y)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[3][1] = [parsedField floatValue];
+			transform.element[3][1] = [parsedField doubleValue];
 			// (z)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[3][2] = [parsedField floatValue];
+			transform.element[3][2] = [parsedField doubleValue];
 			
 			
 			//Read Transformation X.
 			// (a)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[0][0] = [parsedField floatValue];
+			transform.element[0][0] = [parsedField doubleValue];
 			// (b)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[1][0] = [parsedField floatValue];
+			transform.element[1][0] = [parsedField doubleValue];
 			// (c)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[2][0] = [parsedField floatValue];
+			transform.element[2][0] = [parsedField doubleValue];
 			
 			
 			//Read Transformation Y.
 			// (d)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[0][1] = [parsedField floatValue];
+			transform.element[0][1] = [parsedField doubleValue];
 			// (e)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[1][1] = [parsedField floatValue];
+			transform.element[1][1] = [parsedField doubleValue];
 			// (f)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[2][1] = [parsedField floatValue];
+			transform.element[2][1] = [parsedField doubleValue];
 			
 			
 			//Read Transformation Z.
 			// (g)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[0][2] = [parsedField floatValue];
+			transform.element[0][2] = [parsedField doubleValue];
 			// (h)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[1][2] = [parsedField floatValue];
+			transform.element[1][2] = [parsedField doubleValue];
 			// (i)
 			parsedField = [LDrawUtilities readNextField:workingLine  remainder: &workingLine ];
-			transform.element[2][2] = [parsedField floatValue];
+			transform.element[2][2] = [parsedField doubleValue];
 			
 			//finish off the corner of the matrix.
 			transform.element[3][3] = 1;
@@ -248,7 +248,7 @@ int floatNearGrid(float v, float grid, float epsi)
 
 	//Decoding structures is a bit messy.
 	temporary	= [decoder decodeBytesForKey:@"glTransformation" returnedLength:NULL];
-	memcpy(transformation, temporary, sizeof(float)*16 );
+	memcpy(transformation, temporary, sizeof(double)*16 );
 	
 	return self;
 	
@@ -271,7 +271,7 @@ int floatNearGrid(float v, float grid, float epsi)
     // Parts may have icons other than the standard "Brick", i.e. LSynth constraints
 	[encoder encodeObject:[self iconName] forKey:@"iconName"];
 	[encoder encodeBytes:(void *)transformation
-				  length:sizeof(float)*16
+				  length:sizeof(double)*16
 				  forKey:@"glTransformation"];
 	
 }//end encodeWithCoder:
@@ -338,7 +338,11 @@ int floatNearGrid(float v, float grid, float epsi)
 			
 			if([self isSelected] == YES)
 				[renderer pushWireFrame];
-			
+
+			// The renderer works in float; narrow only here, at the boundary.
+			float	glTransformation[16];
+			Matrix4GetFloats([self transformationMatrix], glTransformation);
+
 			#if SHRINK_SEAMS
 			
 			Box3 bbox = [cacheModel boundingBox3];
@@ -367,12 +371,12 @@ int floatNearGrid(float v, float grid, float epsi)
 				}
 			}
 
-			[renderer pushMatrix:transformation];			
+			[renderer pushMatrix:glTransformation];
 			[renderer pushMatrix:shrinkMatrix];
 			
 			#else
 			
-			[renderer pushMatrix:transformation];
+			[renderer pushMatrix:glTransformation];
 			#endif
 			
 			[cacheModel drawSelf:renderer];
@@ -799,7 +803,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //==============================================================================
 - (Matrix4) transformationMatrix
 {
-	return Matrix4CreateFromFloats(transformation);
+	return Matrix4CreateFromDoubles(transformation);
 	
 }//end transformationMatrix
 
@@ -925,7 +929,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 - (void) setTransformationMatrix:(Matrix4 *)newMatrix
 {
 	[self invalCache:CacheFlagBounds];
-	Matrix4GetFloats(*newMatrix, self->transformation);
+	Matrix4GetDoubles(*newMatrix, self->transformation);
 	
 }//end setTransformationMatrix
 
@@ -994,9 +998,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		// vertically. These are different ratios! So I test for known 
 		// numbers, and only apply modifications if they are recognized.
 		
-		float nudgeDistance = V3Length(nudgeVector);
+		double nudgeDistance = V3Length(nudgeVector);
 		
-		float k_small_nudge = 0.0001;
+		double k_small_nudge = 0.0001;
 		
 		if(floatNearGrid(nudgeDistance,20,k_small_nudge))
 		{
@@ -1053,16 +1057,16 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 					 snappedToGrid:(float) gridSpacing
 					  minimumAngle:(float)degrees
 {
-	float	rotationRadians			= radians(degrees);
+	double	rotationRadians			= radians(degrees);
 	
 	Matrix4 transformationMatrix	= IdentityMatrix4;
 	Vector4 yAxisOfPart				= {0, 1, 0, 1};
 	Vector4 worldY					= {0, 0, 0, 1}; //yAxisOfPart converted to world coordinates
 	Vector3 worldY3					= {0, 0, 0};
 	float	gridSpacingYAxis		= 0.0;
-	float	gridX					= 0.0;
-	float	gridY					= 0.0;
-	float	gridZ					= 0.0;
+	double	gridX					= 0.0;
+	double	gridY					= 0.0;
+	double	gridZ					= 0.0;
 	
 	//---------- Adjust position to grid ---------------------------------------
 
@@ -1110,18 +1114,18 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	// size. So all we need to do is normalize, round, then expand back to the 
 	// original size. 
 	
-	components.translate.x = roundf(components.translate.x/gridX) * gridX;
-	components.translate.y = roundf(components.translate.y/gridY) * gridY;
-	components.translate.z = roundf(components.translate.z/gridZ) * gridZ;
+	components.translate.x = round(components.translate.x/gridX) * gridX;
+	components.translate.y = round(components.translate.y/gridY) * gridY;
+	components.translate.z = round(components.translate.z/gridZ) * gridZ;
 	
 
 	//---------- Snap angles ---------------------------------------------------
 	
 	if(rotationRadians != 0)
 	{
-		components.rotate.x = roundf(components.rotate.x/rotationRadians) * rotationRadians;
-		components.rotate.y = roundf(components.rotate.y/rotationRadians) * rotationRadians;
-		components.rotate.z = roundf(components.rotate.z/rotationRadians) * rotationRadians;
+		components.rotate.x = round(components.rotate.x/rotationRadians) * rotationRadians;
+		components.rotate.y = round(components.rotate.y/rotationRadians) * rotationRadians;
+		components.rotate.z = round(components.rotate.z/rotationRadians) * rotationRadians;
 	}
 	
 	//round-off errors here? Potential for trouble.
@@ -1162,9 +1166,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 					 snappedToGrid:(float) gridSpacing
 							byAxis:(Vector3)axis
 {
-	float	gridX					= 0.0;
-	float	gridY					= 0.0;
-	float	gridZ					= 0.0;
+	double	gridX					= 0.0;
+	double	gridY					= 0.0;
+	double	gridZ					= 0.0;
 	
 	// set 1.0 for aligned components and small value for unchangeable ones
 	axis.x = axis.x > 0.5 ? 1.0 : 0.00000001;
@@ -1182,9 +1186,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	// size. So all we need to do is normalize, round, then expand back to the
 	// original size.
 	
-	components.translate.x = roundf(components.translate.x/gridX) * gridX;
-	components.translate.y = roundf(components.translate.y/gridY) * gridY;
-	components.translate.z = roundf(components.translate.z/gridZ) * gridZ;
+	components.translate.x = round(components.translate.x/gridX) * gridX;
+	components.translate.y = round(components.translate.y/gridY) * gridY;
+	components.translate.z = round(components.translate.z/gridZ) * gridZ;
 	
 	
 	//round-off errors here? Potential for trouble.
@@ -1721,7 +1725,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 
 			// Our new location is our old location with the relative transform of that part applied.
 			Matrix4 new_loc = Matrix4Multiply([redirect transformationMatrix], [self transformationMatrix]);
-			Matrix4GetFloats(new_loc, transformation);
+			Matrix4GetDoubles(new_loc, transformation);
 		}
 		
 	}

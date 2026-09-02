@@ -322,9 +322,9 @@
 - (Point3) position:(Point3)position
 	  snappedToGrid:(float)gridSpacing
 {
-	position.x = roundf(position.x/gridSpacing) * gridSpacing;
-	position.y = roundf(position.y/gridSpacing) * gridSpacing;
-	position.z = roundf(position.z/gridSpacing) * gridSpacing;
+	position.x = round(position.x/gridSpacing) * gridSpacing;
+	position.y = round(position.y/gridSpacing) * gridSpacing;
+	position.z = round(position.z/gridSpacing) * gridSpacing;
 	
 	return position;
 	
