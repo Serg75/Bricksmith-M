@@ -39,7 +39,8 @@ static const char * attribs[] = {
 	"transform_w",
 	"color_current",
 	"color_complement",
-	"texture_mix", NULL };
+	"texture_mix",
+	"ghost_alpha", NULL };
 
 
 @implementation LDrawShaderRenderer (OpenGL)
@@ -82,6 +83,10 @@ static const char * attribs[] = {
 	
 	[[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor] getColorRGBA:color_now];
 	glVertexAttrib1f(attr_texture_mix,0.0f);
+
+	// Nothing is a ghost until the ghost pass says so; it restores this when
+	// it is done.
+	glVertexAttrib1f(attr_ghost_alpha,1.0f);
 	complementColor(color_now, compl_now);
 	
 	// Set up the basic transform to be identity - our transform is on top of the MVP matrix.

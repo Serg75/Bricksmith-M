@@ -103,7 +103,13 @@ typedef NS_OPTIONS(NSInteger, CacheFlagsT) {
 	// The bounding box of the directive has changed and is no longer valid.
 	CacheFlagBounds      = 1,
 	DisplayList		     = 2,
-    ContainerInvalid     = 4  // Subdirectives have changed in a way that may invalidate the cache
+    ContainerInvalid     = 4, // Subdirectives have changed in a way that may invalidate the cache
+
+	// Which MLCAD groups the visualization engine drops is derived from the
+	// !LPUB REMOVE GROUP commands laid out across a model's steps, so anything
+	// that moves a step, a group name, or a removal command invalidates it.
+	// Consumed by LDrawModel only.
+	GroupSuppression     = 8
 
 	// Ben says: ContainerInvalid is _not_ a good cache flag because it is not truly recursive - it is ONLY
 	// invoked on LDrawLSynth directives and should probably be private to that class.

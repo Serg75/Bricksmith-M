@@ -10,6 +10,7 @@
 #import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawDrawableElement.h>
+#import <LDrawCore/LDrawGroupable.h>
 #import <LDrawCore/LDrawLSynthConfigSource.h>
 #import <LDrawCore/LDrawLSynthRuntimeSource.h>
 #import <LDrawCore/LDrawMovableDirective.h>
@@ -68,7 +69,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///             synthesized geometry, and the SYNTH BEGIN/END parser.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawLSynth : LDrawContainer <LDrawColorable, LDrawMovableDirective>
+@interface LDrawLSynth : LDrawContainer <LDrawColorable, LDrawMovableDirective, LDrawGroupable>
 {
     NSMutableArray  *synthesizedParts;
     NSString        *synthType;
@@ -80,7 +81,8 @@ NS_ASSUME_NONNULL_BEGIN
     Box3			 cachedBounds;			// cached bounds of the enclosed directives
 }
 
-@property (strong, nullable) NSString * group;		// MLCAD group name or nil
+@property (nonatomic, strong, nullable) NSString * group;		// MLCAD group name or nil
+@property (nonatomic) LDrawGroupVisibilityT groupVisibility;	// see LDrawGroupable
 
 // Accessors
 - (void)setLsynthClass:(int)lsynthClass;

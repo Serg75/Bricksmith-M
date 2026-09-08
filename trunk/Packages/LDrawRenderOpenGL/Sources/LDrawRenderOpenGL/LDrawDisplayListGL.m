@@ -187,6 +187,8 @@ struct LDrawDLSortedInstanceLink {
 	GLfloat									color[4];
 	GLfloat									comp[4];
 	GLfloat									transform[16];
+	int										ghost_id;			// Non-zero for ghosts; all DLs of one ghosted part share an id.
+	GLfloat									ghost_alpha;		// Alpha scale for the above; 1 for a plain transparent part.
 };
 
 
@@ -212,6 +214,9 @@ struct LDrawDLSession {
 	struct LDrawDL *					dl_head;				// Linked list of all DLs that will be instance-drawn, with count.
 	int									dl_count;
 	
+	struct LDrawDLSortedInstanceLink *	ghost_head;				// Linked list + count for ghosted DLs, drawn dead last with a
+	int									ghost_count;			// depth prepass so their interiors do not show through.
+
 	struct LDrawDLSortedInstanceLink *	sorted_head;			// Linked list + count for DLs being drawn later to Z sort.
 	int									sort_count;
 
@@ -623,6 +628,8 @@ struct LDrawDLSession * LDrawDLSessionCreate(const GLfloat model_view[16])
 	session->dl_head = NULL;
 	session->dl_count = 0;
 	session->sorted_head = NULL;
+	session->ghost_head = NULL;
+	session->ghost_count = 0;
 	session->sort_count = 0;
 	#if WANT_STATS
 	memset(&session->stats,0,sizeof(session->stats));
@@ -647,6 +654,145 @@ static int compare_sorted_link(const void * lhs, const void * rhs)
 	const struct LDrawDLSortedInstanceLink * b = (const struct LDrawDLSortedInstanceLink *) rhs;
 	return a->eval - b->eval;
 } // end compare_sorted_link
+
+
+//========== saveForDeferredDraw =================================================
+//
+// Purpose:	Save a DL to be drawn one-at-a-time later, rather than through the
+//			instancing fast path.
+//
+//			A non-zero ghost_id defers it to the ghost pass; otherwise it goes
+//			to the Z-sorted pass used for transparent parts. Both carry the same
+//			payload -- DL, colors, transform and texture -- so they share a
+//			link type and this function.
+//
+//================================================================================
+static void saveForDeferredDraw(struct LDrawDLSession *		session,
+								struct LDrawDL *			dl,
+								struct LDrawTextureSpec *	spec,
+								const float 				cur_color[4],
+								const float 				cmp_color[4],
+								const float					transform[16],
+								int							ghost_id,
+								float						ghost_alpha)
+{
+	struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
+
+	if (ghost_id != 0)
+	{
+		link->next = session->ghost_head;
+		session->ghost_head = link;
+		session->ghost_count++;
+	}
+	else
+	{
+		#if WANT_STATS
+			session->stats.num_btch_srt++;
+			session->stats.num_vert_srt += dl->vrt_count;
+		#endif
+
+		link->next = session->sorted_head;
+		session->sorted_head = link;
+		session->sort_count++;
+	}
+
+	link->dl = dl;
+	link->ghost_id = ghost_id;
+	link->ghost_alpha = ghost_alpha;
+	memcpy(link->color,cur_color,sizeof(GLfloat)*4);
+	memcpy(link->comp,cmp_color,sizeof(GLfloat)*4);
+	memcpy(link->transform,transform,sizeof(GLfloat)*16);
+
+	if (spec)
+		memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
+	else
+		memset(&link->spec,0,sizeof(struct LDrawTextureSpec));
+
+} // end saveForDeferredDraw
+
+
+//========== compare_ghost_link ==================================================
+//
+// Purpose:	Sort ghost instances into contiguous runs, one run per ghosted part,
+//			each run ordered far to near.
+//
+//================================================================================
+static int compare_ghost_link(const void * lhs, const void * rhs)
+{
+	const struct LDrawDLSortedInstanceLink * a = (const struct LDrawDLSortedInstanceLink *) lhs;
+	const struct LDrawDLSortedInstanceLink * b = (const struct LDrawDLSortedInstanceLink *) rhs;
+
+	if (a->ghost_id != b->ghost_id)
+		return (a->ghost_id < b->ghost_id) ? -1 : 1;
+
+	return (a->eval > b->eval) ? -1 : ((a->eval < b->eval) ? 1 : 0);
+
+} // end compare_ghost_link
+
+
+//========== drawDeferredInstance ================================================
+//
+// Purpose:	Draw one deferred instance -- a transparent part or a ghost -- one
+//			at a time, rather than through the instancing fast path.
+//
+// Notes:	For a ghost the caller has already set the color mask, depth mask
+//			and depth func for the pass.
+//
+//			ghost_alpha goes to the shader rather than into the colors here,
+//			because a mesh can carry colors of its own that color_current never
+//			reaches -- see LDrawDefault.glsl.  It is 1 for a transparent part,
+//			so this is the same call for both kinds of deferred instance.
+//
+//================================================================================
+static void drawDeferredInstance(struct LDrawDLSortedInstanceLink * l)
+{
+	struct LDrawDL *	dl	= l->dl;
+	int					i;
+
+	for (i = 0; i < 4; ++i)
+		glVertexAttrib4f(attr_transform_x+i,l->transform[i],l->transform[4+i],l->transform[8+i],l->transform[12+i]);
+
+    glVertexAttrib4fv(attr_color_current, l->color);
+	glVertexAttrib4fv(attr_color_complement, l->comp);
+	glVertexAttrib1f(attr_ghost_alpha, l->ghost_alpha);
+
+	glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
+	#if WANT_SMOOTH
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
+	#endif
+	float * vp = NULL;
+	glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), vp);
+	glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), vp+3);
+	glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), vp+6);
+
+	struct LDrawDLPerTex *	tptr	= dl->texes;
+	int						t;
+
+	for (t = 0; t < dl->tex_count; ++t, ++tptr)
+	{
+		if (tptr->spec.tex_obj)
+			setup_tex_spec(&tptr->spec);
+		else
+			setup_tex_spec(&l->spec);
+
+		#if WANT_SMOOTH
+		if (tptr->line_count)
+			glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
+		if (tptr->tri_count)
+			glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
+		if (tptr->quad_count)
+			glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
+		#else
+		if (tptr->line_count)
+			glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
+		if (tptr->tri_count)
+			glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
+		if (tptr->quad_count)
+			glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
+		#endif
+	}
+
+} // end drawDeferredInstance
 
 
 //========== LDrawDLSessionDrawAndDestroy ========================================
@@ -903,60 +1049,97 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 		// Now: sort our array ascending to get far to near in eye space.
 		qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
 		
-		// NOW we can walk our sorted array and draw each brick, 1x1.  This code is a rehash of the "draw now" 
-		// code in LDrawDLDraw and could be factored.
-		l = arr;
+		// NOW we can walk our sorted array and draw each brick, 1x1.
 		int lc;
 		for (lc = 0; lc < session->sort_count; ++lc)
-		{			
-			int i;
-			for (i = 0; i < 4; ++i)
-				glVertexAttrib4f(attr_transform_x+i,l->transform[i],l->transform[4+i],l->transform[8+i],l->transform[12+i]);
-			glVertexAttrib4fv(attr_color_current, l->color);
-			glVertexAttrib4fv(attr_color_complement, l->comp);
-			
-			dl = l->dl;
-			glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
-			#if WANT_SMOOTH
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dl->idx_vbo);
-			#endif
-			float * p = NULL;
-			glVertexAttribPointer(attr_position, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p);
-			glVertexAttribPointer(attr_normal, 3, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+3);
-			glVertexAttribPointer(attr_color, 4, GL_FLOAT, GL_FALSE, VERT_STRIDE * sizeof(GLfloat), p+6);
-			
-			struct LDrawDLPerTex * tptr = dl->texes;
-			
-			int t;
-			for (t = 0; t < dl->tex_count; ++t, ++tptr)
-			{
-				if (tptr->spec.tex_obj)
-				{
-					setup_tex_spec(&tptr->spec);
-				}
-				else 
-					setup_tex_spec(&l->spec);
-				
-				#if WANT_SMOOTH
-				if (tptr->line_count)
-					glDrawElements(GL_LINES,tptr->line_count,GL_UNSIGNED_INT,idx_null+tptr->line_off);
-				if (tptr->tri_count)
-					glDrawElements(GL_TRIANGLES,tptr->tri_count,GL_UNSIGNED_INT,idx_null+tptr->tri_off);
-				if (tptr->quad_count)
-					glDrawElements(GL_QUADS,tptr->quad_count,GL_UNSIGNED_INT,idx_null+tptr->quad_off);
-				#else
-				if (tptr->line_count)
-					glDrawArrays(GL_LINES,tptr->line_off,tptr->line_count);
-				if (tptr->tri_count)
-					glDrawArrays(GL_TRIANGLES,tptr->tri_off,tptr->tri_count);
-				if (tptr->quad_count)
-					glDrawArrays(GL_QUADS,tptr->quad_off,tptr->quad_count);
-				#endif				
-			}
-			++l;
-		}
+			drawDeferredInstance(arr + lc);
 	}
-	
+
+	// MAIN LOOP 4: ghosted parts (removed MLCAD groups).
+	//
+	// A ghost has to read as an ordinary part that happens to be see-through,
+	// not as a transparent brick: blending every surface would show its studs
+	// and inner walls. So each is drawn twice -- a depth prepass with color
+	// writes masked off to find the nearest surface, then a blend pass with
+	// GL_EQUAL and depth writes off so exactly that surface blends once.
+	//
+	// GL_EQUAL is exact even under GL_MULTISAMPLE: the invariance rules keep
+	// fragment and depth generation independent of the color and depth masks,
+	// so the same program over the same primitives writes bit-identical
+	// per-sample depth in both passes.
+	//
+	// Both passes span the WHOLE ghosted part. A ghosted submodel reference is
+	// a couple of dozen separate DLs, and prepassing them one at a time would
+	// give each brick its own shell -- so you would still see right through the
+	// assembly. Hence the ghost id: instances sharing one are prepassed
+	// together and blended together.
+	//
+	// Drawn last. Between ghosts, ordering does not matter: a ghost behind
+	// another loses its prepass on the depth test and is occluded, the same way
+	// solid parts occlude each other.
+	if (session->ghost_head)
+	{
+		struct LDrawDLSortedInstanceLink * arr = (struct LDrawDLSortedInstanceLink *) LDrawPoolAllocate(session->alloc,sizeof(struct LDrawDLSortedInstanceLink) * session->ghost_count);
+		struct LDrawDLSortedInstanceLink * p = arr;
+
+		for (l = session->ghost_head; l; l = l->next)
+		{
+			float v[4] = {
+				l->transform[12],
+				l->transform[13],
+				l->transform[14], 1.0f };
+			// The copy carries the ghost id across; only eval, which shares
+			// storage with the list pointer, has to be computed here.
+			memcpy(p,l,sizeof(struct LDrawDLSortedInstanceLink));
+			float v_eye[4];
+			applyMatrix(v_eye,session->model_view,v);
+			p->eval = v_eye[2];
+			++p;
+		}
+
+		qsort(arr,session->ghost_count,sizeof(struct LDrawDLSortedInstanceLink),compare_ghost_link);
+
+		int run_start = 0;
+
+		while (run_start < session->ghost_count)
+		{
+			int run_end = run_start + 1;
+			while (run_end < session->ghost_count && arr[run_end].ghost_id == arr[run_start].ghost_id)
+				++run_end;
+
+			int pass;
+			for (pass = 0; pass < 2; ++pass)
+			{
+				int isPrepass = (pass == 0);
+
+				if (isPrepass)
+				{
+					glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
+					glDepthMask(GL_TRUE);
+					glDepthFunc(GL_LESS);
+				}
+				else
+				{
+					glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+					glDepthMask(GL_FALSE);
+					glDepthFunc(GL_EQUAL);
+				}
+
+				int i;
+				for (i = run_start; i < run_end; ++i)
+					drawDeferredInstance(arr + i);
+			}
+
+			run_start = run_end;
+		}
+
+		// Hand the context back the way we found it.
+		glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+		glDepthMask(GL_TRUE);
+		glDepthFunc(GL_LESS);
+		glVertexAttrib1f(attr_ghost_alpha,1.0f);
+	}
+
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 	#if WANT_SMOOTH
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
@@ -994,6 +1177,12 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 //			state like polygon offset that must be used now that isn't recorded
 //			by this API.
 //
+// Parameters:	ghost_id = non-zero when this DL belongs to a ghost, identifying
+//			which one; every DL of one ghosted part shares an id.  See the ghost
+//			pass in LDrawDLSessionDrawAndDestroy.
+//			ghost_alpha = scales the alpha of every fragment the DL produces,
+//			baked-in mesh colors included.  1 for everything that is not a ghost.
+//
 //================================================================================
 void LDrawDLDraw(
 									LDrawRenderEncoder				renderEncoder,
@@ -1003,8 +1192,19 @@ void LDrawDLDraw(
 									const float 					cur_color[4],
 									const float 					cmp_color[4],
 									const float						transform[16],
-									BOOL							is_wire_frame)
+									BOOL							is_wire_frame,
+									int								ghost_id,
+									float							ghost_alpha)
 {
+	// A ghost gets its own pass at the end of the session; see MAIN LOOP 4.
+	// Wireframe wins, since that is the selection cue -- and it draws at full
+	// strength, because a faint cue is no cue.
+	if (ghost_id != 0 && !is_wire_frame)
+	{
+		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, ghost_id, ghost_alpha);
+		return;
+	}
+
 	if (!is_wire_frame)
 	{
 		// Sort case.  We want sort if:
@@ -1014,24 +1214,7 @@ void LDrawDLDraw(
 		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && (cur_color[3] < 1.0f || cmp_color[3] < 1.0f));
 		if (want_sort)
 		{
-			#if WANT_STATS
-				session->stats.num_btch_srt++;
-				session->stats.num_vert_srt += dl->vrt_count;
-			#endif
-		
-			// Build a sorted link, copy the instance data to it, and link it up to our session for later processing.
-			struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
-			link->next = session->sorted_head;
-			session->sorted_head = link;
-			link->dl = dl;
-			memcpy(link->color,cur_color,sizeof(GLfloat)*4);
-			memcpy(link->comp,cmp_color,sizeof(GLfloat)*4);
-			memcpy(link->transform,transform,sizeof(GLfloat)*16);
-			session->sort_count++;
-			if (spec)
-				memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
-			else
-				memset(&link->spec,0,sizeof(struct LDrawTextureSpec));
+			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f);
 			return;
 		}
 

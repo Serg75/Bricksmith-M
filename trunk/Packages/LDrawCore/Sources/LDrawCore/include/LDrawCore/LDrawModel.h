@@ -38,6 +38,12 @@ NS_ASSUME_NONNULL_BEGIN
 	BOOL					 stepDisplayActive;		// YES if we are only display steps 1-currentStepDisplayed
 	NSUInteger				 currentStepDisplayed;	// display up to and including this step index
 
+	BOOL					 anyGroupSuppressed;	// YES if any subdirective is currently dropped or ghosted
+													// by an !LPUB REMOVE GROUP, so a clearing pass is owed
+	BOOL					 derivedWithGroupHiding;// values of +hidesRemovedGroupsInStepDisplay and
+	BOOL					 derivedWithGhosting;	// +showsRemovedGroupsAsGhosts the last derivation ran
+													// under, so a preference change re-derives
+
 	Box3					cachedBounds;			// bounds of the model - only covers steps that are showing
 
 	//steps are stored in the superclass.
@@ -53,6 +59,18 @@ NS_ASSUME_NONNULL_BEGIN
 
 //Initialization
 + (id) model;
+
+// Host-injected: whether step display honors `0 !LPUB REMOVE GROUP`. All mode
+// always does. Defaults to YES; the host pushes the user's preference at
+// launch and whenever it changes. This class does not read
+// standardUserDefaults.
++ (BOOL) hidesRemovedGroupsInStepDisplay;
++ (void) setHidesRemovedGroupsInStepDisplay:(BOOL)flag;
+
+// Host-injected: whether All mode draws a removed group translucent instead of
+// dropping it. Step display is unaffected. Defaults to NO.
++ (BOOL) showsRemovedGroupsAsGhosts;
++ (void) setShowsRemovedGroupsAsGhosts:(BOOL)flag;
 
 //Accessors
 - (NSString *) category;
@@ -84,6 +102,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 //Utilities
 - (NSUInteger) maxStepIndexToOutput;
+/// Brings the derived MLCAD group visibility up to date if it has gone stale.
+/// Every drawing, bounds and picking entry point calls this first; it is
+/// exposed so that a test can drive the derivation without a part library.
+- (void) updateGroupSuppressionIfNeeded;
 - (NSUInteger) numberElements;
 - (void) optimizeStructure;
 - (NSUInteger) parseHeaderFromLines:(NSArray *)lines beginningAtIndex:(NSUInteger)index;

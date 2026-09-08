@@ -210,6 +210,7 @@
 - (void)docChanged:(NSNotification *)notification;
 - (void)stepChanged:(NSNotification *)notification;
 - (void)syntaxColorChanged:(NSNotification *)notification;
+- (void)groupSuppressionChanged:(NSNotification *)notification;
 
 //Menus
 - (void) addModelsToMenus;

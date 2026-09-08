@@ -46,6 +46,8 @@
 
 	// Parts Tab
 	__weak IBOutlet NSTextField		*LDrawPathTextField;
+	__weak IBOutlet NSButton		*hideRemovedGroupsInStepsButton;
+	__weak IBOutlet NSButton		*ghostRemovedGroupsButton;
 	
 	// Style Tab
 	__weak IBOutlet NSColorWell		*backgroundColorWell;
@@ -111,6 +113,8 @@
 - (IBAction) chooseLDrawFolder:(id)sender;
 - (IBAction) pathTextFieldChanged:(id)sender;
 - (IBAction) reloadParts:(id)sender;
+- (IBAction) hideRemovedGroupsInStepsChanged:(id)sender;
+- (IBAction) ghostRemovedGroupsChanged:(id)sender;
 
 // - LSynth Tab
 - (IBAction) lsynthChooseExecutable:(id)sender;

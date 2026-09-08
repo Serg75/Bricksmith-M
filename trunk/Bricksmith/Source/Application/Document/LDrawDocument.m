@@ -28,6 +28,7 @@
 #import <LDrawCore/LDrawDragHandle.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawGroupedObject.h>
 #import <LDrawCore/LDrawHighResPrimitives.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawLine.h>
@@ -275,7 +276,12 @@ void AppendChoicesToNewItem(
 						   selector:@selector(syntaxColorChanged:)
 							   name:LDrawSyntaxColorsDidChangeNotification
 							 object:nil ];
-	
+
+	[notificationCenter addObserver:self
+						   selector:@selector(groupSuppressionChanged:)
+							   name:LDrawGroupSuppressionDidChangeNotification
+							 object:nil ];
+
 	[notificationCenter addObserver:self
 						   selector:@selector(docChanged:)
 							   name:LDrawDirectiveDidChangeNotification
@@ -3266,6 +3272,12 @@ void AppendChoicesToNewItem(
 	NSArray *directivesAndOldGroups = [LDrawMLCadGroup invertedGroupChanges:directivesAndGroups];
 	[LDrawMLCadGroup applyGroupChanges:directivesAndGroups];
 
+	// Group membership decides whether an !LPUB REMOVE GROUP drops a part from
+	// the visualization engine, so a regroup can change what is on screen.
+	for (LDrawGroupedObject *pair in directivesAndGroups) {
+		[(LDrawDirective *)pair.object noteNeedsDisplay];
+	}
+
 	[[undoManager prepareWithInvocationTarget:self] setGroupForDirectives:directivesAndOldGroups];
 	[[undoManager prepareWithInvocationTarget:fileContentsOutline] reloadData];
 	[undoManager setActionName:NSLocalizedString([LDrawSelection setGroupUndoActionKey], nil)];
@@ -4147,8 +4159,24 @@ void AppendChoicesToNewItem(
 - (void) syntaxColorChanged:(NSNotification *)notification
 {
 	[fileContentsOutline reloadData];
-	
+
 }//end syntaxColorChanged:
+
+
+//========== groupSuppressionChanged: ==========================================
+//
+// Purpose:		The user changed whether the Steps view mode honors
+//				0 !LPUB REMOVE GROUP commands.
+//
+//				Each model re-derives which parts are dropped on its own, but
+//				nothing repaints by itself, so ask for a redraw.
+//
+//==============================================================================
+- (void) groupSuppressionChanged:(NSNotification *)notification
+{
+	[[self documentContents] noteNeedsDisplay];
+
+}//end groupSuppressionChanged:
 
 
 //**** NSWindow ****

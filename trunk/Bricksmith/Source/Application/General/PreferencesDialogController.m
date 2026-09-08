@@ -49,6 +49,7 @@
 #import "PreferencesDialogController.h"
 
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawRegex.h>
@@ -293,7 +294,12 @@ PreferencesDialogController *preferencesDialog = nil;
 {
 	NSUserDefaults		*userDefaults		= [NSUserDefaults standardUserDefaults];
 	NSString			*ldrawPath			= [userDefaults stringForKey:LDRAW_PATH_KEY];
-	
+	BOOL				 hideRemovedGroups	= [userDefaults boolForKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY];
+	BOOL				 ghostRemovedGroups	= [userDefaults boolForKey:GHOST_REMOVED_GROUPS_KEY];
+
+	[hideRemovedGroupsInStepsButton setState:(hideRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
+	[ghostRemovedGroupsButton setState:(ghostRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
+
 	if(ldrawPath != nil){
 		[LDrawPathTextField setStringValue:ldrawPath];
 	}//end if we have a folder.
@@ -497,10 +503,58 @@ PreferencesDialogController *preferencesDialog = nil;
 - (IBAction) reloadParts:(id)sender
 {
 	PartLibraryController   *libraryController	= [LDrawApplication sharedPartLibraryController];
-	
+
 	[libraryController reloadPartCatalog:^(BOOL success) {}];
-	
+
 }//end reloadParts:
+
+
+//========== hideRemovedGroupsInStepsChanged: ==================================
+//
+// Purpose:		The user toggled whether the Steps view mode honors
+//				0 !LPUB REMOVE GROUP commands.
+//
+//				Turning it off keeps a removed group on screen while stepping
+//				through the build, which is what you want when the group is
+//				what you are editing. The All view mode always honors removals.
+//
+//==============================================================================
+- (IBAction) hideRemovedGroupsInStepsChanged:(id)sender
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 hideThem		= ([hideRemovedGroupsInStepsButton state] == NSControlStateValueOn);
+
+	[userDefaults setBool:hideThem forKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY];
+
+	// LDrawCore is defaults-free, so push the value; the setter notifies open
+	// documents for us.
+	[LDrawModel setHidesRemovedGroupsInStepDisplay:hideThem];
+
+}//end hideRemovedGroupsInStepsChanged:
+
+
+//========== ghostRemovedGroupsChanged: ========================================
+//
+// Purpose:		The user toggled whether the All view mode draws a removed group
+//				translucent instead of dropping it.
+//
+//				A ghost stays selectable, so it can be clicked and edited while
+//				the rest of the model reads normally. The Steps view mode is
+//				unaffected -- there a group is either fully drawn or gone.
+//
+//==============================================================================
+- (IBAction) ghostRemovedGroupsChanged:(id)sender
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 ghostThem		= ([ghostRemovedGroupsButton state] == NSControlStateValueOn);
+
+	[userDefaults setBool:ghostThem forKey:GHOST_REMOVED_GROUPS_KEY];
+
+	// LDrawCore is defaults-free, so push the value; the setter notifies open
+	// documents for us.
+	[LDrawModel setShowsRemovedGroupsAsGhosts:ghostThem];
+
+}//end ghostRemovedGroupsChanged:
 
 
 #pragma mark -

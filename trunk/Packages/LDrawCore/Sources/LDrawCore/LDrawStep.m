@@ -32,13 +32,14 @@
 
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawLocalization.h>
+#import <LDrawCore/LDrawLSynthDirective.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
-#import <LDrawCore/LDrawUtilities.h>
-#import <LDrawCore/NSString+LDraw.h>
-#import <LDrawCore/LDrawLSynthDirective.h>
 #import <LDrawCore/LDrawRegex.h>
+#import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/LPubRemoveGroup.h>
+#import <LDrawCore/NSString+LDraw.h>
 
 
 @implementation LDrawStep
@@ -912,6 +913,12 @@
 - (void)insertDirective:(LDrawDirective *)directive atIndex:(NSInteger)index
 {
 	[self invalCache:CacheFlagBounds|DisplayList];
+
+	// The arrival may be an LPubRemoveGroup, or a grouped part the model has
+	// not classified yet. The model is GroupSuppression's only consumer, so
+	// invalidate it there; see -[LDrawPart setGroup:].
+	[[self enclosingModel] invalCache:GroupSuppression];
+
 	[super insertDirective:directive atIndex:index];
 	
 } // end insertDirective:atIndex:
@@ -926,6 +933,10 @@
 {
 	[self invalCache:CacheFlagBounds|DisplayList];
 
+	// The departure may be an LPubRemoveGroup. Invalidate the model, which is
+	// GroupSuppression's only consumer; see -[LDrawPart setGroup:].
+	[[self enclosingModel] invalCache:GroupSuppression];
+
 	[super removeDirectiveAtIndex:index];
 	
 } // end removeDirectiveAtIndex:
@@ -934,6 +945,32 @@
 #pragma mark -
 #pragma mark UTILITIES
 #pragma mark -
+
+//========== addRemovedGroupNamesToSet: ========================================
+///
+/// @abstract	Adds the MLCAD group names that this step's
+///				`0 !LPUB REMOVE GROUP` commands drop.
+///
+///				The caller accumulates across steps in order, because a removal
+///				reaches its own step and every step after it.
+///
+//==============================================================================
+- (void)addRemovedGroupNamesToSet:(NSMutableSet<NSString *> *)groupNames
+{
+	for (LDrawDirective *currentDirective in [self subdirectives])
+	{
+		if ([currentDirective isKindOfClass:[LPubRemoveGroup class]])
+		{
+			NSString *removedGroup = [(LPubRemoveGroup *)currentDirective groupName];
+			if ([removedGroup length] > 0)
+			{
+				[groupNames addObject:removedGroup];
+			}
+		}
+	}
+
+} // end addRemovedGroupNamesToSet:
+
 
 //========== lineIsStepTerminator: =============================================
 //

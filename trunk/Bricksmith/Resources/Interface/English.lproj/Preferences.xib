@@ -14,6 +14,8 @@
                 <outlet property="commentsColorWell" destination="73" id="113"/>
                 <outlet property="folderChooserAccessoryView" destination="59" id="62"/>
                 <outlet property="generalTabContentView" destination="163" id="168"/>
+                <outlet property="ghostRemovedGroupsButton" destination="gst-cb-btn" id="gst-cb-out"/>
+                <outlet property="hideRemovedGroupsInStepsButton" destination="grp-cb-btn" id="grp-cb-out"/>
                 <outlet property="gridSpacingCoarseField" destination="Aaz-cE-cv2" id="PrA-aO-4dI"/>
                 <outlet property="gridSpacingFineField" destination="fwz-br-wLK" id="izZ-gB-SyG"/>
                 <outlet property="gridSpacingMediumField" destination="Kic-xb-2bU" id="riv-Dr-0FZ"/>
@@ -216,11 +218,11 @@
             <point key="canvasLocation" x="92" y="1755"/>
         </customView>
         <customView id="76" userLabel="LDraw">
-            <rect key="frame" x="0.0" y="0.0" width="486" height="168"/>
+            <rect key="frame" x="0.0" y="0.0" width="486" height="294"/>
             <autoresizingMask key="autoresizingMask"/>
             <subviews>
                 <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="94">
-                    <rect key="frame" x="37" y="100" width="315" height="22"/>
+                    <rect key="frame" x="37" y="226" width="315" height="22"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="298">
                         <font key="font" metaFont="system"/>
@@ -232,7 +234,7 @@
                     </connections>
                 </textField>
                 <button verticalHuggingPriority="750" id="84">
-                    <rect key="frame" x="354" y="92" width="118" height="32"/>
+                    <rect key="frame" x="354" y="218" width="118" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="push" title="Choose…" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="297">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -243,7 +245,7 @@
                     </connections>
                 </button>
                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="83">
-                    <rect key="frame" x="17" y="130" width="114" height="17"/>
+                    <rect key="frame" x="17" y="256" width="114" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="LDraw Folder" id="296">
                         <font key="font" metaFont="systemBold"/>
@@ -252,7 +254,7 @@
                     </textFieldCell>
                 </textField>
                 <button verticalHuggingPriority="750" id="79">
-                    <rect key="frame" x="354" y="60" width="118" height="32"/>
+                    <rect key="frame" x="354" y="186" width="118" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="push" title="Reload Parts" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="294">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -263,15 +265,60 @@
                     </connections>
                 </button>
                 <box verticalHuggingPriority="750" boxType="separator" id="78">
-                    <rect key="frame" x="108" y="131" width="358" height="5"/>
+                    <rect key="frame" x="108" y="257" width="358" height="5"/>
                     <autoresizingMask key="autoresizingMask"/>
                 </box>
                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="82">
-                    <rect key="frame" x="34" y="49" width="321" height="43"/>
+                    <rect key="frame" x="34" y="175" width="321" height="43"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="295">
                         <font key="font" metaFont="smallSystem"/>
                         <string key="title">This is the path to the folder containing the LDraw part definitions. It should contain the folders "p" and "parts." You may download these files from www.ldraw.org.</string>
+                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="grp-hd-lbl">
+                    <rect key="frame" x="17" y="144" width="114" height="17"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Groups" id="grp-hd-cel">
+                        <font key="font" metaFont="systemBold"/>
+                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <box verticalHuggingPriority="750" boxType="separator" id="grp-sp-box">
+                    <rect key="frame" x="108" y="145" width="358" height="5"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                </box>
+                <button verticalHuggingPriority="750" id="grp-cb-btn" userLabel="Groups - Check Box - Hide removed groups in Steps view mode">
+                    <rect key="frame" x="34" y="114" width="400" height="18"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="check" title="Hide removed groups in Steps view mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="grp-cb-cel">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="hideRemovedGroupsInStepsChanged:" target="-2" id="grp-cb-act"/>
+                    </connections>
+                </button>
+                <button verticalHuggingPriority="750" id="gst-cb-btn" userLabel="Groups - Check Box - Show removed groups as ghosts in All view mode">
+                    <rect key="frame" x="34" y="88" width="400" height="18"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="check" title="Show removed groups as ghosts in All view mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="gst-cb-cel">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="ghostRemovedGroupsChanged:" target="-2" id="gst-cb-act"/>
+                    </connections>
+                </button>
+                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="grp-tx-fld">
+                    <rect key="frame" x="34" y="20" width="421" height="52"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="grp-tx-cel">
+                        <font key="font" metaFont="smallSystem"/>
+                        <string key="title">Parts in an MLCAD group disappear once you reach a step that removes the group. The All view always applies every removal; a ghost draws the group translucent there instead of dropping it, and stays selectable.</string>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                     </textFieldCell>

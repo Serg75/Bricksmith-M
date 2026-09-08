@@ -176,6 +176,8 @@ struct LDrawDLSortedInstanceLink {
 	float									color[4];
 	float									comp[4];
 	float									transform[16];
+	int										ghost_id;			// Non-zero for ghosts; all DLs of one ghosted part share an id.
+	float									ghost_alpha;		// Alpha scale for the above; 1 for a plain transparent part.
 };
 
 
@@ -204,6 +206,9 @@ struct LDrawDLSession {
 
 	struct LDrawDLSortedInstanceLink *	sorted_head;			// Linked list + count for DLs being drawn later to Z sort.
 	int									sort_count;
+
+	struct LDrawDLSortedInstanceLink *	ghost_head;				// Linked list + count for ghosted DLs, drawn dead last with a
+	int									ghost_count;			// depth prepass so their interiors do not show through.
 
 	float								model_view[16];			// Model-view matrix, used to Z sort translucent objects.
 	unsigned int						inst_ring;				// If using more than one instancing buffer, this tells which one we use.
@@ -331,39 +336,205 @@ static int compare_sorted_link(const void * lhs, const void * rhs)
 } // end compare_sorted_link
 
 
-//========== saveForSortDraw =====================================================
+//========== defaultDepthState ===================================================
 //
-// Purpose:	Save DL for later sorting drawing.
-//          We use sorting drawing for transparent parts.
+// Purpose:	The renderer's normal depth behavior, rebuilt here for the ghost
+//			depth prepass and for restoring the encoder afterwards.
 //
 //================================================================================
-static void saveForSortDraw(struct LDrawDLSession *		session,
-							struct LDrawDL *			dl,
-							struct LDrawTextureSpec *	spec,
-							const float 				cur_color[4],
-							const float 				cmp_color[4],
-							const float					transform[16])
+static id<MTLDepthStencilState> defaultDepthState(void)
 {
-#if WANT_STATS
-	session->stats.num_btch_srt++;
-	session->stats.num_vert_srt += dl->vrt_count;
-#endif
+	static id<MTLDepthStencilState> state = nil;
+	if (state == nil)
+	{
+		MTLDepthStencilDescriptor *descriptor = [[MTLDepthStencilDescriptor alloc] init];
+		descriptor.depthCompareFunction = MTLCompareFunctionLess;
+		descriptor.depthWriteEnabled = YES;
+		state = [MetalGPU.device newDepthStencilStateWithDescriptor:descriptor];
+	}
+	return state;
 
-	// Build a sorted link, copy the instance data to it, and link it up to our session for later processing.
+} // end defaultDepthState
+
+
+//========== ghostBlendDepthState ================================================
+//
+// Purpose:	Depth state for the ghost blend pass: only fragments at exactly the
+//			depth the prepass wrote survive, so each ghost blends once.
+//
+//================================================================================
+static id<MTLDepthStencilState> ghostBlendDepthState(void)
+{
+	static id<MTLDepthStencilState> state = nil;
+	if (state == nil)
+	{
+		MTLDepthStencilDescriptor *descriptor = [[MTLDepthStencilDescriptor alloc] init];
+		descriptor.depthCompareFunction = MTLCompareFunctionEqual;
+		descriptor.depthWriteEnabled = NO;
+		state = [MetalGPU.device newDepthStencilStateWithDescriptor:descriptor];
+	}
+	return state;
+
+} // end ghostBlendDepthState
+
+
+//========== compare_ghost_link ==================================================
+//
+// Purpose:	Sort ghost instances into contiguous runs, one run per ghosted part,
+//			each run ordered far to near.
+//
+//================================================================================
+static int compare_ghost_link(const void * lhs, const void * rhs)
+{
+	const struct LDrawDLSortedInstanceLink * a = (const struct LDrawDLSortedInstanceLink *) lhs;
+	const struct LDrawDLSortedInstanceLink * b = (const struct LDrawDLSortedInstanceLink *) rhs;
+
+	if (a->ghost_id != b->ghost_id)
+		return (a->ghost_id < b->ghost_id) ? -1 : 1;
+
+	return (a->eval > b->eval) ? -1 : ((a->eval < b->eval) ? 1 : 0);
+
+} // end compare_ghost_link
+
+
+//========== drawDeferredInstance =================================================
+//
+// Purpose:	Draw one deferred instance -- a transparent part or a ghost -- one
+//			at a time, rather than through the instancing fast path.
+//
+// Notes:	The alpha scale goes to the shader rather than into the colors here,
+//			because a mesh can carry colors of its own that color_current never
+//			reaches -- printed parts, stickers, anything multi-colored in the
+//			part file. See the vertex shader.
+//
+//			depthOnly is for the ghost depth prepass: scaling to zero makes the
+//			fragment add nothing to the color buffer -- the blend is
+//			src*0 + dst*1 -- while depth still writes, so no second pipeline
+//			state is needed. It reaches every fragment, baked colors included,
+//			so nothing leaks through the prepass.
+//
+//================================================================================
+static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
+								 struct LDrawDLSession *				session,
+								 struct LDrawDLSortedInstanceLink *		l,
+								 BOOL									depthOnly)
+{
+	struct InstanceInput	instData;
+	struct LDrawDL *		dl	= l->dl;
+	float					alpha_scale	= depthOnly ? 0.0f : l->ghost_alpha;
+
+	instData.transform_x = simd_make_float4(l->transform[0], l->transform[4], l->transform[8],  l->transform[12]);
+	instData.transform_y = simd_make_float4(l->transform[1], l->transform[5], l->transform[9],  l->transform[13]);
+	instData.transform_z = simd_make_float4(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
+	instData.transform_w = simd_make_float4(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
+	copy_vec4((float *)&instData.color_current, l->color);
+	copy_vec4((float *)&instData.color_complement, l->comp);
+
+	[renderEncoder setVertexBytes:&alpha_scale
+						   length:sizeof(alpha_scale)
+						  atIndex:BufferIndexGhostAlpha];
+
+	[renderEncoder setVertexBytes:&instData
+						   length:sizeof(instData)
+						  atIndex:BufferIndexPerInstanceData];
+
+	[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+
+	struct LDrawDLPerTex *	tptr	= dl->texes;
+	int						t;
+
+	for (t = 0; t < dl->tex_count; ++t, ++tptr)
+	{
+		if (tptr->spec.tex_obj)
+			setup_tex_spec(&tptr->spec, session, renderEncoder);
+		else
+			setup_tex_spec(&l->spec, session, renderEncoder);
+
+		#if WANT_SMOOTH
+		if (tptr->line_count)
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+									  indexCount:tptr->line_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
+								   instanceCount:1];
+
+		if (tptr->tri_count)
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+									  indexCount:tptr->tri_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
+								   instanceCount:1];
+		#else
+		if (tptr->line_count)
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+							  vertexStart:tptr->line_off
+							  vertexCount:tptr->line_count];
+
+		if (tptr->tri_count)
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+							  vertexStart:tptr->tri_off
+							  vertexCount:tptr->tri_count];
+		#endif
+	}
+
+} // end drawDeferredInstance
+
+
+//========== saveForDeferredDraw =================================================
+//
+// Purpose:	Save a DL to be drawn one-at-a-time later, rather than through the
+//			instancing fast path.
+//
+//			A non-zero ghost_id defers it to the ghost pass; otherwise it goes
+//			to the Z-sorted pass used for transparent parts. Both carry the same
+//			payload -- DL, colors, transform and texture -- so they share a
+//			link type and this function.
+//
+//================================================================================
+static void saveForDeferredDraw(struct LDrawDLSession *		session,
+								struct LDrawDL *			dl,
+								struct LDrawTextureSpec *	spec,
+								const float 				cur_color[4],
+								const float 				cmp_color[4],
+								const float					transform[16],
+								int							ghost_id,
+								float						ghost_alpha)
+{
 	struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
-	link->next = session->sorted_head;
-	session->sorted_head = link;
+
+	if (ghost_id != 0)
+	{
+		link->next = session->ghost_head;
+		session->ghost_head = link;
+		session->ghost_count++;
+	}
+	else
+	{
+		#if WANT_STATS
+			session->stats.num_btch_srt++;
+			session->stats.num_vert_srt += dl->vrt_count;
+		#endif
+
+		link->next = session->sorted_head;
+		session->sorted_head = link;
+		session->sort_count++;
+	}
+
 	link->dl = dl;
+	link->ghost_id = ghost_id;
+	link->ghost_alpha = ghost_alpha;
 	memcpy(link->color,cur_color,sizeof(float)*4);
 	memcpy(link->comp,cmp_color,sizeof(float)*4);
 	memcpy(link->transform,transform,sizeof(float)*16);
-	session->sort_count++;
+
 	if (spec)
 		memcpy((void*)&link->spec, (void*)spec, sizeof(struct LDrawTextureSpec));
 	else
 		memset((void*)&link->spec, 0, sizeof(struct LDrawTextureSpec));
 
-} // end saveForSortDraw
+} // end saveForDeferredDraw
 
 
 //========== saveForInstanceDraw =================================================
@@ -1078,6 +1249,8 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	session->dl_count = 0;
 	session->total_instance_count = 0;
 	session->sorted_head = NULL;
+	session->ghost_head = NULL;
+	session->ghost_count = 0;
 	session->sort_count = 0;
 	#if WANT_STATS
 	memset(&session->stats,0,sizeof(session->stats));
@@ -1343,72 +1516,90 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		// Now: sort our array ascending to get far to near in eye space.
 		qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
 
-		struct InstanceInput instData;
-
-		// NOW we can walk our sorted array and draw each brick, 1x1.  This code is a rehash of the "draw now" 
-		// code in LDrawDLDraw and could be factored.
-		l = arr;
+		// NOW we can walk our sorted array and draw each brick, 1x1.
 		int lc;
 		for (lc = 0; lc < session->sort_count; ++lc)
-		{
-			instData.transform_x = simd_make_float4(l->transform[0], l->transform[4], l->transform[8],  l->transform[12]);
-			instData.transform_y = simd_make_float4(l->transform[1], l->transform[5], l->transform[9],  l->transform[13]);
-			instData.transform_z = simd_make_float4(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
-			instData.transform_w = simd_make_float4(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
-			copy_vec4((float *)&instData.color_current, l->color);
-			copy_vec4((float *)&instData.color_complement, l->comp);
-
-			[renderEncoder setVertexBytes:&instData
-								   length:sizeof(instData)
-								  atIndex:BufferIndexPerInstanceData];
-
-			dl = l->dl;
-			[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
-
-			struct LDrawDLPerTex * tptr = dl->texes;
-			
-			int t;
-			for (t = 0; t < dl->tex_count; ++t, ++tptr)
-			{
-				if (tptr->spec.tex_obj)
-				{
-					setup_tex_spec(&tptr->spec, session, renderEncoder);
-				}
-				else 
-					setup_tex_spec(&l->spec, session, renderEncoder);
-
-				#if WANT_SMOOTH
-				if (tptr->line_count)
-					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-											  indexCount:tptr->line_count
-											   indexType:MTLIndexTypeUInt32
-											 indexBuffer:dl->indexBuffer
-									   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
-										   instanceCount:1];
-
-				if (tptr->tri_count)
-					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-											  indexCount:tptr->tri_count
-											   indexType:MTLIndexTypeUInt32
-											 indexBuffer:dl->indexBuffer
-									   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
-										   instanceCount:1];
-				#else
-				if (tptr->line_count)
-					[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
-									  vertexStart:tptr->line_off
-									  vertexCount:tptr->line_count];
-
-				if (tptr->tri_count)
-					[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-									  vertexStart:tptr->tri_off
-									  vertexCount:tptr->tri_count];
-				#endif
-			}
-			++l;
-		}
+			drawDeferredInstance(renderEncoder, session, arr + lc, NO);
 	}
-	
+
+	// MAIN LOOP 4: ghosted parts (removed MLCAD groups).
+	//
+	// A ghost must read as an ordinary part that happens to be see-through, not
+	// as a transparent brick: blending every surface would show its studs and
+	// inner walls. So each ghost is drawn twice --
+	//
+	//	1. A depth prepass establishing its nearest surface. Scaling alpha to 0
+	//	   makes the fragment contribute nothing to the color buffer (the blend
+	//	   is src*0 + dst*1) while depth still writes, so no extra pipeline
+	//	   state is needed. The scale is applied in the shader, so this holds
+	//	   for colors baked into a mesh as well as the meta ones.
+	//	2. A blend pass with depth compare Equal and depth writes off, so only
+	//	   the frontmost fragment survives and blends once.
+	//
+	// Both passes span the WHOLE ghosted part. A ghosted submodel reference is
+	// a couple of dozen separate DLs, and prepassing them one at a time would
+	// give each brick its own shell -- so you would still see right through the
+	// assembly. Hence the ghost id: instances sharing one are prepassed
+	// together and blended together.
+	//
+	// Drawn last. Between ghosts, ordering does not matter: a ghost behind
+	// another loses its prepass on the Less test and is occluded, the same way
+	// solid parts occlude each other.
+	if (session->ghost_head)
+	{
+		struct LDrawDLSortedInstanceLink * arr = (struct LDrawDLSortedInstanceLink *) LDrawPoolAllocate(session->alloc,sizeof(struct LDrawDLSortedInstanceLink) * session->ghost_count);
+		struct LDrawDLSortedInstanceLink * p = arr;
+
+		for (l = session->ghost_head; l; l = l->next)
+		{
+			// The copy carries the ghost id across; only eval, which shares
+			// storage with the list pointer, has to be computed here.
+			memcpy((void*)p, (void*)l, sizeof(struct LDrawDLSortedInstanceLink));
+
+			simd_float4x4 modelView = simd_matrix4x4_from_array(session->model_view);
+			simd_float4 v = simd_make_float4(l->transform[12],
+											 l->transform[13],
+											 l->transform[14], 1.0f);
+			simd_float4 v_eye = simd_mul(modelView, v);
+
+			p->eval = v_eye.z;
+			++p;
+		}
+
+		qsort(arr,session->ghost_count,sizeof(struct LDrawDLSortedInstanceLink),compare_ghost_link);
+
+		int run_start = 0;
+
+		while (run_start < session->ghost_count)
+		{
+			int run_end = run_start + 1;
+            while (run_end < session->ghost_count && arr[run_end].ghost_id == arr[run_start].ghost_id) {
+                ++run_end;
+            }
+
+			int pass;
+			for (pass = 0; pass < 2; ++pass)
+			{
+				BOOL isPrepass = (pass == 0);
+
+				[renderEncoder setDepthStencilState:isPrepass ? defaultDepthState() : ghostBlendDepthState()];
+
+				int i;
+                for (i = run_start; i < run_end; ++i) {
+                    drawDeferredInstance(renderEncoder, session, arr + i, isPrepass);
+                }
+			}
+
+			run_start = run_end;
+		}
+
+		// Hand the encoder back the way we found it.
+		[renderEncoder setDepthStencilState:defaultDepthState()];
+
+		float noGhost = 1.0f;
+		[renderEncoder setVertexBytes:&noGhost length:sizeof(noGhost) atIndex:BufferIndexGhostAlpha];
+	}
+
 	#if WANT_STATS
 		printf("Immediate drawing: %d batches, %d vertices.\n",session->stats.num_btch_imm, session->stats.num_vert_imm);
 		printf("Sorted drawing: %d batches, %d vertices.\n",session->stats.num_btch_srt, session->stats.num_vert_srt);
@@ -1439,6 +1630,13 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 //			Passing is_wire_frame as true will FORCE immediate drawing and disable
 //			all of the instancing/sorting stuff.
 //
+// Parameters:
+//          - ghost_id = non-zero when this DL belongs to a ghost, identifying
+//			which one; every DL of one ghosted part shares an id.  See the ghost
+//			pass in LDrawDLSessionDrawAndDestroy.
+//			- ghost_alpha = scales the alpha of every fragment the DL produces,
+//			baked-in mesh colors included.  1 for everything that is not a ghost.
+//
 //================================================================================
 void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 				 struct LDrawDLSession *		session,
@@ -1447,8 +1645,20 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 				 const float 					cur_color[4],
 				 const float 					cmp_color[4],
 				 const float					transform[16],
-				 BOOL							is_wire_frame)
+				 BOOL							is_wire_frame,
+				 int							ghost_id,
+				 float							ghost_alpha)
 {
+	// A ghost gets its own pass: it is drawn like an ordinary part and blended
+	// as a whole, so its interior does not show through the way a transparent
+	// brick's does. Wireframe wins, since that is the selection cue -- and it
+	// draws at full strength, because a faint cue is no cue.
+	if (ghost_id != 0 && !is_wire_frame)
+	{
+		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, ghost_id, ghost_alpha);
+		return;
+	}
+
 	if (!is_wire_frame)
 	{
 		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && (cur_color[3] < 1.0f || cmp_color[3] < 1.0f));
@@ -1458,7 +1668,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 			// 1. There is alpha baked into our meshes permanently or
 			// 2. Our mesh uses meta colors and the current meta colors have alpha.
 
-			saveForSortDraw(session, dl, spec, cur_color, cmp_color, transform);
+			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f);
 			return;
 		}
 

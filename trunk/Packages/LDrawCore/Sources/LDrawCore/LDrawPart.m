@@ -311,12 +311,22 @@ int floatNearGrid(double v, double grid, double epsi)
 //================================================================================
 - (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
-	if(self->hidden == NO)
+	if([self isOmitted] == NO)
 	{
+		BOOL	drawAsGhost		= (self->_groupVisibility == LDrawGroupVisibilityGhosted);
+
 		[self resolvePart];
 
 		if(cacheModel)
 		{
+			// Ghosting is a renderer-level alpha scale rather than a color, so
+			// that it reaches the parts inside a submodel -- each of those
+			// pushes its own opaque color and would otherwise override a
+			// translucent one pushed here. The part keeps its real hue.
+            if(drawAsGhost == YES) {
+                [renderer pushAlphaModulation:LDRAW_GHOST_ALPHA];
+            }
+
 			if([self->color colorCode] != LDrawCurrentColor)
 			{
 				// Old rendering code did not actually support
@@ -326,16 +336,16 @@ int floatNearGrid(double v, double grid, double epsi)
 				// slappign wrists, so pass it to the render,
 				// which actually DOES know how to get this case
 				// right.
-				if([self->color colorCode] == LDrawEdgeColor)	
+				if([self->color colorCode] == LDrawEdgeColor)
 					[renderer pushColor:LDrawRenderComplementColor];
 				else
 				{
 					float c[4];
-					[self->color getColorRGBA:c];				
+					[self->color getColorRGBA:c];
 					[renderer pushColor:c];
 				}
 			}
-			
+
 			if([self isSelected] == YES)
 				[renderer pushWireFrame];
 
@@ -387,7 +397,10 @@ int floatNearGrid(double v, double grid, double epsi)
 			#endif
 			if([self->color colorCode] != LDrawCurrentColor)
 				[renderer popColor];
-				
+
+			if(drawAsGhost == YES)
+				[renderer popAlphaModulation];
+
 			if([self isSelected] == YES)
 				[renderer popWireFrame];
 				
@@ -438,7 +451,7 @@ int floatNearGrid(double v, double grid, double epsi)
 	   creditObject:(id)creditObject 
 	           hits:(NSMutableSet *)hits
 {
-	if(self->hidden == NO)
+	if([self isOmitted] == NO)
 	{
 		if(!VolumeCanIntersectBox(
 							[self boundingBox3],
@@ -488,9 +501,9 @@ int floatNearGrid(double v, double grid, double epsi)
 		   bestObject:(id *)bestObject 
 			bestDepth:(float *)bestDepth
 {
-	if(self->hidden == NO)
+	if([self isOmitted] == NO)
 	{
-		if(!VolumeCanIntersectPoint([self boundingBox3], transform, bounds, *bestDepth)) 
+		if(!VolumeCanIntersectPoint([self boundingBox3], transform, bounds, *bestDepth))
 			return;
 
 		Matrix4     partTransform       = [self transformationMatrix];
@@ -610,7 +623,7 @@ int floatNearGrid(double v, double grid, double epsi)
 		
 		// We need to have an actual model here. Blithely calling boundingBox3 will 
 		// result in most of our Box3 structure being garbage data!
-		if(modelToDraw != nil && self->hidden == NO)
+		if(modelToDraw != nil && [self isOmitted] == NO)
 		{
 			bounds = [modelToDraw boundingBox3];
 			
@@ -832,6 +845,64 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	[self invalCache:CacheFlagBounds];
 	
 }//end setLDrawColor:
+
+
+//========== setGroup: =========================================================
+///
+/// @abstract	Sets the MLCAD group this part belongs to.
+///
+///				Group membership decides whether an `0 !LPUB REMOVE GROUP`
+///				drops the part, so the enclosing model has to re-derive
+///				suppression.
+///
+/// @discussion	GroupSuppression is invalidated on the model directly rather
+///				than on self, because the model is the flag's only consumer and
+///				so the only object that ever revalidates it. Routed up through
+///				the observers instead, the bit would stick on this part after
+///				the first change and the second change would never be
+///				announced.
+///
+//==============================================================================
+- (void) setGroup:(NSString *)newGroup
+{
+	if(_group != newGroup && [_group isEqualToString:newGroup] == NO)
+	{
+		_group = [newGroup copy];
+		[[self enclosingModel] invalCache:GroupSuppression];
+	}
+
+}//end setGroup:
+
+
+//========== setGroupVisibility: ===============================================
+///
+/// @abstract	Sets what an in-scope `0 !LPUB REMOVE GROUP` does to this part.
+///				Called by the enclosing model; see LDrawGroupable.
+///
+//==============================================================================
+- (void) setGroupVisibility:(LDrawGroupVisibilityT)newVisibility
+{
+	if(self->_groupVisibility != newVisibility)
+	{
+		self->_groupVisibility = newVisibility;
+		[self invalCache:(CacheFlagBounds|DisplayList)];
+	}
+
+}//end setGroupVisibility:
+
+
+//========== isOmitted =========================================================
+///
+/// @abstract	Whether this part is left out of the rendered model entirely;
+///				see LDrawGroupable. Both inputs invalidate CacheFlagBounds when
+///				they change, so callers may cache what they derive from this.
+///
+//==============================================================================
+- (BOOL) isOmitted
+{
+	return (self->hidden == YES || self->_groupVisibility == LDrawGroupVisibilityHidden);
+
+}//end isOmitted
 
 
 //========== setDisplayName: ===================================================

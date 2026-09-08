@@ -14,6 +14,7 @@
 #import "ComputationalGeometry.h"
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawLSynthDirective.h>
+#import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawRegex.h>
 #import <LDrawCore/LDrawUtilities.h>
@@ -498,8 +499,15 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
     NSArray         *constraints         = [self subdirectives];
     LDrawDirective  *currentDirective    = nil;
 
-    if (self->hidden == NO)
+    if ([self isOmitted] == NO)
     {
+        BOOL drawAsGhost = (self->_groupVisibility == LDrawGroupVisibilityGhosted);
+
+        // A renderer-level alpha scale reaches the constraints and synthesized
+        // parts even though each pushes its own color; see -[LDrawPart drawSelf:].
+        if (drawAsGhost == YES)
+            [renderer pushAlphaModulation:LDRAW_GHOST_ALPHA];
+
         // Draw each constraint, if:
         if ([self isSelected] == YES ||                         // We're selected
                 self->subdirectiveSelected != NO ||             // A subdirective (constraint) is selected
@@ -526,6 +534,9 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
         {
             [currentDirective drawSelf:renderer];
         }
+
+        if (drawAsGhost == YES)
+            [renderer popAlphaModulation];
     }
 
 } // end drawSelf:
@@ -543,7 +554,7 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
    creditObject:(id)creditObject
 		   hits:(NSMutableDictionary *)hits
 {
-    if (self->hidden == NO)
+    if ([self isOmitted] == NO)
     {
         NSArray     *steps              = [self subdirectives]; // i.e. constraints
         LDrawPart   *currentDirective   = nil;
@@ -586,6 +597,12 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
    creditObject:(id)creditObject
 		   hits:(NSMutableSet *)hits
 {
+    // Nothing drawn is nothing to hit, or the band would still be selectable
+    // where it no longer appears; see LDrawGroupable.
+    if ([self isOmitted] == YES) {
+        return FALSE;
+    }
+
     NSArray     *commands			= [self subdirectives];
     NSUInteger  commandCount        = [commands count];
     LDrawPart   *currentDirective   = nil;
@@ -636,6 +653,11 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
 	   bestObject:(id *)bestObject
 		bestDepth:(float *)bestDepth
 {
+    // Nothing drawn is nothing to click; see LDrawGroupable.
+    if ([self isOmitted] == YES) {
+        return;
+    }
+
     NSArray     *commands			= [self subdirectives];
     NSUInteger  commandCount        = [commands count];
     LDrawPart   *currentDirective   = nil;
@@ -792,11 +814,18 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
 // Purpose:		Returns the minimum and maximum points of the box which
 //				perfectly contains this object.
 //
+// Notes:		Something we do not draw contributes no bounds, or a removed
+//				group would still hold the model's bounding box open around
+//				empty space. Caching this is safe: both inputs to -isOmitted
+//				invalidate CacheFlagBounds when they change.
+//
 //==============================================================================
 - (Box3)boundingBox3 {
     if ([self revalCache:CacheFlagBounds] == CacheFlagBounds)
     {
-        cachedBounds = [LDrawUtilities boundingBox3ForDirectives:[self subdirectives]];
+        cachedBounds = ([self isOmitted] == YES)
+                        ? InvalidBox
+                        : [LDrawUtilities boundingBox3ForDirectives:[self subdirectives]];
     }
     return cachedBounds;
 }
@@ -877,6 +906,61 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
     return self->hidden;
 
 } // end isHidden
+
+
+//========== setGroup: =========================================================
+///
+/// @abstract	Sets the MLCAD group this directive belongs to.
+///
+///				Group membership decides whether an `0 !LPUB REMOVE GROUP`
+///				drops the directive, so the enclosing model has to re-derive
+///				suppression.
+///
+///				GroupSuppression is invalidated on the model directly because
+///				the model is the flag's only consumer; see -[LDrawPart setGroup:].
+///
+//==============================================================================
+- (void)setGroup:(NSString *)newGroup
+{
+    if (_group != newGroup && [_group isEqualToString:newGroup] == NO)
+    {
+        _group = [newGroup copy];
+        [[self enclosingModel] invalCache:GroupSuppression];
+    }
+
+} // end setGroup:
+
+
+//========== setGroupVisibility: ===============================================
+///
+/// @abstract	Sets what an in-scope `0 !LPUB REMOVE GROUP` does to this
+///				directive. Called by the enclosing model; see LDrawGroupable.
+///
+//==============================================================================
+- (void)setGroupVisibility:(LDrawGroupVisibilityT)newVisibility
+{
+    if (self->_groupVisibility != newVisibility)
+    {
+        self->_groupVisibility = newVisibility;
+        [self invalCache:(CacheFlagBounds|DisplayList)];
+    }
+
+} // end setGroupVisibility:
+
+
+//========== isOmitted =========================================================
+///
+/// @abstract	Whether this directive is left out of the rendered model
+///				entirely; see LDrawGroupable. Both inputs invalidate
+///				CacheFlagBounds when they change, so callers may cache what
+///				they derive from this.
+///
+//==============================================================================
+- (BOOL)isOmitted
+{
+    return (self->hidden == YES || self->_groupVisibility == LDrawGroupVisibilityHidden);
+
+} // end isOmitted
 
 
 //========== transformComponents ===============================================

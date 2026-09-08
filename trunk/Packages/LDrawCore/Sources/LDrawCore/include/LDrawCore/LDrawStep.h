@@ -101,6 +101,7 @@ typedef NS_ENUM(NSInteger, LDrawStepFlavorT)
 + (BOOL) lineIsStepTerminator:(NSString*)line;
 + (BOOL) lineIsRotationStepTerminator:(NSString*)line;
 - (BOOL) parseRotationStepFromLine:(NSString *)rotstep;
+- (void) addRemovedGroupNamesToSet:(NSMutableSet<NSString *> *)groupNames;
 
 @end
 

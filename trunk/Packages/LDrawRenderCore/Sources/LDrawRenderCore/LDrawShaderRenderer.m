@@ -286,6 +286,67 @@ static void set_color4fv(float * c, float storage[4])
 } // end popColor:
 
 
+//========== alphaModulationNow ==================================================
+//
+// Purpose: the alpha factor currently in force, or 1 if nothing is pushed.
+//
+//================================================================================
+- (float)alphaModulationNow
+{
+	return (ghost_stack_top == 0) ? 1.0f : ghost_stack[ghost_stack_top - 1].alpha;
+
+} // end alphaModulationNow
+
+
+//========== ghostIdNow ==========================================================
+//
+// Purpose: which ghost the geometry being drawn belongs to, or 0 for none.
+//
+//================================================================================
+- (int)ghostIdNow
+{
+	return (ghost_stack_top == 0) ? 0 : ghost_stack[ghost_stack_top - 1].ghost_id;
+
+} // end ghostIdNow
+
+
+//========== pushAlphaModulation: ================================================
+//
+// Purpose: scale the alpha of everything drawn from here down, until the
+//			matching pop.
+//
+// Notes:	Nested pushes multiply, so a ghost inside a ghost gets fainter
+//			rather than resetting. They keep the outer ghost's id, so the whole
+//			thing still prepasses as one object.
+//
+//================================================================================
+- (void)pushAlphaModulation:(float)factor
+{
+	assert(ghost_stack_top < COLOR_STACK_DEPTH);
+
+	float	alpha		= [self alphaModulationNow] * factor;
+	int		ghost_id	= (ghost_stack_top == 0) ? ++ghost_serial : [self ghostIdNow];
+
+	ghost_stack[ghost_stack_top].alpha = alpha;
+	ghost_stack[ghost_stack_top].ghost_id = ghost_id;
+	++ghost_stack_top;
+
+} // end pushAlphaModulation:
+
+
+//========== popAlphaModulation ==================================================
+//
+// Purpose: undo the innermost outstanding alpha modulation.
+//
+//================================================================================
+- (void)popAlphaModulation
+{
+	assert(ghost_stack_top > 0);
+	--ghost_stack_top;
+
+} // end popAlphaModulation
+
+
 //========== pushTexture: ========================================================
 //
 // Purpose: change the current texture to a new one, specified by a spec with
@@ -495,6 +556,13 @@ static void set_color4fv(float * c, float storage[4])
 //================================================================================
 - (void)drawDL:(LDrawMeshHandle)dl
 {
+	// The modulation travels with the draw call rather than being folded into
+	// the colors here, because a mesh may carry baked-in colors that the
+	// current color never reaches -- printed parts, stickers, anything
+	// multi-coloured in the part file itself. Scaling those needs the shader.
+	//
+	// It is never baked into the DL either: a DL is cached and shared by every
+	// reference to the same part, so ghosting one would ghost all of them.
 	LDrawDLDraw(
 		_renderEncoder,
 		session,
@@ -503,7 +571,9 @@ static void set_color4fv(float * c, float storage[4])
 		color_now,
 		compl_now,
 		transform_now,
-		wire_frame_count > 0);
+		wire_frame_count > 0,
+		[self ghostIdNow],
+		[self alphaModulationNow]);
 
 } // end drawDL:
 

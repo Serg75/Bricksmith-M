@@ -20,6 +20,7 @@
 
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawLocalization.h>
+#import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCommand.h>
 
@@ -161,6 +162,12 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 {
 	_groupName = [newName copy];
 	super.lPubCommandString = [NSString stringWithFormat:@"%@ %@ \"%@\"", LPUB_REMOVE_GROUP_1, LPUB_REMOVE_GROUP_2, newName];
+	
+	// This command is what drops an MLCAD group from the visualization engine,
+	// so retargeting it means the enclosing model has to re-derive which parts
+	// are suppressed. The model is the flag's only consumer, so invalidate it
+	// there rather than routing up through the observers.
+	[[self enclosingModel] invalCache:GroupSuppression];
 	
 }//end setGroupName:
 

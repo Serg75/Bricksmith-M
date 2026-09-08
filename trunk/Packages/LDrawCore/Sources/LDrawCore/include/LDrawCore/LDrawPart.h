@@ -15,6 +15,7 @@
 #import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawDrawableElement.h>
+#import <LDrawCore/LDrawGroupable.h>
 #import <LDrawCore/MatrixMath.h>
 
 @class LDrawFile;
@@ -40,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// @abstract   Part command. Inserts a part defined in another LDraw file.
 ///
 //------------------------------------------------------------------------------
-@interface LDrawPart : LDrawDrawableElement <NSCoding, LDrawObserver>
+@interface LDrawPart : LDrawDrawableElement <NSCoding, LDrawObserver, LDrawGroupable>
 {
 @private
 	NSString		*displayName;
@@ -60,7 +61,8 @@ NS_ASSUME_NONNULL_BEGIN
 	Box3			cacheBounds;			// Cached bonuding box of resolved parts, in part's coordinate (that is, _not_ in the coordinates of the underlying model.
 }
 
-@property (strong, nullable) NSString * group;		// MLCAD group name or nil
+@property (nonatomic, strong, nullable) NSString * group;		// MLCAD group name or nil
+@property (nonatomic) LDrawGroupVisibilityT groupVisibility;	// see LDrawGroupable
 
 //Directives
 - (void) drawBoundsWithColor:(LDrawColor *)drawingColor;

@@ -37,6 +37,8 @@ enum {
 	attr_color_current,
 	attr_color_complement,
 	attr_texture_mix,
+	attr_ghost_alpha,		// Scales the vertex color's alpha, baked-in mesh colors included;
+							// 1 for everything that is not a ghost.
 	attr_count
 };
 
@@ -101,6 +103,19 @@ struct	LDrawDragHandleInstance;
 	struct LDrawDragHandleInstance * _Nullable drag_handles;						// List of drag handles - deferred to draw at the end for perf and correct scaling.
 	float							scale;											// Needed to code Allen's res-independent drag handles...someday get this from viewport?
 
+    // Ghost stack, for drawing removed MLCAD groups translucent.  Each frame holds the running
+    // product of the alpha factors pushed so far -- products rather than raw factors, so an empty
+    // stack needs no initialization, which matters because each backend seeds its own state in its
+    // own -init -- and the id of the ghost the frame belongs to.  The id lets the DL layer
+    // depth-prepass a whole ghosted part, which may be a submodel of many separate DLs, as one
+    // solid object rather than one shell per brick.
+    struct {
+        float                        alpha;
+        int                            ghost_id;
+    }                                ghost_stack[COLOR_STACK_DEPTH];
+
+    int                                ghost_stack_top;
+    int                                ghost_serial;
 
 	// Metal
 	LDrawRenderEncoder				_Nullable _renderEncoder;

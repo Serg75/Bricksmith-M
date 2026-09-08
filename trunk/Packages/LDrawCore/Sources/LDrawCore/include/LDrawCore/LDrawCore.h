@@ -39,6 +39,7 @@
 #import <LDrawCore/LDrawLSynthRuntimeSource.h>
 #import <LDrawCore/LDrawMovableDirective.h>
 #import <LDrawCore/LDrawGroupedObject.h>
+#import <LDrawCore/LDrawGroupable.h>
 
 // Color
 #import <LDrawCore/LDrawColorLibrary.h>

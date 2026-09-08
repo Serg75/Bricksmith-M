@@ -19,6 +19,11 @@ varying vec4	position_eye;
 	attribute	vec4	color_current;
 	attribute	vec4	color_complement;
 	attribute	float	texture_mix;
+
+	//	Scales the alpha of whatever color this vertex ends up with, so a
+	//	ghosted part goes translucent whether that color came from the meta
+	//	colors or was baked into the mesh.  1 for everything but a ghost.
+	attribute	float	ghost_alpha;
 	
 	void main (void)
 	{
@@ -43,6 +48,11 @@ varying vec4	position_eye;
 		{
 			col = mix(color_current,color_complement, col.r);
 		}
+
+		//	The ghost scale goes on here rather than on color_current, so that it
+		//	reaches a color baked into the mesh as well as a meta one.
+		col.a *= ghost_alpha;
+
 		gl_FrontColor.a = col.a;
 		gl_FrontColor.rgb = col.rgb;
 				 

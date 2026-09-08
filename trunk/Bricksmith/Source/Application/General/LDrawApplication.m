@@ -21,6 +21,7 @@
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawLSynth.h>
+#import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPaths.h>
 
@@ -384,6 +385,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	
 	[LDrawUtilities setColumnizesOutput:[userDefaults boolForKey:COLUMNIZE_OUTPUT_KEY]];
 	[LDrawUtilities setDefaultAuthor:[self userName]];
+	[LDrawModel setHidesRemovedGroupsInStepDisplay:[userDefaults boolForKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY]];
+	[LDrawModel setShowsRemovedGroupsAsGhosts:[userDefaults boolForKey:GHOST_REMOVED_GROUPS_KEY]];
 	
 	//Create shared objects.
 	self->inspector					= [Inspector new];

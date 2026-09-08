@@ -30,11 +30,12 @@ struct VertexOutput {
 	float2	tex_coord;
 };
 
-vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
-								 device const InstanceInput	*inst	[[buffer(BufferIndexPerInstanceData)]],
-								 constant VertexUniform&	uni		[[buffer(BufferIndexVertexUniforms)]],
-								 constant TexturePlaneData&	texGen	[[buffer(BufferIndexTexturePlane)]],
-								 uint						iid		[[instance_id]])
+vertex VertexOutput vertexShader(VertexInput				in		    [[stage_in]],
+								 device const InstanceInput	*inst	    [[buffer(BufferIndexPerInstanceData)]],
+								 constant VertexUniform&	uni		    [[buffer(BufferIndexVertexUniforms)]],
+								 constant TexturePlaneData&	texGen	    [[buffer(BufferIndexTexturePlane)]],
+								 constant float&			ghost_alpha [[buffer(BufferIndexGhostAlpha)]],
+								 uint						iid		    [[instance_id]])
 {
 	VertexOutput out;
 
@@ -59,6 +60,11 @@ vertex VertexOutput vertexShader(VertexInput				in		[[stage_in]],
 	if (in.color.a == 0.0) {
 		col = mix(inst[iid].color_current, inst[iid].color_complement, in.color.r);
 	};
+
+	// The ghost scale goes on here rather than on color_current, so that it
+	// reaches a color baked into the mesh as well as a meta one.
+	col.a *= ghost_alpha;
+
 	out.color.a = col.a;
 	out.color.rgb = col.rgb;
 

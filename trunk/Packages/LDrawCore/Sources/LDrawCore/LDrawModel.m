@@ -25,16 +25,18 @@
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawConditionalLine.h>
 #import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawGroupable.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawKeywords.h>
-#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawLine.h>
+#import <LDrawCore/LDrawLocalization.h>
+#import <LDrawCore/LDrawLSynthDirective.h>
 #import <LDrawCore/LDrawQuadrilateral.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/NSString+LDraw.h>
-#import <LDrawCore/LDrawLSynthDirective.h>
 
 // This disables culling and box approximations for small bricks.  Normally
 // we want this on, but for the purpose of measuring heads-up video card
@@ -46,7 +48,97 @@
 
 #define NO_CULL_SMALL_BRICKS 1
 
+// Host-injected; see +setHidesRemovedGroupsInStepDisplay:. Hiding is the
+// default so that a file which removes a group looks the same in Bricksmith as
+// it does in LPub before the host has pushed anything.
+static BOOL HidesRemovedGroupsInStepDisplay = YES;
+
+// Host-injected; see +setShowsRemovedGroupsAsGhosts:. Off by default, because
+// dropping a removed group outright is what LPub does.
+static BOOL ShowsRemovedGroupsAsGhosts = NO;
+
+
 @implementation LDrawModel
+
+
+#pragma mark -
+#pragma mark CONFIGURATION
+#pragma mark -
+
+//---------- hidesRemovedGroupsInStepDisplay -------------------------[static]--
+///
+/// @abstract	Whether step display honors `0 !LPUB REMOVE GROUP`.
+///
+//------------------------------------------------------------------------------
++ (BOOL) hidesRemovedGroupsInStepDisplay
+{
+	return HidesRemovedGroupsInStepDisplay;
+
+}//end hidesRemovedGroupsInStepDisplay
+
+
+//---------- setHidesRemovedGroupsInStepDisplay: ---------------------[static]--
+///
+/// @abstract	Sets whether step display honors `0 !LPUB REMOVE GROUP`. All
+///				mode honors them either way.
+///
+///				Turning this off keeps a removed group on screen while stepping
+///				through the build, which is what you want when the group is
+///				what you are editing.
+///
+/// @discussion	Models notice the change on their own -- each remembers which
+///				setting it last derived under -- but nothing repaints by
+///				itself, hence the notification for open documents.
+///
+//------------------------------------------------------------------------------
++ (void) setHidesRemovedGroupsInStepDisplay:(BOOL)flag
+{
+	if(HidesRemovedGroupsInStepDisplay != flag)
+	{
+		HidesRemovedGroupsInStepDisplay = flag;
+
+        [[NSNotificationCenter defaultCenter] postNotificationName:LDrawGroupSuppressionDidChangeNotification
+                                                            object:nil];
+	}
+
+}//end setHidesRemovedGroupsInStepDisplay:
+
+
+//---------- showsRemovedGroupsAsGhosts ------------------------------[static]--
+///
+/// @abstract	Whether All mode draws a removed group translucent instead of
+///				dropping it.
+///
+//------------------------------------------------------------------------------
++ (BOOL) showsRemovedGroupsAsGhosts
+{
+	return ShowsRemovedGroupsAsGhosts;
+
+}//end showsRemovedGroupsAsGhosts
+
+
+//---------- setShowsRemovedGroupsAsGhosts: --------------------------[static]--
+///
+/// @abstract	Sets whether All mode draws a removed group translucent instead
+///				of dropping it. Step display is unaffected -- there the group
+///				is either fully drawn or gone, per
+///				+setHidesRemovedGroupsInStepDisplay:.
+///
+///				A ghost still counts for bounds and picking, so it can be
+///				clicked and edited while the rest of the model reads normally.
+///
+//------------------------------------------------------------------------------
++ (void) setShowsRemovedGroupsAsGhosts:(BOOL)flag
+{
+	if(ShowsRemovedGroupsAsGhosts != flag)
+	{
+		ShowsRemovedGroupsAsGhosts = flag;
+
+        [[NSNotificationCenter defaultCenter] postNotificationName:LDrawGroupSuppressionDidChangeNotification
+                                                            object:nil];
+	}
+
+}//end setShowsRemovedGroupsAsGhosts:
 
 
 #pragma mark -
@@ -264,6 +356,11 @@
 //================================================================================
 - (void) drawSelf:(id<LDrawCoreRenderer>)renderer
 {
+	// Before anything else: settle which MLCAD groups an !LPUB REMOVE GROUP
+	// drops. This may dirty our bounds and display list, so it has to happen
+	// ahead of the cull check and the DL revalidation below.
+	[self updateGroupSuppressionIfNeeded];
+
 	// First: cull check!  In my last perf look, draw time was bottlenecked
 	// on the GPU not eating data fast enough, _not_ on CPU.  So burning a
 	// tiny bit of CPU time per part to cull draw calls is a win!
@@ -386,6 +483,8 @@
 //================================================================================
 - (void) collectSelf:(id<LDrawCollector>)renderer
 {
+	[self updateGroupSuppressionIfNeeded];
+
 	NSArray     *steps              = [self subdirectives];
 	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
 	LDrawStep   *currentDirective   = nil;
@@ -408,6 +507,8 @@
 //==============================================================================
 - (void) debugDrawBoundingBox
 {
+	[self updateGroupSuppressionIfNeeded];
+
 	NSArray     *steps              = [self subdirectives];
 	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
 	LDrawStep   *currentDirective   = nil;
@@ -436,6 +537,8 @@
 	creditObject:(id)creditObject
 			hits:(NSMutableDictionary *)hits
 {
+	[self updateGroupSuppressionIfNeeded];
+
 	NSArray     *steps              = [self subdirectives];
 	NSUInteger  maxIndex            = [self maxStepIndexToOutput];
 	LDrawStep   *currentDirective   = nil;
@@ -461,6 +564,8 @@
 	   creditObject:(id)creditObject 
 	           hits:(NSMutableSet *)hits
 {
+	[self updateGroupSuppressionIfNeeded];
+
 	if(!VolumeCanIntersectBox(
 						[self boundingBox3],
 						transform,
@@ -500,6 +605,8 @@
 		   bestObject:(id *)bestObject 
 			bestDepth:(float *)bestDepth
 {
+	[self updateGroupSuppressionIfNeeded];
+
 	if(!VolumeCanIntersectPoint([self boundingBox3], transform, bounds, *bestDepth)) {
         return;
     }
@@ -609,6 +716,10 @@
 {
 	Box3 totalBounds	= InvalidBox;
 	Box3 draggingBounds	= InvalidBox;
+
+	// Suppressed elements report no bounds, so settle suppression before we
+	// decide whether the cached bounds are still good.
+	[self updateGroupSuppressionIfNeeded];
 
 	if([self revalCache:CacheFlagBounds] == CacheFlagBounds)
 	{
@@ -1071,7 +1182,9 @@
 		[NSException raise:NSRangeException format:@"index (%ld) beyond maximum step index %ld", (long)stepIndex, (long)maximumIndex];
 	else
 	{
-		[self invalCache:CacheFlagBounds|DisplayList];	
+		// GroupSuppression: which !LPUB REMOVE GROUP commands are in scope
+		// depends on how far the step display has advanced.
+		[self invalCache:CacheFlagBounds|DisplayList|GroupSuppression];
 		self->currentStepDisplayed = stepIndex;
 	}
 	
@@ -1103,7 +1216,9 @@
 //==============================================================================
 - (void) setStepDisplay:(BOOL)flag
 {
-	[self invalCache:CacheFlagBounds|DisplayList];	
+	// GroupSuppression: leaving step display brings every !LPUB REMOVE GROUP
+	// in the model into scope; entering it narrows scope to the current step.
+	[self invalCache:CacheFlagBounds|DisplayList|GroupSuppression];
 	self->stepDisplayActive = flag;
 	
 }//end setStepDisplay:
@@ -1170,8 +1285,10 @@
 //
 //==============================================================================
 - (void) removeDirectiveAtIndex:(NSInteger)idx
-{	
-	[self invalCache:CacheFlagBounds|DisplayList];
+{
+	// GroupSuppression: removing a step drops whatever removals it declared,
+	// and shifts which steps follow the surviving ones.
+	[self invalCache:CacheFlagBounds|DisplayList|GroupSuppression];
 	if(idx <= currentStepDisplayed && currentStepDisplayed > 0)
 		--currentStepDisplayed;
 	
@@ -1189,7 +1306,7 @@
 //==============================================================================
 - (void) insertDirective:(LDrawDirective *)directive atIndex:(NSInteger)index;
 {
-	[self invalCache:CacheFlagBounds|DisplayList];
+	[self invalCache:CacheFlagBounds|DisplayList|GroupSuppression];
 	[super insertDirective:directive atIndex:index];
 }	
 
@@ -1257,6 +1374,118 @@
 	return maxStep;
 	
 }//end maxStepIndexToOutput
+
+
+//========== updateGroupSuppressionIfNeeded ====================================
+///
+/// @abstract	Re-derives which subdirectives an `0 !LPUB REMOVE GROUP` drops
+///				from the visualization engine, if that derivation has gone
+///				stale.
+///
+///				A removal is in scope once the step declaring it is on display,
+///				and it then drops that group's members wherever they sit --
+///				including the steps that placed them earlier on. That backwards
+///				reach is the point of the command: a model swaps a placeholder
+///				out for the real thing by grouping the placeholder, building on
+///				top of it for a while, and removing the group at the step where
+///				the real part goes in.
+///
+///				Both view modes run the same rule; only the set of steps on
+///				display differs. All mode has every removal in scope, so it
+///				shows the finished assembly. Step display accumulates them as
+///				the user advances, so a group stays visible -- and selectable,
+///				for editing -- right up to the step that removes it.
+///
+///				+hidesRemovedGroupsInStepDisplay can opt step display out of
+///				the rule entirely, for editing a group that a later step
+///				removes. All mode always honors removals, but
+///				+showsRemovedGroupsAsGhosts can make it draw them translucent
+///				rather than dropping them.
+///
+/// @discussion	Visibility is pushed onto the elements rather than passed down
+///				the traversal because the elements already gate drawing, bounds
+///				and picking on their own Hide/Show flag -- see LDrawGroupable.
+///				Setting it invalidates their bounds and display list, which is
+///				what gets the change onto the screen.
+///
+//==============================================================================
+- (void) updateGroupSuppressionIfNeeded
+{
+	BOOL            hidesInSteps    = HidesRemovedGroupsInStepDisplay;
+	BOOL            ghostsInAll     = ShowsRemovedGroupsAsGhosts;
+	BOOL            settingChanged  = (hidesInSteps != self->derivedWithGroupHiding)
+									||	(ghostsInAll != self->derivedWithGhosting);
+
+	// Note the revalCache: call has to happen either way, to re-arm the flag.
+	// The preferences are process-wide globals, so a model cannot be told they
+	// changed -- it compares against what it last derived under instead.
+	if([self revalCache:GroupSuppression] != GroupSuppression && settingChanged == NO)
+		return;
+
+	self->derivedWithGroupHiding = hidesInSteps;
+	self->derivedWithGhosting    = ghostsInAll;
+
+	// Library parts are flattened primitives with no MLCAD groups in them, and
+	// there are thousands of them. Don't walk them.
+	if(self->isOptimized == YES)
+		return;
+
+	NSArray         *steps          = [self subdirectives];
+	NSUInteger      maxIndex        = [self maxStepIndexToOutput];
+	NSMutableSet    *removedGroups  = [NSMutableSet set];
+	NSUInteger      counter         = 0;
+
+	// Which removals are in scope: those declared by the steps on display.
+	// Step display can be opted out of honoring them at all.
+	if(self->stepDisplayActive == NO || hidesInSteps == YES)
+	{
+		for(counter = 0; counter <= maxIndex; counter++)
+		{
+			[[steps objectAtIndex:counter] addRemovedGroupNamesToSet:removedGroups];
+		}
+	}
+
+	// What a removal does to its members. Ghosting is an All-mode reading aid:
+	// step display keeps the plain in-or-out answer, so that stepping through
+	// the build shows what the builder actually has in front of them.
+	LDrawGroupVisibilityT	removedVisibility	= LDrawGroupVisibilityHidden;
+
+    if(ghostsInAll == YES && self->stepDisplayActive == NO) {
+        removedVisibility = LDrawGroupVisibilityGhosted;
+    }
+
+	// Nothing in scope and nothing left over from a previous derivation, so
+	// there is no state to set and none to clear.
+    if([removedGroups count] == 0 && self->anyGroupSuppressed == NO) {
+        return;
+    }
+
+	BOOL anySuppressed = NO;
+
+	// Apply to every step, not just the ones on display: a removal reaches the
+	// members that earlier steps placed, which is the whole point.
+	for(LDrawStep *currentStep in steps)
+	{
+		for(LDrawDirective *currentDirective in [currentStep subdirectives])
+		{
+            if([currentDirective conformsToProtocol:@protocol(LDrawGroupable)] == NO) {
+                continue;
+            }
+
+			id <LDrawGroupable> groupable    = (id <LDrawGroupable>)currentDirective;
+			NSString            *group       = [groupable group];
+			BOOL                removed      = [group length] > 0
+											&& [removedGroups containsObject:group];
+
+			[groupable setGroupVisibility:(removed ? removedVisibility
+													: LDrawGroupVisibilityVisible)];
+			anySuppressed = anySuppressed || removed;
+		}
+	}
+
+	self->anyGroupSuppressed = anySuppressed;
+
+}//end updateGroupSuppressionIfNeeded
 
 
 //========== numberElements ====================================================

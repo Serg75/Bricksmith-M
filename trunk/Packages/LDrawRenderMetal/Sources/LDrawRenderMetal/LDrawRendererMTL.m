@@ -156,7 +156,10 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 	pipelineDescriptor.sampleCount = MSAASampleCount;
 
-	// Blending
+	// Blending. The ghost depth prepass leans on this: at an alpha of 0 the
+	// source contributes nothing, so it can write depth through the same
+	// pipeline state. That is also why alpha-to-coverage stays off here and the
+	// fragment shader never discards on alpha -- see MAIN LOOP 4.
 	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = pipelineDescriptor.colorAttachments[0];
 	colorAttachment.blendingEnabled = YES;
 	colorAttachment.rgbBlendOperation = MTLBlendOperationAdd;
@@ -447,6 +450,12 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	memcpy(vertexUniformBufferPointer, &vertexUniform, sizeof(vertexUniform));
 
 	[renderEncoder setVertexBuffer:vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
+
+	// Nothing is a ghost until the ghost pass says so; it restores this when it
+	// is done. The vertex shader declares the binding, so it has to be present
+	// for every draw in the pass.
+	float ghostAlpha = 1.0f;
+	[renderEncoder setVertexBytes:&ghostAlpha length:sizeof(ghostAlpha) atIndex:BufferIndexGhostAlpha];
 
 	[renderEncoder setFragmentBuffer:state.fragmentUniformBuffer offset:0 atIndex:BufferIndexFragmentUniforms];
 

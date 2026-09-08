@@ -135,6 +135,19 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)pushWireFrame;
 - (void)popWireFrame;
 
+// Alpha modulation stack.  While factors are outstanding, their product scales the alpha of every
+// fragment drawn, including geometry reached by nested directives further down the traversal.  This
+// is how a removed MLCAD group draws as a translucent "ghost"; pushing a translucent color instead
+// does not work, because the parts inside a submodel push their own opaque colors one level down and
+// would override it.
+//
+// The factor travels to the shader with the draw call rather than being folded into the colors,
+// because a mesh can carry colors of its own that the current color never reaches -- printed parts,
+// stickers, anything multi-colored in the part file itself.  It is never baked into a display list
+// either, because display lists are cached and shared between every reference to the same part.
+- (void)pushAlphaModulation:(float)factor;
+- (void)popAlphaModulation;
+
 // Texture stack - sets up new texturing.  When the stack is totally popped, no texturing is applied.
 - (void)pushTexture:(struct LDrawTextureSpec *)tex_spec;
 - (void)popTexture;

@@ -37,6 +37,9 @@ typedef enum BufferIndex {
 	BufferIndexPerInstanceData  		= 1,
 	BufferIndexVertexUniforms      		= 2,
 	BufferIndexTexturePlane      		= 3,
+	// A lone float scaling the alpha of everything the draw call produces, baked-in mesh
+	// colors included.  1 for everything that is not a ghost.
+	BufferIndexGhostAlpha				= 4,
 	BufferIndexFragmentUniforms 		= 0
 } BufferIndex;
 

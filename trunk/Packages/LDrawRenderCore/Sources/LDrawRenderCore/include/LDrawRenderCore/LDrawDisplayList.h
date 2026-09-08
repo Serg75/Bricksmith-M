@@ -83,6 +83,8 @@ void					LDrawDLDraw(
 									const float					cur_color[4],
 									const float					cmp_color[4],
 									const float					transform[16],
-									BOOL						is_wire_frame);
+									BOOL						is_wire_frame,
+									int							ghost_id,
+									float						ghost_alpha);
 
 #endif /* LDrawDisplayList_h */
