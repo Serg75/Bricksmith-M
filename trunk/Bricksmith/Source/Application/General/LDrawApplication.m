@@ -387,7 +387,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[LDrawUtilities setDefaultAuthor:[self userName]];
 	[LDrawModel setHidesRemovedGroupsInStepDisplay:[userDefaults boolForKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY]];
 	[LDrawModel setShowsRemovedGroupsAsGhosts:[userDefaults boolForKey:GHOST_REMOVED_GROUPS_KEY]];
-	
+	[LDrawModel setGhostsPreviousSteps:[userDefaults boolForKey:GHOST_PREVIOUS_STEPS_KEY]];
+
 	//Create shared objects.
 	self->inspector					= [Inspector new];
 	self->partLibraryController		= [[PartLibraryController alloc] init];

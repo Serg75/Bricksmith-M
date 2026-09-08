@@ -72,6 +72,12 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) showsRemovedGroupsAsGhosts;
 + (void) setShowsRemovedGroupsAsGhosts:(BOOL)flag;
 
+// Host-injected: whether step display draws everything built before the step on
+// display as translucent ghosts, leaving only that step solid. All mode is
+// unaffected. Defaults to NO.
++ (BOOL) ghostsPreviousSteps;
++ (void) setGhostsPreviousSteps:(BOOL)flag;
+
 //Accessors
 - (NSString *) category;
 - (LDrawColorLibrary *) colorLibrary;
@@ -106,6 +112,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Every drawing, bounds and picking entry point calls this first; it is
 /// exposed so that a test can drive the derivation without a part library.
 - (void) updateGroupSuppressionIfNeeded;
+/// Whether the steps built before the one on display draw as translucent
+/// ghosts. Exposed so a test can check the rule without a renderer.
+- (BOOL) drawsPreviousStepsAsGhosts;
 - (NSUInteger) numberElements;
 - (void) optimizeStructure;
 - (NSUInteger) parseHeaderFromLines:(NSArray *)lines beginningAtIndex:(NSUInteger)index;

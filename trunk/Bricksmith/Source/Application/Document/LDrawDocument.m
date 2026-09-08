@@ -283,6 +283,11 @@ void AppendChoicesToNewItem(
 							 object:nil ];
 
 	[notificationCenter addObserver:self
+						   selector:@selector(stepGhostingChanged:)
+							   name:LDrawStepGhostingDidChangeNotification
+							 object:nil ];
+
+	[notificationCenter addObserver:self
 						   selector:@selector(docChanged:)
 							   name:LDrawDirectiveDidChangeNotification
 							 object:[self documentContents] ];
@@ -4177,6 +4182,22 @@ void AppendChoicesToNewItem(
 	[[self documentContents] noteNeedsDisplay];
 
 }//end groupSuppressionChanged:
+
+
+//========== stepGhostingChanged: ==============================================
+//
+// Purpose:		The user changed whether the Steps view mode fades the steps
+//				already built.
+//
+//				Ghosting is applied while drawing rather than stored anywhere,
+//				so a redraw is the whole of the update.
+//
+//==============================================================================
+- (void) stepGhostingChanged:(NSNotification *)notification
+{
+	[[self documentContents] noteNeedsDisplay];
+
+}//end stepGhostingChanged:
 
 
 //**** NSWindow ****

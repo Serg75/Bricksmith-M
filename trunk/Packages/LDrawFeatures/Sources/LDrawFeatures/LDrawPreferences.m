@@ -54,6 +54,7 @@
 	[initialDefaults setObject:@NO								forKey:COLUMNIZE_OUTPUT_KEY]; // appease LDraw traditionalists
 	[initialDefaults setObject:@YES								forKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY]; // match LPub
 	[initialDefaults setObject:@NO								forKey:GHOST_REMOVED_GROUPS_KEY]; // dropping them is the LPub reading
+	[initialDefaults setObject:@NO								forKey:GHOST_PREVIOUS_STEPS_KEY]; // the traditional step display shows the assembly solid
 
 	//
 	// Grid Spacing

@@ -211,6 +211,7 @@
 - (void)stepChanged:(NSNotification *)notification;
 - (void)syntaxColorChanged:(NSNotification *)notification;
 - (void)groupSuppressionChanged:(NSNotification *)notification;
+- (void)stepGhostingChanged:(NSNotification *)notification;
 
 //Menus
 - (void) addModelsToMenus;

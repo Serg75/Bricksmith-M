@@ -57,6 +57,10 @@ static BOOL HidesRemovedGroupsInStepDisplay = YES;
 // dropping a removed group outright is what LPub does.
 static BOOL ShowsRemovedGroupsAsGhosts = NO;
 
+// Host-injected; see +setGhostsPreviousSteps:. Off by default: a step display
+// that shows the assembly solid is what Bricksmith has always done.
+static BOOL GhostsPreviousSteps = NO;
+
 
 @implementation LDrawModel
 
@@ -139,6 +143,49 @@ static BOOL ShowsRemovedGroupsAsGhosts = NO;
 	}
 
 }//end setShowsRemovedGroupsAsGhosts:
+
+
+//---------- ghostsPreviousSteps -------------------------------------[static]--
+///
+/// @abstract	Whether step display draws the steps already built as
+///				translucent ghosts.
+///
+//------------------------------------------------------------------------------
++ (BOOL) ghostsPreviousSteps
+{
+	return GhostsPreviousSteps;
+
+}//end ghostsPreviousSteps
+
+
+//---------- setGhostsPreviousSteps: ---------------------------------[static]--
+///
+/// @abstract	Sets whether step display fades everything built before the step
+///				on display, leaving that step the only solid thing on screen.
+///
+///				This is a reading aid for following a build: the parts the
+///				current step adds stand out against the assembly they go onto,
+///				which stays on screen for context rather than disappearing.
+///
+///				All mode is unaffected -- it has no "current" step to single
+///				out.
+///
+/// @discussion	A ghosted step is faded at draw time only. It still counts for
+///				bounds and picking, so earlier parts stay clickable and
+///				editable; nothing about the model changes.
+///
+//------------------------------------------------------------------------------
++ (void) setGhostsPreviousSteps:(BOOL)flag
+{
+	if(GhostsPreviousSteps != flag)
+	{
+		GhostsPreviousSteps = flag;
+
+		[[NSNotificationCenter defaultCenter] postNotificationName:LDrawStepGhostingDidChangeNotification
+															object:nil];
+	}
+
+}//end setGhostsPreviousSteps:
 
 
 #pragma mark -
@@ -427,13 +474,35 @@ static BOOL ShowsRemovedGroupsAsGhosts = NO;
 		NSUInteger  maxIndex            = [self maxStepIndexToOutput];
 		LDrawStep   *currentDirective   = nil;
 		NSUInteger  counter             = 0;
-		
+
+		// Step display can fade everything already built so that only the step
+		// on display reads as solid; see +setGhostsPreviousSteps:. One push
+		// spans every earlier step rather than one per step, so the assembly
+		// blends as a single translucent mass instead of each step showing
+		// through the next.
+		//
+		// This fades the parts a step places, which is what a step is made of.
+		// Raw primitives written straight into a step -- authoring a part file
+		// that has steps in it -- go into the model's own display list above,
+		// which is one mesh for every step on display and is shared by every
+		// reference to this model, so there is nothing to fade them separately
+		// by.
+		BOOL		ghostEarlierSteps	= [self drawsPreviousStepsAsGhosts];
+
+		if(ghostEarlierSteps == YES)
+			[renderer pushAlphaModulation:LDRAW_GHOST_ALPHA];
+
 		for(counter = 0; counter <= maxIndex; counter++)
 		{
+			// The step on display is the last one output, and it draws at full
+			// strength.
+			if(ghostEarlierSteps == YES && counter == maxIndex)
+				[renderer popAlphaModulation];
+
 			currentDirective = [steps objectAtIndex:counter];
 			[currentDirective drawSelf:renderer];
 		}
-		
+
 		// And: if we are currently dragging directives, those 
 		// directives were skipped in the cases above.  So we
 		// do something a little scary.  We build a temporary
@@ -1374,6 +1443,30 @@ static BOOL ShowsRemovedGroupsAsGhosts = NO;
 	return maxStep;
 	
 }//end maxStepIndexToOutput
+
+
+//========== drawsPreviousStepsAsGhosts ========================================
+///
+/// @abstract	Whether the steps built before the one on display draw as
+///				translucent ghosts; see +setGhostsPreviousSteps:.
+///
+///				Only step display has a "current" step to single out, and only
+///				once there is something behind it -- on the first step there is
+///				nothing built yet, and fading nothing would just cost a pass.
+///
+/// @discussion	Read fresh at every draw rather than cached: the answer is a
+///				draw-time appearance, so nothing downstream of it -- bounds,
+///				picking, display lists -- depends on it, and there is no cache
+///				to invalidate when the preference flips.
+///
+//==============================================================================
+- (BOOL) drawsPreviousStepsAsGhosts
+{
+	return	GhostsPreviousSteps
+		&&	self->stepDisplayActive
+		&&	[self maxStepIndexToOutput] > 0;
+
+}//end drawsPreviousStepsAsGhosts
 
 
 //========== updateGroupSuppressionIfNeeded ====================================

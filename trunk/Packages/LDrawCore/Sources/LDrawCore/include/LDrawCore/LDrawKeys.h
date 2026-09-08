@@ -24,6 +24,7 @@
 #define COLUMNIZE_OUTPUT_KEY						@"ColumnizeOutput"
 #define HIDE_REMOVED_GROUPS_IN_STEPS_KEY			@"Hide Removed Groups In Steps"
 #define GHOST_REMOVED_GROUPS_KEY					@"Ghost Removed Groups"
+#define GHOST_PREVIOUS_STEPS_KEY					@"Ghost Previous Steps"
 #define LDRAW_PATH_KEY								@"LDraw Path"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
@@ -83,6 +84,10 @@
 //Whether step display honors !LPUB REMOVE GROUP changed in preferences, so
 // open documents have to redraw. Object is nil. No userInfo.
 #define LDrawGroupSuppressionDidChangeNotification		@"LDrawGroupSuppressionDidChangeNotification"
+
+//Whether step display fades the steps already built changed in preferences, so
+// open documents have to redraw. Object is nil. No userInfo.
+#define LDrawStepGhostingDidChangeNotification			@"LDrawStepGhostingDidChangeNotification"
 
 //A model was added to a document.  Note that the object
 // for this notification is the LDrawFile that was edited!

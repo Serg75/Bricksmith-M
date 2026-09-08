@@ -296,9 +296,11 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSString			*ldrawPath			= [userDefaults stringForKey:LDRAW_PATH_KEY];
 	BOOL				 hideRemovedGroups	= [userDefaults boolForKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY];
 	BOOL				 ghostRemovedGroups	= [userDefaults boolForKey:GHOST_REMOVED_GROUPS_KEY];
+	BOOL				 ghostPreviousSteps	= [userDefaults boolForKey:GHOST_PREVIOUS_STEPS_KEY];
 
 	[hideRemovedGroupsInStepsButton setState:(hideRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
 	[ghostRemovedGroupsButton setState:(ghostRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
+	[ghostPreviousStepsButton setState:(ghostPreviousSteps ? NSControlStateValueOn : NSControlStateValueOff)];
 
 	if(ldrawPath != nil){
 		[LDrawPathTextField setStringValue:ldrawPath];
@@ -555,6 +557,30 @@ PreferencesDialogController *preferencesDialog = nil;
 	[LDrawModel setShowsRemovedGroupsAsGhosts:ghostThem];
 
 }//end ghostRemovedGroupsChanged:
+
+
+//========== ghostPreviousStepsChanged: ========================================
+//
+// Purpose:		The user toggled whether the Steps view mode draws everything
+//				built before the current step as translucent ghosts.
+//
+//				It makes the parts a step adds stand out against the assembly
+//				they go onto, which stays on screen for context. The ghosts stay
+//				selectable, and the All view mode is unaffected.
+//
+//==============================================================================
+- (IBAction) ghostPreviousStepsChanged:(id)sender
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 ghostThem		= ([ghostPreviousStepsButton state] == NSControlStateValueOn);
+
+	[userDefaults setBool:ghostThem forKey:GHOST_PREVIOUS_STEPS_KEY];
+
+	// LDrawCore is defaults-free, so push the value; the setter notifies open
+	// documents for us.
+	[LDrawModel setGhostsPreviousSteps:ghostThem];
+
+}//end ghostPreviousStepsChanged:
 
 
 #pragma mark -
