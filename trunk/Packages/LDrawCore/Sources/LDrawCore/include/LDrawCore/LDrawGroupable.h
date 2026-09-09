@@ -38,11 +38,29 @@ typedef NS_ENUM(NSInteger, LDrawGroupVisibilityT)
 };
 
 
-/// Alpha a ghost draws at.
+/// Alpha a ghost draws at until the host says otherwise. The value in force is
+/// `+[LDrawModel ghostAlpha]`; draw code should ask for that rather than
+/// reaching for this.
+static const float LDRAW_DEFAULT_GHOST_ALPHA = 0.4f;
+
+/// How faint and how solid a ghost is allowed to get.
 ///
-/// Has to stay strictly between 0 and 1: the renderers scale a ghost's alpha by
-/// this, so 0 would draw nothing at all and 1 would defeat the point.
-static const float LDRAW_GHOST_ALPHA = 0.3f;
+/// The alpha has to stay strictly between 0 and 1: the renderers scale a
+/// ghost's alpha by it, so 0 would draw nothing at all and 1 would defeat the
+/// point. +[LDrawModel setGhostAlpha:] clamps to this band, so no stored
+/// preference can push a ghost out of sight or make it solid.
+static const float LDRAW_MIN_GHOST_ALPHA = 0.30f;
+static const float LDRAW_MAX_GHOST_ALPHA = 0.70f;
+
+
+/// Converts the stored preference -- whole percent transparent, the way the
+/// LSynth selection transparency is stored -- to the alpha the renderers want.
+/// Out-of-range input is +[LDrawModel setGhostAlpha:]'s problem, not this
+/// function's; it just does the arithmetic.
+static inline float LDrawGhostAlphaForTransparencyPercent(NSInteger percent)
+{
+	return 1.0f - (float)percent / 100.0f;
+}
 
 
 //------------------------------------------------------------------------------

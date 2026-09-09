@@ -288,6 +288,11 @@ void AppendChoicesToNewItem(
 							 object:nil ];
 
 	[notificationCenter addObserver:self
+						   selector:@selector(ghostAlphaChanged:)
+							   name:LDrawGhostAlphaDidChangeNotification
+							 object:nil ];
+
+	[notificationCenter addObserver:self
 						   selector:@selector(docChanged:)
 							   name:LDrawDirectiveDidChangeNotification
 							 object:[self documentContents] ];
@@ -4198,6 +4203,21 @@ void AppendChoicesToNewItem(
 	[[self documentContents] noteNeedsDisplay];
 
 }//end stepGhostingChanged:
+
+
+//========== ghostAlphaChanged: ================================================
+//
+// Purpose:		The user changed how see-through a ghost draws.
+//
+//				Posted while the slider is being dragged, so this is what makes
+//				the change readable as it happens.
+//
+//==============================================================================
+- (void) ghostAlphaChanged:(NSNotification *)notification
+{
+	[[self documentContents] noteNeedsDisplay];
+
+}//end ghostAlphaChanged:
 
 
 //**** NSWindow ****

@@ -25,6 +25,9 @@
 #define HIDE_REMOVED_GROUPS_IN_STEPS_KEY			@"Hide Removed Groups In Steps"
 #define GHOST_REMOVED_GROUPS_KEY					@"Ghost Removed Groups"
 #define GHOST_PREVIOUS_STEPS_KEY					@"Ghost Previous Steps"
+// Stored as whole percent transparent, 0 solid to 100 invisible, matching how
+// the LSynth selection transparency is stored. The alpha is 1 - percent/100.
+#define GHOST_TRANSPARENCY_KEY						@"Ghost Transparency"
 #define LDRAW_PATH_KEY								@"LDraw Path"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
@@ -88,6 +91,10 @@
 //Whether step display fades the steps already built changed in preferences, so
 // open documents have to redraw. Object is nil. No userInfo.
 #define LDrawStepGhostingDidChangeNotification			@"LDrawStepGhostingDidChangeNotification"
+
+//How solid a ghost draws changed in preferences, so open documents have to
+// redraw. Object is nil. No userInfo.
+#define LDrawGhostAlphaDidChangeNotification			@"LDrawGhostAlphaDidChangeNotification"
 
 //A model was added to a document.  Note that the object
 // for this notification is the LDrawFile that was edited!

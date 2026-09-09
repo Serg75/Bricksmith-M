@@ -49,6 +49,8 @@
 	__weak IBOutlet NSButton		*hideRemovedGroupsInStepsButton;
 	__weak IBOutlet NSButton		*ghostRemovedGroupsButton;
 	__weak IBOutlet NSButton		*ghostPreviousStepsButton;
+	__weak IBOutlet NSSlider		*ghostTransparencySlider;
+	__weak IBOutlet NSTextField		*ghostTransparencyText;
 
 	// Style Tab
 	__weak IBOutlet NSColorWell		*backgroundColorWell;
@@ -117,6 +119,8 @@
 - (IBAction) hideRemovedGroupsInStepsChanged:(id)sender;
 - (IBAction) ghostRemovedGroupsChanged:(id)sender;
 - (IBAction) ghostPreviousStepsChanged:(id)sender;
+- (IBAction) ghostTransparencySliderChanged:(id)sender;
+- (IBAction) ghostTransparencyTextChanged:(id)sender;
 
 // - LSynth Tab
 - (IBAction) lsynthChooseExecutable:(id)sender;

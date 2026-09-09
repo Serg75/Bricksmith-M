@@ -55,6 +55,7 @@
 	[initialDefaults setObject:@YES								forKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY]; // match LPub
 	[initialDefaults setObject:@NO								forKey:GHOST_REMOVED_GROUPS_KEY]; // dropping them is the LPub reading
 	[initialDefaults setObject:@NO								forKey:GHOST_PREVIOUS_STEPS_KEY]; // the traditional step display shows the assembly solid
+	[initialDefaults setObject:@60								forKey:GHOST_TRANSPARENCY_KEY]; // LDRAW_DEFAULT_GHOST_ALPHA, as percent transparent
 
 	//
 	// Grid Spacing

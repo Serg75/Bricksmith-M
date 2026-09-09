@@ -78,6 +78,12 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) ghostsPreviousSteps;
 + (void) setGhostsPreviousSteps:(BOOL)flag;
 
+// Host-injected: how solid a ghost draws, for both kinds -- removed groups and
+// previous steps. Clamped to LDRAW_MIN_GHOST_ALPHA...LDRAW_MAX_GHOST_ALPHA.
+// Defaults to LDRAW_DEFAULT_GHOST_ALPHA.
++ (float) ghostAlpha;
++ (void) setGhostAlpha:(float)alpha;
+
 //Accessors
 - (NSString *) category;
 - (LDrawColorLibrary *) colorLibrary;

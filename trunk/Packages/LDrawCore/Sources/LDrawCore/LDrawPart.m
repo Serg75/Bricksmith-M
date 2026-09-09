@@ -324,7 +324,7 @@ int floatNearGrid(double v, double grid, double epsi)
 			// pushes its own opaque color and would otherwise override a
 			// translucent one pushed here. The part keeps its real hue.
             if(drawAsGhost == YES) {
-                [renderer pushAlphaModulation:LDRAW_GHOST_ALPHA];
+                [renderer pushAlphaModulation:[LDrawModel ghostAlpha]];
             }
 
 			if([self->color colorCode] != LDrawCurrentColor)

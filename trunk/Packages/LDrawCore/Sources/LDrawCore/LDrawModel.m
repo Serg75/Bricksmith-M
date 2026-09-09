@@ -61,6 +61,10 @@ static BOOL ShowsRemovedGroupsAsGhosts = NO;
 // that shows the assembly solid is what Bricksmith has always done.
 static BOOL GhostsPreviousSteps = NO;
 
+// Host-injected; see +setGhostAlpha:. Shared by both kinds of ghost, so that
+// "how faint a ghost is" is one answer rather than one per feature.
+static float GhostAlpha = LDRAW_DEFAULT_GHOST_ALPHA;
+
 
 @implementation LDrawModel
 
@@ -186,6 +190,47 @@ static BOOL GhostsPreviousSteps = NO;
 	}
 
 }//end setGhostsPreviousSteps:
+
+
+//---------- ghostAlpha ----------------------------------------------[static]--
+///
+/// @abstract	How solid a ghost draws, for both kinds -- a removed MLCAD group
+///				and a step already built.
+///
+//------------------------------------------------------------------------------
++ (float) ghostAlpha
+{
+	return GhostAlpha;
+
+}//end ghostAlpha
+
+
+//---------- setGhostAlpha: ------------------------------------------[static]--
+///
+/// @abstract	Sets how solid a ghost draws. One value covers both kinds of
+///				ghost: how faint a see-through part should be is a matter of
+///				taste about the display, not about why the part is ghosted.
+///
+/// @discussion	Clamped to LDRAW_MIN_GHOST_ALPHA...LDRAW_MAX_GHOST_ALPHA. The
+///				renderers scale a ghost's alpha by this, so 0 would leave
+///				nothing on screen at all and 1 would defeat the point -- and
+///				neither is something a stored preference should be able to
+///				produce.
+///
+//------------------------------------------------------------------------------
++ (void) setGhostAlpha:(float)alpha
+{
+	float	clamped	= MAX(LDRAW_MIN_GHOST_ALPHA, MIN(LDRAW_MAX_GHOST_ALPHA, alpha));
+
+	if(GhostAlpha != clamped)
+	{
+		GhostAlpha = clamped;
+
+		[[NSNotificationCenter defaultCenter] postNotificationName:LDrawGhostAlphaDidChangeNotification
+															object:nil];
+	}
+
+}//end setGhostAlpha:
 
 
 #pragma mark -
@@ -490,7 +535,7 @@ static BOOL GhostsPreviousSteps = NO;
 		BOOL		ghostEarlierSteps	= [self drawsPreviousStepsAsGhosts];
 
 		if(ghostEarlierSteps == YES)
-			[renderer pushAlphaModulation:LDRAW_GHOST_ALPHA];
+			[renderer pushAlphaModulation:[LDrawModel ghostAlpha]];
 
 		for(counter = 0; counter <= maxIndex; counter++)
 		{

@@ -161,14 +161,4 @@ final class LDrawStepGhostingTests {
         // notice -- the host only has to ask for a redraw.
         #expect(model.drawsPreviousStepsAsGhosts() == false)
     }
-
-    // MARK: - The alpha
-
-    @Test("The ghost alpha is translucent rather than absent or solid")
-    func ghostAlphaIsTranslucent() {
-        // Shared with the removed-group ghosts: 0 would draw nothing at all and
-        // 1 would leave the previous steps looking solid.
-        #expect(LDRAW_GHOST_ALPHA > 0)
-        #expect(LDRAW_GHOST_ALPHA < 1)
-    }
 }

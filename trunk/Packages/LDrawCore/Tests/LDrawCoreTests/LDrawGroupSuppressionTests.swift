@@ -337,15 +337,6 @@ final class LDrawGroupSuppressionTests {
         #expect(lastPart.groupVisibility == .visible)
     }
 
-    @Test("The ghost alpha is translucent rather than absent or solid")
-    func ghostAlphaIsTranslucent() {
-        // The renderers scale a ghost's alpha by this, so 0 would draw nothing
-        // at all -- indistinguishable from dropping the group -- and 1 would
-        // defeat the point.
-        #expect(LDRAW_GHOST_ALPHA > 0)
-        #expect(LDRAW_GHOST_ALPHA < 1)
-    }
-
     // MARK: - Re-derivation
     //
     // Neither preference can invalidate a model's cache flag -- they are

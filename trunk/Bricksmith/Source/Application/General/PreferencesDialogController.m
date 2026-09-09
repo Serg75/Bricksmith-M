@@ -48,6 +48,7 @@
 //==============================================================================
 #import "PreferencesDialogController.h"
 
+#import <LDrawCore/LDrawGroupable.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPartLibrary.h>
@@ -104,6 +105,8 @@ static NSColor *FallbackColorForPreferenceKey(NSString *key)
 @property (nonatomic, weak) IBOutlet NSTextField*			gridSpacingMediumField;
 @property (nonatomic, weak) IBOutlet NSTextField*			gridSpacingCoarseField;
 
+// LDraw Tab
+- (void) setGhostTransparency:(NSInteger)percent;
 
 @end
 
@@ -297,10 +300,17 @@ PreferencesDialogController *preferencesDialog = nil;
 	BOOL				 hideRemovedGroups	= [userDefaults boolForKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY];
 	BOOL				 ghostRemovedGroups	= [userDefaults boolForKey:GHOST_REMOVED_GROUPS_KEY];
 	BOOL				 ghostPreviousSteps	= [userDefaults boolForKey:GHOST_PREVIOUS_STEPS_KEY];
+	NSInteger			 ghostTransparency	= [userDefaults integerForKey:GHOST_TRANSPARENCY_KEY];
 
 	[hideRemovedGroupsInStepsButton setState:(hideRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
 	[ghostRemovedGroupsButton setState:(ghostRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
 	[ghostPreviousStepsButton setState:(ghostPreviousSteps ? NSControlStateValueOn : NSControlStateValueOff)];
+
+	// Routed through the setter rather than pushed into the two controls, so a
+	// stored value outside the slider's travel is pulled into range instead of
+	// leaving the slider and the field disagreeing. Re-pushing an unchanged
+	// value to LDrawModel is free -- it only notifies on a change.
+	[self setGhostTransparency:ghostTransparency];
 
 	if(ldrawPath != nil){
 		[LDrawPathTextField setStringValue:ldrawPath];
@@ -581,6 +591,64 @@ PreferencesDialogController *preferencesDialog = nil;
 	[LDrawModel setGhostsPreviousSteps:ghostThem];
 
 }//end ghostPreviousStepsChanged:
+
+
+//========== ghostTransparencySliderChanged: ===================================
+//
+// Purpose:		The user dragged the ghost transparency slider.
+//
+//==============================================================================
+- (IBAction) ghostTransparencySliderChanged:(id)sender
+{
+	[self setGhostTransparency:[sender integerValue]];
+
+}//end ghostTransparencySliderChanged:
+
+
+//========== ghostTransparencyTextChanged: =====================================
+//
+// Purpose:		The user typed a ghost transparency.
+//
+//==============================================================================
+- (IBAction) ghostTransparencyTextChanged:(id)sender
+{
+	[self setGhostTransparency:[sender integerValue]];
+
+}//end ghostTransparencyTextChanged:
+
+
+//========== setGhostTransparency: =============================================
+//
+// Purpose:		Stores how see-through a ghost draws and gets it onto the
+//				screen.
+//
+//				One value covers both kinds of ghost -- a removed MLCAD group
+//				and, in the Steps view mode, a step already built.
+//
+// Notes:		Shared by the slider and the text field, which are two ways of
+//				saying the same thing and have to agree afterwards.
+//
+//==============================================================================
+- (void) setGhostTransparency:(NSInteger)percent
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+
+	// LDrawModel clamps the alpha it is handed, so mirror that band here rather
+	// than the slider's travel: what the controls show then always matches what
+	// actually took effect, even if the two ever drift apart in the nib.
+	NSInteger		 minPercent		= lroundf((1.0f - LDRAW_MAX_GHOST_ALPHA) * 100.0f);
+	NSInteger		 maxPercent		= lroundf((1.0f - LDRAW_MIN_GHOST_ALPHA) * 100.0f);
+	NSInteger		 clamped		= MAX(minPercent, MIN(maxPercent, percent));
+
+	[userDefaults setInteger:clamped forKey:GHOST_TRANSPARENCY_KEY];
+	[ghostTransparencySlider setIntegerValue:clamped];
+	[ghostTransparencyText setIntegerValue:clamped];
+
+	// LDrawCore is defaults-free, so push the value; the setter notifies open
+	// documents for us.
+	[LDrawModel setGhostAlpha:LDrawGhostAlphaForTransparencyPercent(clamped)];
+
+}//end setGhostTransparency:
 
 
 #pragma mark -

@@ -506,7 +506,7 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
         // A renderer-level alpha scale reaches the constraints and synthesized
         // parts even though each pushes its own color; see -[LDrawPart drawSelf:].
         if (drawAsGhost == YES)
-            [renderer pushAlphaModulation:LDRAW_GHOST_ALPHA];
+            [renderer pushAlphaModulation:[LDrawModel ghostAlpha]];
 
         // Draw each constraint, if:
         if ([self isSelected] == YES ||                         // We're selected

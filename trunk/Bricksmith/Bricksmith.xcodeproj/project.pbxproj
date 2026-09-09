@@ -340,6 +340,7 @@
 		95AA000B29B1F4820000000B /* LDrawStepParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA000A29B1F4820000000A /* LDrawStepParsingTests.swift */; };
 		95AA001129B1F48200000011 /* LDrawGroupSuppressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001029B1F48200000010 /* LDrawGroupSuppressionTests.swift */; };
 		95AA001329B1F48200000013 /* LDrawStepGhostingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001229B1F48200000012 /* LDrawStepGhostingTests.swift */; };
+		95AA001529B1F48200000015 /* LDrawGhostAlphaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */; };
 		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
 		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
 		95C773C52A24D6ED00058D75 /* LDrawDocumentGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773C32A24D6ED00058D75 /* LDrawDocumentGL.h */; };
@@ -651,6 +652,7 @@
 		95AA000A29B1F4820000000A /* LDrawStepParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepParsingTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawStepParsingTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA001029B1F48200000010 /* LDrawGroupSuppressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawGroupSuppressionTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawGroupSuppressionTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA001229B1F48200000012 /* LDrawStepGhostingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepGhostingTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawStepGhostingTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawGhostAlphaTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawGhostAlphaTests.swift; sourceTree = SOURCE_ROOT; };
 		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
 		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
 		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
@@ -1239,6 +1241,7 @@
 				95AA000A29B1F4820000000A /* LDrawStepParsingTests.swift */,
 				95AA001029B1F48200000010 /* LDrawGroupSuppressionTests.swift */,
 				95AA001229B1F48200000012 /* LDrawStepGhostingTests.swift */,
+				95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */,
 				95AA000229B1F48200000002 /* LDrawGeometryRoundTripTests.swift */,
 				95AA000129B1F48200000001 /* LDrawUtilitiesOutputStringTests.swift */,
 			);
@@ -1929,6 +1932,7 @@
 				95AA000B29B1F4820000000B /* LDrawStepParsingTests.swift in Sources */,
 				95AA001129B1F48200000011 /* LDrawGroupSuppressionTests.swift in Sources */,
 				95AA001329B1F48200000013 /* LDrawStepGhostingTests.swift in Sources */,
+				95AA001529B1F48200000015 /* LDrawGhostAlphaTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
