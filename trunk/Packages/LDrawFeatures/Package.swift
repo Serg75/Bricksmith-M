@@ -22,5 +22,10 @@ let package = Package(
             path: "Sources/LDrawFeatures",
             publicHeadersPath: "include"
         ),
+        .testTarget(
+            name: "LDrawFeaturesTests",
+            dependencies: ["LDrawFeatures", .product(name: "LDrawCore", package: "LDrawCore")],
+            path: "Tests/LDrawFeaturesTests"
+        ),
     ]
 )

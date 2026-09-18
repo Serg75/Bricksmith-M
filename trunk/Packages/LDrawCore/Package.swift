@@ -16,5 +16,10 @@ let package = Package(
             path: "Sources/LDrawCore",
             publicHeadersPath: "include"
         ),
+        .testTarget(
+            name: "LDrawCoreTests",
+            dependencies: ["LDrawCore"],
+            path: "Tests/LDrawCoreTests"
+        ),
     ]
 )

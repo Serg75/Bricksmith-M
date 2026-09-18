@@ -170,7 +170,6 @@
 		9526F9892A0BA1A50083A86A /* LDrawApplicationGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 9526F9872A0BA1A50083A86A /* LDrawApplicationGL.h */; };
 		9526F98A2A0BA1A50083A86A /* LDrawApplicationGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 9526F9882A0BA1A50083A86A /* LDrawApplicationGL.m */; };
 		9543FF8529C52CB400564638 /* InspectorLPubCommand.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9543FF8329C52CB400564638 /* InspectorLPubCommand.xib */; };
-		95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */; };
 		956D9B872A30768000FA956B /* SearchPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 9506E0EE18A3F4130006CE9C /* SearchPanelController.h */; };
 		956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 32DBCF750370BD2300C91783 /* Mac LDraw_Prefix.pch */; };
 		956D9B8E2A30768000FA956B /* DocumentToolbarController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729A708AD849300E3DA53 /* DocumentToolbarController.h */; };
@@ -343,6 +342,12 @@
 		95AA001529B1F48200000015 /* LDrawGhostAlphaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */; };
 		95AA001729B1F48200000017 /* LPubPliMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001629B1F48200000016 /* LPubPliMetaTests.swift */; };
 		95AA001929B1F48200000019 /* LPubPliRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001829B1F48200000018 /* LPubPliRoundTripTests.swift */; };
+		95AA00B029B1F482000000B0 /* NSScannerLDrawTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA00A029B1F482000000A0 /* NSScannerLDrawTests.swift */; };
+		95AA00B129B1F482000000B1 /* MockArchiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA00A129B1F482000000A1 /* MockArchiver.swift */; };
+		95AA00B229B1F482000000B2 /* LDrawMetaCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA00A229B1F482000000A2 /* LDrawMetaCommandTests.swift */; };
+		95AA00B329B1F482000000B3 /* LPubCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA00A329B1F482000000A3 /* LPubCommandTests.swift */; };
+		95AA00B429B1F482000000B4 /* LPubRemoveGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA00A429B1F482000000A4 /* LPubRemoveGroupTests.swift */; };
+		95AA00B529B1F482000000B5 /* LDrawClassInspectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA00A529B1F482000000A5 /* LDrawClassInspectorTests.swift */; };
 		95AA002129B1F48200000021 /* LDrawStepPartListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002029B1F48200000020 /* LDrawStepPartListTests.swift */; };
 		95AA002429B1F48200000024 /* LDrawStepPartListLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002329B1F48200000023 /* LDrawStepPartListLayoutTests.swift */; };
 		95AA002629B1F48200000026 /* LDrawStepPartListPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002529B1F48200000025 /* LDrawStepPartListPolicyTests.swift */; };
@@ -351,15 +356,10 @@
 		95AA003229B1F48200000032 /* LDrawStepPartListResizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA003129B1F48200000031 /* LDrawStepPartListResizeTests.swift */; };
 		95AA003429B1F48200000034 /* LDrawStepPartListEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA003329B1F48200000033 /* LDrawStepPartListEditTests.swift */; };
 		95AA009A29B1F4820000009A /* LDrawInlinePartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA009929B1F48200000099 /* LDrawInlinePartTests.swift */; };
-		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
-		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
 		95C773C52A24D6ED00058D75 /* LDrawDocumentGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773C32A24D6ED00058D75 /* LDrawDocumentGL.h */; };
 		95C773C62A24D6ED00058D75 /* LDrawDocumentGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773C42A24D6ED00058D75 /* LDrawDocumentGL.m */; };
 		95C773C92A274A3800058D75 /* LDrawViewGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773C72A274A3800058D75 /* LDrawViewGL.h */; };
 		95C773CA2A274A3800058D75 /* LDrawViewGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 95C773C82A274A3800058D75 /* LDrawViewGL.m */; };
-		95D021F829B1F533001F2B4D /* LDrawScannerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021F729B1F533001F2B4D /* LDrawScannerTests.m */; };
-		95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */; };
-		95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D0223C29B68FE0001F2B4D /* MockArchiver.m */; };
 		95D115AB299E5D74008051BF /* InspectionLPubCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = 95D115A9299E5D74008051BF /* InspectionLPubCommand.h */; };
 		95D115AC299E5D74008051BF /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
 		95D8939316550B6400AA055B /* Legonian Ruler.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 95D8939216550B6400AA055B /* Legonian Ruler.pdf */; };
@@ -367,7 +367,6 @@
 		95DFF98E298F165300E7BF76 /* InspectionLPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */; };
 		95DFF98F298F165300E7BF76 /* InspectionLPubRemoveGroup.m in Sources */ = {isa = PBXBuildFile; fileRef = 95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */; };
 		95FBD67D29C46BC100E84D2F /* InspectorRemoveGroup.xib in Resources */ = {isa = PBXBuildFile; fileRef = 95FBD67B29C46BC100E84D2F /* InspectorRemoveGroup.xib */; };
-		95FBD68129C4A5A900E84D2F /* LDrawClassInspectorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */; };
 		B5C01A031A2B3C4D5E6F7083 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
 		B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */ = {isa = PBXBuildFile; fileRef = B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */; };
 		B5C01A051A2B3C4D5E6F7085 /* LDrawToolbarLabels.h in Headers */ = {isa = PBXBuildFile; fileRef = B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */; };
@@ -661,7 +660,6 @@
 		9526F9872A0BA1A50083A86A /* LDrawApplicationGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawApplicationGL.h; sourceTree = "<group>"; };
 		9526F9882A0BA1A50083A86A /* LDrawApplicationGL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawApplicationGL.m; sourceTree = "<group>"; };
 		9543FF8429C52CB400564638 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorLPubCommand.xib; sourceTree = "<group>"; };
-		95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawMetaCommand_Tests.m; sourceTree = "<group>"; };
 		956D9C9A2A30768000FA956B /* Bricksmith-M.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Bricksmith-M.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		956D9C9E2A30A72300FA956B /* LDrawApplicationMTL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawApplicationMTL.h; sourceTree = "<group>"; };
 		956D9C9F2A30A72300FA956B /* LDrawApplicationMTL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawApplicationMTL.m; sourceTree = "<group>"; };
@@ -678,6 +676,12 @@
 		95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawGhostAlphaTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawGhostAlphaTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA001629B1F48200000016 /* LPubPliMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LPubPliMetaTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LPubPliMetaTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA001829B1F48200000018 /* LPubPliRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LPubPliRoundTripTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LPubPliRoundTripTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA00A029B1F482000000A0 /* NSScannerLDrawTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NSScannerLDrawTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/NSScannerLDrawTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA00A129B1F482000000A1 /* MockArchiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockArchiver.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/MockArchiver.swift; sourceTree = SOURCE_ROOT; };
+		95AA00A229B1F482000000A2 /* LDrawMetaCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawMetaCommandTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawMetaCommandTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA00A329B1F482000000A3 /* LPubCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LPubCommandTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LPubCommandTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA00A429B1F482000000A4 /* LPubRemoveGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LPubRemoveGroupTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LPubRemoveGroupTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA00A529B1F482000000A5 /* LDrawClassInspectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawClassInspectorTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawClassInspectorTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA002029B1F48200000020 /* LDrawStepPartListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA002329B1F48200000023 /* LDrawStepPartListLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListLayoutTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListLayoutTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA002529B1F48200000025 /* LDrawStepPartListPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListPolicyTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListPolicyTests.swift; sourceTree = SOURCE_ROOT; };
@@ -686,19 +690,12 @@
 		95AA003129B1F48200000031 /* LDrawStepPartListResizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListResizeTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListResizeTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA003329B1F48200000033 /* LDrawStepPartListEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListEditTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListEditTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA009929B1F48200000099 /* LDrawInlinePartTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawInlinePartTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawInlinePartTests.swift; sourceTree = SOURCE_ROOT; };
-		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
-		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
-		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
 		95C773C32A24D6ED00058D75 /* LDrawDocumentGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawDocumentGL.h; sourceTree = "<group>"; };
 		95C773C42A24D6ED00058D75 /* LDrawDocumentGL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawDocumentGL.m; sourceTree = "<group>"; };
 		95C773C72A274A3800058D75 /* LDrawViewGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDrawViewGL.h; sourceTree = "<group>"; };
 		95C773C82A274A3800058D75 /* LDrawViewGL.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawViewGL.m; sourceTree = "<group>"; };
 		95D021ED29B1F482001F2B4D /* UnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		95D021F729B1F533001F2B4D /* LDrawScannerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawScannerTests.m; sourceTree = "<group>"; };
-		95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubCommand_Tests.m; sourceTree = "<group>"; };
 		95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UnitTests_Prefix.pch; path = UnitTests/Other/UnitTests_Prefix.pch; sourceTree = SOURCE_ROOT; };
-		95D0223B29B68FE0001F2B4D /* MockArchiver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockArchiver.h; sourceTree = "<group>"; };
-		95D0223C29B68FE0001F2B4D /* MockArchiver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockArchiver.m; sourceTree = "<group>"; };
 		95D115A9299E5D74008051BF /* InspectionLPubCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubCommand.h; sourceTree = "<group>"; };
 		95D115AA299E5D74008051BF /* InspectionLPubCommand.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubCommand.m; sourceTree = "<group>"; };
 		95D8939216550B6400AA055B /* Legonian Ruler.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "Legonian Ruler.pdf"; sourceTree = "<group>"; };
@@ -707,7 +704,6 @@
 		95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectionLPubRemoveGroup.h; sourceTree = "<group>"; };
 		95DFF98D298F165300E7BF76 /* InspectionLPubRemoveGroup.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InspectionLPubRemoveGroup.m; sourceTree = "<group>"; };
 		95FBD67C29C46BC100E84D2F /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/InspectorRemoveGroup.xib; sourceTree = "<group>"; };
-		95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LDrawClassInspectorTests.m; sourceTree = "<group>"; };
 		B5C01A011A2B3C4D5E6F7081 /* LDrawToolbarLabels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawToolbarLabels.h; sourceTree = "<group>"; };
 		B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawToolbarLabels.m; sourceTree = "<group>"; };
 		B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawHostChrome.h; sourceTree = "<group>"; };
@@ -1291,6 +1287,12 @@
 				95AA009929B1F48200000099 /* LDrawInlinePartTests.swift */,
 				95AA001629B1F48200000016 /* LPubPliMetaTests.swift */,
 				95AA001829B1F48200000018 /* LPubPliRoundTripTests.swift */,
+				95AA00A029B1F482000000A0 /* NSScannerLDrawTests.swift */,
+				95AA00A129B1F482000000A1 /* MockArchiver.swift */,
+				95AA00A229B1F482000000A2 /* LDrawMetaCommandTests.swift */,
+				95AA00A329B1F482000000A3 /* LPubCommandTests.swift */,
+				95AA00A429B1F482000000A4 /* LPubRemoveGroupTests.swift */,
+				95AA00A529B1F482000000A5 /* LDrawClassInspectorTests.swift */,
 				95AA000229B1F48200000002 /* LDrawGeometryRoundTripTests.swift */,
 				95AA000129B1F48200000001 /* LDrawUtilitiesOutputStringTests.swift */,
 			);
@@ -1332,47 +1334,9 @@
 			children = (
 				95AA000729B1F48200000007 /* LDrawCore Tests */,
 				95AA002229B1F48200000022 /* LDrawFeatures Tests */,
-				95D0223A29B68E59001F2B4D /* Test Support */,
 				95D021FE29B3F8C6001F2B4D /* Other */,
-				95D021F929B3F474001F2B4D /* Classes */,
-				95D021F629B1F4DB001F2B4D /* Categories */,
 			);
 			path = UnitTests;
-			sourceTree = "<group>";
-		};
-		95D021F629B1F4DB001F2B4D /* Categories */ = {
-			isa = PBXGroup;
-			children = (
-				95D021F729B1F533001F2B4D /* LDrawScannerTests.m */,
-			);
-			path = Categories;
-			sourceTree = "<group>";
-		};
-		95D021F929B3F474001F2B4D /* Classes */ = {
-			isa = PBXGroup;
-			children = (
-				95FBD67E29C4A52E00E84D2F /* Application */,
-				95D021FA29B3F4B4001F2B4D /* LDraw */,
-			);
-			path = Classes;
-			sourceTree = "<group>";
-		};
-		95D021FA29B3F4B4001F2B4D /* LDraw */ = {
-			isa = PBXGroup;
-			children = (
-				95D021FB29B3F4BE001F2B4D /* Commands */,
-			);
-			path = LDraw;
-			sourceTree = "<group>";
-		};
-		95D021FB29B3F4BE001F2B4D /* Commands */ = {
-			isa = PBXGroup;
-			children = (
-				95633A5129BE73980080149B /* LDrawMetaCommand_Tests.m */,
-				95D021FC29B3F4E5001F2B4D /* LPubCommand_Tests.m */,
-				95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */,
-			);
-			path = Commands;
 			sourceTree = "<group>";
 		};
 		95D021FE29B3F8C6001F2B4D /* Other */ = {
@@ -1381,17 +1345,6 @@
 				95D021FF29B3F908001F2B4D /* UnitTests_Prefix.pch */,
 			);
 			path = Other;
-			sourceTree = "<group>";
-		};
-		95D0223A29B68E59001F2B4D /* Test Support */ = {
-			isa = PBXGroup;
-			children = (
-				95D0223B29B68FE0001F2B4D /* MockArchiver.h */,
-				95D0223C29B68FE0001F2B4D /* MockArchiver.m */,
-				95B37A0B29BA81F6008C581E /* MockScanner.h */,
-				95B37A0C29BA81F6008C581E /* MockScanner.m */,
-			);
-			path = "Test Support";
 			sourceTree = "<group>";
 		};
 		95D8939F1655325000AA055B /* Products */ = {
@@ -1414,22 +1367,6 @@
 			children = (
 			);
 			path = Shaders;
-			sourceTree = "<group>";
-		};
-		95FBD67E29C4A52E00E84D2F /* Application */ = {
-			isa = PBXGroup;
-			children = (
-				95FBD67F29C4A56200E84D2F /* Utilities */,
-			);
-			path = Application;
-			sourceTree = "<group>";
-		};
-		95FBD67F29C4A56200E84D2F /* Utilities */ = {
-			isa = PBXGroup;
-			children = (
-				95FBD68029C4A5A900E84D2F /* LDrawClassInspectorTests.m */,
-			);
-			path = Utilities;
 			sourceTree = "<group>";
 		};
 		D6EDB97F164DEB0000B4062B /* Renderer */ = {
@@ -1996,13 +1933,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				95FBD68129C4A5A900E84D2F /* LDrawClassInspectorTests.m in Sources */,
-				95D021F829B1F533001F2B4D /* LDrawScannerTests.m in Sources */,
-				95D021FD29B3F4E5001F2B4D /* LPubCommand_Tests.m in Sources */,
-				95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */,
-				95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */,
-				95D0223D29B68FE0001F2B4D /* MockArchiver.m in Sources */,
-				95633A5229BE73980080149B /* LDrawMetaCommand_Tests.m in Sources */,
 				95AA000429B1F48200000004 /* LDrawGeometryRoundTripTests.swift in Sources */,
 				95AA000329B1F48200000003 /* LDrawUtilitiesOutputStringTests.swift in Sources */,
 				95AA000929B1F48200000009 /* PrecisionBoundaryTests.swift in Sources */,
@@ -2011,6 +1941,12 @@
 				95AA001329B1F48200000013 /* LDrawStepGhostingTests.swift in Sources */,
 				95AA001729B1F48200000017 /* LPubPliMetaTests.swift in Sources */,
 				95AA001929B1F48200000019 /* LPubPliRoundTripTests.swift in Sources */,
+				95AA00B029B1F482000000B0 /* NSScannerLDrawTests.swift in Sources */,
+				95AA00B129B1F482000000B1 /* MockArchiver.swift in Sources */,
+				95AA00B229B1F482000000B2 /* LDrawMetaCommandTests.swift in Sources */,
+				95AA00B329B1F482000000B3 /* LPubCommandTests.swift in Sources */,
+				95AA00B429B1F482000000B4 /* LPubRemoveGroupTests.swift in Sources */,
+				95AA00B529B1F482000000B5 /* LDrawClassInspectorTests.swift in Sources */,
 				95AA002129B1F48200000021 /* LDrawStepPartListTests.swift in Sources */,
 				95AA002429B1F48200000024 /* LDrawStepPartListLayoutTests.swift in Sources */,
 				95AA002629B1F48200000026 /* LDrawStepPartListPolicyTests.swift in Sources */,
