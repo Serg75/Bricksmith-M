@@ -86,6 +86,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 //Accessors
 - (NSString *) category;
+
+/// Whether a type line in the header, such as `0 !LDRAW_ORG Unofficial_Part`, marks this model as a part.
+- (BOOL) isInlinePart;
+
 - (LDrawColorLibrary *) colorLibrary;
 - (nullable NSArray *) draggingDirectives;
 - (nullable LDrawFile *)enclosingFile;

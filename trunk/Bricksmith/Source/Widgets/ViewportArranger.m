@@ -51,9 +51,24 @@
 	
 	[self setVertical:YES];
 	
+	// The columns report their dividers to us as their delegate. This class
+	// replaces -setDelegate:, so its own dividers need the notification.
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(splitViewDidResizeSubviews:)
+												 name:NSSplitViewDidResizeSubviewsNotification
+											   object:self];
+	
 	return self;
 
-}//end initWithCoder:
+}//end initWithFrame:
+
+
+//========== dealloc ===========================================================
+- (void) dealloc
+{
+	[[NSNotificationCenter defaultCenter] removeObserver:self];
+
+}//end dealloc
 
 
 #pragma mark -
@@ -332,6 +347,22 @@
 	return YES;
 	
 }//end splitView:canCollapseSubview:
+
+
+//========== splitViewDidResizeSubviews: =======================================
+//
+// Purpose:		Tells the delegate that a divider moved, so the viewports have
+//				new sizes.
+//
+// Notes:		Called for a column's divider and for our own.
+//
+//==============================================================================
+- (void) splitViewDidResizeSubviews:(NSNotification *)notification
+{
+	if([self->delegate respondsToSelector:@selector(viewportArrangerDidResizeViewports:)])
+		[self->delegate viewportArrangerDidResizeViewports:self];
+
+}//end splitViewDidResizeSubviews:
 
 
 #pragma mark -

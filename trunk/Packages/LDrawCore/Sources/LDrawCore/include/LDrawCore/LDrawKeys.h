@@ -28,6 +28,17 @@
 // Stored as whole percent transparent, 0 solid to 100 invisible, matching how
 // the LSynth selection transparency is stored. The alpha is 1 - percent/100.
 #define GHOST_TRANSPARENCY_KEY						@"Ghost Transparency"
+
+// Shows the parts list for the step on display. Off by default.
+#define SHOW_STEP_PART_LIST_KEY						@"Show Step Part List"
+#define STEP_PART_LIST_SUBMODELS_KEY				@"Step Part List Includes Submodels"
+// Whether the icons follow the step's ROTSTEP, or keep one angle for the whole
+// document like LPub3D does.
+#define STEP_PART_LIST_FOLLOWS_STEP_KEY				@"Step Part List Follows Step Rotation"
+#define STEP_PART_LIST_LPUB_SCALE_KEY				@"Step Part List Uses LPub Scale"
+/// Path to LPub3D's PLI control file. Absent means LPub3D's own file, if it is
+/// installed.
+#define STEP_PART_LIST_ORIENTATIONS_FILE_KEY		@"Step Part List Orientations File"
 #define LDRAW_PATH_KEY								@"LDraw Path"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
@@ -95,6 +106,10 @@
 //How solid a ghost draws changed in preferences, so open documents have to
 // redraw. Object is nil. No userInfo.
 #define LDrawGhostAlphaDidChangeNotification			@"LDrawGhostAlphaDidChangeNotification"
+
+// Sent when any step parts list preference changes. Object is nil, no
+// userInfo.
+#define LDrawStepPartListDidChangeNotification			@"LDrawStepPartListDidChangeNotification"
 
 //A model was added to a document.  Note that the object
 // for this notification is the LDrawFile that was edited!

@@ -8,6 +8,7 @@
 #import "InspectionLPubCommand.h"
 
 #import <LDrawCore/LPubCommand.h>
+#import "LDrawDocument.h"
 
 @interface InspectionLPubCommand ()
 
@@ -15,6 +16,9 @@
 @property (nonatomic, weak) IBOutlet NSTextField	*fullCommandTextField;
 
 @property (nonatomic, strong)		 NSArray		*topLevelObjects;	// holds NIB objects
+
+// The swap ends editing again, which must not queue a second swap.
+@property (nonatomic, assign)		 BOOL			swapQueued;
 
 @end
 
@@ -93,13 +97,38 @@
 //==============================================================================
 - (IBAction) commandFieldChanged:(id)sender
 {
-	NSString *newCommand	= [self.commandTextField stringValue];
-	NSString *oldCommand	= [self.object lPubCommandString];
+	LPubCommand	*command		= self.object;
+	NSString	*newCommand		= [self.commandTextField stringValue];
+	LPubCommand	*replacement	= nil;
 
-	//If the values really did change, then update.
-	if([newCommand isEqualToString:oldCommand] == NO)
+	if(self.swapQueued || [newCommand isEqualToString:[command lPubCommandString]])
+		return;
+
+	// Text of another class swaps the directive. Otherwise it is edited in place.
+	replacement = [command replacementForText:newCommand];
+	if(replacement == nil)
+	{
 		[self finishedEditing:sender];
-		
+		return;
+	}
+
+	// Next turn: the swap replaces this inspector while its field is still
+	// ending editing.
+	self.swapQueued = YES;
+	dispatch_async(dispatch_get_main_queue(), ^{
+		// The open document that holds the command. There is none once the
+		// document is closed or the command was already swapped.
+		for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
+		{
+			if(		[document isKindOfClass:[LDrawDocument class]]
+			   &&	[(LDrawDocument *)document replaceDirective:command withDirective:replacement])
+			{
+				[[document undoManager] setActionName:NSLocalizedString([replacement undoActionKey], nil)];
+				break;
+			}
+		}
+	});
+
 }//end commandFieldChanged:
 
 

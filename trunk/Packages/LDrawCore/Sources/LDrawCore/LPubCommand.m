@@ -30,6 +30,25 @@ static NSString * const		LPUB_COMMAND_STRING_KEY = @"lpubCommandString";
 static NSArray<Class>		*subclasses;
 
 
+//========== ScopeForKeyword() =================================================
+///
+/// @abstract	Reads a token as a scope. Returns Unspecified when the token is
+/// 			not a scope keyword.
+///
+//==============================================================================
+static LPubMetaScope ScopeForKeyword(NSString *keyword)
+{
+	if ([keyword isEqualToString:LPUB_SCOPE_GLOBAL]) {
+		return LPubMetaScopeGlobal;
+	}
+	if ([keyword isEqualToString:LPUB_SCOPE_LOCAL]) {
+		return LPubMetaScopeLocal;
+	}
+	return LPubMetaScopeUnspecified;
+
+}//end ScopeForKeyword
+
+
 @implementation LPubCommand
 
 // MARK: - INITIALIZATION -
@@ -77,7 +96,9 @@ static NSArray<Class>		*subclasses;
 {
 	self = [super initWithCoder:decoder];
 	
-	_lPubCommandString	= [decoder decodeObjectForKey:LPUB_COMMAND_STRING_KEY];
+	// Go through the setter so a subclass re-derives its properties from the
+	// text. Subclasses that archive properties decode them after this.
+	[self setLPubCommandString:[decoder decodeObjectForKey:LPUB_COMMAND_STRING_KEY] ?: @""];
 	
 	return self;
 	
@@ -108,11 +129,14 @@ static NSArray<Class>		*subclasses;
 - (id) copyWithZone:(NSZone *)zone
 {
 	LPubCommand *copied = (LPubCommand *)[super copyWithZone:zone];
-	
-	copied.lPubCommandString = self.lPubCommandString;
+
+	// Text last, as typed: rebuilding it from the properties would lose a
+	// line that no longer parses.
+	[copied adoptPropertiesFromCommand:self];
+	[copied adoptCommandString:self.lPubCommandString];
 
 	return copied;
-	
+
 }//end copyWithZone:
 
 
@@ -172,11 +196,10 @@ static NSArray<Class>		*subclasses;
 //==============================================================================
 - (BOOL) finishParsing:(NSScanner *)scanner
 {
-	NSString	*remainder	= nil;
-	
-	remainder = [[scanner string] substringFromIndex:[scanner scanLocation]];
-	self.lPubCommandString = remainder;
-	
+	// The line as typed, the same as an edit in the inspector. The setter
+	// parses it again, so CONSTRAIN still writes its own form.
+	self.lPubCommandString = [[scanner string] substringFromIndex:[scanner scanLocation]];
+
 	return YES;
 	
 }//end lineWithDirectiveText
@@ -213,6 +236,28 @@ static NSArray<Class>		*subclasses;
 // MARK: - ACCESSORS -
 
 
+//---------- scopeInParameters:index: -------------------------------[static]--
+///
+/// @abstract	Reads the scope keyword at *index, if there is one, and moves
+/// 			*index past it.
+///
+//------------------------------------------------------------------------------
++ (LPubMetaScope) scopeInParameters:(NSArray<NSString *> *)parameters index:(NSUInteger *)index
+{
+	if (*index >= parameters.count) {
+		return LPubMetaScopeUnspecified;
+	}
+
+	LPubMetaScope scope = ScopeForKeyword(parameters[*index]);
+
+	if (scope != LPubMetaScopeUnspecified) {
+		*index += 1;
+	}
+	return scope;
+
+}//end scopeInParameters:index:
+
+
 //---------- subclassNames--------------------------------------------[static]--
 ///
 /// @abstract	Convenient method for debugging and testsing.
@@ -229,17 +274,101 @@ static NSArray<Class>		*subclasses;
 }//end subclassNames
 
 
+//---------- getNumber:fromToken: ------------------------------------[static]--
++ (BOOL) getNumber:(double *)outValue fromToken:(NSString *)token
+{
+	NSScanner	*scanner	= [NSScanner scannerWithString:token];
+	double		 parsed		= 0.0;
+
+	if ([scanner scanDouble:&parsed] == NO || scanner.isAtEnd == NO || isfinite(parsed) == NO) {
+		return NO;
+	}
+
+	*outValue = parsed;
+	return YES;
+
+}//end getNumber:fromToken:
+
+
+//---------- getPositiveNumber:fromToken: ----------------------------[static]--
++ (BOOL) getPositiveNumber:(double *)outValue fromToken:(NSString *)token
+{
+	double parsed = 0.0;
+
+	if ([self getNumber:&parsed fromToken:token] == NO || parsed <= 0.0) {
+		return NO;
+	}
+
+	*outValue = parsed;
+	return YES;
+
+}//end getPositiveNumber:fromToken:
+
+
+//---------- getInteger:fromToken:atLeast: --------------------------[static]--
++ (BOOL) getInteger:(NSInteger *)outValue fromToken:(NSString *)token atLeast:(NSInteger)minimum
+{
+	NSScanner	*scanner	= [NSScanner scannerWithString:token];
+	NSInteger	 parsed		= 0;
+
+	if ([scanner scanInteger:&parsed] == NO || scanner.isAtEnd == NO || parsed < minimum) {
+		return NO;
+	}
+
+	*outValue = parsed;
+	return YES;
+
+}//end getInteger:fromToken:atLeast:
+
+
 //========== setLPubCommandString: =============================================
 ///
-/// @abstract	Updates the command string.
+/// @abstract	Updates the command string, and the properties a subclass
+/// 			derives from it.
+///
+/// @discussion	The text is parsed again so the properties match it. Text
+/// 			that no longer parses leaves the properties as they were.
 ///
 //==============================================================================
 -(void) setLPubCommandString:(NSString *)newString
 {
-	_lPubCommandString = [newString copy];
-	super.commandString = [NSString stringWithFormat:@"%@ %@", LPUB_COMMAND, newString];
+	[self adoptCommandString:newString];
+
+	// Split the text the way the file parser does, so a quoted name stays whole.
+	NSScanner			*scanner	= [NSScanner scannerWithString:newString ?: @""];
+	NSArray<NSString *>	*tokens		= [scanner scanSubstringsWithQuotations];
+	LPubCommand			*reparsed	= [[self class] lpubCommandInstance:tokens];
+
+	if (reparsed != nil) {
+		[self adoptPropertiesFromCommand:reparsed];
+	}
 
 }//end setLPubCommandString:
+
+
+//========== adoptCommandString: ===============================================
+///
+/// @abstract	Stores the text without re-deriving anything from it.
+///
+//==============================================================================
+- (void) adoptCommandString:(NSString *)commandString
+{
+	_lPubCommandString = [commandString copy];
+	super.commandString = [NSString stringWithFormat:@"%@ %@", LPUB_COMMAND, commandString];
+
+}//end adoptCommandString:
+
+
+//========== adoptPropertiesFromCommand: ======================================
+///
+/// @abstract	A plain command has no properties beyond its text.
+///
+//==============================================================================
+- (void) adoptPropertiesFromCommand:(LPubCommand *)command
+{
+	// Nothing to take.
+
+}//end adoptPropertiesFromCommand:
 
 
 // MARK: - UTILITIES -
@@ -254,11 +383,48 @@ static NSArray<Class>		*subclasses;
 {
 	[super registerUndoActions:undoManager];
 	
+	// Setting the text parses it again, which restores a subclass's properties.
 	[[undoManager prepareWithInvocationTarget:self] setLPubCommandString:self.lPubCommandString];
 	
-	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesLPubCommand"]];
+	[undoManager setActionName:[LDrawLocalization stringForKey:[self undoActionKey]]];
 	
 }//end registerUndoActions:
+
+
+//========== undoActionKey =====================================================
+///
+/// @abstract	The localization key for the undo action name. Subclasses
+/// 			return their own.
+///
+//==============================================================================
+- (NSString *) undoActionKey
+{
+	return @"UndoAttributesLPubCommand";
+
+}//end undoActionKey
+
+
+//========== replacementForText: ===============================================
+///
+/// @abstract	Parses the text as a whole line, the way opening the file does.
+/// 			Returns nil when that gives the receiver's class, because the
+/// 			setter can take the text then.
+///
+//==============================================================================
+- (nullable LPubCommand *) replacementForText:(NSString *)text
+{
+	NSString	*line	= [NSString stringWithFormat:@"0 %@ %@", LPUB_COMMAND, text ?: @""];
+	id			 parsed	= [[LDrawMetaCommand alloc] initWithLines:@[line]
+														  inRange:NSMakeRange(0, 1)
+													  parentGroup:NULL];
+
+	// It is not an LPubCommand only when the parser failed.
+	if ([parsed isKindOfClass:[LPubCommand class]] == NO || [parsed class] == [self class]) {
+		return nil;
+	}
+	return parsed;
+
+}//end replacementForText:
 
 
 @end

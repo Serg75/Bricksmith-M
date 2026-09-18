@@ -57,7 +57,9 @@
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawLSynthPanelModel.h>
+#import <LDrawFeatures/LDrawPartListOrientations.h>
 #import <LDrawFeatures/LDrawPreferences.h>
+#import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
 #import "LDrawApplication.h"
@@ -107,6 +109,9 @@ static NSColor *FallbackColorForPreferenceKey(NSString *key)
 
 // LDraw Tab
 - (void) setGhostTransparency:(NSInteger)percent;
+- (void) storeStepPartListFlagFromCheckbox:(NSButton *)checkbox forKey:(NSString *)key;
+- (void) setStepPartListCheckbox:(NSButton *)checkbox fromKey:(NSString *)key;
+- (void) postStepPartListDidChange;
 
 @end
 
@@ -311,6 +316,13 @@ PreferencesDialogController *preferencesDialog = nil;
 	// leaving the slider and the field disagreeing. Re-pushing an unchanged
 	// value to LDrawModel is free -- it only notifies on a change.
 	[self setGhostTransparency:ghostTransparency];
+
+	[self setStepPartListCheckbox:stepPartListShowButton		fromKey:SHOW_STEP_PART_LIST_KEY];
+	[self setStepPartListCheckbox:stepPartListSubmodelsButton	fromKey:STEP_PART_LIST_SUBMODELS_KEY];
+	[self setStepPartListCheckbox:stepPartListFollowsStepButton	fromKey:STEP_PART_LIST_FOLLOWS_STEP_KEY];
+	[self setStepPartListCheckbox:stepPartListLPubScaleButton	fromKey:STEP_PART_LIST_LPUB_SCALE_KEY];
+
+	[self showStepPartListOrientations];
 
 	if(ldrawPath != nil){
 		[LDrawPathTextField setStringValue:ldrawPath];
@@ -591,6 +603,244 @@ PreferencesDialogController *preferencesDialog = nil;
 	[LDrawModel setGhostsPreviousSteps:ghostThem];
 
 }//end ghostPreviousStepsChanged:
+
+
+//========== stepPartListShowChanged: ==========================================
+//
+// Purpose:		The user toggled the step parts list.
+//
+// Notes:		Off by default. The list only shows in Steps view mode.
+//
+//==============================================================================
+- (IBAction) stepPartListShowChanged:(id)sender
+{
+	[self storeStepPartListFlagFromCheckbox:stepPartListShowButton forKey:SHOW_STEP_PART_LIST_KEY];
+
+}//end stepPartListShowChanged:
+
+
+//========== stepPartListSubmodelsChanged: =====================================
+//
+// Purpose:		The user chose whether submodel references get a row.
+//
+//==============================================================================
+- (IBAction) stepPartListSubmodelsChanged:(id)sender
+{
+	[self storeStepPartListFlagFromCheckbox:stepPartListSubmodelsButton forKey:STEP_PART_LIST_SUBMODELS_KEY];
+
+}//end stepPartListSubmodelsChanged:
+
+
+//========== stepPartListFollowsStepChanged: ===================================
+//
+// Purpose:		The user chose whether the icons follow the step's rotation.
+//
+// Notes:		Following the step draws the icons at the same angle as the
+//				assembly next to them. The other choice is LPub3D's way: one
+//				fixed angle for the whole document.
+//
+//==============================================================================
+- (IBAction) stepPartListFollowsStepChanged:(id)sender
+{
+	[self storeStepPartListFlagFromCheckbox:stepPartListFollowsStepButton
+									 forKey:STEP_PART_LIST_FOLLOWS_STEP_KEY];
+
+}//end stepPartListFollowsStepChanged:
+
+
+//========== stepPartListLPubScaleChanged: =====================================
+//
+// Purpose:		The user chose whether the list is drawn on LPub3D's page, at
+//				the size LPub3D would print it.
+//
+//==============================================================================
+- (IBAction) stepPartListLPubScaleChanged:(id)sender
+{
+	[self storeStepPartListFlagFromCheckbox:stepPartListLPubScaleButton forKey:STEP_PART_LIST_LPUB_SCALE_KEY];
+
+}//end stepPartListLPubScaleChanged:
+
+
+//========== chooseStepPartListOrientations: ===================================
+//
+// Purpose:		Picks the PLI control file the parts list orients its parts by.
+//
+//==============================================================================
+- (IBAction) chooseStepPartListOrientations:(id)sender
+{
+	NSOpenPanel *chooser = [NSOpenPanel openPanel];
+
+	[chooser setCanChooseFiles:YES];
+	[chooser setCanChooseDirectories:NO];
+	[chooser setAllowsMultipleSelection:NO];
+	[chooser setMessage:NSLocalizedString(@"StepPartListOrientationsChooserMessage", nil)];
+
+	NSString *current = [[self class] stepPartListOrientationsPath];
+
+	if(current != nil)
+		[chooser setDirectoryURL:[NSURL fileURLWithPath:[current stringByDeletingLastPathComponent]]];
+
+	if([chooser runModal] != NSModalResponseOK || [[chooser URLs] count] == 0)
+		return;
+
+	[[NSUserDefaults standardUserDefaults] setObject:[[[chooser URLs] objectAtIndex:0] path]
+											  forKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+
+	[[self class] loadStepPartListOrientations];
+	[self showStepPartListOrientations];
+	[self postStepPartListDidChange];
+
+}//end chooseStepPartListOrientations:
+
+
+//========== useDefaultStepPartListOrientations: ===============================
+//
+// Purpose:		Goes back to LPub3D's own control file, if it is installed.
+//
+//==============================================================================
+- (IBAction) useDefaultStepPartListOrientations:(id)sender
+{
+	[[NSUserDefaults standardUserDefaults] removeObjectForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+
+	[[self class] loadStepPartListOrientations];
+	[self showStepPartListOrientations];
+	[self postStepPartListDidChange];
+
+}//end useDefaultStepPartListOrientations:
+
+
+//========== showStepPartListOrientations ======================================
+//
+// Purpose:		Says which control file is in use, and whether it was read.
+//
+//==============================================================================
+- (void) showStepPartListOrientations
+{
+	NSUserDefaults				*userDefaults	= [NSUserDefaults standardUserDefaults];
+	NSString					*path			= [[self class] stepPartListOrientationsPath];
+	LDrawPartListOrientations	*orientations	= [LDrawStepPartList partOrientations];
+	BOOL						 fileWasChosen	= ([[userDefaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY] length] > 0);
+	NSString					*text			= nil;
+
+	if(path == nil)
+		text = NSLocalizedString(@"StepPartListOrientationsNone", nil);
+	else if(orientations == nil)
+		text = [NSString stringWithFormat:NSLocalizedString(@"StepPartListOrientationsUnreadableFormat", nil),
+				[path lastPathComponent]];
+	else
+	{
+		NSString *format = fileWasChosen ? NSLocalizedString(@"StepPartListOrientationsChosenFormat", nil)
+										 : NSLocalizedString(@"StepPartListOrientationsDefaultFormat", nil);
+
+		text = [NSString stringWithFormat:format, [path lastPathComponent],
+				(unsigned long)[orientations count]];
+	}
+
+	[stepPartListOrientationsField setStringValue:text];
+	[stepPartListOrientationsField setToolTip:path];
+
+}//end showStepPartListOrientations
+
+
+//========== stepPartListOrientationsPath ======================================
+//
+// Purpose:		The control file in use: the one chosen, else LPub3D's own.
+//
+//==============================================================================
++ (NSString *) stepPartListOrientationsPath
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	NSString		*chosenPath		= [userDefaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+
+	if([chosenPath length] > 0)
+		return chosenPath;
+
+	return [LDrawPartListOrientations lpubDefaultFilePath];
+
+}//end stepPartListOrientationsPath
+
+
+//========== loadStepPartListOrientations ======================================
+//
+// Purpose:		Reads the control file into the parts list, or clears it.
+//
+// Notes:		Read once here, not every time a list is packed, because the
+//				file is large and rarely changes.
+//
+//==============================================================================
++ (void) loadStepPartListOrientations
+{
+	NSString					*path			= [self stepPartListOrientationsPath];
+	LDrawPartListOrientations	*orientations	= nil;
+
+	if(path != nil)
+		orientations = [LDrawPartListOrientations orientationsWithContentsOfFile:path error:NULL];
+
+	[LDrawStepPartList setPartOrientations:orientations];
+
+}//end loadStepPartListOrientations
+
+
+//========== pushStepPartListDefaults ==========================================
+//
+// Purpose:		Copies the parts list preferences into LDrawStepPartList, which
+//				does not read user defaults.
+//
+//==============================================================================
++ (void) pushStepPartListDefaults
+{
+	NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+
+	[LDrawStepPartList setEnabled:[userDefaults boolForKey:SHOW_STEP_PART_LIST_KEY]];
+	[LDrawStepPartList setIncludesSubmodels:[userDefaults boolForKey:STEP_PART_LIST_SUBMODELS_KEY]];
+	[LDrawStepPartList setFollowsStepRotation:[userDefaults boolForKey:STEP_PART_LIST_FOLLOWS_STEP_KEY]];
+	[LDrawStepPartList setUsesLPubScale:[userDefaults boolForKey:STEP_PART_LIST_LPUB_SCALE_KEY]];
+
+}//end pushStepPartListDefaults
+
+
+//========== storeStepPartListFlagFromCheckbox:forKey: =========================
+//
+// Purpose:		Stores a parts list checkbox and tells the open documents.
+//
+//==============================================================================
+- (void) storeStepPartListFlagFromCheckbox:(NSButton *)checkbox forKey:(NSString *)key
+{
+	BOOL on = ([checkbox state] == NSControlStateValueOn);
+
+	[[NSUserDefaults standardUserDefaults] setBool:on forKey:key];
+
+	[[self class] pushStepPartListDefaults];
+	[self postStepPartListDidChange];
+
+}//end storeStepPartListFlagFromCheckbox:forKey:
+
+
+//========== setStepPartListCheckbox:fromKey: ==================================
+//
+// Purpose:		Shows what a stored parts list flag says.
+//
+//==============================================================================
+- (void) setStepPartListCheckbox:(NSButton *)checkbox fromKey:(NSString *)key
+{
+	BOOL on = [[NSUserDefaults standardUserDefaults] boolForKey:key];
+
+	[checkbox setState:(on ? NSControlStateValueOn : NSControlStateValueOff)];
+
+}//end setStepPartListCheckbox:fromKey:
+
+
+//========== postStepPartListDidChange =========================================
+//
+// Purpose:		Tells the open documents to re-evaluate their overlays.
+//
+//==============================================================================
+- (void) postStepPartListDidChange
+{
+	[[NSNotificationCenter defaultCenter] postNotificationName:LDrawStepPartListDidChangeNotification
+														object:nil];
+
+}//end postStepPartListDidChange
 
 
 //========== ghostTransparencySliderChanged: ===================================

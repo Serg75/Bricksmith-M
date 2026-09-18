@@ -36,9 +36,12 @@
 @class LDrawView;
 @class LDrawModel;
 @class LDrawMPDModel;
-@class LDrawStep;
 @class LDrawPart;
+@class LDrawStep;
+@class LDrawStepPartListPageAnchor;
+@class LDrawStepPartListPageFitter;
 @class PartBrowserDataSource;
+@class StepPartListController;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -77,14 +80,19 @@
 	__weak IBOutlet NSTextField					*coordinateFieldZ;
 	
 	@private
-		LDrawFile		*documentContents;
-		LDrawPart		*lastSelectedPart; //the part in the file which was most recently selected in the contents. (retained)
-		NSArray			*selectedDirectives; //mirrors the selection of the file contents outline.
-		NSArray			*selectedDirectivesBeforeCopyDrag;
+		LDrawView			*mostRecentLDrawView; 	//file graphic view which most recently had focus. Weak link.
+		__weak LDrawView *pageFitViewport;			// viewport whose size the page is kept against. Weak link.
+		StepPartListController *stepPartListController;	// owns the parts list overlay, or nil until one is wanted
+		LDrawStepPartListPageAnchor *pageAnchor;	// the model point the page is pinned to
+		LDrawStepPartListPageFitter *pageFitter;	// fits the page to pageFitViewport, and keeps the size it fitted
+		LDrawFile			*documentContents;
+		LDrawPart			*lastSelectedPart; 		//the part in the file which was most recently selected in the contents. (retained)
+		NSArray				*selectedDirectives; 	//mirrors the selection of the file contents outline.
+		NSArray				*selectedDirectivesBeforeCopyDrag;
 		LDrawGridSpacingMode gridMode;
 		LDrawGridOrientationMode gridOrientation;
-		LDrawView		*mostRecentLDrawView; //file graphic view which most recently had focus. Weak link.
-		NSArray		*	markedSelection;		// if we are mid-marquee selection, this is an array of the previously selected directives before drag started
+		NSArray				*markedSelection;		// if we are mid-marquee selection, this is an array of the previously selected directives before drag started
+		BOOL				usedLPubScale;			// last seen state of the LPub3D page preference, to catch it being switched on
 }
 
 // Accessors
@@ -162,6 +170,7 @@
 - (IBAction) zoomActual:(id)sender;
 - (IBAction) zoomIn:(id)sender;
 - (IBAction) zoomOut:(id)sender;
+- (IBAction) zoomToFit:(id)sender;
 - (IBAction) toggleStepDisplay:(id)sender;
 - (IBAction) advanceOneStep:(id)sender;
 - (IBAction) backOneStep:(id)sender;
@@ -198,6 +207,7 @@
 - (void) addDirective:(LDrawDirective *)newDirective toParent:(LDrawContainer * )parent;
 - (void) addDirective:(LDrawDirective *)newDirective toParent:(LDrawContainer * )parent atIndex:(NSInteger)index;
 - (void) deleteDirective:(LDrawDirective *)doomedDirective;
+- (BOOL) replaceDirective:(LDrawDirective *)oldDirective withDirective:(LDrawDirective *)newDirective;
 - (void) moveDirective:(LDrawDrawableElement *)object inDirection:(Vector3)moveVector;
 - (void) preserveDirectiveState:(LDrawDirective *)directive;
 - (void) rotatePart:(LDrawPart *)part byDegrees:(Tuple3)rotationDegrees aroundPoint:(Point3)rotationCenter;

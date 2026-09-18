@@ -175,8 +175,8 @@
 
 //---------- fittedZoomPercentageAfterFit:previousZoom: --------------[static]--
 //
-// Purpose:		Back out a wee bit so the user has some room to work with his
-//				model. When fit left the zoom unchanged, keep previousZoom.
+// Purpose:		Zooms out a little from a fit, so there is room around the
+//				model. When the fit left the zoom unchanged, keeps previousZoom.
 //
 //------------------------------------------------------------------------------
 + (CGFloat)fittedZoomPercentageAfterFit:(CGFloat)fitZoom

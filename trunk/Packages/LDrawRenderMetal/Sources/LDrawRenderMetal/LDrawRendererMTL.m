@@ -327,15 +327,12 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 //==============================================================================
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size
 {
-#if TARGET_OS_OSX
-	CGSize maxVisibleSize = view.visibleRect.size;
-#else
-	CGSize maxVisibleSize = view.bounds.size;
-#endif
+	// Use bounds, not visibleRect: the surface covers the whole view.
+	CGSize surfaceSize = view.bounds.size;
 
-	if (maxVisibleSize.width > 0 && maxVisibleSize.height > 0)
+	if (surfaceSize.width > 0 && surfaceSize.height > 0)
 	{
-		[self setGraphicsSurfaceSize:V2MakeSize(maxVisibleSize.width, maxVisibleSize.height)];
+		[self setGraphicsSurfaceSize:V2MakeSize(surfaceSize.width, surfaceSize.height)];
 	}
 
 } // end mtkView:drawableSizeWillChange:
@@ -475,8 +472,10 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 
 	[renderEncoder endEncoding];
 
-	// present the drawable and buffer
-	[commandBuffer presentDrawable:currentDrawable];
+	// present the drawable and buffer, unless the view presents with its transaction
+	if (view.presentsWithTransaction == NO) {
+		[commandBuffer presentDrawable:currentDrawable];
+	}
 
 	// Add a completion handler that signals the semaphore when the GPU is done with this frame.
 	// This indicates that we can change the buffer contents without corrupting any rendering.
@@ -488,6 +487,13 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 
 	// send the commands to the GPU
 	[commandBuffer commit];
+
+	// Presenting after the commands are scheduled is what puts the picture in
+	// the same transaction as the drawing over it.
+	if (view.presentsWithTransaction) {
+		[commandBuffer waitUntilScheduled];
+		[currentDrawable present];
+	}
 
 	// If we just did a full draw, see whether interactive manipulation should
 	// drop to bounds-only on the next frame.

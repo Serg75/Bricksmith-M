@@ -81,6 +81,9 @@ extern NSString	*Category_Subparts;
 + (instancetype)sharedPartLibrary;
 + (void)registerSharedPartLibrary:(LDrawPartLibrary *)library;
 
+/// The shared library, or nil when none is registered. +sharedPartLibrary asserts instead.
++ (nullable instancetype)sharedPartLibraryIfRegistered;
+
 // Accessors
 - (NSArray *)allPartCatalogRecords;
 - (NSArray *)categories;

@@ -33,7 +33,17 @@
 #import <LDrawFeatures/LDrawMinifigureSpec.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
+#import <LDrawFeatures/LDrawPartListOrientations.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawRelatedParts.h>
+#import <LDrawFeatures/LDrawStepPartList.h>
+#import <LDrawFeatures/LDrawStepPartListEdit.h>
+#import <LDrawFeatures/LDrawStepPartListLayout.h>
+#import <LDrawFeatures/LDrawStepPartListModelBuilder.h>
+#import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
+#import <LDrawFeatures/LDrawStepPartListPageFitter.h>
+#import <LDrawFeatures/LDrawStepPartListPolicy.h>
+#import <LDrawFeatures/LDrawStepPartListPresentation.h>
+#import <LDrawFeatures/LDrawStepPartListResizeTracker.h>
 #import <LDrawFeatures/LDrawToolMode.h>
 #import <LDrawFeatures/LSynthConfiguration.h>

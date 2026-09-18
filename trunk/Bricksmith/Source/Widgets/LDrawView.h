@@ -74,6 +74,8 @@
 	Vector3					nudgeVector;			// direction of nudge action (valid only in nudgeAction callback)
 	
 	NSArray					*topLevelObjects;		// holds NIB objects
+
+	Box2					lastReportedVisibleRect;	// last camera rect a change notification was posted for
 }
 
 // Accessors
@@ -122,17 +124,28 @@
 
 // Notifications
 
+/// Posted when the camera zooms, scrolls or turns, with the view as the object.
+/// Overlays placed at model points need to move when it arrives.
+extern NSString * const LDrawViewCameraDidChangeNotification;
+
+
 // Utilities
 - (void) restoreConfiguration;
 - (void) saveConfiguration;
 - (void) scrollCameraVisibleRectToPoint:(Point2)visibleRectOrigin;
 - (void) scrollCenterToModelPoint:(Point3)modelPoint;
+- (NSPoint) viewPointForModelPoint:(Point3)modelPoint;
+- (double) pointsPerLDUAtModelPoint:(Point3)modelPoint;
+- (void) scrollModelPoint:(Point3)modelPoint toViewPoint:(NSPoint)viewPoint;
++ (NSColor *) backgroundColorFromUserDefaults;
 - (void) takeBackgroundColorFromUserDefaults;
 
 @end
 
 
 @interface LDrawView (SharedGPUContext)
+/// Draw the view now instead of at the next display pass.
+- (void)draw;
 - (void)setBackgroundColor:(NSColor *)newColor;
 - (void)setViewingAngle:(Tuple3)newAngle;
 /// Activate this view's OpenGL context, or no-op on Metal.
@@ -151,6 +164,10 @@
 @interface NSObject (LDrawViewDelegate)
 
 - (void) LDrawViewBecameFirstResponder:(LDrawView *)glView;
+
+/// Return YES if the delegate did the Zoom to Fit itself, NO to let the view
+/// fit the model as usual.
+- (BOOL) LDrawViewZoomToFit:(LDrawView *)view;
 
 - (BOOL) LDrawView:(LDrawView *)glView writeDirectivesToPasteboard:(NSPasteboard *)pasteboard asCopy:(BOOL)copyFlag;
 - (void) LDrawView:(LDrawView *)glView acceptDrop:(id < NSDraggingInfo >)info directives:(NSArray *)directives;

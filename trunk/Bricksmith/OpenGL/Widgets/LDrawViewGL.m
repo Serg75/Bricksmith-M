@@ -361,13 +361,14 @@
 	{
 		[self makeCurrentContext];
 
-		NSSize maxVisibleSize = [self visibleRect].size;
+		// Use bounds, not visibleRect: the surface covers the whole view.
+		NSSize surfaceSize = [self bounds].size;
 
-		if(maxVisibleSize.width > 0 && maxVisibleSize.height > 0)
+		if(surfaceSize.width > 0 && surfaceSize.height > 0)
 		{
-			glViewport(0,0, maxVisibleSize.width,maxVisibleSize.height);
+			glViewport(0,0, surfaceSize.width,surfaceSize.height);
 
-			[self->renderer setGraphicsSurfaceSize:V2MakeSize(maxVisibleSize.width, maxVisibleSize.height)];
+			[self->renderer setGraphicsSurfaceSize:V2MakeSize(surfaceSize.width, surfaceSize.height)];
 		}
 	}];
 

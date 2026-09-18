@@ -74,7 +74,17 @@
 
 // LPub
 #import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubModelScale.h>
+#import <LDrawCore/LPubPageOrientation.h>
+#import <LDrawCore/LPubPageSize.h>
+#import <LDrawCore/LPubPliCameraAngles.h>
+#import <LDrawCore/LPubPliConstrain.h>
+#import <LDrawCore/LPubPliIgnore.h>
+#import <LDrawCore/LPubPliPartRotation.h>
+#import <LDrawCore/LPubPliShow.h>
+#import <LDrawCore/LPubPliSubstitute.h>
 #import <LDrawCore/LPubRemoveGroup.h>
+#import <LDrawCore/LPubResolution.h>
 
 // Support utilities
 #import <LDrawCore/LDrawUtilities.h>
@@ -82,3 +92,4 @@
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPartReport.h>
 #import <LDrawCore/LDrawPartSpecific.h>
+#import <LDrawCore/LDrawStepPartListEntry.h>

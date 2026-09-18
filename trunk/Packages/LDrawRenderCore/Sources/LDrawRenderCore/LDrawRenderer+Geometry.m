@@ -123,6 +123,55 @@
 } // end getModelAxesForViewX:Y:Z:
 
 
+//========== viewPointForModelPoint: ===========================================
+//
+// Purpose:		Projects a model point onto the screen, in view coordinates.
+//
+// Notes:		The inverse of -modelPointForPoint:, with the same viewport and
+//				flip convention. Drawing placed with this sticks to the model,
+//				so it moves with a pan or a zoom.
+//
+//==============================================================================
+- (Point2)viewPointForModelPoint:(Point3)modelPoint
+{
+	Point3	projected	= V3Project(modelPoint,
+									Matrix4CreateFromFloats([camera modelView]),
+									Matrix4CreateFromFloats([camera projection]),
+									[self viewport]);
+
+	// Convert back through the shared helper, so this stays in step with
+	// -modelPointForPoint:.
+	return [self convertPointFromViewport:V2Make(projected.x, projected.y)];
+
+} // end viewPointForModelPoint:
+
+
+//========== pointsPerLDUAtModelPoint: =========================================
+//
+// Purpose:		How many points one LDU covers on screen beside this model
+//				point.
+//
+// Notes:		In a perspective view the scale depends on how deep the point
+//				is, so drawing sized against the model has to measure it rather
+//				than read the zoom.
+//
+//==============================================================================
+- (double)pointsPerLDUAtModelPoint:(Point3)modelPoint
+{
+	Vector3	modelX	= ZeroPoint3;
+	double	span	= 100.0;	// LDU, short enough to stay beside the point
+
+	[self getModelAxesForViewX:&modelX Y:NULL Z:NULL];
+
+	Point2	from	= [self viewPointForModelPoint:modelPoint];
+	Point2	to		= [self viewPointForModelPoint:V3Add(modelPoint, V3MulScalar(modelX, span))];
+	Vector2	across	= V2Sub(to, from);
+
+	return sqrt(across.x * across.x + across.y * across.y) / span;
+
+} // end pointsPerLDUAtModelPoint:
+
+
 //========== modelPointForPoint: ===============================================
 //
 // Purpose:		Unprojects the given point (in view coordinates) back into a 

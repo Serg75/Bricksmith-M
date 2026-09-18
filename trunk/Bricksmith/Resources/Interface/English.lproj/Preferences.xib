@@ -42,6 +42,11 @@
                 <outlet property="primitivesColorWell" destination="70" id="112"/>
                 <outlet property="rightButtonRadioButtons" destination="327" id="339"/>
                 <outlet property="rotateModeRadioButtons" destination="331" id="337"/>
+                <outlet property="stepPartListFollowsStepButton" destination="spl-fs-btn" id="spl-fs-out"/>
+                <outlet property="stepPartListLPubScaleButton" destination="spl-ls-btn" id="spl-ls-out"/>
+                <outlet property="stepPartListOrientationsField" destination="spl-op-fld" id="spl-op-out"/>
+                <outlet property="stepPartListShowButton" destination="spl-cb-btn" id="spl-cb-out"/>
+                <outlet property="stepPartListSubmodelsButton" destination="spl-sm-btn" id="spl-sm-out"/>
                 <outlet property="stepsColorWell" destination="128" id="131"/>
                 <outlet property="stylesContentView" destination="63" id="88"/>
                 <outlet property="unknownColorWell" destination="75" id="114"/>
@@ -221,11 +226,11 @@
             <point key="canvasLocation" x="92" y="1755"/>
         </customView>
         <customView id="76" userLabel="LDraw">
-            <rect key="frame" x="0.0" y="0.0" width="486" height="514"/>
+            <rect key="frame" x="0.0" y="0.0" width="486" height="714"/>
             <autoresizingMask key="autoresizingMask"/>
             <subviews>
                 <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="94">
-                    <rect key="frame" x="37" y="446" width="315" height="22"/>
+                    <rect key="frame" x="37" y="646" width="315" height="22"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="298">
                         <font key="font" metaFont="system"/>
@@ -237,7 +242,7 @@
                     </connections>
                 </textField>
                 <button verticalHuggingPriority="750" id="84">
-                    <rect key="frame" x="354" y="438" width="118" height="32"/>
+                    <rect key="frame" x="354" y="638" width="118" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="push" title="Choose…" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="297">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -248,7 +253,7 @@
                     </connections>
                 </button>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="83">
-                    <rect key="frame" x="17" y="476" width="114" height="17"/>
+                    <rect key="frame" x="17" y="676" width="114" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="LDraw Folder" id="296">
                         <font key="font" metaFont="systemBold"/>
@@ -257,7 +262,7 @@
                     </textFieldCell>
                 </textField>
                 <button verticalHuggingPriority="750" id="79">
-                    <rect key="frame" x="354" y="406" width="118" height="32"/>
+                    <rect key="frame" x="354" y="606" width="118" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="push" title="Reload Parts" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="294">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -268,11 +273,11 @@
                     </connections>
                 </button>
                 <box verticalHuggingPriority="750" boxType="separator" id="78">
-                    <rect key="frame" x="108" y="477" width="358" height="5"/>
+                    <rect key="frame" x="108" y="677" width="358" height="5"/>
                     <autoresizingMask key="autoresizingMask"/>
                 </box>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="82">
-                    <rect key="frame" x="34" y="395" width="321" height="43"/>
+                    <rect key="frame" x="34" y="595" width="321" height="43"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="295">
                         <font key="font" metaFont="smallSystem"/>
@@ -282,7 +287,7 @@
                     </textFieldCell>
                 </textField>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="grp-hd-lbl">
-                    <rect key="frame" x="17" y="364" width="114" height="17"/>
+                    <rect key="frame" x="17" y="564" width="114" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Groups" id="grp-hd-cel">
                         <font key="font" metaFont="systemBold"/>
@@ -291,11 +296,11 @@
                     </textFieldCell>
                 </textField>
                 <box verticalHuggingPriority="750" boxType="separator" id="grp-sp-box">
-                    <rect key="frame" x="108" y="365" width="358" height="5"/>
+                    <rect key="frame" x="108" y="565" width="358" height="5"/>
                     <autoresizingMask key="autoresizingMask"/>
                 </box>
                 <button verticalHuggingPriority="750" id="grp-cb-btn" userLabel="Groups - Check Box - Hide removed groups in Steps view mode">
-                    <rect key="frame" x="34" y="334" width="400" height="18"/>
+                    <rect key="frame" x="34" y="534" width="400" height="18"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="check" title="Hide removed groups in Steps view mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="grp-cb-cel">
                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -306,7 +311,7 @@
                     </connections>
                 </button>
                 <button verticalHuggingPriority="750" id="gst-cb-btn" userLabel="Groups - Check Box - Show removed groups as ghosts in All view mode">
-                    <rect key="frame" x="34" y="308" width="400" height="18"/>
+                    <rect key="frame" x="34" y="508" width="400" height="18"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="check" title="Show removed groups as ghosts in All view mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="gst-cb-cel">
                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -317,7 +322,7 @@
                     </connections>
                 </button>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="grp-tx-fld">
-                    <rect key="frame" x="34" y="240" width="421" height="52"/>
+                    <rect key="frame" x="34" y="440" width="421" height="52"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="grp-tx-cel">
                         <font key="font" metaFont="smallSystem"/>
@@ -327,7 +332,7 @@
                     </textFieldCell>
                 </textField>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="stp-hd-lbl">
-                    <rect key="frame" x="17" y="210" width="114" height="17"/>
+                    <rect key="frame" x="17" y="410" width="114" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Steps" id="stp-hd-cel">
                         <font key="font" metaFont="systemBold"/>
@@ -336,11 +341,11 @@
                     </textFieldCell>
                 </textField>
                 <box verticalHuggingPriority="750" boxType="separator" id="stp-sp-box">
-                    <rect key="frame" x="108" y="211" width="358" height="5"/>
+                    <rect key="frame" x="108" y="411" width="358" height="5"/>
                     <autoresizingMask key="autoresizingMask"/>
                 </box>
                 <button verticalHuggingPriority="750" id="stp-cb-btn" userLabel="Steps - Check Box - Show previous steps as ghosts in Steps view mode">
-                    <rect key="frame" x="34" y="180" width="400" height="18"/>
+                    <rect key="frame" x="34" y="380" width="400" height="18"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <buttonCell key="cell" type="check" title="Show previous steps as ghosts in Steps view mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="stp-cb-cel">
                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -351,7 +356,7 @@
                     </connections>
                 </button>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="stp-tx-fld">
-                    <rect key="frame" x="34" y="126" width="421" height="40"/>
+                    <rect key="frame" x="34" y="326" width="421" height="40"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="stp-tx-cel">
                         <font key="font" metaFont="smallSystem"/>
@@ -361,7 +366,7 @@
                     </textFieldCell>
                 </textField>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="gha-hd-lbl">
-                    <rect key="frame" x="17" y="96" width="114" height="17"/>
+                    <rect key="frame" x="17" y="296" width="114" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Ghosts" id="gha-hd-cel">
                         <font key="font" metaFont="systemBold"/>
@@ -370,11 +375,11 @@
                     </textFieldCell>
                 </textField>
                 <box verticalHuggingPriority="750" boxType="separator" id="gha-sp-box">
-                    <rect key="frame" x="108" y="97" width="358" height="5"/>
+                    <rect key="frame" x="108" y="297" width="358" height="5"/>
                     <autoresizingMask key="autoresizingMask"/>
                 </box>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="gha-cp-lbl">
-                    <rect key="frame" x="34" y="69" width="88" height="17"/>
+                    <rect key="frame" x="34" y="269" width="88" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Transparency" id="gha-cp-cel">
                         <font key="font" metaFont="system"/>
@@ -383,7 +388,7 @@
                     </textFieldCell>
                 </textField>
                 <slider verticalHuggingPriority="750" id="gha-sl-sld" userLabel="Ghosts - Horizontal Slider - Transparency">
-                    <rect key="frame" x="128" y="66" width="120" height="21"/>
+                    <rect key="frame" x="128" y="266" width="120" height="21"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <sliderCell key="cell" continuous="YES" state="on" alignment="left" minValue="30" maxValue="70" doubleValue="60" tickMarkPosition="above" sliderType="linear" id="gha-sl-cel"/>
                     <connections>
@@ -391,7 +396,7 @@
                     </connections>
                 </slider>
                 <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="gha-tf-fld" userLabel="Ghosts - Percentage">
-                    <rect key="frame" x="254" y="66" width="44" height="20"/>
+                    <rect key="frame" x="254" y="266" width="44" height="20"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="gha-tf-cel">
                         <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="3" id="gha-tf-fmt"/>
@@ -404,7 +409,7 @@
                     </connections>
                 </textField>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="gha-pc-lbl">
-                    <rect key="frame" x="302" y="69" width="15" height="17"/>
+                    <rect key="frame" x="302" y="269" width="15" height="17"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="%" id="gha-pc-cel">
                         <font key="font" metaFont="system"/>
@@ -413,10 +418,117 @@
                     </textFieldCell>
                 </textField>
                 <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="gha-tx-fld">
-                    <rect key="frame" x="34" y="16" width="421" height="32"/>
+                    <rect key="frame" x="34" y="216" width="421" height="32"/>
                     <autoresizingMask key="autoresizingMask"/>
                     <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="How see-through a ghost draws, whether it is a removed group or a previous step. Higher is fainter." id="gha-tx-cel">
                         <font key="font" metaFont="smallSystem"/>
+                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="spl-hd-lbl">
+                    <rect key="frame" x="17" y="193" width="114" height="17"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Parts List" id="spl-hd-cel">
+                        <font key="font" metaFont="systemBold"/>
+                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <box verticalHuggingPriority="750" boxType="separator" id="spl-sp-box">
+                    <rect key="frame" x="108" y="194" width="358" height="5"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                </box>
+                <button verticalHuggingPriority="750" id="spl-cb-btn" userLabel="Parts List - Check Box - Show the parts list in Steps view mode">
+                    <rect key="frame" x="34" y="164" width="400" height="18"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="check" title="Show the step's parts list in Steps view mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="spl-cb-cel">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="stepPartListShowChanged:" target="-2" id="spl-cb-act"/>
+                    </connections>
+                </button>
+                <button verticalHuggingPriority="750" id="spl-sm-btn" userLabel="Parts List - Check Box - Include submodel references">
+                    <rect key="frame" x="34" y="140" width="400" height="18"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="check" title="Include submodel references" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="spl-sm-cel">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="stepPartListSubmodelsChanged:" target="-2" id="spl-sm-act"/>
+                    </connections>
+                </button>
+                <button verticalHuggingPriority="750" id="spl-fs-btn" userLabel="Parts List - Check Box - Draw icons at the step rotation">
+                    <rect key="frame" x="34" y="116" width="400" height="18"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="check" title="Draw the icons at the step's own rotation" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="spl-fs-cel">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="stepPartListFollowsStepChanged:" target="-2" id="spl-fs-act"/>
+                    </connections>
+                </button>
+                <button verticalHuggingPriority="750" id="spl-ls-btn" userLabel="Parts List - Check Box - Draw on LPub3D page">
+                    <rect key="frame" x="34" y="88" width="400" height="18"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="check" title="Draw on LPub3D's page" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="spl-ls-cel">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="stepPartListLPubScaleChanged:" target="-2" id="spl-ls-act"/>
+                    </connections>
+                </button>
+                <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="spl-ol-lbl">
+                    <rect key="frame" x="34" y="60" width="112" height="17"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" title="Part orientations" id="spl-ol-cel">
+                        <font key="font" metaFont="system"/>
+                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="spl-op-fld" userLabel="Parts List - Orientations File">
+                    <rect key="frame" x="148" y="61" width="146" height="15"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <textFieldCell key="cell" lineBreakMode="truncatingMiddle" sendsActionOnEndEditing="YES" alignment="left" title="None" id="spl-op-cel">
+                        <font key="font" metaFont="smallSystem"/>
+                        <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <button verticalHuggingPriority="750" id="spl-oc-btn" userLabel="Parts List - Choose Orientations File">
+                    <rect key="frame" x="294" y="51" width="88" height="32"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="push" title="Choose…" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="spl-oc-cel">
+                        <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="chooseStepPartListOrientations:" target="-2" id="spl-oc-act"/>
+                    </connections>
+                </button>
+                <button verticalHuggingPriority="750" id="spl-od-btn" userLabel="Parts List - Default Orientations File">
+                    <rect key="frame" x="386" y="51" width="84" height="32"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <buttonCell key="cell" type="push" title="Default" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="spl-od-cel">
+                        <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="useDefaultStepPartListOrientations:" target="-2" id="spl-od-act"/>
+                    </connections>
+                </button>
+                <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="spl-tx-fld">
+                    <rect key="frame" x="34" y="16" width="421" height="32"/>
+                    <autoresizingMask key="autoresizingMask"/>
+                    <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="left" id="spl-tx-cel">
+                        <font key="font" metaFont="smallSystem"/>
+                        <string key="title">A framed list of the parts the current step adds. With Draw on LPub3D's page on, it is packed like LPub3D, and dragging its edge sizes it per step.</string>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                     </textFieldCell>

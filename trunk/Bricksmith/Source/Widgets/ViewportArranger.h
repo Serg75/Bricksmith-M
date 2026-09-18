@@ -47,5 +47,8 @@
 - (void) viewportArranger:(ViewportArranger *)viewportArranger didAddViewport:(LDrawViewerContainer *)newViewport sourceViewport:(LDrawViewerContainer *)sourceViewport;
 - (void) viewportArranger:(ViewportArranger *)viewportArranger willRemoveViewports:(NSSet<LDrawViewerContainer*> *)removingViewports;
 - (void) viewportArrangerDidRemoveViewports:(ViewportArranger *)viewportArranger;
+/// Sent when a divider drag changes the viewport sizes. It arrives after
+/// every move, so coalesce any slow work.
+- (void) viewportArrangerDidResizeViewports:(ViewportArranger *)viewportArranger;
 
 @end

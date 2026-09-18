@@ -64,6 +64,9 @@ static Box2 NSRectToBox2(NSRect rect)
 }
 
 
+NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChangeNotification";
+
+
 @implementation LDrawView
 
 #pragma mark -
@@ -503,6 +506,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	[self->renderer setViewOrientation:newOrientation];
 
 	[self saveConfiguration];
+	[self postCameraDidChange];
 
 }//end setViewOrientation:
 
@@ -572,6 +576,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	[self->renderer setLocationMode:[LDrawViewportPolicy locationModeForViewOrientation:newAngle]];
 
 	[self saveConfiguration];
+	[self postCameraDidChange];
 
 }//end viewOrientationSelected:
 
@@ -610,6 +615,14 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (IBAction) zoomToFit:(id)sender
 {
+	// Let the delegate fit in its own way. A document drawn on a printed page
+	// fits the page, not the model.
+	if([self->ldrawDelegate respondsToSelector:@selector(LDrawViewZoomToFit:)]
+	   && [self->ldrawDelegate LDrawViewZoomToFit:self])
+	{
+		return;
+	}
+
 	[self lockContextAndExecute:^
 	{
 		[self makeCurrentContext];
@@ -1118,6 +1131,7 @@ static Box2 NSRectToBox2(NSRect rect)
 	else if(toolMode == LDrawToolModeSpin)
 	{
 		[self->renderer rotationDragged:dragDelta];
+		[self postCameraDidChange];
 	}
 	else if(toolMode == LDrawToolModeSmoothZoom)
 	{
@@ -1134,6 +1148,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		{
 			case LDrawRotateSelectDragRotateCamera:
 				[self->renderer rotationDragged:dragDelta];
+				[self postCameraDidChange];
 				break;
 			case LDrawRotateSelectDragDirectInteraction:
 				[self directInteractionDragged:theEvent];
@@ -1258,6 +1273,7 @@ static Box2 NSRectToBox2(NSRect rect)
 		[[self->renderer camera] setUseTurntable:USE_TURNTABLE];
 		[self->renderer mouseDragged];
 		[self->renderer rotationDragged:dragDelta];
+		[self postCameraDidChange];
 	}
 }
 
@@ -1819,6 +1835,8 @@ static Box2 NSRectToBox2(NSRect rect)
 
 			[self->renderer rotateByDegrees:angle];
 		}];
+
+		[self postCameraDidChange];
 	}
 
 }//end rotateWithEvent:
@@ -2380,6 +2398,74 @@ static Box2 NSRectToBox2(NSRect rect)
 }
 
 
+//========== viewPointForModelPoint: ===========================================
+//
+// Purpose:		Where a model point lands in this view, in its own coordinates.
+//
+// Notes:		Used by overlays that have to stay put against the model rather
+//				than the window, like the LPub3D page outline.
+//
+//==============================================================================
+- (NSPoint) viewPointForModelPoint:(Point3)modelPoint
+{
+	[self makeCurrentContext];
+
+	Point2 viewPoint = [self->renderer viewPointForModelPoint:modelPoint];
+
+	return NSMakePoint(viewPoint.x, viewPoint.y);
+
+}//end viewPointForModelPoint:
+
+
+//========== pointsPerLDUAtModelPoint: =========================================
+//
+// Purpose:		How many points one LDU covers on screen beside this model
+//				point.
+//
+// Notes:		Perspective makes a near part bigger than a far one, so drawing
+//				sized against the model measures it here.
+//
+//==============================================================================
+- (double) pointsPerLDUAtModelPoint:(Point3)modelPoint
+{
+	[self makeCurrentContext];
+
+	return [self->renderer pointsPerLDUAtModelPoint:modelPoint];
+
+}//end pointsPerLDUAtModelPoint:
+
+
+//========== scrollModelPoint:toViewPoint: =====================================
+//
+// Purpose:		Scrolls so that the given model point lands on the given point
+//				of this view.
+//
+// Notes:		For drawing that has to stay where it is while the camera turns
+//				under it, like the LPub3D page outline.
+//
+//==============================================================================
+- (void) scrollModelPoint:(Point3)modelPoint toViewPoint:(NSPoint)viewPoint
+{
+	Box2	viewport	= ZeroBox2;
+	Point2	inViewport	= ZeroPoint2;
+
+	[self makeCurrentContext];
+
+	viewport = [self->renderer viewport];
+
+	if(V2BoxWidth(viewport) <= 0.0 || V2BoxHeight(viewport) <= 0.0)
+		return;
+
+	// Uses the renderer's conversion, which flips y.
+	inViewport = [self->renderer convertPointToViewport:V2Make(viewPoint.x, viewPoint.y)];
+
+	[self->renderer scrollModelPoint:modelPoint
+		 toViewportProportionalPoint:V2Make((inViewport.x - V2BoxMinX(viewport)) / V2BoxWidth(viewport),
+											(inViewport.y - V2BoxMinY(viewport)) / V2BoxHeight(viewport))];
+
+}//end scrollModelPoint:toViewPoint:
+
+
 //========== scrollCenterToModelPoint: =========================================
 //
 // Purpose:		Scrolls the receiver (if it is inside a scroll view) so that
@@ -2394,13 +2480,13 @@ static Box2 NSRectToBox2(NSRect rect)
 }
 
 
-//========== takeBackgroundColorFromUserDefaults ===============================
+//========== backgroundColorFromUserDefaults ===================================
 //
-// Purpose:		The user gets to choose a background color used throughout the 
-//				application. Read and use it here.
+// Purpose:		The background color the user chose for the 3D views, or the
+//				fallback when there is none.
 //
 //==============================================================================
-- (void) takeBackgroundColorFromUserDefaults
++ (NSColor *) backgroundColorFromUserDefaults
 {
 	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
 	NSColor			*newColor		= [userDefaults colorForKey:LDRAW_VIEWER_BACKGROUND_COLOR_KEY];
@@ -2416,9 +2502,38 @@ static Box2 NSRectToBox2(NSRect rect)
 		}
 	}
 	
-	[self setBackgroundColor:newColor];
+	return newColor;
+	
+}//end backgroundColorFromUserDefaults
+
+
+//========== takeBackgroundColorFromUserDefaults ===============================
+//
+// Purpose:		The user gets to choose a background color used throughout the 
+//				application. Read and use it here.
+//
+//==============================================================================
+- (void) takeBackgroundColorFromUserDefaults
+{
+	[self setBackgroundColor:[LDrawView backgroundColorFromUserDefaults]];
 	
 }//end takeBackgroundColorFromUserDefaults
+
+
+//========== postCameraDidChange ===============================================
+//
+// Purpose:		Tells overlays the camera turned.
+//
+// Notes:		A turn keeps the visible rect, so
+//				-reflectLogicalDocumentRect:visibleRect: does not post for it.
+//
+//==============================================================================
+- (void) postCameraDidChange
+{
+	[[NSNotificationCenter defaultCenter] postNotificationName:LDrawViewCameraDidChangeNotification
+														object:self];
+
+}//end postCameraDidChange
 
 
 #pragma mark -
@@ -2436,6 +2551,17 @@ static Box2 NSRectToBox2(NSRect rect)
 //==============================================================================
 - (void) reflectLogicalDocumentRect:(Box2)newDocumentRect visibleRect:(Box2)visibleRect
 {
+	// Every zoom and scroll comes through here, so tell overlays the camera
+	// moved. Observers must defer their work: this runs inside a camera
+	// update.
+	if(V2EqualBoxes(visibleRect, self->lastReportedVisibleRect) == NO)
+	{
+		self->lastReportedVisibleRect = visibleRect;
+
+		[[NSNotificationCenter defaultCenter] postNotificationName:LDrawViewCameraDidChangeNotification
+															object:self];
+	}
+
 	LDrawViewerContainer* enclosingContainer = nil;
 	
 	NSView* superview = self.superview;

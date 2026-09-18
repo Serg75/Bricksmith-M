@@ -57,6 +57,11 @@
 	[initialDefaults setObject:@NO								forKey:GHOST_PREVIOUS_STEPS_KEY]; // the traditional step display shows the assembly solid
 	[initialDefaults setObject:@60								forKey:GHOST_TRANSPARENCY_KEY]; // LDRAW_DEFAULT_GHOST_ALPHA, as percent transparent
 
+	[initialDefaults setObject:@NO								forKey:SHOW_STEP_PART_LIST_KEY]; // a new overlay must not appear unannounced
+	[initialDefaults setObject:@NO								forKey:STEP_PART_LIST_SUBMODELS_KEY]; // matches LPub3D's PLI INCLUDE_SUBMODELS FALSE
+	[initialDefaults setObject:@YES								forKey:STEP_PART_LIST_FOLLOWS_STEP_KEY]; // agree with the assembly beside it
+	[initialDefaults setObject:@NO								forKey:STEP_PART_LIST_LPUB_SCALE_KEY]; // an overlay is not a printed page
+
 	//
 	// Grid Spacing
 	//

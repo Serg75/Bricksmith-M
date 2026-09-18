@@ -52,6 +52,12 @@
 	__weak IBOutlet NSSlider		*ghostTransparencySlider;
 	__weak IBOutlet NSTextField		*ghostTransparencyText;
 
+	__weak IBOutlet NSButton		*stepPartListShowButton;
+	__weak IBOutlet NSButton		*stepPartListSubmodelsButton;
+	__weak IBOutlet NSButton		*stepPartListFollowsStepButton;
+	__weak IBOutlet NSButton		*stepPartListLPubScaleButton;
+	__weak IBOutlet NSTextField		*stepPartListOrientationsField;
+
 	// Style Tab
 	__weak IBOutlet NSColorWell		*backgroundColorWell;
 	
@@ -121,6 +127,12 @@
 - (IBAction) ghostPreviousStepsChanged:(id)sender;
 - (IBAction) ghostTransparencySliderChanged:(id)sender;
 - (IBAction) ghostTransparencyTextChanged:(id)sender;
+- (IBAction) stepPartListShowChanged:(id)sender;
+- (IBAction) stepPartListSubmodelsChanged:(id)sender;
+- (IBAction) stepPartListFollowsStepChanged:(id)sender;
+- (IBAction) stepPartListLPubScaleChanged:(id)sender;
+- (IBAction) chooseStepPartListOrientations:(id)sender;
+- (IBAction) useDefaultStepPartListOrientations:(id)sender;
 
 // - LSynth Tab
 - (IBAction) lsynthChooseExecutable:(id)sender;
@@ -134,6 +146,8 @@
 
 //Utilities
 + (void) ensureDefaults;
++ (void) loadStepPartListOrientations;
++ (void) pushStepPartListDefaults;
 - (void) changeLDrawFolderPath:(NSString *) folderPath;
 - (void) selectPanelWithIdentifier:(NSString *)itemIdentifier;
 

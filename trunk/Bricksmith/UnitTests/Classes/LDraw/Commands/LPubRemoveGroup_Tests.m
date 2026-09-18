@@ -133,6 +133,22 @@
 }
 
 
+- (void)test_LPubRemoveGroup_setLPubCommandString_ReReadsAQuotedName
+{
+	// The name here has a space, so a plain split on spaces would lose it.
+	LPubRemoveGroup *command = (LPubRemoveGroup *)[LPubRemoveGroup lpubCommandInstance:@[@"REMOVE", @"GROUP", @"\"name\""]];
+
+	command.lPubCommandString = @"REMOVE GROUP \"foo bar\"";
+
+	XCTAssertEqualObjects(command.groupName, @"foo bar");
+	XCTAssertEqualObjects(command.lPubCommandString, @"REMOVE GROUP \"foo bar\"");
+
+	command.lPubCommandString = @"REMOVE GROUP \"wheels\"";
+
+	XCTAssertEqualObjects(command.groupName, @"wheels");
+}
+
+
 - (void)test_LPubRemoveGroup_finishParsing_DoesNothing
 {
 	NSArray<NSString *> *parameters = @[@"REMOVE", @"GROUP", @"\"name\""];

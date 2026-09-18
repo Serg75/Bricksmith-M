@@ -79,4 +79,41 @@ static NSString * const	LPUB_COMMAND			= @"!LPUB";
 static NSString * const	LPUB_REMOVE_GROUP_1		= @"REMOVE";
 static NSString * const	LPUB_REMOVE_GROUP_2		= @"GROUP";
 
+// Scope keywords most LPub metas accept between the command and its value.
+static NSString * const	LPUB_SCOPE_GLOBAL		= @"GLOBAL";
+static NSString * const	LPUB_SCOPE_LOCAL		= @"LOCAL";
+
+static NSString * const	LPUB_BOOLEAN_TRUE		= @"TRUE";
+static NSString * const	LPUB_BOOLEAN_FALSE		= @"FALSE";
+
+// LPub PLI (parts list image)
+static NSString * const	LPUB_PLI					= @"PLI";
+static NSString * const	LPUB_PLI_CONSTRAIN			= @"CONSTRAIN";
+static NSString * const	LPUB_PLI_SHOW				= @"SHOW";
+static NSString * const	LPUB_PLI_BEGIN				= @"BEGIN";
+static NSString * const	LPUB_PLI_END				= @"END";
+static NSString * const	LPUB_PLI_IGNORE				= @"IGN";
+/// The branch of `0 !LPUB PART BEGIN IGN` and `0 !LPUB PART END`.
+static NSString * const	LPUB_PART					= @"PART";
+static NSString * const	LPUB_PLI_CONSTRAIN_AREA		= @"AREA";
+static NSString * const	LPUB_PLI_CONSTRAIN_SQUARE	= @"SQUARE";
+static NSString * const	LPUB_PLI_CONSTRAIN_WIDTH	= @"WIDTH";
+static NSString * const	LPUB_PLI_CONSTRAIN_HEIGHT	= @"HEIGHT";
+static NSString * const	LPUB_PLI_CONSTRAIN_COLS		= @"COLS";
+
+// LPub MODEL_SCALE, shared by three branches, and RESOLUTION.
+static NSString * const	LPUB_ASSEM					= @"ASSEM";
+static NSString * const	LPUB_BOM					= @"BOM";
+static NSString * const	LPUB_MODEL_SCALE			= @"MODEL_SCALE";
+static NSString * const	LPUB_RESOLUTION				= @"RESOLUTION";
+static NSString * const	LPUB_RESOLUTION_DPI			= @"DPI";
+static NSString * const	LPUB_RESOLUTION_DPCM		= @"DPCM";
+
+// LPub PAGE.
+static NSString * const	LPUB_PAGE					= @"PAGE";
+static NSString * const	LPUB_PAGE_SIZE				= @"SIZE";
+static NSString * const	LPUB_PAGE_ORIENTATION		= @"ORIENTATION";
+static NSString * const	LPUB_PAGE_PORTRAIT			= @"PORTRAIT";
+static NSString * const	LPUB_PAGE_LANDSCAPE			= @"LANDSCAPE";
+
 #endif

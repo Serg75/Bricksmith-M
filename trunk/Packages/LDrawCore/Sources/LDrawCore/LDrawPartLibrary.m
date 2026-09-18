@@ -100,6 +100,18 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 } // end sharedPartLibrary
 
 
+//========== sharedPartLibraryIfRegistered =====================================
+//
+// Purpose:		The shared library, or nil when none is registered.
+//
+//==============================================================================
++ (nullable instancetype)sharedPartLibraryIfRegistered
+{
+	return PartLibrary_sharedInstance;
+
+} // end sharedPartLibraryIfRegistered
+
+
 //========== registerSharedPartLibrary: ========================================
 //
 // Purpose:		Registers the given (typically renderer-specific) LDrawPartLibrary

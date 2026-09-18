@@ -44,6 +44,7 @@
 #import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/LPubRemoveGroup.h>
 
 #import <LDrawEditing/LDrawClipboard.h>
@@ -61,6 +62,11 @@
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawRelatedParts.h>
+#import <LDrawFeatures/LDrawStepPartList.h>
+#import <LDrawFeatures/LDrawStepPartListEdit.h>
+#import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
+#import <LDrawFeatures/LDrawStepPartListPageFitter.h>
+#import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
 #import "DimensionsPanel.h"
@@ -81,6 +87,7 @@
 #import "PieceCountPanel.h"
 #import "RotationPanelController.h"
 #import "SearchPanelController.h"
+#import "StepPartListController.h"
 #import "StringUtilities.h"
 #import "UserDefaultsCategory.h"
 #import "ViewportArranger.h"
@@ -127,6 +134,21 @@ void AppendChoicesToNewItem(
 }//end AppendChoicesToNewItem
 
 
+
+// LDrawView already has the camera calls the page fitter needs.
+@interface LDrawView (StepPartListPageView) <LDrawStepPartListPageView>
+@end
+
+@implementation LDrawView (StepPartListPageView)
+@end
+
+
+@interface LDrawDocument () <StepPartListControllerDelegate>
+- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change;
+- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageWasDrawn:(BOOL)pageWasDrawn;
+@end
+
+
 @implementation LDrawDocument
 
 //========== init ==============================================================
@@ -140,6 +162,8 @@ void AppendChoicesToNewItem(
     self = [super init];
     if (self)
 	{
+		self->pageAnchor = [[LDrawStepPartListPageAnchor alloc] init];
+		self->pageFitter = [[LDrawStepPartListPageFitter alloc] initWithPageAnchor:self->pageAnchor];
 		[self setDocumentContents:[LDrawFile file]];
 		[self setGridSpacingMode:LDrawGridModeMedium];
     }
@@ -261,7 +285,8 @@ void AppendChoicesToNewItem(
 			[currentViewport zoomToFit:nil];
 			fitZoom = [currentViewport zoomPercentage];
 
-			// Back out a wee bit so the user has some room to work with his model
+			// Zoom out a little from the fit, so there is room around the model.
+			// Steps mode is off here, so this fits the model, not a page.
 			CGFloat adjustedZoom = [LDrawViewportPolicy fittedZoomPercentageAfterFit:fitZoom previousZoom:unfitZoom];
 			if(adjustedZoom != unfitZoom)
 			{
@@ -291,6 +316,14 @@ void AppendChoicesToNewItem(
 						   selector:@selector(ghostAlphaChanged:)
 							   name:LDrawGhostAlphaDidChangeNotification
 							 object:nil ];
+
+	[notificationCenter addObserver:self
+						   selector:@selector(stepPartListPreferenceChanged:)
+							   name:LDrawStepPartListDidChangeNotification
+							 object:nil ];
+
+	// The page preference as it is now, so only a later switch fits the page.
+	self->usedLPubScale = [LDrawStepPartList usesLPubScale];
 
 	[notificationCenter addObserver:self
 						   selector:@selector(docChanged:)
@@ -650,23 +683,34 @@ void AppendChoicesToNewItem(
 	
 	if(currentStepIndex != requestedStepIndex)
 	{
+		// Read on the old step, so leaving a step with a page holds too.
+		BOOL pageWasDrawn = [LDrawStepPartListPolicy drawsPageInModel:activeModel];
+
 		[activeModel setMaximumStepIndexForStepDisplay:requestedStepIndex];
-		
-		// Update UI
-		
-		[self selectStep:requestedStepIndex];
-		
-		[self->stepField setIntegerValue:(requestedStepIndex + 1)]; // make 1-relative
-		
-		if([activeModel stepDisplay] == YES)
-		{
-			if([requestedStep stepRotationType] != LDrawStepRotationNone)
+
+		// One hold: the row selection redraws, and the turn and the new step's
+		// size both move the camera.
+		[self holdLPubPageDuringChange:^{
+			// Update UI
+
+			[self selectStep:requestedStepIndex];
+
+			[self->stepField setIntegerValue:(requestedStepIndex + 1)]; // make 1-relative
+
+			if([activeModel stepDisplay] == YES)
 			{
-				[self updateViewingAngleToMatchStep];
+				if([requestedStep stepRotationType] != LDrawStepRotationNone)
+				{
+					[self updateViewingAngleToMatchStep];
+				}
+
+				[[self documentContents] noteNeedsDisplay];
 			}
-				
-			[[self documentContents] noteNeedsDisplay];
-		}
+		} pageWasDrawn:pageWasDrawn];
+
+		// After the hold, so the new step's list is laid out for the final
+		// camera.
+		[self updateStepPartList];
 	}
 	
 }//end setCurrentStep:
@@ -779,14 +823,23 @@ void AppendChoicesToNewItem(
 	
 	if(showStepsFlag != [activeModel stepDisplay])
 	{
+		// Each Steps session measures the model again.
+		[self->pageAnchor invalidate];
+
 		if(showStepsFlag == YES)
 		{
 			[activeModel setStepDisplay:YES];
 			[self setCurrentStep:0];
+
+			// Measured now, at step 0, whatever the preferences, so no later
+			// REMOVE GROUP is in scope.
+			[self->pageAnchor anchorForModel:activeModel];
 			
 			// Force viewing angle update when turning on step display. 
 			// -setCurrentStep only does this if the step has actually changed. 
-			[self updateViewingAngleToMatchStep];
+			[self holdLPubPageDuringChange:^{
+				[self updateViewingAngleToMatchStep];
+			}];
 		}
 		else // turn it off now
 		{
@@ -795,7 +848,10 @@ void AppendChoicesToNewItem(
 		
 		[[self documentContents] noteNeedsDisplay];
 	}
-	
+
+	// The list belongs to Steps mode, so it comes and goes with it.
+	[self updateStepPartList];
+
 	// Set scope button state no matter what. The scope buttons are really 
 	// toggle buttons which call this method; if you click "Steps" and step 
 	// display is already on, you want the button to *stay* selected. This makes 
@@ -2105,6 +2161,43 @@ void AppendChoicesToNewItem(
 }//end zoomActual:
 
 
+//========== fitLPubPageInViewport:keepingMagnification: =======================
+//
+// Purpose:		Fits the whole page in the viewport, with the step in the
+//				middle.
+//
+// Notes:		Keeping the magnification is for a resize: everything stays
+//				where it was on the page.
+//
+//==============================================================================
+- (void) fitLPubPageInViewport:(LDrawView *)viewport keepingMagnification:(BOOL)keepsMagnification
+{
+	if(viewport == nil)
+		return;
+
+	[self->pageFitter fitPageOfModel:[[self documentContents] activeModel]
+							  inView:viewport
+							viewSize:[self visibleSizeOfViewport:viewport]
+				keepingMagnification:keepsMagnification];
+
+}//end fitLPubPageInViewport:keepingMagnification:
+
+
+//========== visibleSizeOfViewport: ============================================
+//
+// Purpose:		The part of the viewport on screen, as the page fitter measures
+//				it.
+//
+//==============================================================================
+- (Size2) visibleSizeOfViewport:(LDrawView *)viewport
+{
+	NSSize size = [viewport visibleRect].size;
+
+	return V2MakeSize(size.width, size.height);
+
+}//end visibleSizeOfViewport:
+
+
 //========== zoomIn: ===========================================================
 //
 // Purpose:		Enlarge the scale of the current LDraw view.
@@ -2127,6 +2220,21 @@ void AppendChoicesToNewItem(
 	[mostRecentLDrawView zoomOut:sender];
 	
 }//end zoomOut:
+
+
+//========== zoomToFit: ========================================================
+//
+// Purpose:		Fit the current LDraw view's contents on screen.
+//
+// Notes:		Here so the command still works when the viewport does not have
+//				the focus.
+//
+//==============================================================================
+- (IBAction) zoomToFit:(id)sender
+{
+	[mostRecentLDrawView zoomToFit:sender];
+
+}//end zoomToFit:
 
 
 //========== viewOrientationSelected: ==========================================
@@ -3094,6 +3202,50 @@ void AppendChoicesToNewItem(
 }//end deleteDirective:
 
 
+//========== replaceDirective:withDirective: ===================================
+//
+// Purpose:		Undo-aware call to put newDirective where oldDirective is. If
+//				the old one was selected, the new one takes its place in the
+//				selection.
+//
+// Returns:		NO when oldDirective is not in this document.
+//
+//==============================================================================
+- (BOOL) replaceDirective:(LDrawDirective *)oldDirective
+			withDirective:(LDrawDirective *)newDirective
+{
+	// Already replaced or deleted.
+	if([oldDirective enclosingFile] != [self documentContents])
+		return NO;
+
+	LDrawContainer  *parent     = [oldDirective enclosingDirective];
+	NSInteger       index       = [parent indexOfDirective:oldDirective];
+	NSMutableArray  *selection  = [[self selectedObjects] mutableCopy];
+	NSUInteger      slot        = [selection indexOfObjectIdenticalTo:oldDirective];
+
+	[[[self undoManager] prepareWithInvocationTarget:self]
+		replaceDirective:newDirective withDirective:oldDirective];
+
+	// The outline must not keep a removed row selected.
+	if(slot != NSNotFound)
+		[fileContentsOutline deselectAll:nil];
+
+	[parent removeDirective:oldDirective];
+	[parent insertDirective:newDirective atIndex:index];
+
+	// Select here, not in the caller, so undo and redo reselect it. The flush
+	// reloads the outline before selecting.
+	if(slot != NSNotFound)
+	{
+		[selection replaceObjectAtIndex:slot withObject:newDirective];
+		[self flushDocChangesAndSelect:selection];
+	}
+
+	return YES;
+
+}//end replaceDirective:withDirective:
+
+
 //========== moveDirective:inDirection: ========================================
 //
 // Purpose:		Undo-aware call to move the object in the direction indicated. 
@@ -3664,6 +3816,46 @@ void AppendChoicesToNewItem(
 
 
 //**** LDrawView ****
+//========== LDrawViewZoomToFit: ===============================================
+//
+// Purpose:		Zoom to Fit for a document drawn on its LPub3D page: fits the
+//				whole page in the viewport instead of the model.
+//
+// Notes:		Only for the viewport the page is drawn in. Any other viewport,
+//				or a document that does not measure its page, fits the model as
+//				usual.
+//
+//==============================================================================
+- (BOOL) LDrawViewZoomToFit:(LDrawView *)view
+{
+	if([self drawsLPubPageInViewport:view] == NO)
+		return NO;
+
+	[self fitLPubPageInViewport:view keepingMagnification:NO];
+	return YES;
+
+}//end LDrawViewZoomToFit:
+
+
+//========== drawsLPubPageInViewport: =========================================
+//
+// Purpose:		Whether this viewport is showing the document on its page.
+//
+// Notes:		The parts list overlay draws the page, so only the viewport it is
+//				on can show one. The overlay stays for the page on a step that
+//				hides its list.
+//
+//==============================================================================
+- (BOOL) drawsLPubPageInViewport:(LDrawView *)view
+{
+	return view != nil
+		&& view == self->pageFitViewport
+		&& [LDrawStepPartListPolicy drawsPageInModel:[[self documentContents] activeModel]];
+
+}//end drawsLPubPageInViewport:
+
+
+//**** LDrawView ****
 //========== LDrawViewBecameFirstResponder: ====================================
 //
 // Purpose:		One of our model views just became active, so we need to update 
@@ -4052,6 +4244,10 @@ void AppendChoicesToNewItem(
 	[self addModelsToMenus];
 	
 	[self setLastSelectedPart:nil];
+
+	// A different submodel has its own steps, and may not be in Steps mode
+	// at all.
+	[self updateStepPartList];
 	
 }//end activeModelDidChange:
 
@@ -4135,6 +4331,11 @@ void AppendChoicesToNewItem(
 	// MPD parts to a file without going completely insane.
 	[self addModelsToMenus];
 
+	// A PLI SHOW or PAGE SIZE added or removed can add or remove the overlay.
+	// Other edits reach the list through its own observers.
+	if([self wantsStepPartList] != ([self->stepPartListController hostView] != nil))
+		[self updateStepPartList];
+
 }//end docChanged:
 
 
@@ -4155,7 +4356,9 @@ void AppendChoicesToNewItem(
 	if([[docContents activeModel] stepDisplay] == YES)
 	{
 		// TODO: new notification for this to get out of hot path?!?
-		[self updateViewingAngleToMatchStep];
+		[self holdLPubPageDuringChange:^{
+			[self updateViewingAngleToMatchStep];
+		}];
 	}
 }//end stepChanged:
 
@@ -4184,7 +4387,10 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) groupSuppressionChanged:(NSNotification *)notification
 {
-	[[self documentContents] noteNeedsDisplay];
+	// The redraw can change the camera's distance, which moves the page.
+	[self holdLPubPageDuringChange:^{
+		[[self documentContents] noteNeedsDisplay];
+	}];
 
 }//end groupSuppressionChanged:
 
@@ -4203,6 +4409,33 @@ void AppendChoicesToNewItem(
 	[[self documentContents] noteNeedsDisplay];
 
 }//end stepGhostingChanged:
+
+
+//========== stepPartListPreferenceChanged: ====================================
+//
+// Purpose:		The user changed one of the step parts list preferences.
+//
+//				Covers switching the overlay on and off as well as settings that
+//				only change what it says: -updateStepPartList does both.
+//
+//==============================================================================
+- (void) stepPartListPreferenceChanged:(NSNotification *)notification
+{
+	BOOL usesLPubScale		= [LDrawStepPartList usesLPubScale];
+	BOOL pageWasSwitchedOn	= (usesLPubScale && usesLPubScale != self->usedLPubScale);
+
+	self->usedLPubScale = usesLPubScale;
+
+	// First, so the overlay and its page exist before anything asks for
+	// them.
+	[self updateStepPartList];
+
+	// Fit the page only when it is switched on. Every parts list preference
+	// posts this, and refitting each time would lose the user's zoom.
+	if(pageWasSwitchedOn && [self drawsLPubPageInViewport:[self main3DViewport]])
+		[self fitLPubPageInViewport:[self main3DViewport] keepingMagnification:NO];
+
+}//end stepPartListPreferenceChanged:
 
 
 //========== ghostAlphaChanged: ================================================
@@ -4830,6 +5063,181 @@ void AppendChoicesToNewItem(
 }//end connectLDrawView:
 
 
+//========== updateStepPartList ================================================
+//
+// Purpose:		Puts the step parts list overlay on the main viewport, or takes
+//				it away.
+//
+//==============================================================================
+- (void) updateStepPartList
+{
+	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
+
+	if([self wantsStepPartList] == NO)
+	{
+		[self->stepPartListController detach];
+		[self watchViewportForPageFit:nil];
+		return;
+	}
+
+	if(self->stepPartListController == nil)
+	{
+		// Created on first use, so a document that never shows the list does
+		// not pay for the extra GPU surface.
+		self->stepPartListController = [[StepPartListController alloc] init];
+		[self->stepPartListController setDelegate:self];
+		[self->stepPartListController setPageAnchor:self->pageAnchor];
+	}
+
+	[self watchViewportForPageFit:[self main3DViewport]];
+
+	[self->stepPartListController setModel:activeModel];
+	[self->stepPartListController attachToView:[self main3DViewport]];
+
+}//end updateStepPartList
+
+
+//========== wantsStepPartList =================================================
+//
+// Purpose:		Whether the overlay is needed: for the step's list, its page, or
+//				both.
+//
+//==============================================================================
+- (BOOL) wantsStepPartList
+{
+	return [LDrawStepPartListPolicy showsListOrPageInModel:[[self documentContents] activeModel]];
+
+}//end wantsStepPartList
+
+
+//========== watchViewportForPageFit: ==========================================
+//
+// Purpose:		Keeps the page fitted to whichever viewport the overlay is on.
+//
+//==============================================================================
+- (void) watchViewportForPageFit:(LDrawView *)viewport
+{
+	NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+
+	if(viewport == self->pageFitViewport)
+		return;
+
+	if(self->pageFitViewport != nil)
+		[center removeObserver:self name:NSViewFrameDidChangeNotification object:self->pageFitViewport];
+
+	self->pageFitViewport			= viewport;
+	self->pageFitter.fittedViewSize	= ZeroSize2;
+
+	if(viewport != nil)
+	{
+		// The reference size for a later resize, so a saved zoom that was
+		// never fitted still scales with the window.
+		if([self drawsLPubPageInViewport:viewport])
+			self->pageFitter.fittedViewSize = [self visibleSizeOfViewport:viewport];
+
+		[viewport setPostsFrameChangedNotifications:YES];
+		[center addObserver:self
+				   selector:@selector(viewportFrameDidChange:)
+					   name:NSViewFrameDidChangeNotification
+					 object:viewport];
+	}
+
+}//end watchViewportForPageFit:
+
+
+//========== viewportFrameDidChange: ===========================================
+//
+// Purpose:		The viewport changed size, so the page is fitted to the new
+//				size.
+//
+// Notes:		Only while the document is drawn on its page. Coalesced, because
+//				dragging the window's edge sends a run of these.
+//
+//==============================================================================
+- (void) viewportFrameDidChange:(NSNotification *)notification
+{
+	if([self drawsLPubPageInViewport:self->pageFitViewport] == NO)
+		return;
+
+	// The first real size after the window is laid out becomes the reference,
+	// and the saved zoom is left alone.
+	Size2 fitted = self->pageFitter.fittedViewSize;
+
+	if(fitted.width <= 0.0 || fitted.height <= 0.0)
+	{
+		self->pageFitter.fittedViewSize = [self visibleSizeOfViewport:self->pageFitViewport];
+		return;
+	}
+
+	[NSObject cancelPreviousPerformRequestsWithTarget:self
+											 selector:@selector(refitLPubPage)
+											   object:nil];
+
+	[self performSelector:@selector(refitLPubPage) withObject:nil afterDelay:0.0];
+
+}//end viewportFrameDidChange:
+
+
+//========== refitLPubPage =====================================================
+- (void) refitLPubPage
+{
+	[self fitLPubPageInViewport:self->pageFitViewport keepingMagnification:YES];
+
+}//end refitLPubPage
+
+
+//========== stepPartListController:applyEdit:toStep: ==========================
+//
+// Purpose:		Performs the document change a finished frame resize asks for,
+//				through the undoable path.
+//
+//==============================================================================
+- (void) stepPartListController:(StepPartListController *)controller
+					  applyEdit:(LDrawStepPartListEdit *)edit
+						 toStep:(LDrawStep *)step
+{
+	NSUndoManager	*undoManager	= [self undoManager];
+	LPubPliConstrain *existing		= [edit existingDirective];
+
+	switch([edit kind])
+	{
+		case LDrawStepPartListEditKindNone:
+			// The document already says this. Recording it would put a no-op in
+			// the undo menu on every mouse-up.
+			return;
+
+		case LDrawStepPartListEditKindInsert:
+			if(step == nil || [edit directiveToInsert] == nil)
+				return;
+			[self addDirective:[edit directiveToInsert] toParent:step atIndex:[edit insertIndex]];
+			break;
+
+		case LDrawStepPartListEditKindUpdate:
+			if(existing == nil)
+				return;
+
+			// Before the setters: it records the old values, and it redraws on
+			// undo and redo.
+			[self preserveDirectiveState:existing];
+			[existing setScope:LPubMetaScopeLocal];
+			[existing setMode:[edit targetMode]];
+			[existing setInches:[edit targetInches]];
+			break;
+
+		case LDrawStepPartListEditKindRemove:
+			if(existing == nil)
+				return;
+			[self deleteDirective:existing];
+			break;
+	}
+
+	[undoManager setActionName:NSLocalizedString([edit undoActionKey], nil)];
+
+	[[self documentContents] noteNeedsDisplay];
+
+}//end stepPartListController:applyEdit:toStep:
+
+
 //========== main3DViewport ====================================================
 //
 // Purpose:		This is the viewport anointed "main", where we reflect things 
@@ -4930,6 +5338,8 @@ void AppendChoicesToNewItem(
 	
 	[self updateViewportAutosaveNamesAndRestore:NO];
 
+	// "Main" means "largest", so adding a viewport can move it.
+	[self updateStepPartList];
 
 }//end viewportArranger:didAddViewport:
 
@@ -4972,7 +5382,20 @@ void AppendChoicesToNewItem(
 			}
 		}
 	}
-	
+
+	// Only a removed host takes the overlay down. A surviving host stays
+	// watched, so it refits as it grows.
+	for(LDrawViewerContainer* container in removingViewports)
+	{
+		if(	container.glView == [self->stepPartListController hostView]
+		   || container.glView == self->pageFitViewport )
+		{
+			[self->stepPartListController detach];
+			[self watchViewportForPageFit:nil];
+			break;
+		}
+	}
+
 }//end viewportArranger:willRemoveViewports:
 
 
@@ -4986,8 +5409,47 @@ void AppendChoicesToNewItem(
 - (void) viewportArrangerDidRemoveViewports:(ViewportArranger *)viewportArranger
 {
 	[self updateViewportAutosaveNamesAndRestore:NO];
+
+	// -willRemoveViewports: may have detached the overlay. The arrangement has
+	// settled, so put it back on whichever viewport is largest.
+	[self updateStepPartList];
 	
 }//end viewportArrangerDidRemoveViewports:
+
+
+//========== viewportArrangerDidResizeViewports: ===============================
+//
+// Purpose:		A divider moved. The parts list sits on the largest viewport, and
+//				that may now be a different one.
+//
+// Notes:		Coalesced: dragging a divider sends a run of these, and moving
+//				the overlay is not cheap.
+//
+//==============================================================================
+- (void) viewportArrangerDidResizeViewports:(ViewportArranger *)viewportArranger
+{
+	[NSObject cancelPreviousPerformRequestsWithTarget:self
+											 selector:@selector(moveStepPartListToMainViewportIfNeeded)
+											   object:nil];
+
+	[self performSelector:@selector(moveStepPartListToMainViewportIfNeeded) withObject:nil afterDelay:0.0];
+
+}//end viewportArrangerDidResizeViewports:
+
+
+//========== moveStepPartListToMainViewportIfNeeded ============================
+//
+// Purpose:		Puts the overlay on the largest viewport, if it is on another.
+//
+//==============================================================================
+- (void) moveStepPartListToMainViewportIfNeeded
+{
+	LDrawView *host = [self->stepPartListController hostView];
+
+	if(host != nil && host != [self main3DViewport])
+		[self updateStepPartList];
+
+}//end moveStepPartListToMainViewportIfNeeded
 
 
 #pragma mark -
@@ -5312,6 +5774,8 @@ void AppendChoicesToNewItem(
 	
 	[self buildRelatedPartsMenus];
 
+	[self updateStepPartList];
+
 }//end loadDataIntoDocumentUI
 
 
@@ -5461,6 +5925,57 @@ void AppendChoicesToNewItem(
 	[[LDrawColorPanelController sharedColorPanel] updateSelectionWithObjects:selectedObjects];
 	
 }//end updateInspector
+
+
+//========== holdLPubPageDuringChange: =========================================
+//
+// Purpose:		Runs a change that moves the camera, then scrolls the page back
+//				to where it was on screen.
+//
+// Notes:		Decided by the page rules, not by whether the overlay is on, so
+//				a step that hides its list is held too.
+//
+//==============================================================================
+- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change
+{
+	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
+
+	[self holdLPubPageDuringChange:change
+					  pageWasDrawn:[LDrawStepPartListPolicy drawsPageInModel:activeModel]];
+
+}//end holdLPubPageDuringChange:
+
+
+//========== holdLPubPageDuringChange:pageWasDrawn: ============================
+//
+// Purpose:		The same, for a change that has already moved to another step.
+//				`pageWasDrawn` says whether the step before it had a page.
+//
+// Notes:		Held when the page is drawn before or after the change, so
+//				stepping into or out of a step without a page does not move it.
+//
+//==============================================================================
+- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageWasDrawn:(BOOL)pageWasDrawn
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	LDrawView		*viewport		= [self main3DViewport];
+
+	if(viewport == nil || [activeModel stepDisplay] == NO)
+	{
+		change();
+		return;
+	}
+
+	Point3	anchor			= [self->pageAnchor anchorForModel:activeModel];
+	NSPoint	anchorViewPoint	= [viewport viewPointForModelPoint:anchor];
+
+	change();
+
+	// The paper does not move when the model turns or changes size on it.
+	if(pageWasDrawn || [LDrawStepPartListPolicy drawsPageInModel:activeModel])
+		[viewport scrollModelPoint:anchor toViewPoint:anchorViewPoint];
+
+}//end holdLPubPageDuringChange:pageWasDrawn:
 
 
 //========== updateViewingAngleToMatchStep =====================================

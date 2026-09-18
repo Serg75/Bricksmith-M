@@ -391,6 +391,9 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[LDrawModel setGhostsPreviousSteps:[userDefaults boolForKey:GHOST_PREVIOUS_STEPS_KEY]];
 	[LDrawModel setGhostAlpha:LDrawGhostAlphaForTransparencyPercent([userDefaults integerForKey:GHOST_TRANSPARENCY_KEY])];
 
+	[PreferencesDialogController pushStepPartListDefaults];
+	[PreferencesDialogController loadStepPartListOrientations];
+
 	//Create shared objects.
 	self->inspector					= [Inspector new];
 	self->partLibraryController		= [[PartLibraryController alloc] init];

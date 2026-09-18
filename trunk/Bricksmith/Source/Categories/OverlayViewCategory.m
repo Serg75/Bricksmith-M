@@ -101,11 +101,17 @@
 	
 	if(overlayHelper)
 	{
+		// Hide the overlay window first. Dropping the helper detaches the
+		// window from its parent but leaves it on screen.
+		NSWindow *overlayWindow = [overlayViewIn window];
+
+		[overlayWindow orderOut:nil];
+
 		[overlayHelper removeFromSuperview];
 	}
 
 	[self setNeedsDisplay:YES];
-	
+
 }//end removeOverlayView:
 
 

@@ -151,6 +151,12 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (Point2)convertPointFromViewport:(Point2)viewportPoint;
 - (Point2)convertPointToViewport:(Point2)point_view;
 - (void)getModelAxesForViewX:(Vector3 * _Nullable)outModelX Y:(Vector3 * _Nullable)outModelY Z:(Vector3 * _Nullable)outModelZ;
+- (double)pointsPerLDUAtModelPoint:(Point3)modelPoint;
+/// Where a model point lands on screen, in view coordinates (y down). The
+/// inverse of -modelPointForPoint:. Use it to draw something that must stay
+/// put against the model while it is panned and zoomed.
+- (Point2)viewPointForModelPoint:(Point3)modelPoint;
+
 - (Point3)modelPointForPoint:(Point2)viewPoint;
 - (Point3)modelPointForPoint:(Point2)viewPoint depthReferencePoint:(Point3)depthPoint;
 

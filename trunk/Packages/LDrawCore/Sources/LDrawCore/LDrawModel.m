@@ -29,6 +29,7 @@
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawLine.h>
+#import <LDrawCore/LDrawMetaCommand.h>
 #import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawLSynthDirective.h>
 #import <LDrawCore/LDrawQuadrilateral.h>
@@ -862,6 +863,51 @@ static float GhostAlpha = LDRAW_DEFAULT_GHOST_ALPHA;
 	return totalBounds;
 		
 }//end boundingBox3
+
+
+//========== isInlinePart ======================================================
+//
+// Purpose:		Whether the header marks this submodel as a part, not a
+//				model.
+//
+// Notes:		Only the meta commands at the start of the first step are
+//				searched.
+//
+//==============================================================================
+- (BOOL) isInlinePart
+{
+	static NSRegularExpression *typeLine = nil;
+	static dispatch_once_t		onceToken;
+
+	dispatch_once(&onceToken, ^{
+		typeLine = [NSRegularExpression regularExpressionWithPattern:
+					@"^!?(?:LDRAW_ORG\\s+)?UNOFFICIAL[_ ](?:PART|SUBPART|PRIMITIVE|8_PRIMITIVE|48_PRIMITIVE|SHORTCUT)\\b"
+					@"|^!LDCAD\\s+GENERATED\\b"
+														options:NSRegularExpressionCaseInsensitive
+														  error:NULL];
+	});
+
+	LDrawStep *header = [[self steps] firstObject];
+
+	for (LDrawDirective *directive in [header subdirectives])
+	{
+		if([directive isKindOfClass:[LDrawMetaCommand class]] == NO)
+			break;
+
+		NSString *command = [[(LDrawMetaCommand *)directive commandString]
+							 stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+
+		// The length check also skips a nil command, which the match would throw on.
+		if(command.length > 0
+		   && [typeLine firstMatchInString:command options:0 range:NSMakeRange(0, command.length)] != nil)
+		{
+			return YES;
+		}
+	}
+
+	return NO;
+
+}//end isInlinePart
 
 
 //========== category ==========================================================

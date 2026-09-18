@@ -36,8 +36,21 @@
 {
 	SEL sel = NSSelectorFromString(@"subclassNames");
 	NSArray *subclasses = [LPubCommand performSelector:sel];
-	XCTAssertEqual(subclasses.count, 1);
-	XCTAssertEqualObjects(subclasses[0], @"LPubRemoveGroup");
+
+	// The runtime returns the subclasses in no set order, so compare as sets.
+	NSSet *expected = [NSSet setWithArray:@[@"LPubRemoveGroup",
+											@"LPubPliConstrain",
+											@"LPubPliShow",
+											@"LPubPliIgnore",
+											@"LPubPliSubstitute",
+											@"LPubPliCameraAngles",
+											@"LPubPliPartRotation",
+											@"LPubModelScale",
+											@"LPubResolution",
+											@"LPubPageSize",
+											@"LPubPageOrientation"]];
+
+	XCTAssertEqualObjects([NSSet setWithArray:subclasses], expected);
 }
 
 

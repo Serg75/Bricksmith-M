@@ -19,7 +19,6 @@
 #import <LDrawCore/LPubRemoveGroup.h>
 
 #import <LDrawCore/LDrawKeywords.h>
-#import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCommand.h>
@@ -30,7 +29,9 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 
 @implementation LPubRemoveGroup
 
+
 // MARK: - INITIALIZATION -
+
 
 //========== initWithCoder: ====================================================
 ///
@@ -66,22 +67,6 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 }//end encodeWithCoder:
 
 
-//========== copyWithZone: =====================================================
-//
-// Purpose:		Returns a duplicate of this file.
-//
-//==============================================================================
-- (id) copyWithZone:(NSZone *)zone
-{
-	LPubRemoveGroup *copied = (LPubRemoveGroup *)[super copyWithZone:zone];
-	
-	copied.groupName = self.groupName;
-
-	return copied;
-	
-}//end copyWithZone:
-
-
 //---------- lpubCommandInstance: ------------------------------------[static]--
 ///
 /// @abstract	Here we create LPubRemoveGroup instance if parsing succeeded.
@@ -101,7 +86,7 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 		// remove quotes around group name
 		NSCharacterSet *quoteCharset = [NSCharacterSet characterSetWithCharactersInString:@"\""];
 		command.groupName = [parameters[2] stringByTrimmingCharactersInSet:quoteCharset];
-		command.lPubCommandString = [parameters componentsJoinedByString:@" "];
+		[command adoptCommandString:[parameters componentsJoinedByString:@" "]];
 		
 		return command;
 	}
@@ -110,20 +95,8 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 }//end lpubCommandInstance:
 
 
-//========== finishParsing: ====================================================
-///
-/// @abstract	Because everything has done in lpubCommandInstance: method,
-///				here we do nothing.
-///
-//==============================================================================
-- (BOOL) finishParsing:(NSScanner *)scanner
-{
-	return YES;
-	
-}//end finishParsing
-
-
 // MARK: - DISPLAY -
+
 
 //========== browsingDescription ===============================================
 ///
@@ -153,6 +126,7 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 
 // MARK: - ACCESSORS -
 
+
 //========== setGroupName: =====================================================
 ///
 /// @abstract	Updates the command's group name.
@@ -161,7 +135,9 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 -(void) setGroupName:(NSString *)newName
 {
 	_groupName = [newName copy];
-	super.lPubCommandString = [NSString stringWithFormat:@"%@ %@ \"%@\"", LPUB_REMOVE_GROUP_1, LPUB_REMOVE_GROUP_2, newName];
+	// No re-parse: the text is built from the property.
+	[self adoptCommandString:[NSString stringWithFormat:@"%@ %@ \"%@\"",
+														LPUB_REMOVE_GROUP_1, LPUB_REMOVE_GROUP_2, newName]];
 	
 	// This command is what drops an MLCAD group from the visualization engine,
 	// so retargeting it means the enclosing model has to re-derive which parts
@@ -172,23 +148,28 @@ static NSString * const		GROUP_NAME_KEY = @"groupName";
 }//end setGroupName:
 
 
-// MARK: - UTILITIES -
-
-//========== registerUndoActions ===============================================
+//========== adoptPropertiesFromCommand: =======================================
 ///
-/// @abstract	Registers the undo actions that are unique to this subclass,
-///				not to any superclass.
+/// @abstract	Takes the group name from another instance, so the hidden
+/// 			group matches the text.
 ///
 //==============================================================================
-- (void) registerUndoActions:(NSUndoManager *)undoManager
+- (void) adoptPropertiesFromCommand:(LPubCommand *)command
 {
-	[super registerUndoActions:undoManager];
-	
-	[[undoManager prepareWithInvocationTarget:self] setGroupName:self.groupName];
-	
-	[undoManager setActionName:[LDrawLocalization stringForKey:@"UndoAttributesRemoveGroup"]];
-	
-}//end registerUndoActions:
+	self.groupName = [(LPubRemoveGroup *)command groupName];
+
+}//end adoptPropertiesFromCommand:
+
+
+// MARK: - UTILITIES -
+
+
+//========== undoActionKey =====================================================
+- (NSString *) undoActionKey
+{
+	return @"UndoAttributesRemoveGroup";
+
+}//end undoActionKey
 
 
 @end

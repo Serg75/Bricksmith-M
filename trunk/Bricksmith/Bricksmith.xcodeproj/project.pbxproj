@@ -341,6 +341,16 @@
 		95AA001129B1F48200000011 /* LDrawGroupSuppressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001029B1F48200000010 /* LDrawGroupSuppressionTests.swift */; };
 		95AA001329B1F48200000013 /* LDrawStepGhostingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001229B1F48200000012 /* LDrawStepGhostingTests.swift */; };
 		95AA001529B1F48200000015 /* LDrawGhostAlphaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */; };
+		95AA001729B1F48200000017 /* LPubPliMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001629B1F48200000016 /* LPubPliMetaTests.swift */; };
+		95AA001929B1F48200000019 /* LPubPliRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA001829B1F48200000018 /* LPubPliRoundTripTests.swift */; };
+		95AA002129B1F48200000021 /* LDrawStepPartListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002029B1F48200000020 /* LDrawStepPartListTests.swift */; };
+		95AA002429B1F48200000024 /* LDrawStepPartListLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002329B1F48200000023 /* LDrawStepPartListLayoutTests.swift */; };
+		95AA002629B1F48200000026 /* LDrawStepPartListPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002529B1F48200000025 /* LDrawStepPartListPolicyTests.swift */; };
+		95AA002829B1F48200000028 /* LDrawStepPartListModelBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002729B1F48200000027 /* LDrawStepPartListModelBuilderTests.swift */; };
+		95AA003029B1F48200000030 /* LDrawStepPartListPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA002929B1F48200000029 /* LDrawStepPartListPreferencesTests.swift */; };
+		95AA003229B1F48200000032 /* LDrawStepPartListResizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA003129B1F48200000031 /* LDrawStepPartListResizeTests.swift */; };
+		95AA003429B1F48200000034 /* LDrawStepPartListEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA003329B1F48200000033 /* LDrawStepPartListEditTests.swift */; };
+		95AA009A29B1F4820000009A /* LDrawInlinePartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA009929B1F48200000099 /* LDrawInlinePartTests.swift */; };
 		95B37A0D29BA81F6008C581E /* MockScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0C29BA81F6008C581E /* MockScanner.m */; };
 		95B37A0F29BA82EF008C581E /* LPubRemoveGroup_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */; };
 		95C773C52A24D6ED00058D75 /* LDrawDocumentGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 95C773C32A24D6ED00058D75 /* LDrawDocumentGL.h */; };
@@ -377,6 +387,19 @@
 		BB0300000000000000000014 /* LDrawEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000014 /* LDrawEditing */; };
 		BB0300000000000000000015 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000015 /* LDrawFeatures */; };
 		BB0300000000000000000021 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000021 /* LDrawCore */; };
+		BB0300000000000000000022 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000022 /* LDrawFeatures */; };
+		BB11000000000000000000 /* StepPartListView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000000 /* StepPartListView.h */; };
+		BB11000000000000000001 /* StepPartListView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000001 /* StepPartListView.m */; };
+		BB11000000000000000002 /* StepPartListChromeView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000002 /* StepPartListChromeView.h */; };
+		BB11000000000000000003 /* StepPartListChromeView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000003 /* StepPartListChromeView.m */; };
+		BB11000000000000000004 /* StepPartListController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000004 /* StepPartListController.h */; };
+		BB11000000000000000005 /* StepPartListController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000005 /* StepPartListController.m */; };
+		BB12000000000000000000 /* StepPartListView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000000 /* StepPartListView.h */; };
+		BB12000000000000000001 /* StepPartListView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000001 /* StepPartListView.m */; };
+		BB12000000000000000002 /* StepPartListChromeView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000002 /* StepPartListChromeView.h */; };
+		BB12000000000000000003 /* StepPartListChromeView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000003 /* StepPartListChromeView.m */; };
+		BB12000000000000000004 /* StepPartListController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000004 /* StepPartListController.h */; };
+		BB12000000000000000005 /* StepPartListController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000005 /* StepPartListController.m */; };
 		D687D424170A6DF3007300E2 /* related.ldr in Resources */ = {isa = PBXBuildFile; fileRef = D687D423170A6DF3007300E2 /* related.ldr */; };
 /* End PBXBuildFile section */
 
@@ -653,6 +676,16 @@
 		95AA001029B1F48200000010 /* LDrawGroupSuppressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawGroupSuppressionTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawGroupSuppressionTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA001229B1F48200000012 /* LDrawStepGhostingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepGhostingTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawStepGhostingTests.swift; sourceTree = SOURCE_ROOT; };
 		95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawGhostAlphaTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawGhostAlphaTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA001629B1F48200000016 /* LPubPliMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LPubPliMetaTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LPubPliMetaTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA001829B1F48200000018 /* LPubPliRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LPubPliRoundTripTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LPubPliRoundTripTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA002029B1F48200000020 /* LDrawStepPartListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA002329B1F48200000023 /* LDrawStepPartListLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListLayoutTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListLayoutTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA002529B1F48200000025 /* LDrawStepPartListPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListPolicyTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListPolicyTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA002729B1F48200000027 /* LDrawStepPartListModelBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListModelBuilderTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListModelBuilderTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA002929B1F48200000029 /* LDrawStepPartListPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListPreferencesTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListPreferencesTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA003129B1F48200000031 /* LDrawStepPartListResizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListResizeTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListResizeTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA003329B1F48200000033 /* LDrawStepPartListEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawStepPartListEditTests.swift; path = ../Packages/LDrawFeatures/Tests/LDrawFeaturesTests/LDrawStepPartListEditTests.swift; sourceTree = SOURCE_ROOT; };
+		95AA009929B1F48200000099 /* LDrawInlinePartTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LDrawInlinePartTests.swift; path = ../Packages/LDrawCore/Tests/LDrawCoreTests/LDrawInlinePartTests.swift; sourceTree = SOURCE_ROOT; };
 		95B37A0B29BA81F6008C581E /* MockScanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockScanner.h; sourceTree = "<group>"; };
 		95B37A0C29BA81F6008C581E /* MockScanner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MockScanner.m; sourceTree = "<group>"; };
 		95B37A0E29BA82EF008C581E /* LPubRemoveGroup_Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LPubRemoveGroup_Tests.m; sourceTree = "<group>"; };
@@ -679,6 +712,12 @@
 		B5C01A021A2B3C4D5E6F7082 /* LDrawToolbarLabels.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawToolbarLabels.m; sourceTree = "<group>"; };
 		B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDrawHostChrome.h; sourceTree = "<group>"; };
 		B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDrawHostChrome.m; sourceTree = "<group>"; };
+		BB10000000000000000000 /* StepPartListView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StepPartListView.h; sourceTree = "<group>"; };
+		BB10000000000000000001 /* StepPartListView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StepPartListView.m; sourceTree = "<group>"; };
+		BB10000000000000000002 /* StepPartListChromeView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StepPartListChromeView.h; sourceTree = "<group>"; };
+		BB10000000000000000003 /* StepPartListChromeView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StepPartListChromeView.m; sourceTree = "<group>"; };
+		BB10000000000000000004 /* StepPartListController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StepPartListController.h; sourceTree = "<group>"; };
+		BB10000000000000000005 /* StepPartListController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StepPartListController.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -724,6 +763,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB0300000000000000000021 /* LDrawCore in Frameworks */,
+				BB0300000000000000000022 /* LDrawFeatures in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -863,6 +903,10 @@
 				0B06F7150F633FD2004E7DD7 /* ExtendedTableView.h */,
 				0B06F7160F633FD2004E7DD7 /* ExtendedTableView.m */,
 				0B04EF3510A6A38E00E201EE /* FocusRingView.h */,
+				BB10000000000000000002 /* StepPartListChromeView.h */,
+				BB10000000000000000003 /* StepPartListChromeView.m */,
+				BB10000000000000000000 /* StepPartListView.h */,
+				BB10000000000000000001 /* StepPartListView.m */,
 				0B04EF3610A6A38E00E201EE /* FocusRingView.m */,
 				0B8EBE6F093C100100D87E0C /* IconTextCell.h */,
 				0B8EBE70093C100100D87E0C /* IconTextCell.m */,
@@ -907,7 +951,9 @@
 				2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */,
 				2BF2E3000AB0FC5E0026D5DB /* MovePanel.m */,
 				0B356AEF08D385B900695EEB /* PieceCountPanel.h */,
+				BB10000000000000000004 /* StepPartListController.h */,
 				0B356AEE08D385B900695EEB /* PieceCountPanel.m */,
+				BB10000000000000000005 /* StepPartListController.m */,
 				2BF2E3010AB0FC5E0026D5DB /* RotationPanelController.h */,
 				2BF2E3020AB0FC5E0026D5DB /* RotationPanelController.m */,
 				9506E0EE18A3F4130006CE9C /* SearchPanelController.h */,
@@ -1242,10 +1288,27 @@
 				95AA001029B1F48200000010 /* LDrawGroupSuppressionTests.swift */,
 				95AA001229B1F48200000012 /* LDrawStepGhostingTests.swift */,
 				95AA001429B1F48200000014 /* LDrawGhostAlphaTests.swift */,
+				95AA009929B1F48200000099 /* LDrawInlinePartTests.swift */,
+				95AA001629B1F48200000016 /* LPubPliMetaTests.swift */,
+				95AA001829B1F48200000018 /* LPubPliRoundTripTests.swift */,
 				95AA000229B1F48200000002 /* LDrawGeometryRoundTripTests.swift */,
 				95AA000129B1F48200000001 /* LDrawUtilitiesOutputStringTests.swift */,
 			);
 			name = "LDrawCore Tests";
+			sourceTree = "<group>";
+		};
+		95AA002229B1F48200000022 /* LDrawFeatures Tests */ = {
+			isa = PBXGroup;
+			children = (
+				95AA002029B1F48200000020 /* LDrawStepPartListTests.swift */,
+				95AA002329B1F48200000023 /* LDrawStepPartListLayoutTests.swift */,
+				95AA002529B1F48200000025 /* LDrawStepPartListPolicyTests.swift */,
+				95AA002729B1F48200000027 /* LDrawStepPartListModelBuilderTests.swift */,
+				95AA002929B1F48200000029 /* LDrawStepPartListPreferencesTests.swift */,
+				95AA003129B1F48200000031 /* LDrawStepPartListResizeTests.swift */,
+				95AA003329B1F48200000033 /* LDrawStepPartListEditTests.swift */,
+			);
+			name = "LDrawFeatures Tests";
 			sourceTree = "<group>";
 		};
 		95C773BD2A24CFF700058D75 /* Commands */ = {
@@ -1268,6 +1331,7 @@
 			isa = PBXGroup;
 			children = (
 				95AA000729B1F48200000007 /* LDrawCore Tests */,
+				95AA002229B1F48200000022 /* LDrawFeatures Tests */,
 				95D0223A29B68E59001F2B4D /* Test Support */,
 				95D021FE29B3F8C6001F2B4D /* Other */,
 				95D021F929B3F474001F2B4D /* Classes */,
@@ -1382,6 +1446,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB11000000000000000000 /* StepPartListView.h in Headers */,
+				BB11000000000000000002 /* StepPartListChromeView.h in Headers */,
+				BB11000000000000000004 /* StepPartListController.h in Headers */,
 				9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */,
 				9526F9892A0BA1A50083A86A /* LDrawApplicationGL.h in Headers */,
 				0B6770EE0817588D0044A0E0 /* Mac LDraw_Prefix.pch in Headers */,
@@ -1450,6 +1517,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB12000000000000000000 /* StepPartListView.h in Headers */,
+				BB12000000000000000002 /* StepPartListChromeView.h in Headers */,
+				BB12000000000000000004 /* StepPartListController.h in Headers */,
 				956D9B872A30768000FA956B /* SearchPanelController.h in Headers */,
 				18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */,
 				956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */,
@@ -1592,6 +1662,7 @@
 			name = UnitTests;
 			packageProductDependencies = (
 				BB0200000000000000000021 /* LDrawCore */,
+				BB0200000000000000000022 /* LDrawFeatures */,
 			);
 			productName = UnitTests;
 			productReference = 95D021ED29B1F482001F2B4D /* UnitTests.xctest */;
@@ -1781,6 +1852,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB11000000000000000001 /* StepPartListView.m in Sources */,
+				BB11000000000000000003 /* StepPartListChromeView.m in Sources */,
+				BB11000000000000000005 /* StepPartListController.m in Sources */,
 				8D15AC320486D014006FF6A4 /* main.m in Sources */,
 				0BF729B908AD849300E3DA53 /* DocumentToolbarController.m in Sources */,
 				B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */,
@@ -1850,6 +1924,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB12000000000000000001 /* StepPartListView.m in Sources */,
+				BB12000000000000000003 /* StepPartListChromeView.m in Sources */,
+				BB12000000000000000005 /* StepPartListController.m in Sources */,
 				956D9C1D2A30768000FA956B /* main.m in Sources */,
 				956D9CA12A30A72300FA956B /* LDrawApplicationMTL.m in Sources */,
 				18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */,
@@ -1932,7 +2009,17 @@
 				95AA000B29B1F4820000000B /* LDrawStepParsingTests.swift in Sources */,
 				95AA001129B1F48200000011 /* LDrawGroupSuppressionTests.swift in Sources */,
 				95AA001329B1F48200000013 /* LDrawStepGhostingTests.swift in Sources */,
+				95AA001729B1F48200000017 /* LPubPliMetaTests.swift in Sources */,
+				95AA001929B1F48200000019 /* LPubPliRoundTripTests.swift in Sources */,
+				95AA002129B1F48200000021 /* LDrawStepPartListTests.swift in Sources */,
+				95AA002429B1F48200000024 /* LDrawStepPartListLayoutTests.swift in Sources */,
+				95AA002629B1F48200000026 /* LDrawStepPartListPolicyTests.swift in Sources */,
+				95AA002829B1F48200000028 /* LDrawStepPartListModelBuilderTests.swift in Sources */,
+				95AA003029B1F48200000030 /* LDrawStepPartListPreferencesTests.swift in Sources */,
+				95AA003229B1F48200000032 /* LDrawStepPartListResizeTests.swift in Sources */,
+				95AA003429B1F48200000034 /* LDrawStepPartListEditTests.swift in Sources */,
 				95AA001529B1F48200000015 /* LDrawGhostAlphaTests.swift in Sources */,
+				95AA009A29B1F4820000009A /* LDrawInlinePartTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2754,6 +2841,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference "../Packages/LDrawCore" */;
 			productName = LDrawCore;
+		};
+		BB0200000000000000000022 /* LDrawFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000006 /* XCLocalSwiftPackageReference "../Packages/LDrawFeatures" */;
+			productName = LDrawFeatures;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
