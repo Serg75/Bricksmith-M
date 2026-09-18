@@ -138,7 +138,7 @@
 // Purpose:		Populate the Types dropdown
 //
 //==============================================================================
-- (void) populateTypes:(int)classTag
+- (void) populateTypes:(LDrawLSynthClass)classTag
 {
     NSArray *types = [[LSynthConfiguration sharedInstance] typesForLSynthClass:classTag];
     NSArray *titles = [LDrawLSynthPanelModel typePopupTitlesFromTypes:types];
@@ -170,14 +170,14 @@
 //
 //==============================================================================
 
-- (void) populateDefaultConstraint:(int)classTag
+- (void) populateDefaultConstraint:(LDrawLSynthClass)classTag
 {
     NSArray *types = [[LSynthConfiguration sharedInstance] typesForLSynthClass:classTag];
-    NSDictionary *selectedType = [LDrawLSynthPanelModel selectedTypeForClass:(LDrawLSynthClass)classTag
+    NSDictionary *selectedType = [LDrawLSynthPanelModel selectedTypeForClass:classTag
                                                                      atIndex:[typePopup indexOfSelectedItem]
                                                                      inTypes:types];
 
-    LDrawLSynthClass constraintClass = [LSynthConfiguration constraintClassForSynthClass:(LDrawLSynthClass)classTag
+    LDrawLSynthClass constraintClass = [LSynthConfiguration constraintClassForSynthClass:classTag
                                                                             selectedType:selectedType];
 
     NSArray *constraints = [[LSynthConfiguration sharedInstance] constraintsForClass:constraintClass];
@@ -239,7 +239,7 @@
         [self updateSynthTypeLabel:(LDrawLSynthClass)[[sender selectedCell] tag]];
 
         // Populate the types dropdown correctly
-        [self populateTypes:(int)[[sender selectedCell] tag]];
+        [self populateTypes:(LDrawLSynthClass)[[sender selectedCell] tag]];
 
         // Select the default type for the class
         NSString *typeName = [LSynthConfiguration defaultTypeNameForClass:(LDrawLSynthClass)[[sender selectedCell] tag]];
@@ -257,7 +257,7 @@
         }
 
         // Populate the constraints dropdown and select the default
-        [self populateDefaultConstraint:(int)[[sender selectedCell] tag]];
+        [self populateDefaultConstraint:(LDrawLSynthClass)[[sender selectedCell] tag]];
 
         // Finish and invoke redisplay
         [self finishedEditing:sender];

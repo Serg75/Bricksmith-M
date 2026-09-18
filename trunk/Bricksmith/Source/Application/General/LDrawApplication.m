@@ -16,7 +16,6 @@
 
 #import <3DConnexionClient/ConnexionClientAPI.h>
 #import <mach/mach_time.h>
-#import <Sparkle/Sparkle.h>
 
 #import <LDrawCore/LDrawGroupable.h>
 #import <LDrawCore/LDrawKeys.h>
@@ -86,6 +85,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	{
 		// Install message handler and register our client
 		error = InstallConnexionHandlers(connexionMessageHandler, 0L, 0L);
+		if(error != noErr)
+			NSLog(@"3Dconnexion: InstallConnexionHandlers failed (%d)", error);
 		
 		// This takes over in our application only. Note that the first field 
 		// here is the "Bundle OS Type code" from the Info.plist file. 
@@ -499,7 +500,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 {
 	DonationDialogController	*donation = [[DonationDialogController alloc] init];
 	
-	if([donation shouldShowDialog] == YES && suppressDonationPrompt == NO)
+	if([donation shouldShowDialog] == YES)
 	{
 		[donation runModal];
 	}
@@ -552,20 +553,6 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	return enable;
 	
 }//end validateMenuItem:
-
-
-// MARK: - SPUUpdaterDelegate (Sparkle)
-
-//========== updaterWillRelaunchApplication: ===================================
-//
-// Purpose:		Sparkle is about to install an update and relaunch.
-//
-//==============================================================================
-- (void) updaterWillRelaunchApplication:(SPUUpdater *)updater
-{
-	// Asking for money in the middle of an update process is a bit distracting.
-	suppressDonationPrompt = YES;
-}
 
 
 #pragma mark -
@@ -978,13 +965,13 @@ void connexionMessageHandler(io_connect_t connection, natural_t messageType, voi
 							rotation.z = ((int)(rotation.z / rotationQuantum)) * rotationQuantum;
 						}
 						
-						float length = fabsf(V3Length(translation));
+						double length = V3Length(translation);
 						if (length > 0)
 						{
 							[currentDocument moveSelectionBy:translation];
 							translationAccumulatedSinceLastMove = V3Make(0.0, 0.0, 0.0);
 						}
-						length = fabsf(V3Length(rotation));
+						length = V3Length(rotation);
 						if (length > 0)
 						{
 							[currentDocument rotateSelection:rotation mode:LDrawRotateAroundSelectionCenter fixedCenter:NULL];

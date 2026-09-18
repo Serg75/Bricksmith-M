@@ -73,7 +73,7 @@
 		case NSCarriageReturnCharacter:	// Return key
 		case NSNewlineCharacter:		// ???
 			if([self doubleAction] != NULL)
-				[[self target] performSelector:[self doubleAction] withObject:self];
+				[self sendAction:[self doubleAction] to:[self target]];
 			break;
 		
 		default:

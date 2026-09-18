@@ -35,8 +35,8 @@
 - (IBAction)               partClassChanged:(id)sender;
 - (IBAction) makeConstraintsDefaultForClass:(id)sender;
 
-- (void) populateTypes:(int)lsynthClass;
-- (void) populateDefaultConstraint:(int)class;
+- (void) populateTypes:(LDrawLSynthClass)lsynthClass;
+- (void) populateDefaultConstraint:(LDrawLSynthClass)class;
 
 - (void) updateSynthTypeLabel:(LDrawLSynthClass)tag;
 

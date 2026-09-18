@@ -71,7 +71,7 @@
 		
 		// - Category Table
 		
-		[self->categoryTable setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleSourceList];
+		[self->categoryTable setStyle:NSTableViewStyleSourceList];
 		[self->categoryTable setAllowsTypeSelect:YES];
 		[self->categoryTable setFocusRingType:NSFocusRingTypeNone];
 		[self->categoryTable setDelegate:self];

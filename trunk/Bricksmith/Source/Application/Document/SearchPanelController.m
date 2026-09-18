@@ -8,6 +8,7 @@
 #import "SearchPanelController.h"
 
 #import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawEditing/LDrawClipboard.h>
 
 #import "LDrawColorPanelController.h"

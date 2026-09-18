@@ -26,19 +26,6 @@
 
 @implementation LDrawDirective
 
-//========== debugDrawBoundingBox ==============================================
-//
-// Purpose:		Default no-op implementation. Renderers that support
-//				immediate-mode debug drawing override this through an
-//				Objective-C category; the Metal renderer leaves the no-op in
-//				place because Metal has no equivalent operation worth showing.
-//
-//==============================================================================
-- (void)debugDrawBoundingBox
-{
-} // end debugDrawBoundingBox
-
-
 //========== defaultIconName ===================================================
 //
 // Purpose:		Return the base icon name for this type of LDraw directive.

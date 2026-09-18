@@ -29,6 +29,7 @@
 #import <LDrawCore/LDrawLSynth.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawStep.h>
 #import "SearchPanelController.h"
 
 

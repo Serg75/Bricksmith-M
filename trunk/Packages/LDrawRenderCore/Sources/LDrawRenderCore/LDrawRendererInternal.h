@@ -39,12 +39,14 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (Matrix4)getInverseMatrix;
+
+@end
+
+
+// Private methods implemented in LDrawRenderer+HitTesting.m.
+@interface LDrawRenderer (HitTestingInternal)
+
 - (float)getDepthUnderPoint:(Point2)point_view;
-- (Point2)convertPointToViewport:(Point2)point_view;
-- (Point2)convertPointFromViewport:(Point2)viewportPoint;
-- (Point3)modelPointForPoint:(Point2)viewPoint;
-- (Point3)modelPointForPoint:(Point2)viewPoint depthReferencePoint:(Point3)depthPoint;
-- (void)getModelAxesForViewX:(Vector3 * _Nullable)outModelX Y:(Vector3 * _Nullable)outModelY Z:(Vector3 * _Nullable)outModelZ;
 
 @end
 

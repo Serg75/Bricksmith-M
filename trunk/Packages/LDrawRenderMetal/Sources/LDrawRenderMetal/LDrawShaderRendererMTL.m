@@ -80,7 +80,7 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	// Create drag handle pipeline state if not already created
 	if (_dragHandlePipelineState == nil) {
 		id<MTLDevice> device = MetalGPU.device;
-		id<MTLLibrary> defaultLibrary = [LDrawRenderMetalResources newDefaultLibraryForDevice:device];
+		id<MTLLibrary> defaultLibrary = [LDrawRenderMetalResources defaultLibraryForDevice:device];
 		if (defaultLibrary != nil) {
 			id<MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"vertexDragHandle"];
 			id<MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"fragmentDragHandle"];

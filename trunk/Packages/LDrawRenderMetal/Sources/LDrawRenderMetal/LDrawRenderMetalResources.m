@@ -52,7 +52,7 @@
 }
 
 
-//---------- newDefaultLibraryForDevice: ----------------------------[static]--
+//---------- defaultLibraryForDevice: -------------------------------[static]--
 //
 // Purpose:		Load default.metallib from the package resource bundle.
 //
@@ -60,7 +60,7 @@
 //				and asserts in debug if the library is missing.
 //
 //------------------------------------------------------------------------------
-+ (id<MTLLibrary>)newDefaultLibraryForDevice:(id<MTLDevice>)device
++ (id<MTLLibrary>)defaultLibraryForDevice:(id<MTLDevice>)device
 {
 	NSBundle *bundle = [self bundle];
 	NSError *error = nil;

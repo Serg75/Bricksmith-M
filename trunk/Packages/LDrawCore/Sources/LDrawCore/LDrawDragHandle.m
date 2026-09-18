@@ -126,9 +126,11 @@
 {
 	self->position = positionIn;
 	
-	if(update)
+	if(update && self->target != nil)
 	{
-		[self->target performSelector:self->action withObject:self];
+		// Call through a typed IMP so ARC knows the action returns nothing to release.
+		void (*sendAction)(id, SEL, id) = (void *)[self->target methodForSelector:self->action];
+		sendAction(self->target, self->action, self);
 	}
 }//end setPosition:updateTarget:
 

@@ -9,6 +9,8 @@
 //==============================================================================
 #import "PieceCountPanel.h"
 
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawMPDModel.h>
@@ -273,7 +275,7 @@
 	NSInteger   result              = 0;
 	
 	//set up the save panel
-	[savePanel setAllowedFileTypes:[NSArray arrayWithObject:@"txt"]];
+	[savePanel setAllowedContentTypes:@[UTTypePlainText]];
 	[savePanel setCanSelectHiddenExtension:YES];
 	[savePanel setTitle:NSLocalizedString([LDrawPartReport pieceCountSaveDialogTitleKey], nil)];
 	[savePanel setMessage:NSLocalizedString([LDrawPartReport pieceCountSaveDialogMessageKey], nil)];

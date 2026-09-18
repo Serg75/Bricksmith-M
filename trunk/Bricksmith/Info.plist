@@ -38,7 +38,7 @@
 	<key>CFBundleSignature</key>
 	<string>Brik</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>11.5.0</string>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>SUFeedURL</key>
 	<string>https://bricksmith.sourceforge.io/files/bricksmith_appcast_4.0.xml</string>
 	<key>SUPublicDSAKeyFile</key>

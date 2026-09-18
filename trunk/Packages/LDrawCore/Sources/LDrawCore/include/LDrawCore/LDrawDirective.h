@@ -205,12 +205,6 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 - (void)collectSelf:(nullable id<LDrawCollector>)renderer;
 - (Box3)boundingBox3;
 
-// Debug helper. Default base-class implementation is a no-op; renderers that
-// support immediate-mode debug drawing (LDrawRenderOpenGL) override via an
-// Objective-C category. Replaces the LDrawDirectiveGPU_h macro indirection
-// that used to gate compile-time visibility of this method.
-- (void)debugDrawBoundingBox;
-
 // Hit testing primitives
 - (void)hitTest:(Ray3)pickRay transform:(Matrix4)transform viewScale:(float)scaleFactor boundsOnly:(BOOL)boundsOnly creditObject:(nullable id)creditObject hits:(NSMutableDictionary *)hits;
 - (BOOL)boxTest:(Box2)bounds transform:(Matrix4)transform boundsOnly:(BOOL)boundsOnly creditObject:(nullable id)creditObject hits:(NSMutableSet *)hits;
@@ -255,6 +249,21 @@ typedef void(^LDrawPartVisitor)(LDrawPart *);
 - (void)sendMessageToObservers:(LDrawObserverMessage) msg;	// Send a specific message to all observers.
 - (void)invalCache:(CacheFlagsT) flags;			// Invalidate cache bits - this notifies observers as needed.  Flags are the bits to invalidate, not the net effect.
 - (CacheFlagsT)revalCache:(CacheFlagsT) flags;	// Revalidate flags - no notifications are sent, but internals are updated.  Returns which flags _were_ dirty.
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawDirective (DebugDrawing)
+///
+/// @abstract   Debug drawing that a renderer package implements.
+///
+//------------------------------------------------------------------------------
+@interface LDrawDirective (DebugDrawing)
+
+// Draws the bounding box. LDrawRenderOpenGL implements it; call it only from there.
+- (void)debugDrawBoundingBox;
 
 @end
 

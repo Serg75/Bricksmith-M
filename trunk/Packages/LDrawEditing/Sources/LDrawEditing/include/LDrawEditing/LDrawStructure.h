@@ -61,6 +61,18 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 //------------------------------------------------------------------------------
 @interface LDrawStructure : NSObject
 
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Delete)
+///
+/// @abstract   Delete eligibility and ordering rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Delete)
+
 /// Last remaining model or step in its parent cannot be deleted.
 + (LDrawDeleteRefusal)deleteRefusalForDirective:(LDrawDirective *)directive;
 
@@ -72,11 +84,45 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 /// rather than the bottom. The host still checks can-delete and deletes.
 + (NSArray *)directivesInReverseDeletionOrder:(NSArray *)directives;
 
+/// Format key for the delete-refusal alert message (takes browsingDescription).
++ (NSString *)deleteDirectiveErrorMessageKey;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Insertion)
+///
+/// @abstract   Directive insertion and step-wrapping rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Insertion)
+
 /// Prefer an "interesting" selected container (texture, etc.) that accepts
 /// the directive; otherwise the last visible step.
 + (LDrawContainer *)insertionParentForDirective:(LDrawDirective *)directive
 							  selectedContainer:(nullable LDrawContainer *)selectedContainer
 									visibleStep:(LDrawContainer *)visibleStep;
+
+/// Wraps at the ends. C remainder of a negative dividend is negative, so
+/// stepping back from 0 must not use a raw `%`. The host still sets the
+/// current step.
++ (NSInteger)wrappedStepIndex:(NSInteger)current
+					  byDelta:(NSInteger)delta
+					stepCount:(NSInteger)count;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Split)
+///
+/// @abstract   Step and model split rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Split)
 
 /// Direct children of steps that share one containing model (first model wins).
 /// Returns an empty array when nothing can move; out parameters are then left
@@ -94,6 +140,25 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 /// (undo).
 + (NSArray<LDrawSplitExpansion *> *)splitExpansionsInSelection:(NSArray *)selection;
 
++ (BOOL)selectionCanSplitStep:(NSArray *)selection;
++ (BOOL)selectionCanSplitModel:(NSArray *)selection;
+
+/// Localization keys for the undo actions. The host still localizes.
++ (NSString *)splitStepUndoActionKey;
++ (NSString *)splitModelUndoActionKey;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Origin)
+///
+/// @abstract   Origin-change rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Origin)
+
 /// Menu-tag mapping for change-origin commands (LDrawKeys.h tags).
 + (BOOL)originChangeKind:(nullable LDrawOriginChangeKind *)outKind forMenuTag:(NSInteger)tag;
 
@@ -103,10 +168,24 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 + (NSArray<LDrawOriginPartUpdate *> *)originPartUpdatesForSelection:(NSArray *)selection
 															   kind:(LDrawOriginChangeKind)kind;
 
-+ (BOOL)selectionCanSplitStep:(NSArray *)selection;
-+ (BOOL)selectionCanSplitModel:(NSArray *)selection;
 + (BOOL)selectionCanChangeOrigin:(NSArray *)selection;
 + (BOOL)selectionCanChangeOriginByRotation:(NSArray *)selection;
+
+/// Localization key for the undo action. The host still localizes.
++ (NSString *)changeOriginUndoActionKey;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Submodel)
+///
+/// @abstract   Move-to-parent and model-from-selection rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Submodel)
+
 + (BOOL)selectionCanMoveToParentModel:(NSArray *)selection;
 
 /// Selected directives keyed by enclosing model fileName.
@@ -143,6 +222,22 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 							   anchorMatrix:(Matrix4)anchorMatrix
 									  color:(LDrawColor *)color;
 
+/// Localization keys for the undo actions. The host still localizes.
++ (NSString *)moveToParentModelUndoActionKey;
++ (NSString *)modelFromSelectionUndoActionKey;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (LSynth)
+///
+/// @abstract   LSynth insertion rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (LSynth)
+
 /// Parent LSynth and insert index for a new constraint or INSIDE/OUTSIDE
 /// directive. YES when lastSelected is an LSynth or a child of one.
 + (BOOL)lsynthInsertionParent:(LDrawContainer * _Nullable * _Nullable)outParent
@@ -156,6 +251,18 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 /// the default for any other tag. The host still localizes.
 + (NSString *)lsynthInsertUndoKeyForMenuTag:(NSInteger)tag;
 
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Navigation)
+///
+/// @abstract   MPD submodel and peer-file navigation rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Navigation)
+
 /// MPD submodel to make active. Nil unless the selection is a single object
 /// whose referencedMPDSubmodel is an LDrawMPDModel.
 + (nullable LDrawMPDModel *)mpdSubmodelToActivateFromSelection:(NSArray *)selection;
@@ -165,16 +272,36 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 + (BOOL)peerFileFromSelection:(NSArray *)selection
 						 path:(NSString * _Nullable * _Nullable)outPath;
 
-/// Localization keys for structural edits. The host still localizes.
-+ (NSString *)splitStepUndoActionKey;
-+ (NSString *)splitModelUndoActionKey;
-+ (NSString *)moveToParentModelUndoActionKey;
-+ (NSString *)changeOriginUndoActionKey;
-+ (NSString *)modelFromSelectionUndoActionKey;
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Primitives)
+///
+/// @abstract   High-res primitive conversion rules.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Primitives)
+
+/// Localization key for the undo action. The host still localizes.
 + (NSString *)convertPrimitivesUndoActionKey;
 
-/// Format key for the delete-refusal alert message (takes browsingDescription).
-+ (NSString *)deleteDirectiveErrorMessageKey;
+/// If nothing is selected, all directives in the first step are converted.
++ (NSArray *)highResSourceDirectivesFromSelection:(NSArray *)selection
+									  activeModel:(nullable LDrawModel *)model;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawStructure (Export)
+///
+/// @abstract   Step export and compliant submodel naming.
+///
+//------------------------------------------------------------------------------
+@interface LDrawStructure (Export)
 
 /// Submodels whose names lack a recognized LDraw extension (.ldr, .dat).
 /// Direct rename is used when the file has a single submodel; otherwise the
@@ -201,17 +328,6 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 + (BOOL)shouldRejectDuplicateModelRenameFrom:(nullable NSString *)oldValue
 										  to:(nullable NSString *)newValue
 						 whenModelNameExists:(BOOL)nameExists;
-
-/// Wraps at the ends. C remainder of a negative dividend is negative, so
-/// stepping back from 0 must not use a raw `%`. The host still sets the
-/// current step.
-+ (NSInteger)wrappedStepIndex:(NSInteger)current
-					  byDelta:(NSInteger)delta
-					stepCount:(NSInteger)count;
-
-/// If nothing is selected, all directives in the first step are converted.
-+ (NSArray *)highResSourceDirectivesFromSelection:(NSArray *)selection
-									  activeModel:(nullable LDrawModel *)model;
 
 @end
 

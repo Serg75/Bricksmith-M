@@ -109,6 +109,19 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (void)setViewingAngle:(Tuple3)newAngle;
 - (void)setViewOrientation:(LDrawViewOrientation) newAngle;
 - (void)setZoomPercentage:(CGFloat) newPercentage;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawRenderer (Camera)
+///
+/// @abstract   Camera zoom and scroll commands.
+///
+//------------------------------------------------------------------------------
+@interface LDrawRenderer (Camera)
+
 - (void)moveCamera:(Vector3)delta;
 
 // Actions
@@ -116,7 +129,27 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (IBAction)zoomOut:(nullable id)sender;
 - (IBAction)zoomToFit:(nullable id)sender;
 
-// Events
+// Utilities
+- (BOOL)autoscrollPoint:(Point2)point_view relativeToRect:(Box2)viewRect;
+- (void)setZoomPercentage:(CGFloat)newPercentage preservePoint:(Point2)viewPoint;		// This and setZoomPercentage are how we zoom.
+- (void)scrollBy:(Vector2)scrollDelta;
+- (void)scrollCameraVisibleRectToPoint:(Point2)visibleRectOrigin;
+- (void)scrollCenterToModelPoint:(Point3)modelPoint;									// These two are how we do gesture-based scrolls
+- (void)scrollModelPoint:(Point3)modelPoint toViewportProportionalPoint:(Point2)viewportPoint;
+- (void)updateRotationCenter;															// A camera "property change"
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawRenderer (Events)
+///
+/// @abstract   Mouse, gesture and notification handling.
+///
+//------------------------------------------------------------------------------
+@interface LDrawRenderer (Events)
+
 - (void)mouseMoved:(Point2)point_view;
 - (void)mouseDown;
 - (void)mouseDragged;
@@ -136,18 +169,33 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 // Notifications
 - (void)displayNeedsUpdating:(NSNotification *)notification;
 
-// Utilities
-- (BOOL)autoscrollPoint:(Point2)point_view relativeToRect:(Box2)viewRect;
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawRenderer (HitTesting)
+///
+/// @abstract   Finding the directives and model points under the mouse.
+///
+//------------------------------------------------------------------------------
+@interface LDrawRenderer (HitTesting)
+
 - (NSArray *)getDirectivesUnderRect:(Box2)rect_view amongDirectives:(NSArray *)directives fastDraw:(BOOL)fastDraw;
 - (void)publishMouseOverPoint:(Point2)viewPoint;
-- (void)setZoomPercentage:(CGFloat)newPercentage preservePoint:(Point2)viewPoint;		// This and setZoomPercentage are how we zoom.
-- (void)scrollBy:(Vector2)scrollDelta;
-- (void)scrollCameraVisibleRectToPoint:(Point2)visibleRectOrigin;
-- (void)scrollCenterToModelPoint:(Point3)modelPoint;									// These two are how we do gesture-based scrolls
-- (void)scrollModelPoint:(Point3)modelPoint toViewportProportionalPoint:(Point2)viewportPoint;
-- (void)updateRotationCenter;															// A camera "property change"
 
-// - Geometry
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawRenderer (Geometry)
+///
+/// @abstract   Conversions between view, viewport and model coordinates.
+///
+//------------------------------------------------------------------------------
+@interface LDrawRenderer (Geometry)
+
 - (Point2)convertPointFromViewport:(Point2)viewportPoint;
 - (Point2)convertPointToViewport:(Point2)point_view;
 - (void)getModelAxesForViewX:(Vector3 * _Nullable)outModelX Y:(Vector3 * _Nullable)outModelY Z:(Vector3 * _Nullable)outModelZ;

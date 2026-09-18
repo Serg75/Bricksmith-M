@@ -73,7 +73,7 @@ NS_ASSUME_NONNULL_BEGIN
 {
     NSMutableArray  *synthesizedParts;
     NSString        *synthType;
-    int              lsynthClass;
+    LDrawLSynthClass lsynthClass;
     LDrawColor      *color;
     double			 transformation[16];	// column-major, see LDrawPart
     BOOL             hidden;
@@ -85,8 +85,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) LDrawGroupVisibilityT groupVisibility;	// see LDrawGroupable
 
 // Accessors
-- (void)setLsynthClass:(int)lsynthClass;
-- (int)lsynthClass;
+- (void)setLsynthClass:(LDrawLSynthClass)lsynthClass;
+- (LDrawLSynthClass)lsynthClass;
 - (void)setLsynthType:(NSString *)lsynthType;
 - (NSString *)lsynthType;
 - (void)setHidden:(BOOL)flag;

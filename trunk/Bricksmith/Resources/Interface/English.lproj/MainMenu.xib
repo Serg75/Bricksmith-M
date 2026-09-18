@@ -31,12 +31,6 @@
                                     <action selector="doPreferences:" target="210" id="211"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Check for Updates…" id="425">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="checkForUpdates:" target="YVL-Ft-Wuw" id="L8M-aB-BWF"/>
-                                </connections>
-                            </menuItem>
                             <menuItem title="Donate…" id="413">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
@@ -887,10 +881,5 @@ CA
             <point key="canvasLocation" x="132" y="153"/>
         </menu>
         <customObject id="210" userLabel="LDrawApplication" customClass="LDrawApplication"/>
-        <customObject id="YVL-Ft-Wuw" customClass="SPUStandardUpdaterController">
-            <connections>
-                <outlet property="updaterDelegate" destination="210" id="f3V-tB-HLN"/>
-            </connections>
-        </customObject>
     </objects>
 </document>

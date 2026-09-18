@@ -24,9 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LDrawDirective (OpenGL)
 
-// Overrides the base-class no-op `debugDrawBoundingBox` to draw an
-// immediate-mode wire box. The selector is already declared on the base
-// class; this category supplies the OpenGL implementation.
+// Implements -debugDrawBoundingBox from LDrawDirective (DebugDrawing).
 
 @end
 

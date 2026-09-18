@@ -57,6 +57,7 @@
 		0B356AF108D385B900695EEB /* PieceCountPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B356AEF08D385B900695EEB /* PieceCountPanel.h */; };
 		0B3E7BA010AF9E5A00AFBCF4 /* OverlayViewCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B3E7B9F10AF9E5A00AFBCF4 /* OverlayViewCategory.m */; };
 		0B491FF707F64B5800AC0C10 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B491FF607F64B5800AC0C10 /* OpenGL.framework */; };
+		5D7BBA2E2A1BE5FC1C1EEADC /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE7F70DBE0FCC24B251D86BA /* UniformTypeIdentifiers.framework */; };
 		0B4F5E110F31632C00355631 /* PartLibraryController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B4F5E0F0F31632C00355631 /* PartLibraryController.h */; };
 		0B4F5E120F31632C00355631 /* PartLibraryController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B4F5E100F31632C00355631 /* PartLibraryController.m */; };
 		0B65543A081367E800EA7F4F /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B655439081367E800EA7F4F /* GLUT.framework */; };
@@ -548,6 +549,7 @@
 		0B356AEF08D385B900695EEB /* PieceCountPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PieceCountPanel.h; sourceTree = "<group>"; };
 		0B3E7B9F10AF9E5A00AFBCF4 /* OverlayViewCategory.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OverlayViewCategory.m; sourceTree = "<group>"; };
 		0B491FF607F64B5800AC0C10 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
+		FE7F70DBE0FCC24B251D86BA /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		0B4F5E0F0F31632C00355631 /* PartLibraryController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartLibraryController.h; sourceTree = "<group>"; };
 		0B4F5E100F31632C00355631 /* PartLibraryController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartLibraryController.m; sourceTree = "<group>"; };
 		0B655439081367E800EA7F4F /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = /System/Library/Frameworks/GLUT.framework; sourceTree = "<absolute>"; };
@@ -729,6 +731,7 @@
 				BB0300000000000000000015 /* LDrawFeatures in Frameworks */,
 				8D15AC340486D014006FF6A4 /* Cocoa.framework in Frameworks */,
 				0B491FF707F64B5800AC0C10 /* OpenGL.framework in Frameworks */,
+				5D7BBA2E2A1BE5FC1C1EEADC /* UniformTypeIdentifiers.framework in Frameworks */,
 				0B65543A081367E800EA7F4F /* GLUT.framework in Frameworks */,
 				0B34B52E090B07AE00F3A001 /* Carbon.framework in Frameworks */,
 				2BB59F4309FEFE960077A885 /* AMSProgressBar.framework in Frameworks */,
@@ -991,6 +994,7 @@
 			isa = PBXGroup;
 			children = (
 				0B491FF607F64B5800AC0C10 /* OpenGL.framework */,
+				FE7F70DBE0FCC24B251D86BA /* UniformTypeIdentifiers.framework */,
 				0B655439081367E800EA7F4F /* GLUT.framework */,
 				1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */,
 				0B34B52D090B07AE00F3A001 /* Carbon.framework */,
@@ -2263,7 +2267,10 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					GL_SILENCE_DEPRECATION,
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
@@ -2304,7 +2311,10 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Source/Other/Mac LDraw_Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = NDEBUG;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					NDEBUG,
+					GL_SILENCE_DEPRECATION,
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				IBC_NOTICES = NO;
 				IBC_WARNINGS = NO;
@@ -2578,7 +2588,7 @@
 					"$(inherited)",
 					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 4.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -2642,7 +2652,7 @@
 					"$(inherited)",
 					"$(SRCROOT)/../Packages/LDrawCore/Sources/LDrawCore",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 4.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;

@@ -41,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// Loads `default.metallib` from the package resource bundle. Returns nil
 /// (and asserts in debug) if the library is missing; does not fall back to
 /// the app bundle.
-+ (nullable id<MTLLibrary>)newDefaultLibraryForDevice:(id<MTLDevice>)device;
++ (nullable id<MTLLibrary>)defaultLibraryForDevice:(id<MTLDevice>)device;
 
 @end
 

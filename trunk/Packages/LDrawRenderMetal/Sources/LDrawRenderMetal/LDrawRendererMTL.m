@@ -82,7 +82,7 @@ static dispatch_semaphore_t			_inFlightSemaphore;
 
 // Controls the number uniform buffers in flight to prevent the CPU from overwriting GPU resources still in use.
 // This is essential for avoiding rendering artefacts, especially on slower systems.
-static const NSUInteger				MaxBuffersInFlight = 3;		// The maximum number of command buffers in flight
+enum : NSUInteger { MaxBuffersInFlight = 3 };					// The maximum number of command buffers in flight
 
 static id<MTLBuffer>				_vertexUniformBuffers[MaxBuffersInFlight];
 static NSUInteger					_currentUniformBufferIndex = 0;
@@ -122,7 +122,7 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	_inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
 
 	// Load the shader library from the LDrawRenderMetal package bundle.
-	id<MTLLibrary> defaultLibrary = [LDrawRenderMetalResources newDefaultLibraryForDevice:device];
+	id<MTLLibrary> defaultLibrary = [LDrawRenderMetalResources defaultLibraryForDevice:device];
 	if (defaultLibrary == nil) {
 		return;
 	}

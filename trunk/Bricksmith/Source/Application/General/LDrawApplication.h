@@ -30,8 +30,6 @@
     LSynthConfiguration     *lsynthConfiguration;   // centralized location for LSynth configuration
 	Inspector				*inspector;				// system for graphically inspecting classes.
 	UInt16			        connexionClientID;		// The identifier of client to a 3Dconnexion controller, if there is one.
-	
-	BOOL					suppressDonationPrompt;
 }
 
 //Actions

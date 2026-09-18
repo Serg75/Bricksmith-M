@@ -25,6 +25,10 @@ let package = Package(
                 .process("Shaders"),
             ],
             publicHeadersPath: "include",
+            cSettings: [
+                // This package is OpenGL-only, so Apple's OpenGL deprecation warnings are just noise.
+                .define("GL_SILENCE_DEPRECATION"),
+            ],
             linkerSettings: [
                 .linkedFramework("OpenGL"),
             ]

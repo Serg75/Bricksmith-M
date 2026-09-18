@@ -136,7 +136,7 @@
 	// Prevent "tearing"
 	GLint   swapInterval    = 1;
 	[[self openGLContext] setValues: &swapInterval
-					   forParameter: NSOpenGLCPSwapInterval ];
+					   forParameter: NSOpenGLContextParameterSwapInterval ];
 
 	// GL surface should be under window to allow Cocoa overtop.
 	// Huge FPS hit--over 40%! Don't do it!
@@ -320,33 +320,6 @@
 #pragma mark -
 
 
-//========== renewGState =======================================================
-//
-// Purpose:		NSOpenGLViews' content is drawn directly by a hardware surface
-//				that, when being moved, is moved before the surrounding regular
-//				window content gets drawn and flushed. This causes an annoying
-//				flicker, especially with NSSplitViews. Overriding this method
-//				gives us a chance to compensate for this problem.
-//
-//==============================================================================
-- (void) renewGState
-{
-	NSWindow *window = [self window];
-	
-	// Disabling screen updates should allow the redrawing of the surrounding
-	// window to catch up with the new position of the OpenGL hardware surface.
-	//
-	// Note: In Apple's "GLChildWindow" sample code, Apple put this in
-	//		 -splitViewWillResizeSubviews:. But that doesn't actually solve the
-	//		 problem. Putting it here *does*.
-	//
-	[window disableScreenUpdatesUntilFlush];
-	
-	[super renewGState];
-	
-}//end renewGState
-
-
 //========== reshape ===========================================================
 //
 // Purpose:		Something changed in the viewing department; we need to adjust
@@ -386,10 +359,10 @@
 //==============================================================================
 - (void) update
 {
-	[self lockContextAndExecute:^
-	{
-		[super update];
-	}];
+	// Not through -lockContextAndExecute: so the compiler can see the super call.
+	CGLLockContext([[self openGLContext] CGLContextObj]);
+	[super update];
+	CGLUnlockContext([[self openGLContext] CGLContextObj]);
 
 }//end update
 
@@ -444,7 +417,7 @@
 	cSpace = CGColorSpaceCreateWithName (kCGColorSpaceGenericRGB);
 	bitmap = CGBitmapContextCreate(byteBuffer, viewportSize.width, viewportSize.height, 8, byteWidth,
 												cSpace,
-												kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host);
+												(CGBitmapInfo)kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host);
 	
 	// Make an image out of our bitmap; does a cheap vm_copy of the bitmap
 	image = CGBitmapContextCreateImage(bitmap);

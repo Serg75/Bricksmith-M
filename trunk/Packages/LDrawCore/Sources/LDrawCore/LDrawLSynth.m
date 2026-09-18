@@ -438,7 +438,7 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
     // Encode container-related stuff: containedObjects etc.
     [super encodeWithCoder:encoder];
 
-    [encoder encodeInt:lsynthClass forKey:@"lsynthClass"];
+    [encoder encodeInt:(int)lsynthClass forKey:@"lsynthClass"];
     [encoder encodeObject:synthType forKey:@"synthType"];
     [encoder encodeObject:color forKey:@"color"];
 
@@ -837,7 +837,7 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
 //                  chain etc.
 //
 //==============================================================================
-- (void)setLsynthClass:(int)class
+- (void)setLsynthClass:(LDrawLSynthClass)class
 {
     self->lsynthClass = class;
 } // end setLsynthClass:
@@ -848,7 +848,7 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
 //  Purpose:		Return the class of the Synthesized part.
 //
 //==============================================================================
-- (int)lsynthClass
+- (LDrawLSynthClass)lsynthClass
 {
     return self->lsynthClass;
 } // end lsynthClass:

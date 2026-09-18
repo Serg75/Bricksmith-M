@@ -264,7 +264,7 @@
 	[super encodeWithCoder:encoder];
 	
 	[encoder encodeBytes:(void *)&rotationAngle length:sizeof(Tuple3)	forKey:@"rotationAngle"];
-	[encoder encodeInt:stepRotationType									forKey:@"stepRotationType"];
+	[encoder encodeInt:(int)stepRotationType						forKey:@"stepRotationType"];
 
 } // end encodeWithCoder:
 

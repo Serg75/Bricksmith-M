@@ -71,6 +71,18 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 //------------------------------------------------------------------------------
 @interface LDrawSelection : NSObject
 
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Rotation)
+///
+/// @abstract   Rotation helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Rotation)
+
 + (Tuple3)rotationForAxis:(Vector3)axis degrees:(float)degrees;
 + (Tuple3)partRelativeRotation:(Tuple3)rotation forPart:(LDrawPart *)part;
 
@@ -79,6 +91,43 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 				  forSelection:(NSArray *)selection
 				  partRelative:(BOOL)partRelative;
 + (LDrawRotationMode)rotationModeForSelectionCount:(NSUInteger)count aroundOrigin:(BOOL)aroundOrigin;
+
+/// Shared center for LDrawRotateAroundSelectionCenter / FixedPoint.
+/// LDrawRotateAroundPartPositions still uses each part's origin in the host loop.
++ (Point3)rotationCenterForDirectives:(NSArray *)directives
+								 mode:(LDrawRotationMode)mode
+						  fixedCenter:(const Point3 * _Nullable)fixedCenter;
+
+/// Origin when the list is empty; otherwise the first drawable’s position.
+/// The host still sets the model’s rotation center.
++ (Point3)rotationCenterFromFirstDrawable:(NSArray *)drawables;
+
+/// One of the quick rotation shortcuts was clicked. Build a rotation in the
+/// requested direction (deduced from the sender's tag). Returns NO for
+/// unrecognized tags; outAxis is unchanged in that case.
++ (BOOL)quickRotationAxis:(Vector3 *)outAxis forMenuTag:(NSInteger)tag;
+
+/// Menu tag for toolbar quick-rotate buttons (LDrawRotatePositiveXTag, etc.).
++ (NSInteger)quickRotationMenuTagForAxis:(LDrawQuickRotationAxis)axis
+								positive:(BOOL)positive;
+
+/// Toolbar rotation identifiers match both localized string key and image
+/// name (Rotate+X, Rotate-X, …). Returns NO when unrecognized.
++ (BOOL)quickRotationAxis:(LDrawQuickRotationAxis *)outAxis
+				 positive:(BOOL *)outPositive
+	 forToolbarIdentifier:(NSString *)identifier;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Nudge)
+///
+/// @abstract   Keyboard and toolbar nudge helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Nudge)
 
 /// Screen-space nudge mapped onto the part's axes using the camera basis.
 /// Pass identity for partMatrix to nudge in model space. useTurntable should
@@ -89,25 +138,11 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 		  orthographic:(BOOL)orthographic
 		  useTurntable:(BOOL)useTurntable;
 
-/// Shift = 1<<17, Option = 1<<19 (NSEventModifierFlagShift / Option).
-+ (LDrawSelectionMode)selectionModeFromModifiers:(NSUInteger)modifiers;
-
 /// Maps an arrow + modifier mask into a screen-space unit nudge.
 /// Option moves on Z; Shift ×10; Command ×0.04. Returns NO if arrow is None.
 + (BOOL)screenNudge:(Vector3 *)outNudge
 		   forArrow:(LDrawArrowNudge)arrow
 		  modifiers:(NSUInteger)modifiers;
-
-+ (NSArray *)movableDirectivesInSelection:(NSArray *)selection;
-+ (NSArray *)partsInSelection:(NSArray *)selection;
-
-/// First LDrawPart in the selection, or nil if none.
-+ (nullable LDrawPart *)firstPartInSelection:(NSArray *)selection;
-
-/// Shared LDrawPart referenceName among selected parts, or nil if none or mixed.
-+ (nullable NSString *)sharedReferenceNameInSelection:(NSArray *)selection;
-
-/// Shared class of every selected object, or Nil if empty or mixed.
 
 /// Identity, or the first selected object's rotation with translation zeroed
 /// when partRelative is YES (part-oriented grid).
@@ -121,15 +156,23 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 	   gridSpacing:(float)gridSpacing
 		 selection:(NSArray *)selection;
 
-/// Shared center for LDrawRotateAroundSelectionCenter / FixedPoint.
-/// LDrawRotateAroundPartPositions still uses each part's origin in the host loop.
-+ (Point3)rotationCenterForDirectives:(NSArray *)directives
-								 mode:(LDrawRotationMode)mode
-						  fixedCenter:(const Point3 * _Nullable)fixedCenter;
+/// Toolbar nudge: unit vector on axis × sign (−1 or +1 from the button tag).
++ (Vector3)nudgeUnitVectorForAxis:(LDrawNudgeAxis)axis sign:(NSInteger)sign;
 
-/// Origin when the list is empty; otherwise the first drawable’s position.
-/// The host still sets the model’s rotation center.
-+ (Point3)rotationCenterFromFirstDrawable:(NSArray *)drawables;
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Marquee)
+///
+/// @abstract   Marquee selection-mode helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Marquee)
+
+/// Shift = 1<<17, Option = 1<<19 (NSEventModifierFlagShift / Option).
++ (LDrawSelectionMode)selectionModeFromModifiers:(NSUInteger)modifiers;
 
 /// Marquee merge: replace = new, extend = old|new, subtract = old−new,
 /// intersection = old&new. Empty result means the host should deselect.
@@ -137,9 +180,41 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 						 newDirectives:(NSArray *)directives
 								  mode:(LDrawSelectionMode)mode;
 
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Query)
+///
+/// @abstract   Selection query helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Query)
+
++ (NSArray *)movableDirectivesInSelection:(NSArray *)selection;
++ (NSArray *)partsInSelection:(NSArray *)selection;
+
+/// First LDrawPart in the selection, or nil if none.
++ (nullable LDrawPart *)firstPartInSelection:(NSArray *)selection;
+
+/// Shared LDrawPart referenceName among selected parts, or nil if none or mixed.
++ (nullable NSString *)sharedReferenceNameInSelection:(NSArray *)selection;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Visibility)
+///
+/// @abstract   Hide, show, and visibility helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Visibility)
+
 + (NSArray *)hideableDirectivesInSelection:(NSArray *)selection;
 + (NSArray *)hiddenHideableDirectivesIn:(NSArray *)directives;
-+ (NSArray *)colorableDirectivesInSelection:(NSArray *)selection;
 
 /// Hide originals during a move drag so the dragging copy is the only
 /// visual manifestation. Unhide before an undoable delete when the drag
@@ -158,10 +233,36 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 /// (visibleFlag NO). Used to enable Hide Parts / Show Parts.
 + (BOOL)selection:(NSArray *)selection containsVisibility:(BOOL)visibleFlag;
 
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Color)
+///
+/// @abstract   Color assignment helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Color)
+
++ (NSArray *)colorableDirectivesInSelection:(NSArray *)selection;
+
 /// One color per colorable directive, drawn from the unique colors already in
 /// the set. Consecutive repeats are avoided when the palette has more than one
 /// color. The host still applies the colors (undo).
 + (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Transform)
+///
+/// @abstract   Snap-to-grid and mirror transform helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Transform)
 
 /// Aligns selected parts to the grid. Kind of a weird legacy API. The host
 /// still applies the components (undo).
@@ -180,20 +281,17 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 + (NSArray<LDrawPartTransformUpdate *> *)mirroredTransformUpdatesForSelection:(NSArray *)selection
 																		 axis:(Vector3)axis;
 
-/// One of the quick rotation shortcuts was clicked. Build a rotation in the
-/// requested direction (deduced from the sender's tag). Returns NO for
-/// unrecognized tags; outAxis is unchanged in that case.
-+ (BOOL)quickRotationAxis:(Vector3 *)outAxis forMenuTag:(NSInteger)tag;
+@end
 
-/// Menu tag for toolbar quick-rotate buttons (LDrawRotatePositiveXTag, etc.).
-+ (NSInteger)quickRotationMenuTagForAxis:(LDrawQuickRotationAxis)axis
-								positive:(BOOL)positive;
 
-/// Toolbar rotation identifiers match both localized string key and image
-/// name (Rotate+X, Rotate-X, …). Returns NO when unrecognized.
-+ (BOOL)quickRotationAxis:(LDrawQuickRotationAxis *)outAxis
-				 positive:(BOOL *)outPositive
-	 forToolbarIdentifier:(NSString *)identifier;
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Drag)
+///
+/// @abstract   View drag helpers.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Drag)
 
 /// During a copy drag the outline selection is cleared; use the saved
 /// selection when resolving the enclosing container.
@@ -202,6 +300,18 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 
 /// Move drags hide the originals; copy drags leave them visible for deselect.
 + (void)prepareViewDragOriginals:(NSArray *)drawables asCopy:(BOOL)copyFlag;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @category   LDrawSelection (Undo)
+///
+/// @abstract   Undo action localization keys.
+///
+//------------------------------------------------------------------------------
+@interface LDrawSelection (Undo)
 
 /// Hide → @"UndoHidePart"; show → @"UndoShowPart". The host still localizes.
 + (NSString *)hideShowUndoActionKeyForHidden:(BOOL)hideFlag;
@@ -212,9 +322,6 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 + (NSString *)colorUndoActionKey;
 + (NSString *)snapToGridUndoActionKey;
 + (NSString *)setGroupUndoActionKey;
-
-/// Toolbar nudge: unit vector on axis × sign (−1 or +1 from the button tag).
-+ (Vector3)nudgeUnitVectorForAxis:(LDrawNudgeAxis)axis sign:(NSInteger)sign;
 
 @end
 
