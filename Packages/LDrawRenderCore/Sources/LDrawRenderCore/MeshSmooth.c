@@ -1862,8 +1862,10 @@ void				write_indexed_mesh(
 
 	} // end of primitve sort
 	
+	#if DEBUG
 	assert(vert_ptr == vert_stop);
 	assert(index_ptr == index_stop);
+	#endif
 }
 
 
