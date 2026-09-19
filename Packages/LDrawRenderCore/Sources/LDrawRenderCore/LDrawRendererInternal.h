@@ -42,14 +42,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-
-// Private methods implemented in LDrawRenderer+HitTesting.m.
-@interface LDrawRenderer (HitTestingInternal)
-
-- (float)getDepthUnderPoint:(Point2)point_view;
-
-@end
-
 NS_ASSUME_NONNULL_END
 
 #endif /* LDrawRendererInternal_h */

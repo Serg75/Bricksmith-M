@@ -181,6 +181,9 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 //------------------------------------------------------------------------------
 @interface LDrawRenderer (HitTesting)
 
+/// Depth of the nearest object under a view point, from 0 to 1. Returns 1.0
+/// when there is no object under the point.
+- (float)getDepthUnderPoint:(Point2)point_view;
 - (NSArray *)getDirectivesUnderRect:(Box2)rect_view amongDirectives:(NSArray *)directives fastDraw:(BOOL)fastDraw;
 - (void)publishMouseOverPoint:(Point2)viewPoint;
 
