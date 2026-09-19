@@ -1638,12 +1638,7 @@
 			);
 			mainGroup = 2A37F4AAFDCFA73011CA2CEA /* Mac LDraw */;
 			packageReferences = (
-				BB0100000000000000000001 /* XCLocalSwiftPackageReference "../Packages/LDrawCore" */,
-				BB0100000000000000000002 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderCore" */,
-				BB0100000000000000000003 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderMetal" */,
-				BB0100000000000000000004 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderOpenGL" */,
-				BB0100000000000000000005 /* XCLocalSwiftPackageReference "../Packages/LDrawEditing" */,
-				BB0100000000000000000006 /* XCLocalSwiftPackageReference "../Packages/LDrawFeatures" */,
+				BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */,
 			);
 			projectDirPath = "";
 			projectReferences = (
@@ -2706,91 +2701,71 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		BB0100000000000000000001 /* XCLocalSwiftPackageReference "../Packages/LDrawCore" */ = {
+		BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Packages/LDrawCore;
-		};
-		BB0100000000000000000002 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Packages/LDrawRenderCore;
-		};
-		BB0100000000000000000003 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderMetal" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Packages/LDrawRenderMetal;
-		};
-		BB0100000000000000000004 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderOpenGL" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Packages/LDrawRenderOpenGL;
-		};
-		BB0100000000000000000005 /* XCLocalSwiftPackageReference "../Packages/LDrawEditing" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Packages/LDrawEditing;
-		};
-		BB0100000000000000000006 /* XCLocalSwiftPackageReference "../Packages/LDrawFeatures" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Packages/LDrawFeatures;
+			relativePath = ..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		BB0200000000000000000001 /* LDrawCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference "../Packages/LDrawCore" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawCore;
 		};
 		BB0200000000000000000002 /* LDrawRenderCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000002 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderCore" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawRenderCore;
 		};
 		BB0200000000000000000003 /* LDrawRenderMetal */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000003 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderMetal" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawRenderMetal;
 		};
 		BB0200000000000000000004 /* LDrawEditing */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000005 /* XCLocalSwiftPackageReference "../Packages/LDrawEditing" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawEditing;
 		};
 		BB0200000000000000000005 /* LDrawFeatures */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000006 /* XCLocalSwiftPackageReference "../Packages/LDrawFeatures" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawFeatures;
 		};
 		BB0200000000000000000011 /* LDrawCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference "../Packages/LDrawCore" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawCore;
 		};
 		BB0200000000000000000012 /* LDrawRenderCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000002 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderCore" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawRenderCore;
 		};
 		BB0200000000000000000013 /* LDrawRenderOpenGL */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000004 /* XCLocalSwiftPackageReference "../Packages/LDrawRenderOpenGL" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawRenderOpenGL;
 		};
 		BB0200000000000000000014 /* LDrawEditing */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000005 /* XCLocalSwiftPackageReference "../Packages/LDrawEditing" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawEditing;
 		};
 		BB0200000000000000000015 /* LDrawFeatures */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000006 /* XCLocalSwiftPackageReference "../Packages/LDrawFeatures" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawFeatures;
 		};
 		BB0200000000000000000021 /* LDrawCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference "../Packages/LDrawCore" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawCore;
 		};
 		BB0200000000000000000022 /* LDrawFeatures */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = BB0100000000000000000006 /* XCLocalSwiftPackageReference "../Packages/LDrawFeatures" */;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawFeatures;
 		};
 /* End XCSwiftPackageProductDependency section */

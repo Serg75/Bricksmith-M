@@ -686,9 +686,9 @@ Routes 1 (click the pin), 3 (Escape) and 4 (delete the directive in the outline,
 
 ## Tests
 
-**Tests live beside the code they exercise, inside the owning package.** This repository already does that: `Packages/LDrawCore/Tests/LDrawCoreTests/` holds `LDrawStepGhostingTests.swift`, `LDrawGroupSuppressionTests.swift` and friends, next to `Sources/LDrawCore`. What it deliberately does *not* have is an SPM `testTarget` — no `Package.swift` declares one. The files are compiled by the Xcode `UnitTests` target, which references each package's `Tests` directory as a group. Keep that arrangement: proximity to the source without a second build system, and code coverage stays off.
+**Tests live beside the code they exercise, inside the owning package.** This repository already does that: `Packages/LDrawCore/Tests/LDrawCoreTests/` holds `LDrawStepGhostingTests.swift`, `LDrawGroupSuppressionTests.swift` and friends, next to `Sources/LDrawCore`. The root `Package.swift` declares them as the `LDrawCoreTests` and `LDrawFeaturesTests` test targets, so `swift test` at the repo root runs them. The Xcode `UnitTests` target also compiles the same files, and references each package's `Tests` directory as a group. Code coverage stays off.
 
-So each new test file goes in its own module's `Tests` directory, and is added to the Xcode `UnitTests` target as it is created. `LDrawFeatures` and `LDrawEditing` have no `Tests` directory yet — create them on the same pattern (`Packages/LDrawFeatures/Tests/LDrawFeaturesTests/`, `Packages/LDrawEditing/Tests/LDrawEditingTests/`) rather than parking their tests in LDrawCore or in the app target. Swift + the Testing framework, matching the existing files.
+So each new test file goes in its own module's `Tests` directory, and is added to the Xcode `UnitTests` target as it is created. `LDrawEditing` has no `Tests` directory yet. Create it on the same pattern (`Packages/LDrawEditing/Tests/LDrawEditingTests/`) and add a matching test target to the root `Package.swift`, rather than parking its tests in LDrawCore or in the app target. Swift + the Testing framework, matching the existing files.
 
 | File | Module | Covers |
 |------|--------|--------|

@@ -29,7 +29,7 @@
 
 ## Target module layout
 
-Six local Swift Packages live under a new `Packages/` directory at the repo root. Each is a pure Objective-C SPM target with a Foundation-only public headers folder and SPM-managed platform constraints. `Bricksmith.xcodeproj` consumes them via "Add Local Package".
+Six Objective-C modules live under `Packages/` at the repo root. One `Package.swift` at the repo root declares each module as a target and a library product, so other projects can add them by the repository URL. Each target has a Foundation-only public headers folder. `Bricksmith.xcodeproj` uses the root package as a local package.
 
 - **LDrawCore** (macOS + iOS) — pure Foundation model, parser, color library, part library, math.
 - **LDrawRenderCore** (macOS + iOS) — GPU-agnostic renderer protocols, shared shader renderer, camera, scene visitor.
@@ -80,12 +80,12 @@ graph TD
 
 ## On-disk layout (SPM convention)
 
-Each package follows SPM's Obj-C layout: public headers under `include/<Module>/`, implementation alongside.
+Each module follows SPM's Obj-C layout: public headers under `include/<Module>/`, implementation alongside. The root `Package.swift` points each target at `Packages/<Module>/Sources/<Module>`.
 
 ```
+Package.swift               # the only manifest
 Packages/
   LDrawCore/
-    Package.swift
     Sources/LDrawCore/
       include/LDrawCore/        # public headers (umbrella + per-class)
         LDrawCore.h             # umbrella
@@ -96,7 +96,6 @@ Packages/
       LDrawFile.m
       ...
   LDrawRenderCore/
-    Package.swift
     Sources/LDrawRenderCore/
       include/LDrawRenderCore/
         LDrawRenderCore.h
@@ -107,7 +106,6 @@ Packages/
       LDrawShaderRenderer.m
       ...
   LDrawRenderMetal/
-    Package.swift
     Sources/LDrawRenderMetal/
       include/LDrawRenderMetal/
         LDrawRenderMetal.h
@@ -116,43 +114,44 @@ Packages/
       Shaders/shaders.metal     # bundled as resource
       LDrawRendererMTL.m
       ...
-  LDrawRenderOpenGL/        # macOS-only via Package.swift platforms
+  LDrawRenderOpenGL/        # macOS only
   LDrawEditing/
   LDrawFeatures/
 ```
 
-### Skeleton `Package.swift` (example for LDrawRenderMetal)
+### Root `Package.swift` (excerpt)
 
 ```swift
-// swift-tools-version:5.9
+// swift-tools-version:5.7
 import PackageDescription
 
 let package = Package(
-    name: "LDrawRenderMetal",
+    name: "BricksmithM",
     platforms: [.macOS(.v11), .iOS(.v14)],
     products: [
         .library(name: "LDrawRenderMetal", targets: ["LDrawRenderMetal"]),
-    ],
-    dependencies: [
-        .package(path: "../LDrawCore"),
-        .package(path: "../LDrawRenderCore"),
+        // ... one library per module
     ],
     targets: [
         .target(
             name: "LDrawRenderMetal",
             dependencies: ["LDrawCore", "LDrawRenderCore"],
+            path: "Packages/LDrawRenderMetal/Sources/LDrawRenderMetal",
             resources: [.process("Shaders")],
             publicHeadersPath: "include",
-            cSettings: [
-                .define("METAL"),
-                .headerSearchPath("."),
-            ]
+            cSettings: [.define("METAL")],
+            linkerSettings: [.linkedFramework("MetalKit")]
         ),
+        // ... one target per module, plus LDrawCoreTests and LDrawFeaturesTests
     ]
 )
 ```
 
-LDrawRenderOpenGL's `platforms:` declares **only** `.macOS(.v11)` — SPM will refuse to build it for iOS, providing physical isolation.
+The package name has no hyphen. SwiftPM names the resource bundles `<Package>_<Target>.bundle`, but the Obj-C accessor it generates replaces the hyphen with an underscore, so it would not find them. Consumers still refer to the package as `Bricksmith-M`, from the repository URL.
+
+Modules depend on each other by target name. SwiftPM does not allow `.package(path:)` dependencies in a package that is fetched by URL, so there are no per-module manifests.
+
+The package declares iOS, but LDrawRenderOpenGL is macOS only. No other target depends on it, so an iOS build of any other product never builds it. It links OpenGL only on macOS.
 
 ## Per-module file membership
 
@@ -197,7 +196,7 @@ Everything that today lives under `Bricksmith/Metal/` **except** the AppKit cate
 - `Bricksmith/Metal/LDraw/Commands/LDrawTextureMTL.{h,m}`
 - `Bricksmith/Metal/LDraw/Renderer/LDrawDisplayListMTL.{h,m}`, `LDrawShaderRendererMTL.{h,m}`
 - `Bricksmith/Metal/LDraw/Support/LDrawDirectiveMTL.{h,m}`, `LDrawRendererMTL.{h,m}`, `MetalUtilities.{h,m}`, `PartLibraryMTL.{h,m}`, `SIMDConversions.h`
-- `Bricksmith/Metal/Shaders/shaders.metal` — declared in `Package.swift` as `.process("Shaders")` so it ships in the package resource bundle.
+- `Bricksmith/Metal/Shaders/shaders.metal` — declared in the root `Package.swift` as `.process("Shaders")` so it ships in the package resource bundle.
 - `Bricksmith/Metal/MTL.h` — slimmed down once the `LDrawDirectiveGPU_h` / `PartLibraryGPU_h` macros are gone (Phase 2a). The remaining content is just the `@import MetalKit;` shim.
 
 This package provides categories on `LDrawDirective`, `LDrawPart`, `LDrawTexture`, etc. that implement the `LDrawDirectiveDrawing` and `LDrawPartLibraryGPU` protocols declared in LDrawRenderCore. The app target links with `OTHER_LDFLAGS = -ObjC` to keep cross-package categories.
@@ -267,6 +266,8 @@ The `LDrawRenderer` editor halves are deleted/replaced by calls into `LDrawScene
 5. Add `OTHER_LDFLAGS = -ObjC` to both app targets so categories defined in packages aren't dead-stripped.
 6. Verify both `Bricksmith-Metal` and `Bricksmith-OpenGL` still build and run unchanged (sources still in-app).
 
+The six per-module manifests from this phase were later merged into the root `Package.swift`, and the app now references that one package.
+
 ### Phase 1 — Move the pure-Foundation, no-GPU files
 
 Move every file from the per-module lists above that does **not** `#import LDrawDirectiveGPU_h`, `PartLibraryGPU_h`, or `LDrawTextureGPU_h`. Concretely, what moves now:
@@ -283,7 +284,7 @@ For each moved file, update `#import "X.h"` to `#import <ModuleName/X.h>` and re
 Sanity checkpoints at end of Phase 1:
 
 - `Bricksmith-Metal` and `Bricksmith-OpenGL` compile, link, and pass `UnitTests`.
-- Each package builds in isolation via `cd Packages/<Module> && swift build`.
+- The root package builds with `swift build` at the repo root. To build one module, use `swift build --product <Module>`.
 
 ### Phase 2 — Cleanups required for portable hosts
 
@@ -344,7 +345,7 @@ Extract `LDrawPartBrowserModel`, `LDrawToolMode`, `LDrawPreferences` from their 
 
 #### 2i. Resource bundle loading
 
-`shaders.metal` is declared `resources: [.process("Shaders")]` in `Packages/LDrawRenderMetal/Package.swift`. Obj-C consumers must load via the package resource bundle, not `[NSBundle mainBundle]`. Pattern:
+`shaders.metal` is declared `resources: [.process("Shaders")]` for the LDrawRenderMetal target in the root `Package.swift`. Obj-C consumers must load via the package resource bundle, not `[NSBundle mainBundle]`. Pattern:
 
 ```objc
 // In LDrawRenderMetal source files:
@@ -354,11 +355,11 @@ Extract `LDrawPartBrowserModel`, `LDrawToolMode`, `LDrawPreferences` from their 
 NSURL *shaderURL = [SWIFTPM_MODULE_BUNDLE URLForResource:@"shaders" withExtension:@"metallib"];
 ```
 
-SPM automatically defines `SWIFTPM_MODULE_BUNDLE` for Swift targets; for Obj-C targets we either rely on the auto-generated `<Module>_<Target>.bundle` lookup or fall back to `bundleForClass:`. Update `LDrawApplicationMTL.m` and any other current consumer of `[NSBundle mainBundle]` for shaders.
+SPM automatically defines `SWIFTPM_MODULE_BUNDLE` for Swift targets; for Obj-C targets we either rely on the auto-generated `<Package>_<Target>.bundle` lookup or fall back to `bundleForClass:`. Update `LDrawApplicationMTL.m` and any other current consumer of `[NSBundle mainBundle]` for shaders.
 
 #### 2j. iOS smoke build
 
-Verify with `xcodebuild -scheme LDrawCore -destination 'generic/platform=iOS Simulator' build` (and the same for `LDrawRenderCore`, `LDrawRenderMetal`, `LDrawEditing`, `LDrawFeatures`). Bricksmith-Metal and Bricksmith-OpenGL still build and tests pass on macOS.
+Verify from the repo root with `xcodebuild -scheme LDrawCore -destination 'generic/platform=iOS Simulator' build` (and the same for `LDrawRenderCore`, `LDrawRenderMetal`, `LDrawEditing`, `LDrawFeatures`). Bricksmith-Metal and Bricksmith-OpenGL still build and tests pass on macOS.
 
 ## Risks and mitigations
 
