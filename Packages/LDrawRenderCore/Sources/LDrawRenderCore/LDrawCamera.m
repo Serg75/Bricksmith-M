@@ -957,13 +957,6 @@
 				// as we need to convert our drag into a proper rotation 
 				// direction. See notes in function header.
 
-	if (self.useTurntable)
-	{
-		Tuple3 view_now = [self viewingAngle];
-		if (view_now.x * view_now.y * view_now.z < 0.0)
-			rotationAboutY = -rotationAboutY;
-	}	
-	
 	// Get the current transformation matrix. By using its inverse, we can 
 	// convert projection-coordinates back to the model coordinates they 
 	// are displaying.
@@ -990,7 +983,12 @@
 
 	if (self.useTurntable)
 	{
-		rotationAboutY = -rotationAboutY;
+		// Spin about the model's up axis. When the view is upside down (the
+		// screen's up is the model's +Y, which is down in LDraw), that spin
+		// runs the other way on screen, so turn the other way to follow the
+		// drag. Euler angles cannot decide this: they jump at 90 degrees.
+		BOOL upsideDown = (transformedVectorY.y > 0.0);
+		rotationAboutY = upsideDown ? rotationAboutY : -rotationAboutY;
 		transformedVectorY = vectorY;
 	}
 	
