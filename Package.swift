@@ -16,6 +16,7 @@ let package = Package(
         .library(name: "LDrawRenderOpenGL", targets: ["LDrawRenderOpenGL"]),
         .library(name: "LDrawEditing", targets: ["LDrawEditing"]),
         .library(name: "LDrawFeatures", targets: ["LDrawFeatures"]),
+        .library(name: "LDrawConnectivity", targets: ["LDrawConnectivity"]),
     ],
     targets: [
         .target(
@@ -72,6 +73,12 @@ let package = Package(
             path: "Packages/LDrawFeatures/Sources/LDrawFeatures",
             publicHeadersPath: "include"
         ),
+        .target(
+            name: "LDrawConnectivity",
+            dependencies: ["LDrawCore"],
+            path: "Packages/LDrawConnectivity/Sources/LDrawConnectivity",
+            publicHeadersPath: "include"
+        ),
         .testTarget(
             name: "LDrawCoreTests",
             dependencies: ["LDrawCore"],
@@ -81,6 +88,14 @@ let package = Package(
             name: "LDrawFeaturesTests",
             dependencies: ["LDrawFeatures", "LDrawCore"],
             path: "Packages/LDrawFeatures/Tests/LDrawFeaturesTests"
+        ),
+        .testTarget(
+            name: "LDrawConnectivityTests",
+            dependencies: ["LDrawConnectivity", "LDrawCore"],
+            path: "Packages/LDrawConnectivity/Tests/LDrawConnectivityTests",
+            resources: [
+                .copy("Fixtures"),
+            ]
         ),
     ]
 )

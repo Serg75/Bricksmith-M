@@ -32,6 +32,14 @@
 	NSString		*preferredLDrawPath;
 	NSString		*internalLDrawPath;
 	NSString		*bundledLdconfigPath;
+
+	// The folders pathForPartName: searches, built from the two paths above.
+	// Cleared when either path changes.
+	NSArray			*searchPaths;
+
+	// Counts changes to the two paths, so a search list built from old paths
+	// is not stored.
+	NSUInteger		pathGeneration;
 }
 
 /// Host-provided fallback LDConfig.ldr. Thread-safe.
@@ -131,7 +139,9 @@
 	NSString *newPath = [pathIn copy];
 
 	os_unfair_lock_lock(&pathsLock);
-	internalLDrawPath = newPath;
+	internalLDrawPath	= newPath;
+	searchPaths			= nil;
+	pathGeneration++;
 	os_unfair_lock_unlock(&pathsLock);
 }
 
@@ -158,7 +168,9 @@
 	NSString *newPath = [pathIn copy];
 
 	os_unfair_lock_lock(&pathsLock);
-	preferredLDrawPath = newPath;
+	preferredLDrawPath	= newPath;
+	searchPaths			= nil;
+	pathGeneration++;
 	os_unfair_lock_unlock(&pathsLock);
 }
 
@@ -453,22 +465,46 @@
 - (NSString *)pathForPartName:(NSString *)partName
 {
 	NSFileManager	*fileManager	= [[NSFileManager alloc] init];
-	static NSArray	*searchPaths	= nil;
 	NSMutableString *fixedPartName	= [NSMutableString stringWithString:partName];
 	NSString		*partPath		= nil;
-	
-	if (searchPaths == nil)
+	NSArray			*folders		= nil;
+
+	NSUInteger		generation		= 0;
+
+	os_unfair_lock_lock(&pathsLock);
+	folders		= searchPaths;
+	generation	= pathGeneration;
+	os_unfair_lock_unlock(&pathsLock);
+
+	if (folders == nil)
 	{
-		searchPaths = [[NSArray alloc] initWithObjects:
-							[self partsPathForDomain:LDrawUserOfficial],
-							[self primitivesPathForDomain:LDrawUserOfficial],
-							[self partsPathForDomain:LDrawUserUnofficial],
-							[self primitivesPathForDomain:LDrawUserUnofficial],
-							[self partsPathForDomain:LDrawInternalOfficial],
-							[self primitivesPathForDomain:LDrawInternalOfficial],
-							[self partsPathForDomain:LDrawInternalUnofficial],
-							[self primitivesPathForDomain:LDrawInternalUnofficial],
-							nil];
+		// Built without the lock, because these calls take it and it does not
+		// nest. Folders that are not set are left out.
+		NSMutableArray *found = [NSMutableArray arrayWithCapacity:8];
+
+		for (NSNumber *domain in @[@(LDrawUserOfficial), @(LDrawUserUnofficial),
+								   @(LDrawInternalOfficial), @(LDrawInternalUnofficial)])
+		{
+			NSString *parts			= [self partsPathForDomain:domain.integerValue];
+			NSString *primitives	= [self primitivesPathForDomain:domain.integerValue];
+
+			if (parts != nil)
+			{
+				[found addObject:parts];
+			}
+			if (primitives != nil)
+			{
+				[found addObject:primitives];
+			}
+		}
+		folders = found;
+
+		os_unfair_lock_lock(&pathsLock);
+		if (pathGeneration == generation)
+		{
+			searchPaths = folders;
+		}
+		os_unfair_lock_unlock(&pathsLock);
 	}
 	
 	// LDraw references parts in subfolders by their relative pathnames in DOS 
@@ -488,7 +524,7 @@
 	{
 		// We have a file path name; try each directory.
 		
-		for (NSString *basePath in searchPaths)
+		for (NSString *basePath in folders)
 		{
 			NSString *testPath = [basePath stringByAppendingPathComponent:fixedPartName];
 			
