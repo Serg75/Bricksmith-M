@@ -3,7 +3,8 @@
 //  File:       LDrawConnectivityMath.h
 //  Package:    LDrawConnectivity
 //
-//  Purpose:    Transforms a direction by a matrix, ignoring the translation.
+//  Purpose:    Small math the package shares: transforming a direction by a
+//              matrix, and the key of a grid cell.
 //
 //  Created by Sergey Slobodenyuk on 2026-09-21.
 //
@@ -30,4 +31,21 @@ static inline Vector3 LDrawDirectionByMatrix(Vector3 direction, Matrix4 matrix)
 			 + direction.z * matrix.element[2][2];
 
 	return turned;
+}
+
+
+//---------- LDrawCellKey ------------------------------------------------------
+///
+/// One number for a cell of a 3D grid. Each index is shifted positive and kept
+/// to 21 bits, so a model below the origin is named as well as one above it,
+/// and no shift runs off the end of the number.
+///
+//------------------------------------------------------------------------------
+static inline int64_t LDrawCellKey(int64_t x, int64_t y, int64_t z)
+{
+	uint64_t key = ((uint64_t)((x + (1 << 20)) & 0x1FFFFF) << 42)
+				 | ((uint64_t)((y + (1 << 20)) & 0x1FFFFF) << 21)
+				 |  (uint64_t)((z + (1 << 20)) & 0x1FFFFF);
+
+	return (int64_t)key;
 }

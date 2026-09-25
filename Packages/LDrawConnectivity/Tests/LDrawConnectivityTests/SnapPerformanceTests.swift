@@ -28,7 +28,7 @@ struct SnapPerformanceTests {
     /// A wall of 10,000 bricks in rows of 100.
     private func largeModel() throws -> (index: LDrawConnectorIndex, seconds: Double) {
         let index = LDrawConnectorIndex()
-        var bricks: [(UInt32, Data)] = []
+        var bricks: [(UInt32, LDrawWorldConnectors)] = []
 
         for owner in 0..<10_000 {
             let x = Double(owner % 100) * 80
@@ -75,7 +75,7 @@ struct SnapPerformanceTests {
         let start = Date()
 
         for moving in path {
-            if solver.solution(forConnectors: moving, dragDirection: V3Make(1, 0, 0)).snapped {
+            if solver.solution(for: moving, dragDirection: V3Make(1, 0, 0)).snapped {
                 snapped += 1
             }
         }
@@ -87,6 +87,60 @@ struct SnapPerformanceTests {
 
         if Self.budgetsAreKept {
             #expect(each < 2.0)
+        }
+    }
+}
+
+@Suite("Dragging something built of many parts", .timeLimit(.minutes(1)))
+struct SubmodelDragPerformanceTests {
+
+    /// A submodel's worth of connectors: fifty bricks under one owner, which
+    /// is what a part standing for a submodel expands to.
+    private func submodel(at position: (Double, Double, Double)) throws -> LDrawWorldConnectors {
+        let connectors = LDrawWorldConnectors()
+
+        for brick in 0..<50 {
+            let x = position.0 + Double(brick % 10) * 80
+            let z = position.2 + Double(brick / 10) * 40
+
+            connectors.add(try SnapScene.connectors("3001.dat", at: (x, position.1, z),
+                                                              owner: 99_999))
+        }
+        return connectors
+    }
+
+    @Test("A submodel of fifty parts answers inside a frame")
+    func draggingASubmodel() throws {
+        let index = LDrawConnectorIndex()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+        let steps = 100
+
+        for owner in 0..<10_000 {
+            let x = Double(owner % 100) * 80
+            let y = Double(owner / 100) * -24
+
+            index.setConnectors(try SnapScene.connectors("3001.dat", at: (x, y, 0),
+                                                         owner: UInt32(owner)),
+                                forOwner: UInt32(owner))
+        }
+        solver.pointsPerUnit = 1
+
+        let path = try (0..<steps).map { step in
+            try submodel(at: (Double(step) * 0.08, -24.0 * 100, 0))
+        }
+        let moving = path[0].count
+        let start = Date()
+
+        for connectors in path {
+            _ = solver.solution(for: connectors, dragDirection: V3Make(1, 0, 0))
+        }
+
+        let each = -start.timeIntervalSinceNow / Double(steps) * 1000
+
+        print("submodel drag: \(moving) connectors, \(String(format: "%.2f", each)) ms each")
+
+        if SnapPerformanceTests.budgetsAreKept {
+            #expect(each < 8.0)                 // one frame at 120 Hz
         }
     }
 }

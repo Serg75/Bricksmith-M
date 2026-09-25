@@ -16,7 +16,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawConnectivity/LDrawConnectorSet.h>
+#import <LDrawConnectivity/LDrawConnector.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -59,16 +59,15 @@ static inline Point3 LDrawWorldConnectorMouth(LDrawWorldConnector connector)
 }
 
 
-/// Every place the set can connect, placed by the part's own matrix.
-extern NSData *LDrawWorldConnectorsFromSet(LDrawConnectorSet *set, Matrix4 placement, uint32_t owner);
-
 /// Whether the two can mate: opposite genders, matching shapes and radii, and
-/// axes within the tolerance. Position is not tested.
+/// axes within the tolerance. Position is not tested, and neither is the
+/// owner: a part's own connectors mate with each other inside it.
 ///
 /// `depth` is how far the first connector's mouth sits along the second's
 /// axis, from its mouth. It is zero for a stud in a stud hole, and the depth
 /// of the narrow part for a bar inside a tube.
 extern BOOL LDrawWorldConnectorsMate(LDrawWorldConnector one, LDrawWorldConnector other,
 									 double axisTolerance, double * _Nullable depth);
+
 
 NS_ASSUME_NONNULL_END

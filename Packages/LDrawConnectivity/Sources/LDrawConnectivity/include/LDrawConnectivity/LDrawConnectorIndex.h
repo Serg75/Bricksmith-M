@@ -15,14 +15,14 @@
 
 #import <Foundation/Foundation.h>
 
-#import <LDrawConnectivity/LDrawWorldConnector.h>
+#import <LDrawConnectivity/LDrawWorldConnectors.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LDrawConnectorIndex : NSObject
 
 /// Replaces an owner's connectors with these.
-- (void)setConnectors:(NSData *)connectors forOwner:(uint32_t)owner;
+- (void)setConnectors:(LDrawWorldConnectors *)connectors forOwner:(uint32_t)owner;
 
 - (void)removeOwner:(uint32_t)owner;
 - (void)removeAllConnectors;
@@ -33,7 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// The connectors whose run reaches into the box, each returned once,
 /// leaving out the given owner's. The caller widens the box by the snap
 /// distance.
-- (NSData *)connectorsInBox:(Box3)box excludingOwner:(uint32_t)owner;
+- (LDrawWorldConnectors *)connectorsInBox:(Box3)box excludingOwner:(uint32_t)owner;
 
 @end
 

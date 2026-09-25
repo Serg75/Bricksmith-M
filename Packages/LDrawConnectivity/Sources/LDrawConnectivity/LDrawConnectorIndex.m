@@ -11,12 +11,11 @@
 
 #import <LDrawConnectivity/LDrawConnectorIndex.h>
 
+#import "LDrawConnectivityMath.h"
+
 // Stud pitch and plate height, so a cell holds about one connector.
 static const double CellWidth	= 20.0;
 static const double CellHeight	= 8.0;
-
-// Past this many cells, checking every connector is cheaper than the hash.
-static const NSUInteger MaximumQueryCells = 4096;
 
 // A guard against bad data. Real connectors cross far fewer cells.
 static const NSUInteger MaximumConnectorCells = 4096;
@@ -33,9 +32,9 @@ typedef struct
 
 @implementation LDrawConnectorIndex
 {
-	NSMutableDictionary<NSNumber *, NSData *>			*_connectorsByOwner;
-	NSMutableDictionary<NSNumber *, NSMutableData *>	*_cells;		// cell key -> places
-	NSUInteger											_connectorCount;
+	NSMutableDictionary<NSNumber *, LDrawWorldConnectors *>	*_connectorsByOwner;
+	NSMutableDictionary<NSNumber *, NSMutableData *>		*_cells;		// cell key -> places
+	NSUInteger												_connectorCount;
 }
 
 //========== init ==============================================================
@@ -125,7 +124,7 @@ static void EnumerateCellsAlongRun(LDrawWorldConnector connector, void (^visit)(
 	{
 		NSUInteger nearest = 0;
 
-		visit(CellKeyAtCoordinates(cell[0], cell[1], cell[2]));
+		visit(LDrawCellKey(cell[0], cell[1], cell[2]));
 
 		if (cell[0] == last[0] && cell[1] == last[1] && cell[2] == last[2])
 		{
@@ -162,26 +161,14 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 }
 
 
-//---------- CellKeyAtCoordinates --------------------------------------[static]--
-//
-// Purpose:		One number for a cell. Each index is offset to be positive, so
-//				negative coordinates work.
-//
-//------------------------------------------------------------------------------
-static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
-{
-	return ((x + (1 << 20)) << 42) | (((y + (1 << 20)) & 0x1FFFFF) << 21) | ((z + (1 << 20)) & 0x1FFFFF);
-}
-
-
 #pragma mark - Contents
 
 //========== setConnectors:forOwner: ===========================================
 //==============================================================================
-- (void)setConnectors:(NSData *)connectors forOwner:(uint32_t)owner
+- (void)setConnectors:(LDrawWorldConnectors *)connectors forOwner:(uint32_t)owner
 {
-	const LDrawWorldConnector	*placed	= connectors.bytes;
-	NSUInteger					count	= connectors.length / sizeof(LDrawWorldConnector);
+	const LDrawWorldConnector	*placed	= connectors.all;
+	NSUInteger					count	= connectors.count;
 
 	[self removeOwner:owner];
 
@@ -189,6 +176,8 @@ static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
 	{
 		return;
 	}
+	// A copy, because the caller may go on adding to the set it passed, and
+	// the cells below record where each connector is by its place in it.
 	_connectorsByOwner[@(owner)] = [connectors copy];
 	_connectorCount += count;
 
@@ -214,9 +203,9 @@ static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
 //==============================================================================
 - (void)removeOwner:(uint32_t)owner
 {
-	NSData						*connectors	= _connectorsByOwner[@(owner)];
-	const LDrawWorldConnector	*placed		= connectors.bytes;
-	NSUInteger					count		= connectors.length / sizeof(LDrawWorldConnector);
+	LDrawWorldConnectors		*connectors	= _connectorsByOwner[@(owner)];
+	const LDrawWorldConnector	*placed		= connectors.all;
+	NSUInteger					count		= connectors.count;
 
 	if (connectors == nil)
 	{
@@ -292,10 +281,10 @@ static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
 
 //========== connectorsInBox:excludingOwner: ===================================
 //==============================================================================
-- (NSData *)connectorsInBox:(Box3)box excludingOwner:(uint32_t)owner
+- (LDrawWorldConnectors *)connectorsInBox:(Box3)box excludingOwner:(uint32_t)owner
 {
-	NSMutableData	*found		= [NSMutableData data];
-	CFMutableSetRef	answered	= NULL;
+	LDrawWorldConnectors	*found		= [LDrawWorldConnectors connectors];
+	CFMutableSetRef			answered	= NULL;
 
 	if (box.max.x < box.min.x || box.max.y < box.min.y || box.max.z < box.min.z)
 	{
@@ -310,7 +299,10 @@ static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
 	int64_t			lastZ		= (int64_t)floor(box.max.z / CellWidth);
 	NSUInteger		cellCount	= (NSUInteger)((lastX - firstX + 1) * (lastY - firstY + 1) * (lastZ - firstZ + 1));
 
-	if (cellCount > MaximumQueryCells)
+	// Reading a cell costs about what reading a connector costs. A box with
+	// more cells than the model has connectors is faster to answer by walking
+	// the model.
+	if (cellCount > _connectorCount)
 	{
 		for (NSNumber *other in _connectorsByOwner)
 		{
@@ -331,7 +323,7 @@ static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
 		{
 			for (int64_t z = firstZ; z <= lastZ; z++)
 			{
-				NSData						*cell	= _cells[@(CellKeyAtCoordinates(x, y, z))];
+				NSData						*cell	= _cells[@(LDrawCellKey(x, y, z))];
 				const LDrawConnectorPlace	*places	= cell.bytes;
 				NSUInteger					count	= cell.length / sizeof(LDrawConnectorPlace);
 
@@ -361,35 +353,35 @@ static int64_t CellKeyAtCoordinates(int64_t x, int64_t y, int64_t z)
 
 //========== addConnectorAtPlace:inBox:to: =====================================
 //==============================================================================
-- (void)addConnectorAtPlace:(LDrawConnectorPlace)place inBox:(Box3)box to:(NSMutableData *)found
+- (void)addConnectorAtPlace:(LDrawConnectorPlace)place inBox:(Box3)box to:(LDrawWorldConnectors *)found
 {
-	NSData						*connectors	= _connectorsByOwner[@(place.owner)];
-	const LDrawWorldConnector	*placed		= connectors.bytes;
+	LDrawWorldConnectors		*connectors	= _connectorsByOwner[@(place.owner)];
+	const LDrawWorldConnector	*placed		= connectors.all;
 
-	if (place.index >= connectors.length / sizeof(LDrawWorldConnector))
+	if (place.index >= connectors.count)
 	{
 		return;
 	}
 	if (RunReachesBox(placed[place.index], box))
 	{
-		[found appendBytes:&placed[place.index] length:sizeof(LDrawWorldConnector)];
+		[found addConnector:placed[place.index]];
 	}
 }
 
 
 //========== addConnectorsOfOwner:inBox:to: ====================================
 //==============================================================================
-- (void)addConnectorsOfOwner:(uint32_t)owner inBox:(Box3)box to:(NSMutableData *)found
+- (void)addConnectorsOfOwner:(uint32_t)owner inBox:(Box3)box to:(LDrawWorldConnectors *)found
 {
-	NSData						*connectors	= _connectorsByOwner[@(owner)];
-	const LDrawWorldConnector	*placed		= connectors.bytes;
-	NSUInteger					count		= connectors.length / sizeof(LDrawWorldConnector);
+	LDrawWorldConnectors		*connectors	= _connectorsByOwner[@(owner)];
+	const LDrawWorldConnector	*placed		= connectors.all;
+	NSUInteger					count		= connectors.count;
 
 	for (NSUInteger index = 0; index < count; index++)
 	{
 		if (RunReachesBox(placed[index], box))
 		{
-			[found appendBytes:&placed[index] length:sizeof(LDrawWorldConnector)];
+			[found addConnector:placed[index]];
 		}
 	}
 }

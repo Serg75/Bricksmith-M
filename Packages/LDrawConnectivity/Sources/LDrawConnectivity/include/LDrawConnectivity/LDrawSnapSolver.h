@@ -68,7 +68,11 @@ typedef struct
 /// Where the dragged part should go. The connectors are the dragged part's,
 /// already at the place the pointer asks for. The drag direction is in model
 /// coordinates and may be zero.
-- (LDrawSnapSolution)solutionForConnectors:(NSData *)movingConnectors
+///
+/// The connectors are taken as given. A caller that builds them from several
+/// parts should drop the ones filled inside the group first, once per drag,
+/// with -connectorsStillFree:.
+- (LDrawSnapSolution)solutionForConnectors:(LDrawWorldConnectors *)movingConnectors
 							 dragDirection:(Vector3)dragDirection;
 
 /// Forgets the placement being held, for the end of a drag.

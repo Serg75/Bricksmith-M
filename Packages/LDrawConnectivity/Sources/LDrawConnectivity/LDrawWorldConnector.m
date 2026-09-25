@@ -63,52 +63,6 @@ static BOOL KindsAccept(LDrawConnectorKind one, LDrawConnectorKind other)
 }
 
 
-//---------- LDrawWorldConnectorsFromSet ---------------------------------------
-//------------------------------------------------------------------------------
-NSData *LDrawWorldConnectorsFromSet(LDrawConnectorSet *set, Matrix4 placement, uint32_t owner)
-{
-	NSMutableData *placed = [NSMutableData data];
-
-	for (NSUInteger index = 0; index < set.connectorCount; index++)
-	{
-		LDrawConnector			connector	= [set connectorAtIndex:index];
-		LDrawConnectorSection	profile[LDrawWorldConnectorSectionLimit] = {};
-		NSUInteger				kept		= 0;
-		double					length		= 0.0;
-
-		for (NSUInteger section = 0; section < connector.sectionCount; section++)
-		{
-			LDrawConnectorSection run = [set sectionAtIndex:connector.sectionOffset + section];
-
-			if (kept < LDrawWorldConnectorSectionLimit)
-			{
-				profile[kept] = run;
-				kept++;
-				length += run.length;
-			}
-		}
-
-		for (NSUInteger point = 0; point < LDrawConnectorPointCount(connector); point++)
-		{
-			LDrawWorldConnector world = {
-				.position		= V3MulPointByProjMatrix(LDrawConnectorPointAtIndex(connector, point), placement),
-				.axis			= V3Normalize(LDrawDirectionByMatrix(connector.axis, placement)),
-				.length			= length,
-				.owner			= owner,
-				.sectionCount	= (uint8_t)kept,
-				.kind			= connector.kind,
-				.gender			= connector.gender,
-				.centered		= connector.centered,
-				.slide			= connector.slide,
-			};
-			memcpy(world.sections, profile, sizeof(profile));
-			[placed appendBytes:&world length:sizeof(world)];
-		}
-	}
-	return placed;
-}
-
-
 //---------- SectionStart ----------------------------------------------[static]--
 //
 // Purpose:		How far along the axis a section begins, measured from the
@@ -135,10 +89,6 @@ BOOL LDrawWorldConnectorsMate(LDrawWorldConnector one, LDrawWorldConnector other
 	BOOL	found	= NO;
 	double	nearest	= 0.0;
 
-	if (one.owner == other.owner)
-	{
-		return NO;
-	}
 	if (one.gender == other.gender)
 	{
 		return NO;

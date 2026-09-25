@@ -13,6 +13,7 @@
 #import <LDrawConnectivity/LDrawSnapSolver.h>
 
 #import "LDrawConnectivityMath.h"
+#import "LDrawConnectorNeighborhood.h"
 
 // Placements are rounded to half an LDU before they are compared. Library
 // positions are whole LDU, so this only hides float noise.
@@ -258,14 +259,15 @@ static const int64_t NoPlacement = INT64_MIN;
 
 #pragma mark - Solving
 
+
 //========== solutionForConnectors:dragDirection: ==============================
 //==============================================================================
-- (LDrawSnapSolution)solutionForConnectors:(NSData *)movingConnectors
+- (LDrawSnapSolution)solutionForConnectors:(LDrawWorldConnectors *)movingConnectors
 							 dragDirection:(Vector3)dragDirection
 {
-	const LDrawWorldConnector	*moving		= movingConnectors.bytes;
-	NSUInteger					movingCount	= movingConnectors.length / sizeof(LDrawWorldConnector);
-	NSData						*met		= nil;
+	const LDrawWorldConnector	*moving		= movingConnectors.all;
+	NSUInteger					movingCount	= movingConnectors.count;
+	LDrawWorldConnectors		*met		= nil;
 	NSArray<LDrawSnapCluster *>	*clusters	= nil;
 
 	if (movingCount == 0 || self.pointsPerUnit <= 0.0)
@@ -274,11 +276,12 @@ static const int64_t NoPlacement = INT64_MIN;
 	}
 	met			= [self.connectorIndex connectorsInBox:[self searchBoxForConnectors:movingConnectors]
 										excludingOwner:moving[0].owner];
-	clusters	= [self clustersForConnectors:movingConnectors met:met
-										anchor:[self anchorOfConnectors:movingConnectors]];
-	clusters	= [self rankedClusters:clusters dragDirection:dragDirection];
+	clusters	= [self clustersForConnectors:movingConnectors
+										  met:met
+									   anchor:[self anchorOfConnectors:movingConnectors]];
+	clusters	= [self rankedClusters:clusters owner:moving[0].owner dragDirection:dragDirection];
 
-	return [self solutionFromRankedClusters:clusters owner:moving[0].owner];
+	return [self solutionFromRankedClusters:clusters];
 }
 
 
@@ -291,10 +294,10 @@ static const int64_t NoPlacement = INT64_MIN;
 //				point keeps the distance independent of the search order.
 //
 //==============================================================================
-- (Point3)anchorOfConnectors:(NSData *)movingConnectors
+- (Point3)anchorOfConnectors:(LDrawWorldConnectors *)movingConnectors
 {
-	const LDrawWorldConnector	*moving	= movingConnectors.bytes;
-	NSUInteger					count	= movingConnectors.length / sizeof(LDrawWorldConnector);
+	const LDrawWorldConnector	*moving	= movingConnectors.all;
+	NSUInteger					count	= movingConnectors.count;
 	Point3						middle	= V3Make(0, 0, 0);
 
 	for (NSUInteger index = 0; index < count; index++)
@@ -311,10 +314,10 @@ static const int64_t NoPlacement = INT64_MIN;
 //				widened by the release distance.
 //
 //==============================================================================
-- (Box3)searchBoxForConnectors:(NSData *)movingConnectors
+- (Box3)searchBoxForConnectors:(LDrawWorldConnectors *)movingConnectors
 {
-	const LDrawWorldConnector	*moving	= movingConnectors.bytes;
-	NSUInteger					count	= movingConnectors.length / sizeof(LDrawWorldConnector);
+	const LDrawWorldConnector	*moving	= movingConnectors.all;
+	NSUInteger					count	= movingConnectors.count;
 	double						reach	= self.releaseDistance / self.pointsPerUnit;
 	Box3						box		= InvalidBox;
 
@@ -331,31 +334,60 @@ static const int64_t NoPlacement = INT64_MIN;
 }
 
 
+//========== searchBoxForConnector:reach: ======================================
+//
+// Purpose:		The volume one dragged connector could reach.
+//
+//==============================================================================
+- (Box3)searchBoxForConnector:(LDrawWorldConnector)connector reach:(double)reach
+{
+	Point3	mouth	= LDrawWorldConnectorMouth(connector);
+	Point3	end		= V3Add(mouth, V3MulScalar(connector.axis, connector.length));
+	Box3	box		= V3BoundsFromPoints(mouth, end);
+
+	box.min.x -= reach;	box.min.y -= reach;	box.min.z -= reach;
+	box.max.x += reach;	box.max.y += reach;	box.max.z += reach;
+
+	return box;
+}
+
+
 //========== clustersForConnectors:met: ========================================
 //
 // Purpose:		Turns every pair that can mate into a placement, and groups
 //				the pairs that give the same placement.
 //
 //==============================================================================
-- (NSArray<LDrawSnapCluster *> *)clustersForConnectors:(NSData *)movingConnectors
-												   met:(NSData *)metConnectors
+- (NSArray<LDrawSnapCluster *> *)clustersForConnectors:(LDrawWorldConnectors *)movingConnectors
+												   met:(LDrawWorldConnectors *)metConnectors
 												anchor:(Point3)anchor
 {
-	const LDrawWorldConnector	*moving		= movingConnectors.bytes;
-	const LDrawWorldConnector	*met		= metConnectors.bytes;
-	NSUInteger					movingCount	= movingConnectors.length / sizeof(LDrawWorldConnector);
-	NSUInteger					metCount	= metConnectors.length / sizeof(LDrawWorldConnector);
-	double						pairing		= self.allowsRotation ? M_PI : self.axisTolerance;
-	NSUInteger					rotationCount = 0;
-	const Matrix4				*rotations	= CubeRotations(&rotationCount);
-	LDrawSnapClusterTable *clusters = [[LDrawSnapClusterTable alloc] init];
+	const LDrawWorldConnector	*moving			= movingConnectors.all;
+	NSUInteger					movingCount		= movingConnectors.count;
+	double						reach			= self.releaseDistance / self.pointsPerUnit;
+	double						pairing			= self.allowsRotation ? M_PI : self.axisTolerance;
+	NSUInteger					rotationCount	= 0;
+	const Matrix4				*rotations		= CubeRotations(&rotationCount);
+	LDrawSnapClusterTable		*clusters		= [[LDrawSnapClusterTable alloc] init];
+	LDrawConnectorNeighborhood	*nearby			= [[LDrawConnectorNeighborhood alloc]
+												   initWithConnectors:metConnectors cellSize:reach];
+	const LDrawWorldConnector	*met			= [nearby connectors];
 
 	for (NSUInteger one = 0; one < movingCount; one++)
 	{
-		for (NSUInteger other = 0; other < metCount; other++)
-		{
-			double depth = 0.0;
+		NSUInteger		count	= 0;
+		const uint32_t	*close	= [nearby indicesNearBox:[self searchBoxForConnector:moving[one] reach:reach]
+													count:&count];
 
+		for (NSUInteger index = 0; index < count; index++)
+		{
+			NSUInteger	other	= close[index];
+			double		depth	= 0.0;
+
+			if (met[other].owner == moving[one].owner)
+			{
+				continue;			// a part does not hold itself
+			}
 			if (LDrawWorldConnectorsMate(moving[one], met[other], pairing, &depth) == NO)
 			{
 				continue;
@@ -368,7 +400,7 @@ static const int64_t NoPlacement = INT64_MIN;
 						   depth:depth
 						rotation:IdentityMatrix4
 							turn:NoTurn
-						  anchor:moving[0].position
+						  anchor:anchor
 							  to:clusters];
 				continue;
 			}
@@ -388,7 +420,7 @@ static const int64_t NoPlacement = INT64_MIN;
 						   depth:depth
 						rotation:rotations[turn]
 							turn:turn
-						  anchor:moving[0].position
+						  anchor:anchor
 							  to:clusters];
 			}
 		}
@@ -496,38 +528,90 @@ static const int64_t NoPlacement = INT64_MIN;
 
 #pragma mark - Ranking
 
-//========== rankedClusters:dragDirection: =====================================
+
+//========== rankedClusters:owner:dragDirection: ===============================
 //
 // Purpose:		Scores the placements within reach and sorts the best first.
 //				More votes win over a shorter distance.
 //
 //==============================================================================
 - (NSArray<LDrawSnapCluster *> *)rankedClusters:(NSArray<LDrawSnapCluster *> *)clusters
+										  owner:(uint32_t)owner
 								  dragDirection:(Vector3)dragDirection
 {
-	double	reach	= self.releaseDistance / self.pointsPerUnit;
+	double				reach		= self.releaseDistance / self.pointsPerUnit;
+	NSMutableArray		*scored		= [NSMutableArray arrayWithCapacity:clusters.count];
+	NSMutableArray		*inReach	= [NSMutableArray arrayWithCapacity:clusters.count];
+	LDrawSnapCluster	*held		= nil;
+	double				best		= -INFINITY;
 
 	for (LDrawSnapCluster *cluster in clusters)
 	{
-		double drag = 0.0;
-
-		if (V3Length(dragDirection) > 0.0 && cluster.distance > 0.0)
+		if (cluster.distance <= reach)
 		{
-			double along = V3Dot(V3Normalize(dragDirection), V3Normalize(cluster.displacement));
-
-			drag = (1.0 - along) / 2.0;
+			[inReach addObject:cluster];
+			if (cluster.identifier == _heldPlacement)
+			{
+				held = cluster;
+			}
 		}
-		cluster.score = self.countWeight * (double)cluster.votes
-					  - self.distanceWeight * cluster.distance * self.pointsPerUnit
-					  - self.angleWeight * cluster.angle
-					  - self.dragWeight * drag
-					  - self.switchWeight * ((cluster.identifier == _heldPlacement) ? 0.0 : 1.0);
 	}
 
-	return [[clusters filteredArrayUsingPredicate:
-			 [NSPredicate predicateWithBlock:^BOOL(LDrawSnapCluster *cluster, NSDictionary *bindings) {
-		return cluster.distance <= reach;
-	}]] sortedArrayUsingComparator:^NSComparisonResult(LDrawSnapCluster *one, LDrawSnapCluster *other) {
+	// The placement being held is scored first, whatever it is worth. The
+	// walk below stops early, and the part can only stay where it is while
+	// its own placement is among the answers.
+	if (held != nil)
+	{
+		[self scoreCluster:held owner:owner dragDirection:dragDirection];
+		if (held.votes > 0)
+		{
+			[scored addObject:held];
+			best = held.score;
+		}
+	}
+
+	// Most pairs first. A placement can score no more than its pairs are
+	// worth, so once that ceiling falls below the best score that could be
+	// taken up, nothing further can win and the rest need not be looked at:
+	// reading whether a connector is free costs a question to the index.
+	[inReach sortUsingComparator:^NSComparisonResult(LDrawSnapCluster *one,
+													 LDrawSnapCluster *other) {
+		if (one.votes == other.votes)
+		{
+			return (one.identifier < other.identifier) ? NSOrderedAscending : NSOrderedDescending;
+		}
+		return (one.votes > other.votes) ? NSOrderedAscending : NSOrderedDescending;
+	}];
+
+	for (LDrawSnapCluster *cluster in inReach)
+	{
+		if (cluster == held)
+		{
+			continue;
+		}
+		if (self.countWeight * (double)cluster.votes <= best)
+		{
+			break;
+		}
+		[self scoreCluster:cluster owner:owner dragDirection:dragDirection];
+
+		if (cluster.votes == 0)
+		{
+			continue;			// every connector it would use is taken
+		}
+		[scored addObject:cluster];
+
+		// Only a placement that could be taken up raises the bar. One too far
+		// to latch on to cannot be chosen, so it must not stop nearer ones
+		// from being looked at.
+		if ([self screenDistance:cluster] <= self.acquireDistance)
+		{
+			best = MAX(best, cluster.score);
+		}
+	}
+
+	return [scored sortedArrayUsingComparator:^NSComparisonResult(LDrawSnapCluster *one,
+																  LDrawSnapCluster *other) {
 		if (one.score == other.score)
 		{
 			// Break ties by identifier so the order is stable.
@@ -538,7 +622,46 @@ static const int64_t NoPlacement = INT64_MIN;
 }
 
 
-//========== solutionFromRankedClusters:owner: =================================
+//========== scoreCluster:owner:dragDirection: =================================
+//
+// Purpose:		Counts the pairs a placement still has free and scores it by
+//				them. A placement with none left scores nothing.
+//
+//==============================================================================
+- (void)scoreCluster:(LDrawSnapCluster *)cluster owner:(uint32_t)owner
+	   dragDirection:(Vector3)dragDirection
+{
+	cluster.votes = [self freeMeetingsOfCluster:cluster owner:owner];
+	cluster.score = (cluster.votes > 0) ? [self scoreOfCluster:cluster dragDirection:dragDirection] : 0.0;
+}
+
+
+//========== scoreOfCluster:dragDirection: =====================================
+//
+// Purpose:		What a placement is worth: the pairs that hold it, less how
+//				far the part moves on screen, how far it turns, whether it
+//				moves against the drag, and whether it is the one being held.
+//
+//==============================================================================
+- (double)scoreOfCluster:(LDrawSnapCluster *)cluster dragDirection:(Vector3)dragDirection
+{
+	double drag = 0.0;
+
+	if (V3Length(dragDirection) > 0.0 && cluster.distance > 0.0)
+	{
+		double along = V3Dot(V3Normalize(dragDirection), V3Normalize(cluster.displacement));
+
+		drag = (1.0 - along) / 2.0;
+	}
+	return self.countWeight * (double)cluster.votes
+		 - self.distanceWeight * cluster.distance * self.pointsPerUnit
+		 - self.angleWeight * cluster.angle
+		 - self.dragWeight * drag
+		 - self.switchWeight * ((cluster.identifier == _heldPlacement) ? 0.0 : 1.0);
+}
+
+
+//========== solutionFromRankedClusters: =======================================
 //
 // Purpose:		Picks the placement to hold. A part snaps to the best placement
 //				within the acquire distance. It keeps that placement until it
@@ -546,7 +669,7 @@ static const int64_t NoPlacement = INT64_MIN;
 //				scores better by the switch margin.
 //
 //==============================================================================
-- (LDrawSnapSolution)solutionFromRankedClusters:(NSArray<LDrawSnapCluster *> *)clusters owner:(uint32_t)owner
+- (LDrawSnapSolution)solutionFromRankedClusters:(NSArray<LDrawSnapCluster *> *)clusters
 {
 	LDrawSnapCluster	*held	= nil;
 	LDrawSnapCluster	*best	= nil;
@@ -564,10 +687,6 @@ static const int64_t NoPlacement = INT64_MIN;
 		if (isHeld && distance > self.releaseDistance)
 		{
 			continue;			// dragged past the release distance
-		}
-		if ([self clusterIsFree:cluster owner:owner] == NO)
-		{
-			continue;			// another part already uses these connectors
 		}
 		if (isHeld && held == nil)
 		{
@@ -624,19 +743,26 @@ static const int64_t NoPlacement = INT64_MIN;
 }
 
 
-//========== clusterIsFree:owner: ==============================================
+//========== freeMeetingsOfCluster:owner: ======================================
 //
-// Purpose:		Whether the connectors this placement meets are still free.
+// Purpose:		How many of the connectors this placement meets are free.
 //
-// Notes:		A connector is taken when another part uses any length of it,
-//				not only its mouth. The met part's own connectors are skipped,
-//				so an open stud with a hole in it still counts as free.
+// Notes:		A connector another part already holds does not hold this one,
+//				so it does not count. It does not rule the placement out
+//				either: a part over eight studs of which one is taken is
+//				still held by the other seven, and a model always has parts
+//				that touch without being connected.
+//
+//				The dragged part is left out: a part is often still in the
+//				index while it is dragged, and its own connectors would make
+//				the place it is leaving look taken.
 //
 //==============================================================================
-- (BOOL)clusterIsFree:(LDrawSnapCluster *)cluster owner:(uint32_t)owner
+- (NSUInteger)freeMeetingsOfCluster:(LDrawSnapCluster *)cluster owner:(uint32_t)owner
 {
 	const LDrawSnapMeeting	*meetings	= cluster.meetings.bytes;
 	NSUInteger				count		= cluster.meetings.length / sizeof(LDrawSnapMeeting);
+	NSUInteger				free		= 0;
 
 	for (NSUInteger index = 0; index < count; index++)
 	{
@@ -644,28 +770,28 @@ static const int64_t NoPlacement = INT64_MIN;
 		Point3				mouth		= LDrawWorldConnectorMouth(met);
 		Point3				end			= V3Add(mouth, V3MulScalar(met.axis, met.length));
 		Box3				run			= V3BoundsFromPoints(mouth, end);
-		NSData				*neighbors	= nil;
+		BOOL				taken		= NO;
+
 		run.min.x -= CoincidentDistance;	run.min.y -= CoincidentDistance;	run.min.z -= CoincidentDistance;
 		run.max.x += CoincidentDistance;	run.max.y += CoincidentDistance;	run.max.z += CoincidentDistance;
 
-		neighbors = [self.connectorIndex connectorsInBox:run excludingOwner:owner];
+		LDrawWorldConnectors	*neighbors	= [self.connectorIndex connectorsInBox:run excludingOwner:met.owner];
 
-		const LDrawWorldConnector	*near	= neighbors.bytes;
-		NSUInteger					found	= neighbors.length / sizeof(LDrawWorldConnector);
+		const LDrawWorldConnector	*near		= neighbors.all;
+		NSUInteger					found		= neighbors.count;
 
-		for (NSUInteger other = 0; other < found; other++)
+		for (NSUInteger other = 0; other < found && taken == NO; other++)
 		{
-			if (near[other].owner == met.owner || near[other].gender != meetings[index].movingGender)
+			if (near[other].owner == owner || near[other].gender != meetings[index].movingGender)
 			{
-				continue;		// the met part itself, or the wrong gender
+				continue;		// the part being dragged, or not after the same place
 			}
-			if ([self connector:near[other] takesPlaceOf:meetings[index]])
-			{
-				return NO;
-			}
+			taken = [self connector:near[other] takesPlaceOf:meetings[index]];
 		}
+		free += (taken ? 0 : 1);
+
 	}
-	return YES;
+	return free;
 }
 
 

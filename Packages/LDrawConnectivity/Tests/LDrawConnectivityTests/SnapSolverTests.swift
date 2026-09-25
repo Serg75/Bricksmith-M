@@ -26,17 +26,18 @@ struct SnapScene {
     /// Connectors of a part placed at a point and rotated by the given degrees.
     static func connectors(_ part: String, at position: (Double, Double, Double),
                            turnedBy degrees: (Double, Double, Double) = (0, 0, 0),
-                           owner: UInt32) throws -> Data {
+                           owner: UInt32) throws -> LDrawWorldConnectors {
         let set = try #require(ConnectivityFixtures.shadowConnectorSet(part))
         var placement = Matrix4Rotate(IdentityMatrix4, V3Make(degrees.0, degrees.1, degrees.2))
 
         placement = Matrix4Translate(placement, V3Make(position.0, position.1, position.2))
 
-        return LDrawWorldConnectorsFromSet(set, placement, owner)
+        return LDrawWorldConnectors(from: set, placement: placement, owner: owner)
     }
 
     @discardableResult
-    func place(_ part: String, at position: (Double, Double, Double), owner: UInt32) throws -> Data {
+    func place(_ part: String, at position: (Double, Double, Double),
+               owner: UInt32) throws -> LDrawWorldConnectors {
         let connectors = try Self.connectors(part, at: position, owner: owner)
 
         index.setConnectors(connectors, forOwner: owner)
@@ -50,15 +51,19 @@ struct SnapScene {
               direction: Vector3 = V3Make(0, 0, 0)) throws -> LDrawSnapSolution {
         let moving = try Self.connectors(part, at: position, turnedBy: degrees, owner: owner)
 
-        return solver.solution(forConnectors: moving, dragDirection: direction)
+        return solver.solution(for: moving, dragDirection: direction)
     }
 }
 
 
 extension Array where Element == LDrawWorldConnector {
     /// The connectors as the index and the solver take them.
-    var buffer: Data {
-        withUnsafeBufferPointer { Data(buffer: $0) }
+    var buffer: LDrawWorldConnectors {
+        let connectors = LDrawWorldConnectors()
+
+        forEach { connectors.add($0) }
+
+        return connectors
     }
 }
 
@@ -178,12 +183,16 @@ struct ConnectorPairTests {
         #expect(mate(bar, clip).holds)
     }
 
-    @Test("Connectors of the same part never hold each other")
-    func samePart() {
+    @Test("Whether two connectors hold each other does not depend on whose they are")
+    func ownerIsNotPartOfMating() {
+        // Shapes decide whether two could hold; the solver decides which
+        // pairs are worth offering, and never offers a part its own. The
+        // connectors inside a group of parts mate with each other, which is
+        // how the ones nothing can reach are found.
         let stud = connector((0, 0, 0), axis: (0, -1, 0), gender: .male, owner: 7)
         let hole = connector((0, 0, 0), axis: (0, -1, 0), gender: .female, owner: 7)
 
-        #expect(mate(stud, hole).holds == false)
+        #expect(mate(stud, hole).holds)
     }
 
     @Test("A bar reaches the narrow part of a tube that takes a stud at its mouth")
@@ -207,6 +216,51 @@ struct ConnectorPairTests {
 
         #expect(mate(stud, hole).holds == false)
         #expect(mate(stud, hole, tolerance: .pi).holds)
+    }
+}
+
+
+@Suite("The connectors a group of parts still offers")
+struct StillFreeTests {
+
+    private func stillFree(_ connectors: [LDrawWorldConnector]) -> [LDrawWorldConnector] {
+        let free = connectors.buffer.connectorsStillFree(0.05)
+
+        return (0..<free.count).map { free.connector(at: $0) }
+    }
+
+    @Test("A stud with a hole on it, and that hole, are past reaching")
+    func mateeachOtherInside() {
+        // A plate sitting on one stud of a brick, both inside the same group.
+        let taken = connector((0, 0, 0), axis: (0, -1, 0), profile: [(6, 4, .round)], gender: .male)
+        let onIt = connector((0, 0, 0), axis: (0, -1, 0), profile: [(6, 20, .round)], gender: .female)
+        let free = connector((20, 0, 0), axis: (0, -1, 0), profile: [(6, 4, .round)], gender: .male)
+
+        let left = stillFree([taken, onIt, free])
+
+        #expect(left.count == 1)
+        #expect(left.first?.position.x == 20)
+    }
+
+    @Test("A connector that slides keeps what is left of its run")
+    func slidingRunsAreKept() {
+        // An axle through a beam is held over part of its length and is still
+        // free over the rest.
+        let axle = connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 60, .round)],
+                             gender: .male, slide: true)
+        let beam = connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 28, .round)],
+                             gender: .female, slide: true)
+
+        #expect(stillFree([axle, beam]).count == 2)
+    }
+
+    @Test("Connectors that meet nothing are all kept")
+    func nothingInside() {
+        let studs = (0..<4).map {
+            connector((Double($0) * 20, 0, 0), axis: (0, -1, 0), gender: .male)
+        }
+
+        #expect(stillFree(studs).count == 4)
     }
 }
 
@@ -271,6 +325,21 @@ struct SnapSolverTests {
         #expect(translation(refused.transform).y > 0)
     }
 
+    @Test("A part left in the index does not take its own place")
+    func ownConnectorsDoNotBlock() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+        try scene.place("3001.dat", at: (0, -24, 0), owner: 2)
+
+        // Owner 2 is dragged while it is still in the index, back onto the
+        // studs it is standing on.
+        let solution = try scene.drag("3001.dat", to: (0, -24 + 2, 0), owner: 2)
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+    }
+
     @Test("Two plates cannot sit on one stud")
     func oneStudHoldsOnePart() throws {
         let scene = SnapScene()
@@ -293,20 +362,20 @@ struct SnapSolverTests {
 struct SnapSlideTests {
 
     /// A hole 28 long, centered on the origin and running along X.
-    private func hole(slides: Bool) -> Data {
+    private func hole(slides: Bool) -> LDrawWorldConnectors {
         [connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 28, .round)],
                    gender: .female, owner: 1, slide: slides, centered: true)].buffer
     }
 
     /// An axle 60 long, running along X.
-    private func axle(at position: (Double, Double, Double), slides: Bool) -> Data {
+    private func axle(at position: (Double, Double, Double), slides: Bool) -> LDrawWorldConnectors {
         [connector(position, axis: (1, 0, 0), profile: [(4, 60, .round)],
                    gender: .male, owner: 2, slide: slides)].buffer
     }
 
     /// A short pin, 4 long.
     private func pin(at position: (Double, Double, Double), along axis: (Double, Double, Double),
-                     slides: Bool = false) -> Data {
+                     slides: Bool = false) -> LDrawWorldConnectors {
         [connector(position, axis: axis, profile: [(4, 4, .round)],
                    gender: .male, owner: 2, slide: slides)].buffer
     }
@@ -323,7 +392,7 @@ struct SnapSlideTests {
                             forOwner: 1)
 
         // A pin held 2 LDU off the hole's mouth, which is at (-14, 0, 0).
-        let solution = solver.solution(forConnectors: pin(at: (-14, 2, 0), along: (1, 0, 0)),
+        let solution = solver.solution(for: pin(at: (-14, 2, 0), along: (1, 0, 0)),
                                        dragDirection: V3Make(0, 0, 0))
 
         #expect(solution.snapped)
@@ -341,7 +410,7 @@ struct SnapSlideTests {
 
         // Held near the hole's far end, 2 LDU off its line. The hole's mouth
         // is 26 LDU away, far outside the reach.
-        let solution = solver.solution(forConnectors: pin(at: (12, 2, 0), along: (1, 0, 0), slides: true),
+        let solution = solver.solution(for: pin(at: (12, 2, 0), along: (1, 0, 0), slides: true),
                                        dragDirection: V3Make(0, 0, 0))
 
         // Moved onto the line, and 2 LDU back so the pin stays inside the hole.
@@ -360,7 +429,7 @@ struct SnapSlideTests {
 
         // The first axle's mouth is not at the hole's mouth, but it still
         // fills the hole.
-        let solution = solver.solution(forConnectors: [connector((-30, 2, 0), axis: (1, 0, 0),
+        let solution = solver.solution(for: [connector((-30, 2, 0), axis: (1, 0, 0),
                                                                  profile: [(4, 60, .round)],
                                                                  gender: .male, owner: 3,
                                                                  slide: true)].buffer,
@@ -383,16 +452,16 @@ struct SnapSlideTests {
         index.setConnectors([connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 28, .round)],
                                        gender: .female, owner: 2, slide: true)].buffer, forOwner: 2)
 
-        func beam(at position: (Double, Double, Double)) -> Data {
+        func beam(at position: (Double, Double, Double)) -> LDrawWorldConnectors {
             [connector(position, axis: (1, 0, 0), profile: [(4, 28, .round)],
                        gender: .female, owner: 3, slide: true)].buffer
         }
 
-        let free = solver.solution(forConnectors: beam(at: (34, 2, 0)), dragDirection: V3Make(0, 0, 0))
+        let free = solver.solution(for: beam(at: (34, 2, 0)), dragDirection: V3Make(0, 0, 0))
 
         solver.releaseHold()
 
-        let over = solver.solution(forConnectors: beam(at: (10, 2, 0)), dragDirection: V3Make(0, 0, 0))
+        let over = solver.solution(for: beam(at: (10, 2, 0)), dragDirection: V3Make(0, 0, 0))
 
         #expect(free.snapped)                   // past the first beam
         #expect(over.snapped == false)          // where the first beam already is
@@ -409,7 +478,7 @@ struct SnapSlideTests {
         // An axle lying across the hole, 4 LDU above its mouth.
         let across = [connector((-14, 4, 0), axis: (0, 1, 0), profile: [(4, 60, .round)],
                                 gender: .male, owner: 2, slide: true)].buffer
-        let solution = solver.solution(forConnectors: across, dragDirection: V3Make(0, 0, 0))
+        let solution = solver.solution(for: across, dragDirection: V3Make(0, 0, 0))
 
         #expect(solution.snapped)
         #expect(isTurned(solution.transform))
@@ -425,7 +494,7 @@ struct SnapSlideTests {
         index.setConnectors(hole(slides: true), forOwner: 1)
 
         // Held 2 LDU off the axis, and 6 LDU along it from the fixed depth.
-        let solution = solver.solution(forConnectors: axle(at: (-20, 2, 0), slides: true),
+        let solution = solver.solution(for: axle(at: (-20, 2, 0), slides: true),
                                        dragDirection: V3Make(0, 0, 0))
 
         #expect(solution.snapped)
@@ -440,7 +509,7 @@ struct SnapSlideTests {
         solver.pointsPerUnit = 1
         index.setConnectors(hole(slides: false), forOwner: 1)
 
-        let solution = solver.solution(forConnectors: axle(at: (-20, 2, 0), slides: false),
+        let solution = solver.solution(for: axle(at: (-20, 2, 0), slides: false),
                                        dragDirection: V3Make(0, 0, 0))
 
         #expect(solution.snapped)
@@ -512,6 +581,28 @@ struct SnapHysteresisTests {
         #expect(whole.voteCount == 8)
     }
 
+    @Test("A held placement with fewer connectors is still kept")
+    func holdSurvivesARicherNeighbor() throws {
+        let scene = SnapScene()
+
+        // Nothing may take the hold over: only a placement scoring twice as
+        // well as the held one could.
+        scene.solver.switchMargin = 2.0
+        scene.solver.acquireDistance = 10       // the four-stud placement is 20 away
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // Two studs deep over the end of the brick, then nudged towards the
+        // four-stud placement 20 LDU away.
+        let acquired = try scene.drag("3001.dat", to: (60, -24, 0))
+        let nudged = try scene.drag("3001.dat", to: (44, -24, 0))
+
+        #expect(acquired.snapped)
+        #expect(acquired.voteCount == 2)
+        #expect(nudged.snapped)
+        #expect(nudged.voteCount == 2)                  // still the placement it holds
+        #expect(landing((0, 0, 0), by: nudged.transform).x == 16)
+    }
+
     @Test("Letting go forgets the placement")
     func releaseHold() throws {
         let scene = SnapScene()
@@ -542,11 +633,12 @@ struct SnapRotationTests {
         // stud by turning.
         let solution = try scene.drag("3024.dat", to: (10, 2, 0))
 
-        // The distance is how far the part's middle moves while it turns,
-        // not how far the hole moves.
+        // The distance is how far the middle of the plate's connectors moves
+        // while it turns, not how far the hole moves. That middle sits 4 LDU
+        // from the plate's origin, so a quarter turn carries it 4 * sqrt(2).
         #expect(solution.snapped)
         #expect(isTurned(solution.transform))
-        #expect(solution.distance > 10)
+        #expect(abs(solution.distance - 4 * 2.0.squareRoot()) < 0.001)
     }
 
     @Test("A part is not turned when it is told not to be")
@@ -599,11 +691,10 @@ struct ConnectorIndexTests {
         // The four middle studs are in the box, and the four stud holes above
         // them reach into it, from y = 24 up to y = 4. Each is found once,
         // though it spans several cells.
-        let found = index.connectors(inBox: box, excludingOwner: 0)
-        #expect(found.count / MemoryLayout<LDrawWorldConnector>.size == 8)
+        #expect(index.connectors(inBox: box, excludingOwner: 0).count == 8)
 
         box = V3BoundsFromPoints(V3Make(-100, -100, -100), V3Make(100, 100, 100))
-        #expect(index.connectors(inBox: box, excludingOwner: 1).isEmpty)
+        #expect(index.connectors(inBox: box, excludingOwner: 1).count == 0)
     }
 
     @Test("A long run is held all the way along, and found at its far end")
@@ -617,11 +708,11 @@ struct ConnectorIndexTests {
         let atTheFarEnd = V3BoundsFromPoints(V3Make(-1, 310, -1), V3Make(1, 318, 1))
         let beyondIt = V3BoundsFromPoints(V3Make(-1, 330, -1), V3Make(1, 338, 1))
 
-        #expect(index.connectors(inBox: atTheFarEnd, excludingOwner: 0).isEmpty == false)
-        #expect(index.connectors(inBox: beyondIt, excludingOwner: 0).isEmpty)
+        #expect(index.connectors(inBox: atTheFarEnd, excludingOwner: 0).count > 0)
+        #expect(index.connectors(inBox: beyondIt, excludingOwner: 0).count == 0)
 
         index.removeOwner(1)
-        #expect(index.connectors(inBox: atTheFarEnd, excludingOwner: 0).isEmpty)
+        #expect(index.connectors(inBox: atTheFarEnd, excludingOwner: 0).count == 0)
     }
 
     @Test("A run at an angle is held in the cells it crosses")
@@ -635,11 +726,25 @@ struct ConnectorIndexTests {
 
         let midway = V3BoundsFromPoints(V3Make(30, 30, 30), V3Make(32, 32, 32))
 
-        #expect(index.connectors(inBox: midway, excludingOwner: 0).isEmpty == false)
+        #expect(index.connectors(inBox: midway, excludingOwner: 0).count > 0)
 
         index.removeOwner(1)
         #expect(index.connectorCount == 0)
-        #expect(index.connectors(inBox: midway, excludingOwner: 0).isEmpty)
+        #expect(index.connectors(inBox: midway, excludingOwner: 0).count == 0)
+    }
+
+    @Test("The index keeps what it was given, not what the caller adds later")
+    func indexTakesASnapshot() throws {
+        let index = LDrawConnectorIndex()
+        let brick = try SnapScene.connectors("3001.dat", at: (0, 0, 0), owner: 1)
+
+        index.setConnectors(brick, forOwner: 1)
+        brick.add(try SnapScene.connectors("3001.dat", at: (0, -24, 0), owner: 1))
+
+        #expect(index.connectorCount == 16)
+
+        index.removeOwner(1)
+        #expect(index.connectorCount == 0)
     }
 
     @Test("A baseplate's studs are all indexed")
