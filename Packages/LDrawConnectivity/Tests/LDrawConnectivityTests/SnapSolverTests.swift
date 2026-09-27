@@ -93,7 +93,8 @@ func connector(_ position: (Double, Double, Double), axis: (Double, Double, Doub
                profile: [(radius: Double, length: Double, shape: LDrawSectionShape)]
                    = [(6, 4, .round)],
                kind: LDrawConnectorKind = .cylinder, gender: LDrawConnectorGender,
-               owner: UInt32 = 1, slide: Bool = false, centered: Bool = false) -> LDrawWorldConnector {
+               owner: UInt32 = 1, slide: Bool = false, centered: Bool = false,
+               bothEndsOpen: Bool = false) -> LDrawWorldConnector {
     let empty = LDrawConnectorSection(radius: 0, length: 0, shape: .round)
     var sections = [LDrawConnectorSection](repeating: empty, count: 4)
 
@@ -108,7 +109,7 @@ func connector(_ position: (Double, Double, Double), axis: (Double, Double, Doub
                                sections: (sections[0], sections[1], sections[2], sections[3]),
                                owner: owner, sectionCount: UInt8(min(profile.count, 4)),
                                kind: kind, gender: gender,
-                               centered: centered, slide: slide)
+                               centered: centered, slide: slide, bothEndsOpen: bothEndsOpen)
 }
 
 
@@ -355,6 +356,21 @@ struct SnapSolverTests {
         #expect(taken.snapped == false)
         #expect(free.snapped)
     }
+
+    @Test("A stud does not go into a stud hole from its closed end")
+    func closedEnd() {
+        let index = LDrawConnectorIndex()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+
+        solver.pointsPerUnit = 1
+        solver.allowsRotation = false
+        index.setConnectors([connector((0, 0, 0), axis: (0, -1, 0), gender: .female, owner: 1)].buffer,
+                            forOwner: 1)
+
+        let upsideDown = [connector((0, -2, 0), axis: (0, 1, 0), gender: .male, owner: 2)].buffer
+
+        #expect(solver.solution(for: upsideDown, dragDirection: V3Make(0, 0, 0)).snapped == false)
+    }
 }
 
 
@@ -438,7 +454,7 @@ struct SnapSlideTests {
         #expect(solution.snapped == false)
     }
 
-    @Test("A second beam goes on the free length of an axle, but not over the first")
+    @Test("A second beam goes on the free length of an axle, and stops against the first")
     func twoBeamsOnOneAxle() throws {
         let index = LDrawConnectorIndex()
         let solver = LDrawSnapSolver(connectorIndex: index)
@@ -463,8 +479,30 @@ struct SnapSlideTests {
 
         let over = solver.solution(for: beam(at: (10, 2, 0)), dragDirection: V3Make(0, 0, 0))
 
-        #expect(free.snapped)                   // past the first beam
-        #expect(over.snapped == false)          // where the first beam already is
+        #expect(free.snapped)                                   // past the first beam
+        #expect(over.snapped)
+        #expect(translation(over.transform) == (18, -2, 0))     // pushed off the first beam
+    }
+
+    @Test("A hole open at both ends takes an axle from either end")
+    func eitherEnd() throws {
+        let index = LDrawConnectorIndex()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+
+        solver.pointsPerUnit = 1
+        solver.allowsRotation = false
+        index.setConnectors([connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 28, .round)],
+                                       gender: .female, owner: 1, slide: true, centered: true,
+                                       bothEndsOpen: true)].buffer, forOwner: 1)
+
+        // An axle pointing the other way, 2 LDU off the hole's line.
+        let axle = [connector((20, 2, 0), axis: (-1, 0, 0), profile: [(4, 60, .round)],
+                              gender: .male, owner: 2, slide: true, bothEndsOpen: true)].buffer
+        let solution = solver.solution(for: axle, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(isTurned(solution.transform) == false)
+        #expect(translation(solution.transform) == (0, -2, 0))
     }
 
     @Test("A part that has to turn is seated at the mouth, not slid")
@@ -514,6 +552,578 @@ struct SnapSlideTests {
 
         #expect(solution.snapped)
         #expect(translation(solution.transform) == (6, -2, 0))      // back to the hole's mouth
+    }
+}
+
+
+@Suite("Looking along the line of sight through the finger")
+struct SightTests {
+
+    /// A line looking straight down through a point, from high above it.
+    private func lookingDown(at x: Double, _ z: Double, holding grab: (Double, Double, Double)) -> LDrawSightLine {
+        LDrawSightLine(origin: V3Make(x, -1000, z), direction: V3Make(0, 1, 0),
+                       grab: V3Make(grab.0, grab.1, grab.2), surface: .infinity)
+    }
+
+    @Test("A placement far below the part, but under the finger, is found")
+    func depthDoesNotCount() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // 500 LDU above the brick, far past any reach measured in the model,
+        // but right over it on screen.
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -500, 0), owner: 99)
+        let solution = scene.solver.solution(for: moving,
+                                             alongSight: lookingDown(at: 0, 0, holding: (0, -500, 0)),
+                                             dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 476)     // down onto its studs
+    }
+
+    @Test("The nearest surface under the finger wins over one behind it")
+    func nearestWins() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)           // low
+        try scene.place("3001.dat", at: (0, -100, 0), owner: 2)        // high, in front of it
+
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -500, 0), owner: 99)
+        let solution = scene.solver.solution(for: moving,
+                                             alongSight: lookingDown(at: 0, 0, holding: (0, -500, 0)),
+                                             dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 376)     // onto the high one
+    }
+
+    @Test("A placement well to the side of the finger is not taken")
+    func besideIsNotUnder() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (400, 0, 0), owner: 1)
+
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -500, 0), owner: 99)
+        let solution = scene.solver.solution(for: moving,
+                                             alongSight: lookingDown(at: 0, 0, holding: (0, -500, 0)),
+                                             dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped == false)
+    }
+
+    /// A free brick low down, and in front of it a brick whose studs are all
+    /// capped with tiles, so nothing can land on it.
+    private func cappedInFront() throws -> SnapScene {
+        let scene = SnapScene()
+        var owner: UInt32 = 3
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+        try scene.place("3001.dat", at: (0, -100, 0), owner: 2)
+
+        for x in [-30.0, -10, 10, 30] {
+            for z in [-10.0, 10] {
+                try scene.place("3070b.dat", at: (x, -108, z), owner: owner)
+                owner += 1
+            }
+        }
+        return scene
+    }
+
+    @Test("A surface whose studs are all taken does not stop the search for one behind it")
+    func takenSurfaceIsPassedOver() throws {
+        let scene = try cappedInFront()
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -500, 0), owner: 99)
+        let solution = scene.solver.solution(for: moving,
+                                             alongSight: lookingDown(at: 0, 0, holding: (0, -500, 0)),
+                                             dragDirection: V3Make(0, 0, 0))
+
+        // The capped studs are passed over, and the next free place along the
+        // line is under the capped brick, its studs up in the brick's holes.
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 424)
+    }
+
+    @Test("A part does not land out of sight, behind what the finger sees")
+    func hiddenIsNotTaken() throws {
+        let scene = try cappedInFront()
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -500, 0), owner: 99)
+        var sight = lookingDown(at: 0, 0, holding: (0, -500, 0))
+
+        // The finger sees the tops of the tiles. Under the capped brick, and
+        // on the low one, the part would be behind them.
+        sight.surface = 1000 - 108
+
+        #expect(scene.solver.solution(for: moving, alongSight: sight,
+                                      dragDirection: V3Make(0, 0, 0)).snapped == false)
+    }
+
+    @Test("Across the screen, the reach is measured from the finger")
+    func reachIsOnScreen() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // A 1x1 plate held by its one hole. The brick's last stud is at 30:
+        // the finger 15 past it is in the 22 pt reach, 30 past it is not.
+        let near = try SnapScene.connectors("3024.dat", at: (45, -500, 0), owner: 99)
+        let far = try SnapScene.connectors("3024.dat", at: (60, -500, 0), owner: 99)
+
+        let taken = scene.solver.solution(for: near,
+                                          alongSight: lookingDown(at: 45, 0, holding: (45, -500, 0)),
+                                          dragDirection: V3Make(0, 0, 0))
+
+        scene.solver.releaseHold()
+
+        let passed = scene.solver.solution(for: far,
+                                           alongSight: lookingDown(at: 60, 0, holding: (60, -500, 0)),
+                                           dragDirection: V3Make(0, 0, 0))
+
+        #expect(taken.snapped)
+        #expect(passed.snapped == false)
+    }
+
+    /// An axle 60 long along X from the origin, with a wheel on it from 20 to
+    /// 40, both open at both ends.
+    private func axleWithAWheel() -> SnapScene {
+        let scene = SnapScene()
+
+        scene.index.setConnectors([connector((0, 0, 0), axis: (1, 0, 0), profile: [(6, 60, .axle)],
+                                             gender: .male, owner: 1, slide: true,
+                                             bothEndsOpen: true)].buffer, forOwner: 1)
+        scene.index.setConnectors([connector((20, 0, 0), axis: (1, 0, 0), profile: [(6, 20, .axle)],
+                                             gender: .female, owner: 2, slide: true,
+                                             bothEndsOpen: true)].buffer, forOwner: 2)
+        return scene
+    }
+
+    /// A disc 10 thick with an axle hole, facing the far end of the axle.
+    private func disc(at position: (Double, Double, Double)) -> LDrawWorldConnectors {
+        [connector(position, axis: (-1, 0, 0), profile: [(6, 10, .axle)], gender: .female,
+                   owner: 99, slide: true, bothEndsOpen: true)].buffer
+    }
+
+    @Test("A disc slides along an axle to come under the finger")
+    func slidesUnderTheFinger() throws {
+        let scene = axleWithAWheel()
+
+        // Held above the axle by its outer face, and seen at a slant: the
+        // line of sight meets the axle at 55.
+        let direction = V3Normalize(V3Make(1, 1, 0))
+        let sight = LDrawSightLine(origin: V3Sub(V3Make(5, -50, 0), V3MulScalar(direction, 1000)),
+                                   direction: direction, grab: V3Make(5, -50, 0), surface: .infinity)
+        let solution = scene.solver.solution(for: disc(at: (5, -50, 0)), alongSight: sight,
+                                             dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(landing((5, -50, 0), by: solution.transform) == (55, 0, 0))
+    }
+
+    @Test("A disc pushed along an axle seen end on stops at the wheel")
+    func stopsAtTheWheel() throws {
+        let scene = axleWithAWheel()
+
+        // Looking along the axle from its far end, holding the disc so deep
+        // that it would sit in the wheel.
+        let sight = LDrawSightLine(origin: V3Make(1000, 0, 0), direction: V3Make(-1, 0, 0),
+                                   grab: V3Make(42, 0, 0), surface: .infinity)
+        let solution = scene.solver.solution(for: disc(at: (42, 0, 0)), alongSight: sight,
+                                             dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(landing((42, 0, 0), by: solution.transform) == (50, 0, 0))
+    }
+}
+
+
+@Suite("Refusing a placement that is through another part")
+struct ClashTests {
+
+    /// The space a plate or brick of this size fills, from its origin: LDraw
+    /// parts have their origin on the top face.
+    private func bounds(width: Double, height: Double, depth: Double,
+                        at position: (Double, Double, Double)) -> Box3 {
+        V3BoundsFromPoints(V3Make(position.0 - width / 2, position.1, position.2 - depth / 2),
+                           V3Make(position.0 + width / 2, position.1 + height, position.2 + depth / 2))
+    }
+
+    @Test("A wide plate does not land through a small one beside it")
+    func doesNotSwallowASmallPlate() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("10a.dat", at: (0, 0, 0), owner: 1)
+        let small = try SnapScene.connectors("3024.dat", at: (0, -8, 0), owner: 2)
+
+        scene.index.setConnectors(field, bounds: bounds(width: 480, height: 8, depth: 640,
+                                                        at: (0, 0, 0)), forOwner: 1)
+        scene.index.setConnectors(small, bounds: bounds(width: 20, height: 8, depth: 20,
+                                                        at: (0, -8, 0)), forOwner: 2)
+
+        // A 2x4 plate over the small one, resting on its stud. Landing on the
+        // baseplate instead would hold it on more studs, but drive it through
+        // the small plate.
+        let moving = try SnapScene.connectors("3020.dat", at: (0, -16, 0), owner: 99)
+
+        scene.solver.addMovingBounds(bounds(width: 80, height: 8, depth: 40, at: (0, -16, 0)))
+
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 0)      // stays on the small plate
+    }
+
+    @Test("A plate goes onto the small plate under the finger, not onto more studs beside it")
+    func smallPartUnderTheFinger() throws {
+        let scene = SnapScene()
+        let brick = try SnapScene.connectors("3001.dat", at: (0, 0, 0), owner: 1)
+        let small = try SnapScene.connectors("3024.dat", at: (-10, -8, -10), owner: 2)
+
+        scene.index.setConnectors(brick, bounds: bounds(width: 80, height: 24, depth: 40,
+                                                        at: (0, 0, 0)), forOwner: 1)
+        scene.index.setConnectors(small, bounds: bounds(width: 20, height: 8, depth: 20,
+                                                        at: (-10, -8, -10)), forOwner: 2)
+
+        // A 2x4 plate at the height of the brick's studs, held over one of its
+        // holes, with the finger over the 1x1 plate. The brick offers four
+        // studs a stud's width away.
+        let moving = try SnapScene.connectors("3020.dat", at: (0, -8, 0), owner: 99)
+        let sight = LDrawSightLine(origin: V3Make(-10, -1000, -10), direction: V3Make(0, 1, 0),
+                                   grab: V3Make(-10, -8, -10), surface: 1000 - 8)
+
+        scene.solver.addMovingBounds(bounds(width: 80, height: 8, depth: 40, at: (0, -8, 0)))
+
+        let solution = scene.solver.solution(for: moving, alongSight: sight, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 1)
+        #expect(landing((-10, -8, -10), by: solution.transform) == (-10, -16, -10))
+    }
+
+    @Test("Without bounds the same placement is allowed")
+    func withoutBoundsItGoesThrough() throws {
+        let scene = SnapScene()
+
+        try scene.place("10a.dat", at: (0, 0, 0), owner: 1)
+        try scene.place("3024.dat", at: (0, -8, 0), owner: 2)
+
+        let moving = try SnapScene.connectors("3020.dat", at: (0, -16, 0), owner: 99)
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 8)      // down onto the baseplate
+    }
+
+    @Test("Parts that hold each other may share as much space as they like")
+    func joinedPartsMayOverlap() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // A box far taller than the brick, as a hinge or a clip reaches into
+        // the part it holds.
+        scene.index.setConnectors(field, bounds: bounds(width: 80, height: 24, depth: 40,
+                                                        at: (0, -48, 0)), forOwner: 1)
+
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -28, 0), owner: 99)
+
+        scene.solver.clearMovingBounds()
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (0, -28, 0)))
+
+        // The boxes overlap by 20, far more than a stud, but the placement is
+        // what joins the two.
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+    }
+
+    @Test("A part can go back where it was built, whatever its box overlaps there")
+    func goesBackWhereItWasBuilt() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("10a.dat", at: (0, 0, 0), owner: 1)
+        let beside = try SnapScene.connectors("3024.dat", at: (35, -8, 0), owner: 2)
+
+        scene.index.setConnectors(field, bounds: bounds(width: 480, height: 8, depth: 640,
+                                                        at: (0, 0, 0)), forOwner: 1)
+        // A part whose box reaches 20 LDU into the brick's, not joined to it,
+        // as a slope's box covers space its shape leaves free.
+        scene.index.setConnectors(beside, bounds: bounds(width: 40, height: 24, depth: 20,
+                                                         at: (40, -24, 0)), forOwner: 2)
+
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -24, 0), owner: 99)
+
+        scene.solver.clearMovingBounds()
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (0, -24, 0)))
+
+        let refused = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        scene.solver.releaseHold()
+        scene.solver.excusePartsItOverlaps()                // where the drag began
+
+        let home = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(refused.snapped == false || landing((0, 0, 0), by: refused.transform) != (0, 0, 0))
+        #expect(home.snapped)
+        #expect(landing((0, 0, 0), by: home.transform) == (0, 0, 0))
+    }
+
+    @Test("A part it overlapped where it was built still blocks it anywhere else")
+    func excusedOnlyWhereItWasBuilt() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("10a.dat", at: (0, 0, 0), owner: 1)
+        let beside = try SnapScene.connectors("3024.dat", at: (35, -8, 0), owner: 2)
+
+        scene.solver.acquireDistance = 10       // only the placement one stud over
+        scene.index.setConnectors(field, bounds: bounds(width: 480, height: 8, depth: 640,
+                                                        at: (0, 0, 0)), forOwner: 1)
+        scene.index.setConnectors(beside, bounds: bounds(width: 40, height: 24, depth: 20,
+                                                         at: (40, -24, 0)), forOwner: 2)
+
+        scene.solver.clearMovingBounds()
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (0, -24, 0)))
+        scene.solver.excusePartsItOverlaps()
+
+        // One stud further into the other part's box.
+        let moving = try SnapScene.connectors("3001.dat", at: (20, -24, 0), owner: 99)
+
+        scene.solver.clearMovingBounds()
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (20, -24, 0)))
+
+        #expect(scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0)).snapped == false)
+    }
+
+    @Test("Every part of a large submodel is tested for clashes")
+    func everyPartIsTested() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("10a.dat", at: (0, 0, 0), owner: 1)
+        let beside = try SnapScene.connectors("3024.dat", at: (35, -8, 0), owner: 2)
+
+        scene.index.setConnectors(field, bounds: bounds(width: 480, height: 8, depth: 640,
+                                                        at: (0, 0, 0)), forOwner: 1)
+        scene.index.setConnectors(beside, bounds: bounds(width: 40, height: 24, depth: 20,
+                                                         at: (40, -24, 0)), forOwner: 2)
+
+        // 600 parts, of which only the last reaches into the other part.
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -24, 0), owner: 99)
+
+        scene.solver.clearMovingBounds()
+        for _ in 0..<599 {
+            scene.solver.addMovingBounds(bounds(width: 20, height: 8, depth: 20, at: (-30, -24, 0)))
+        }
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (0, -24, 0)))
+
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped == false || landing((0, 0, 0), by: solution.transform) != (0, 0, 0))
+    }
+
+    @Test("A thing made of parts fits into the gap between them")
+    func fitsIntoAGap() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("10a.dat", at: (0, 0, 0), owner: 1)
+
+        scene.index.setConnectors(field, bounds: bounds(width: 480, height: 8, depth: 640,
+                                                       at: (0, 0, 0)), forOwner: 1)
+
+        // Two bricks 100 apart with a bar over them, as a submodel's parts
+        // stand: one box around all three covers the gap, the parts do not.
+        let over = LDrawWorldConnectors()
+
+        over.add(try SnapScene.connectors("3001.dat", at: (-100, -24, 0), owner: 2))
+        over.add(try SnapScene.connectors("3001.dat", at: (100, -24, 0), owner: 2))
+        scene.index.setConnectors(over, forOwner: 2)
+        scene.index.addBounds(bounds(width: 80, height: 24, depth: 40, at: (-100, -24, 0)),
+                              forOwner: 2)
+        scene.index.addBounds(bounds(width: 80, height: 24, depth: 40, at: (100, -24, 0)),
+                              forOwner: 2)
+
+        // A brick into the gap between them, on the baseplate.
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -28, 0), owner: 99)
+
+        scene.solver.clearMovingBounds()
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (0, -28, 0)))
+
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+    }
+
+    @Test("A part still lands on one it touches")
+    func touchingIsNotClashing() throws {
+        let scene = SnapScene()
+        let field = try SnapScene.connectors("10a.dat", at: (0, 0, 0), owner: 1)
+
+        scene.index.setConnectors(field, bounds: bounds(width: 480, height: 8, depth: 640,
+                                                        at: (0, 0, 0)), forOwner: 1)
+
+        // A brick just above the baseplate: its studs stand in the brick's
+        // holes, which is how parts hold each other.
+        let moving = try SnapScene.connectors("3001.dat", at: (0, -28, 0), owner: 99)
+
+        scene.solver.addMovingBounds(bounds(width: 80, height: 24, depth: 40, at: (0, -28, 0)))
+
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+    }
+}
+
+
+@Suite("Riding the surface under a part")
+struct RestingDropTests {
+
+    private let reach = 240.0                   // ten bricks
+
+    @Test("A part held above a brick falls to its studs")
+    func fallsToTheStuds() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        let above = try SnapScene.connectors("3001.dat", at: (0, -24 - 80, 0), owner: 99)
+
+        #expect(scene.solver.restingDrop(for: above, within: reach) == 80)
+    }
+
+    @Test("A part already resting stays where it is")
+    func restingStays() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        let resting = try SnapScene.connectors("3001.dat", at: (0, -24, 0), owner: 99)
+
+        #expect(scene.solver.restingDrop(for: resting, within: reach) == 0)
+    }
+
+    @Test("A part over nothing keeps its height")
+    func overNothing() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // Well to the side of the brick, where no stud is under it.
+        let away = try SnapScene.connectors("3001.dat", at: (400, -100, 0), owner: 99)
+
+        #expect(scene.solver.restingDrop(for: away, within: reach) == 0)
+    }
+
+    @Test("A part rests on the highest thing under it")
+    func restsOnTheHighest() throws {
+        let scene = SnapScene()
+
+        try scene.place("3024.dat", at: (0, 0, 0), owner: 1)        // a plate, top at 0
+        try scene.place("3001.dat", at: (20, -48, 0), owner: 2)     // a brick standing higher
+
+        // A plate high above both. Its holes are 8 LDU under its origin, at
+        // -140, and the brick's studs are at -48, so it stops on the brick
+        // after 92 and not on the plate's studs at 0.
+        let above = try SnapScene.connectors("3020.dat", at: (10, -148, 0), owner: 99)
+
+        #expect(scene.solver.restingDrop(for: above, within: reach) == 92)
+    }
+
+    @Test("A part sliding onto a brick is lifted onto its studs")
+    func risesOntoABrick() throws {
+        let scene = SnapScene()
+
+        try scene.place("10a.dat", at: (0, 0, 0), owner: 1)          // a baseplate, studs at 0
+        try scene.place("3001.dat", at: (0, -24, 0), owner: 2)      // a brick standing on it
+
+        // A plate at plate height, its holes at 0, slid over the brick.
+        let sunk = try SnapScene.connectors("3020.dat", at: (0, -8, 0), owner: 99)
+
+        #expect(scene.solver.restingDrop(for: sunk, within: reach) == -24)
+    }
+
+    @Test("A stud with a part already on it is passed over")
+    func coveredStudsAreSkipped() throws {
+        let scene = SnapScene()
+
+        try scene.place("10a.dat", at: (0, 0, 0), owner: 1)
+        try scene.place("3001.dat", at: (0, -24, 0), owner: 2)      // on the baseplate
+        try scene.place("3001.dat", at: (0, -48, 0), owner: 3)      // and another on that
+
+        // Over the stack at baseplate level: the lower brick's studs are
+        // covered, so the plate rises to the top of the stack, not into it.
+        let sunk = try SnapScene.connectors("3020.dat", at: (0, -8, 0), owner: 99)
+
+        #expect(scene.solver.restingDrop(for: sunk, within: reach) == -48)
+    }
+
+    @Test("A part does not rest on itself")
+    func notOnItself() throws {
+        let scene = SnapScene()
+        let alone = try SnapScene.connectors("3001.dat", at: (0, -100, 0), owner: 1)
+
+        scene.index.setConnectors(alone, forOwner: 1)
+
+        #expect(scene.solver.restingDrop(for: alone, within: reach) == 0)
+    }
+}
+
+
+@Suite("Drawing a part down onto what is under it")
+struct SnapDropTests {
+
+    /// A scene that draws a part down onto what is under it, as a host that
+    /// places by dropping would set it.
+    private func dropping() -> SnapScene {
+        let scene = SnapScene()
+
+        scene.solver.dropReach = 120       // five bricks
+
+        return scene
+    }
+
+    @Test("A part held well above a brick lands on it")
+    func fallsOntoABrick() throws {
+        let scene = dropping()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // 80 LDU up is 80 points at this zoom, far past the 40 pt release, and
+        // within the drop.
+        let solution = try scene.drag("3001.dat", to: (0, -24 - 80, 0))
+
+        #expect(solution.snapped)
+        #expect(solution.voteCount == 8)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 80)     // the whole way down
+    }
+
+    @Test("Without the drop the same part stays in the air")
+    func staysUpWithoutTheDrop() throws {
+        let scene = SnapScene()                 // the drop reach is 0 by default
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        #expect(try scene.drag("3001.dat", to: (0, -24 - 80, 0)).snapped == false)
+    }
+
+    @Test("A part below is not drawn up")
+    func doesNotRise() throws {
+        let scene = dropping()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // The same distance under the brick, where its studs are out of reach.
+        #expect(try scene.drag("3001.dat", to: (0, 80, 0)).snapped == false)
+    }
+
+    @Test("A near placement still wins over a long drop")
+    func nearnessStillCounts() throws {
+        let scene = dropping()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+        try scene.place("3001.dat", at: (200, -24 - 200, 0), owner: 2)
+
+        // Beside the brick that is high up, and far above the low one.
+        let solution = try scene.drag("3001.dat", to: (200, -24 - 200 - 24 - 4, 0))
+
+        #expect(solution.snapped)
+        #expect(landing((0, 0, 0), by: solution.transform).y == 4)      // onto the near brick
     }
 }
 
@@ -585,9 +1195,9 @@ struct SnapHysteresisTests {
     func holdSurvivesARicherNeighbor() throws {
         let scene = SnapScene()
 
-        // Nothing may take the hold over: only a placement scoring twice as
-        // well as the held one could.
-        scene.solver.switchMargin = 2.0
+        // Nothing may take the hold over: only a placement 100 LDU nearer
+        // could.
+        scene.solver.switchMargin = 100
         scene.solver.acquireDistance = 10       // the four-stud placement is 20 away
         try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
 
@@ -601,6 +1211,45 @@ struct SnapHysteresisTests {
         #expect(nudged.snapped)
         #expect(nudged.voteCount == 2)                  // still the placement it holds
         #expect(landing((0, 0, 0), by: nudged.transform).x == 16)
+    }
+
+    @Test("A part slid along a brick moves one stud at a time")
+    func oneStudAtATime() throws {
+        let scene = SnapScene()
+        var landings: [Double] = []
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // A 1x1 plate slid along the brick's back row, 1 LDU a step.
+        for x in stride(from: -30.0, through: 30.0, by: 1.0) {
+            let solution = try scene.drag("3024.dat", to: (x, -8, -10))
+
+            #expect(solution.snapped)
+
+            let landed = x + translation(solution.transform).x
+
+            if landings.last != landed {
+                landings.append(landed)
+            }
+        }
+
+        #expect(landings == [-30, -10, 10, 30])
+    }
+
+    @Test("A placement keeps its number while it is held, and another gets its own")
+    func placementIsNamed() throws {
+        let scene = SnapScene()
+
+        try scene.place("3001.dat", at: (0, 0, 0), owner: 1)
+
+        // The same landing from two positions, then a landing one stud over.
+        let near = try scene.drag("3001.dat", to: (2, -24, 0))
+        let again = try scene.drag("3001.dat", to: (6, -24, 0))
+        let over = try scene.drag("3001.dat", to: (60, -24 + 6, 0))
+
+        #expect(near.snapped && again.snapped && over.snapped)
+        #expect(near.placement == again.placement)
+        #expect(over.placement != near.placement)
     }
 
     @Test("Letting go forgets the placement")
@@ -639,6 +1288,17 @@ struct SnapRotationTests {
         #expect(solution.snapped)
         #expect(isTurned(solution.transform))
         #expect(abs(solution.distance - 4 * 2.0.squareRoot()) < 0.001)
+    }
+
+    @Test("A part is not turned further than it may be")
+    func turnIsCapped() throws {
+        let scene = SnapScene()
+
+        scene.solver.maximumTurn = 50 * Double.pi / 180     // under the right angle this needs
+        scene.solver.acquireDistance = 12
+        try scene.place("4733.dat", at: (0, 0, 0), owner: 1)
+
+        #expect(try scene.drag("3024.dat", to: (10, 2, 0)).snapped == false)
     }
 
     @Test("A part is not turned when it is told not to be")

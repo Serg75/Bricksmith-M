@@ -40,7 +40,13 @@ struct SnapPerformanceTests {
         let start = Date()
 
         for (owner, connectors) in bricks {
-            index.setConnectors(connectors, forOwner: owner)
+            let x = Double(owner % 100) * 80
+            let y = Double(owner / 100) * -24
+
+            index.setConnectors(connectors,
+                                bounds: V3BoundsFromPoints(V3Make(x - 40, y, -20),
+                                                           V3Make(x + 40, y + 24, 20)),
+                                forOwner: owner)
         }
         return (index, -start.timeIntervalSinceNow)
     }
@@ -54,6 +60,100 @@ struct SnapPerformanceTests {
 
         if Self.budgetsAreKept {
             #expect(seconds < 10.0)
+        }
+    }
+
+    @Test("Looking down through the whole wall still answers inside a frame")
+    func dragQueriesAlongSight() throws {
+        let (index, _) = try largeModel()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+        let steps = 1_000
+
+        solver.pointsPerUnit = 1
+        solver.maximumTurn = 50 * Double.pi / 180       // as a host that keeps parts upright sets it
+
+        // Held 200 LDU over the wall and looking straight down, so the line
+        // runs through all hundred rows.
+        let path = try (0..<steps).map { step in
+            try SnapScene.connectors("3001.dat", at: (Double(step) * 0.08, Self.topOfWall - 200, 0),
+                                     owner: 99_999)
+        }
+        var snapped = 0
+        let start = Date()
+
+        for (step, moving) in path.enumerated() {
+            let x = Double(step) * 0.08
+            let sight = LDrawSightLine(origin: V3Make(x, Self.topOfWall - 1000, 0),
+                                       direction: V3Make(0, 1, 0),
+                                       grab: V3Make(x, Self.topOfWall - 200, 0), surface: .infinity)
+
+            if solver.solution(for: moving, alongSight: sight, dragDirection: V3Make(1, 0, 0)).snapped {
+                snapped += 1
+            }
+        }
+
+        let each = -start.timeIntervalSinceNow / Double(steps) * 1000
+
+        print("drag step along the sight: \(String(format: "%.3f", each)) ms each, over \(steps) steps")
+        #expect(snapped == steps)                       // always onto the top row
+
+        if Self.budgetsAreKept {
+            #expect(each < 8.0)
+        }
+    }
+
+    @Test("Finding what a part rests on is cheap enough for every step")
+    func restingDrop() throws {
+        let (index, _) = try largeModel()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+        let steps = 1_000
+
+        solver.pointsPerUnit = 1
+
+        let path = try (0..<steps).map { step in
+            try SnapScene.connectors("3001.dat", at: (Double(step) * 0.08, Self.topOfWall, 0),
+                                     owner: 99_999)
+        }
+        let start = Date()
+
+        for moving in path {
+            _ = solver.restingDrop(for: moving, within: 240)
+        }
+
+        let each = -start.timeIntervalSinceNow / Double(steps) * 1000
+
+        print("resting drop: \(String(format: "%.3f", each)) ms each, over \(steps) steps")
+
+        if Self.budgetsAreKept {
+            #expect(each < 2.0)
+        }
+    }
+
+    @Test("A thousand drag steps still answer inside a frame when parts are drawn down")
+    func dragQueriesWhileDropping() throws {
+        let (index, _) = try largeModel()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+        let steps = 1_000
+
+        solver.pointsPerUnit = 1
+        solver.dropReach = 120              // as a host that places by dropping sets it
+
+        let path = try (0..<steps).map { step in
+            try SnapScene.connectors("3001.dat", at: (Double(step) * 0.08, Self.topOfWall, 0),
+                                     owner: 99_999)
+        }
+        let start = Date()
+
+        for moving in path {
+            _ = solver.solution(for: moving, dragDirection: V3Make(1, 0, 0))
+        }
+
+        let each = -start.timeIntervalSinceNow / Double(steps) * 1000
+
+        print("drag step drawing down: \(String(format: "%.3f", each)) ms each, over \(steps) steps")
+
+        if Self.budgetsAreKept {
+            #expect(each < 8.0)             // one frame at 120 Hz
         }
     }
 
@@ -74,7 +174,12 @@ struct SnapPerformanceTests {
         var snapped = 0
         let start = Date()
 
-        for moving in path {
+        for (step, moving) in path.enumerated() {
+            let x = Double(step) * 0.08
+
+            solver.clearMovingBounds()
+            solver.addMovingBounds(V3BoundsFromPoints(V3Make(x - 40, Self.topOfWall, -20),
+                                                      V3Make(x + 40, Self.topOfWall + 24, 20)))
             if solver.solution(for: moving, dragDirection: V3Make(1, 0, 0)).snapped {
                 snapped += 1
             }
@@ -138,6 +243,31 @@ struct SubmodelDragPerformanceTests {
         let each = -start.timeIntervalSinceNow / Double(steps) * 1000
 
         print("submodel drag: \(moving) connectors, \(String(format: "%.2f", each)) ms each")
+
+        // The same, looked for along the line of sight straight down through
+        // the wall, with the part kept upright as a host sets it.
+        solver.releaseHold()
+        solver.maximumTurn = 50 * Double.pi / 180
+
+        let sightStart = Date()
+
+        for (step, connectors) in path.enumerated() {
+            let x = Double(step) * 0.08
+            let sight = LDrawSightLine(origin: V3Make(x, -24.0 * 100 - 1000, 0), direction: V3Make(0, 1, 0),
+                                       grab: V3Make(x, -24.0 * 100, 0), surface: .infinity)
+
+            _ = solver.solution(for: connectors, alongSight: sight, dragDirection: V3Make(1, 0, 0))
+        }
+        print("submodel drag along the sight: "
+              + "\(String(format: "%.2f", -sightStart.timeIntervalSinceNow / Double(steps) * 1000)) ms each")
+
+        let restingStart = Date()
+
+        for connectors in path {
+            _ = solver.restingDrop(for: connectors, within: 240)
+        }
+        print("submodel resting drop: "
+              + "\(String(format: "%.2f", -restingStart.timeIntervalSinceNow / Double(steps) * 1000)) ms each")
 
         if SnapPerformanceTests.budgetsAreKept {
             #expect(each < 8.0)                 // one frame at 120 Hz

@@ -33,7 +33,10 @@ typedef struct
 @implementation LDrawConnectorIndex
 {
 	NSMutableDictionary<NSNumber *, LDrawWorldConnectors *>	*_connectorsByOwner;
-	NSMutableDictionary<NSNumber *, NSMutableData *>		*_cells;		// cell key -> places
+	NSMutableDictionary<NSNumber *, NSMutableData *>		*_boundsByOwner;		// owner -> Box3 a part
+	Box3													_occupied;
+	BOOL													_occupiedIsKnown;
+	CFMutableDictionaryRef									_cells;			// cell key -> NSMutableData of places
 	NSUInteger												_connectorCount;
 }
 
@@ -45,7 +48,10 @@ typedef struct
 	if (self != nil)
 	{
 		_connectorsByOwner	= [NSMutableDictionary dictionary];
-		_cells				= [NSMutableDictionary dictionary];
+		_boundsByOwner		= [NSMutableDictionary dictionary];
+		// Keyed by the raw number: a cell key is too large to box without
+		// allocating, and a query looks up thousands of cells.
+		_cells				= CFDictionaryCreateMutable(NULL, 0, NULL, &kCFTypeDictionaryValueCallBacks);
 	}
 	return self;
 }
@@ -144,6 +150,14 @@ static void EnumerateCellsAlongRun(LDrawWorldConnector connector, void (^visit)(
 }
 
 
+//---------- CellAtKey -------------------------------------------------[static]--
+//------------------------------------------------------------------------------
+static NSMutableData *CellAtKey(CFMutableDictionaryRef cells, int64_t key)
+{
+	return (__bridge NSMutableData *)CFDictionaryGetValue(cells, (const void *)(intptr_t)key);
+}
+
+
 //---------- RunReachesBox ---------------------------------------------[static]--
 //
 // Purpose:		Whether any of a connector's run lies in the box.
@@ -163,9 +177,27 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 
 #pragma mark - Contents
 
+//========== dealloc ===========================================================
+//==============================================================================
+- (void)dealloc
+{
+	CFRelease(_cells);
+}
+
+
 //========== setConnectors:forOwner: ===========================================
 //==============================================================================
 - (void)setConnectors:(LDrawWorldConnectors *)connectors forOwner:(uint32_t)owner
+{
+	[self setConnectors:connectors bounds:InvalidBox forOwner:owner];
+}
+
+
+//========== setConnectors:bounds:forOwner: ====================================
+//==============================================================================
+- (void)setConnectors:(LDrawWorldConnectors *)connectors
+			   bounds:(Box3)bounds
+			 forOwner:(uint32_t)owner
 {
 	const LDrawWorldConnector	*placed	= connectors.all;
 	NSUInteger					count	= connectors.count;
@@ -179,6 +211,12 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 	// A copy, because the caller may go on adding to the set it passed, and
 	// the cells below record where each connector is by its place in it.
 	_connectorsByOwner[@(owner)] = [connectors copy];
+	_occupiedIsKnown = NO;
+
+	if (V3EqualBoxes(bounds, InvalidBox) == NO)
+	{
+		[self addBounds:bounds forOwner:owner];
+	}
 	_connectorCount += count;
 
 	for (NSUInteger index = 0; index < count; index++)
@@ -186,16 +224,96 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 		LDrawConnectorPlace place = { .owner = owner, .index = (uint32_t)index };
 
 		EnumerateCellsAlongRun(placed[index], ^(int64_t key) {
-			NSMutableData *cell = self->_cells[@(key)];
+			NSMutableData *cell = CellAtKey(self->_cells, key);
 
 			if (cell == nil)
 			{
 				cell = [NSMutableData data];
-				self->_cells[@(key)] = cell;
+				CFDictionarySetValue(self->_cells, (const void *)(intptr_t)key, (__bridge const void *)cell);
 			}
 			[cell appendBytes:&place length:sizeof(place)];
 		});
 	}
+}
+
+
+//========== addBounds:forOwner: ===============================================
+//==============================================================================
+- (void)addBounds:(Box3)bounds forOwner:(uint32_t)owner
+{
+	NSMutableData *boxes = _boundsByOwner[@(owner)];
+
+	if (boxes == nil)
+	{
+		boxes = [NSMutableData data];
+		_boundsByOwner[@(owner)] = boxes;
+	}
+	[boxes appendBytes:&bounds length:sizeof(bounds)];
+}
+
+
+//========== occupiedBounds ====================================================
+//
+// Purpose:		Worked out when first asked after a change, because a drag asks
+//				on every touch and the model does not change during one.
+//
+//==============================================================================
+- (Box3)occupiedBounds
+{
+	if (_occupiedIsKnown == NO)
+	{
+		_occupied = InvalidBox;
+
+		for (LDrawWorldConnectors *connectors in _connectorsByOwner.objectEnumerator)
+		{
+			const LDrawWorldConnector	*placed	= connectors.all;
+			NSUInteger					count	= connectors.count;
+
+			for (NSUInteger index = 0; index < count; index++)
+			{
+				_occupied = V3UnionBoxAndPoint(_occupied, LDrawWorldConnectorMouth(placed[index]));
+			}
+		}
+		_occupiedIsKnown = YES;
+	}
+	return _occupied;
+}
+
+
+//========== boundsOfOwner: ====================================================
+//==============================================================================
+- (Box3)boundsOfOwner:(uint32_t)owner
+{
+	NSUInteger	count	= [self partBoundsCountOfOwner:owner];
+	Box3		bounds	= InvalidBox;
+
+	for (NSUInteger index = 0; index < count; index++)
+	{
+		bounds = V3UnionBox(bounds, [self partBoundsOfOwner:owner atIndex:index]);
+	}
+	return bounds;
+}
+
+
+//========== partBoundsCountOfOwner: ===========================================
+//==============================================================================
+- (NSUInteger)partBoundsCountOfOwner:(uint32_t)owner
+{
+	return _boundsByOwner[@(owner)].length / sizeof(Box3);
+}
+
+
+//========== partBoundsOfOwner:atIndex: ========================================
+//==============================================================================
+- (Box3)partBoundsOfOwner:(uint32_t)owner atIndex:(NSUInteger)index
+{
+	const Box3 *boxes = _boundsByOwner[@(owner)].bytes;
+
+	if (index >= [self partBoundsCountOfOwner:owner])
+	{
+		return InvalidBox;
+	}
+	return boxes[index];
 }
 
 
@@ -214,20 +332,22 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 	for (NSUInteger index = 0; index < count; index++)
 	{
 		EnumerateCellsAlongRun(placed[index], ^(int64_t key) {
-			NSMutableData *cell = self->_cells[@(key)];
+			NSMutableData *cell = CellAtKey(self->_cells, key);
 
 			if (cell != nil)
 			{
 				[self removeOwner:owner fromCell:cell];
 				if (cell.length == 0)
 				{
-					[self->_cells removeObjectForKey:@(key)];
+					CFDictionaryRemoveValue(self->_cells, (const void *)(intptr_t)key);
 				}
 			}
 		});
 	}
 	_connectorCount -= count;
 	[_connectorsByOwner removeObjectForKey:@(owner)];
+	[_boundsByOwner removeObjectForKey:@(owner)];
+	_occupiedIsKnown = NO;
 }
 
 
@@ -256,8 +376,10 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 - (void)removeAllConnectors
 {
 	[_connectorsByOwner removeAllObjects];
-	[_cells removeAllObjects];
-	_connectorCount = 0;
+	[_boundsByOwner removeAllObjects];
+	CFDictionaryRemoveAllValues(_cells);
+	_connectorCount		= 0;
+	_occupiedIsKnown	= NO;
 }
 
 
@@ -323,7 +445,7 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 		{
 			for (int64_t z = firstZ; z <= lastZ; z++)
 			{
-				NSData						*cell	= _cells[@(LDrawCellKey(x, y, z))];
+				NSData						*cell	= CellAtKey(_cells, LDrawCellKey(x, y, z));
 				const LDrawConnectorPlace	*places	= cell.bytes;
 				NSUInteger					count	= cell.length / sizeof(LDrawConnectorPlace);
 

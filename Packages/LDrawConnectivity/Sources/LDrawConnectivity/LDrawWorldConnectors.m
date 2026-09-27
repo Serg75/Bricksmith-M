@@ -122,6 +122,7 @@ static BOOL RunCovers(LDrawWorldConnector connector, Point3 point, double margin
 				.gender			= connector.gender,
 				.centered		= connector.centered,
 				.slide			= connector.slide,
+				.bothEndsOpen	= (connector.caps == LDrawConnectorCapsNone),
 			};
 			memcpy(world.sections, profile, sizeof(profile));
 			[self addConnector:world];
