@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LDrawRenderer ()
 {
-	id<LDrawCameraScroller>	_Nullable scroller;
+	__weak id<LDrawCameraScroller> _Nullable scroller;
 	id						_Nullable target;
 	BOOL					allowsEditing;
 

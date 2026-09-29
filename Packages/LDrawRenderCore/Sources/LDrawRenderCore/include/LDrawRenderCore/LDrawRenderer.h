@@ -51,7 +51,7 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 //------------------------------------------------------------------------------
 @interface LDrawRenderer : NSObject <LDrawColorable>
 {
-	id<LDrawRendererDelegate>	_Nullable delegate;
+	__weak id<LDrawRendererDelegate> _Nullable delegate;	// the host owns the renderer, so this is weak
 
 	LDrawDirective	* _Nullable fileBeingDrawn;	// Should only be an LDrawFile or LDrawModel.
 												// if you want to do anything else, you must

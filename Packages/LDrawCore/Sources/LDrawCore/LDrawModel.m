@@ -865,6 +865,39 @@ static float GhostAlpha = LDRAW_DEFAULT_GHOST_ALPHA;
 }//end boundingBox3
 
 
+//========== projectedBoundingBoxWithModelView:projection:view: ================
+//
+// Purpose:		Returns the 2D projection (ignore the z) of the bounds of the
+//				steps on display, the same steps -boundingBox3 counts. Zoom to
+//				fit uses it.
+//
+//==============================================================================
+- (Box3) projectedBoundingBoxWithModelView:(Matrix4)modelView
+								projection:(Matrix4)projection
+									  view:(Box2)viewport
+{
+	Box3		bounds		= InvalidBox;
+	Box3		stepBounds	= InvalidBox;
+	NSArray		*steps		= [self subdirectives];
+	NSUInteger	maxIndex	= [self maxStepIndexToOutput];
+	NSUInteger	counter		= 0;
+
+	// Suppressed elements report no bounds, as in -boundingBox3.
+	[self updateGroupSuppressionIfNeeded];
+
+	for(counter = 0; counter <= maxIndex && counter < [steps count]; counter++)
+	{
+		stepBounds	= [[steps objectAtIndex:counter] projectedBoundingBoxWithModelView:modelView
+																		  projection:projection
+																				view:viewport];
+		bounds		= V3UnionBox(bounds, stepBounds);
+	}
+
+	return bounds;
+
+}//end projectedBoundingBoxWithModelView:projection:view:
+
+
 //========== isInlinePart ======================================================
 //
 // Purpose:		Whether the header marks this submodel as a part, not a

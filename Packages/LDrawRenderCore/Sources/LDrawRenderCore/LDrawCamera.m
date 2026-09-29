@@ -448,8 +448,11 @@
 		{
 			visibilityPlane = [self nearFrustumClippingRectFromVisibleRect:visibleRect];
 			
-			assert(visibilityPlane.size.width > 0.0);
-			assert(visibilityPlane.size.height > 0.0);
+			// A view with no size yet has nothing to project, so keep the old matrix.
+			if (visibilityPlane.size.width <= 0.0 || visibilityPlane.size.height <= 0.0)
+			{
+				return;
+			}
 			
 			buildFrustumMatrix(projection,
 							   V2BoxMinX(visibilityPlane),	// left
@@ -464,8 +467,11 @@
 		{
 			visibilityPlane = [self nearOrthoClippingRectFromVisibleRect:visibleRect];
 			
-			assert(visibilityPlane.size.width > 0.0);
-			assert(visibilityPlane.size.height > 0.0);
+			// A view with no size yet has nothing to project, so keep the old matrix.
+			if (visibilityPlane.size.width <= 0.0 || visibilityPlane.size.height <= 0.0)
+			{
+				return;
+			}
 			
 			buildOrthoMatrix(projection,
 							 V2BoxMinX(visibilityPlane),	// left

@@ -35,6 +35,12 @@ NS_ASSUME_NONNULL_BEGIN
 // Accessors
 - (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
 
+// Pictures
+/// Draws the directive once, off screen, into a picture of the given size in pixels.
+/// The camera must already be set up for a surface of the same shape. Waits for the GPU.
+/// With transparent, the background is clear instead of the background color.
+- (nullable CGImageRef) newImageWithPixelSize:(CGSize)pixelSize transparent:(BOOL)transparent CF_RETURNS_RETAINED;
+
 @end
 
 NS_ASSUME_NONNULL_END

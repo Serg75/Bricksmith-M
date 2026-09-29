@@ -55,6 +55,9 @@
 @property (nonatomic, strong) id<MTLTexture>    msaaColorTexture;
 @property (nonatomic, strong) id<MTLTexture>    depthTexture;
 @property (nonatomic, assign) CGSize            lastDrawableSize;
+@property (nonatomic, strong) id<MTLTexture>    offscreenColorTexture;
+@property (nonatomic, strong) id<MTLTexture>    offscreenDepthTexture;
+@property (nonatomic, assign) CGSize            offscreenSize;
 
 @end
 
@@ -256,6 +259,41 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 } // end setupMarquee:
 
 
+//========== newMultisampleTexture ============================================
+//
+// Purpose:		Makes a multisample render target. On Apple GPUs it lives only
+//				in tile memory, since the pass resolves or discards it.
+//
+//==============================================================================
+static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, NSString *label)
+{
+	id<MTLDevice>			device		= MetalGPU.device;
+	MTLTextureDescriptor	*descriptor	= nil;
+
+	descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
+																    width:size.width
+																   height:size.height
+																mipmapped:NO];
+
+	descriptor.sampleCount = MSAASampleCount;
+	descriptor.textureType = MTLTextureType2DMultisample;
+	descriptor.usage = MTLTextureUsageRenderTarget;
+	if (@available(macOS 11.0, *)) {
+		if ([device supportsFamily:MTLGPUFamilyApple1]) {
+			descriptor.storageMode = MTLStorageModeMemoryless;
+		} else {
+			descriptor.storageMode = MTLStorageModePrivate;
+		}
+	} else {
+		descriptor.storageMode = MTLStorageModePrivate;
+	}
+
+	id<MTLTexture> texture = [device newTextureWithDescriptor:descriptor];
+	[texture setLabel:label];
+	return texture;
+}
+
+
 //========== createTexturesForSize: ============================================
 //
 // Purpose:		Create or update MSAA color and depth textures for the given size.
@@ -267,56 +305,27 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 
 	if (CGSizeEqualToSize(size, state.lastDrawableSize)) { return; }
 
-	id<MTLDevice> device = MetalGPU.device;
-
-	// Multisample color texture
-	MTLTextureDescriptor *msaaColorTextureDescriptor =
-	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
-													   width:size.width
-													  height:size.height
-												   mipmapped:NO];
-	
-	msaaColorTextureDescriptor.sampleCount = MSAASampleCount;
-	msaaColorTextureDescriptor.textureType = MTLTextureType2DMultisample;
-	msaaColorTextureDescriptor.usage = MTLTextureUsageRenderTarget;
-	if (@available(macOS 11.0, *)) {
-		if ([device supportsFamily:MTLGPUFamilyApple1]) {
-			msaaColorTextureDescriptor.storageMode = MTLStorageModeMemoryless;
-		} else {
-			msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
-		}
-	} else {
-		msaaColorTextureDescriptor.storageMode = MTLStorageModePrivate;
-	}
-
-	state.msaaColorTexture = [device newTextureWithDescriptor:msaaColorTextureDescriptor];
-	[state.msaaColorTexture setLabel:@"MSAA Color Texture"];
-	
-	// Depth texture (also multisampled)
-	MTLTextureDescriptor *depthTextureDescriptor =
-	[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-													   width:size.width
-													  height:size.height
-												   mipmapped:NO];
-	
-	depthTextureDescriptor.sampleCount = MSAASampleCount;
-	depthTextureDescriptor.textureType = MTLTextureType2DMultisample;
-	depthTextureDescriptor.usage = MTLTextureUsageRenderTarget;
-	
-	if (@available(macOS 11.0, *)) {
-		if ([device supportsFamily:MTLGPUFamilyApple1]) {
-			depthTextureDescriptor.storageMode = MTLStorageModeMemoryless;
-		} else {
-			depthTextureDescriptor.storageMode = MTLStorageModePrivate;
-		}
-	} else {
-		depthTextureDescriptor.storageMode = MTLStorageModePrivate;
-	}
-
-	state.depthTexture = [device newTextureWithDescriptor:depthTextureDescriptor];
-	[state.depthTexture setLabel:@"Depth Texture"];
-
+	state.msaaColorTexture = newMultisampleTexture(MTLPixelFormatBGRA8Unorm, size, @"MSAA Color Texture");
+	state.depthTexture = newMultisampleTexture(MTLPixelFormatDepth32Float, size, @"Depth Texture");
 	state.lastDrawableSize = size;
+}
+
+
+//========== createOffscreenTexturesForSize: ===================================
+//
+// Purpose:		Create or update the MSAA textures for pictures. Kept apart from
+//				the view's, so a picture of another size does not rebuild them.
+//
+//==============================================================================
+- (void)createOffscreenTexturesForSize:(CGSize)size
+{
+	LDrawRendererMetalDrawState * state = metalDrawState(self);
+
+	if (CGSizeEqualToSize(size, state.offscreenSize)) { return; }
+
+	state.offscreenColorTexture = newMultisampleTexture(MTLPixelFormatBGRA8Unorm, size, @"Offscreen Color Texture");
+	state.offscreenDepthTexture = newMultisampleTexture(MTLPixelFormatDepth32Float, size, @"Offscreen Depth Texture");
+	state.offscreenSize = size;
 }
 
 
@@ -389,88 +398,18 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	// Create or update textures if needed
 	[self createTexturesForSize:view.drawableSize];
 
-	MTLRenderPassDescriptor *renderPassDescriptor = MTLRenderPassDescriptor.renderPassDescriptor;
-	if (renderPassDescriptor == nil) {
+	LDrawRendererMetalDrawState * state = metalDrawState(self);
+
+	if ([self encodeDrawWithCommandBuffer:commandBuffer
+					   multisampleTexture:state.msaaColorTexture
+							 depthTexture:state.depthTexture
+						   resolveTexture:currentDrawable.texture
+							   clearColor:[self clearColor]
+							   boundsOnly:boundsOnly] == NO)
+	{
 		dispatch_semaphore_signal(_inFlightSemaphore);
 		return;
 	}
-
-	float bgColor[4];
-	if (backgroundColor[3] == 0.0) {
-		// Default color. The host view sets the explicit RGBA via
-		// `-setBackgroundColorRGBA:` (Phase 2g). Until that fires we
-		// fall back to mid-grey so the renderer never reaches into
-		// AppKit for `NSColor.controlBackgroundColor`.
-		bgColor[0] = 0.93f;
-		bgColor[1] = 0.93f;
-		bgColor[2] = 0.93f;
-		bgColor[3] = 1.0;
-	} else {
-		bgColor[0] = backgroundColor[0];
-		bgColor[1] = backgroundColor[1];
-		bgColor[2] = backgroundColor[2];
-		bgColor[3] = backgroundColor[3];
-	}
-
-	LDrawRendererMetalDrawState * state = metalDrawState(self);
-
-	renderPassDescriptor.colorAttachments[0].texture = state.msaaColorTexture;
-	renderPassDescriptor.colorAttachments[0].resolveTexture = currentDrawable.texture;
-	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
-	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
-	renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(bgColor[0],
-																			bgColor[1],
-																			bgColor[2],
-																			bgColor[3]);
-
-	renderPassDescriptor.depthAttachment.texture = state.depthTexture;
-	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
-	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
-	renderPassDescriptor.depthAttachment.clearDepth = 1.0;
-
-	id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-	renderEncoder.label = @"Drawable Render Encoder";
-
-	[renderEncoder setRenderPipelineState:_pipelineState];
-	[renderEncoder setDepthStencilState:_depthStencilState];
-
-	// Advance the buffer index for multiple buffering
-	_currentUniformBufferIndex = (_currentUniformBufferIndex + 1) % MaxBuffersInFlight;
-	id<MTLBuffer> vertexUniformBuffer = _vertexUniformBuffers[_currentUniformBufferIndex];
-
-	struct VertexUniform vertexUniform;
-	vertexUniform.model_view_matrix	= simd_matrix4x4_from_array_transposed([camera modelView]);
-	vertexUniform.projection_matrix	= simd_matrix4x4_from_array_transposed([camera projection]);
-	vertexUniform.normal_matrix		= simd_normal_matrix_from_matrix4x4(vertexUniform.model_view_matrix);
-
-	void *vertexUniformBufferPointer = [vertexUniformBuffer contents];
-	memcpy(vertexUniformBufferPointer, &vertexUniform, sizeof(vertexUniform));
-
-	[renderEncoder setVertexBuffer:vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
-
-	// Nothing is a ghost until the ghost pass says so; it restores this when it
-	// is done. The vertex shader declares the binding, so it has to be present
-	// for every draw in the pass.
-	float ghostAlpha = 1.0f;
-	[renderEncoder setVertexBytes:&ghostAlpha length:sizeof(ghostAlpha) atIndex:BufferIndexGhostAlpha];
-
-	[renderEncoder setFragmentBuffer:state.fragmentUniformBuffer offset:0 atIndex:BufferIndexFragmentUniforms];
-
-	// DRAW!
-
-	LDrawShaderRenderer *ren = [[LDrawShaderRenderer alloc] initWithEncoder:renderEncoder
-																	  scale:[self zoomPercentageForViewport] / 100.
-																  modelView:[camera modelView]
-																 projection:[camera projection]];
-
-	[ren setBoundsOnlyDrawing:boundsOnly];
-	[self->fileBeingDrawn drawSelf:ren];
-
-	[ren finishDraw];
-
-	[self drawMarqueeWithEncoder:renderEncoder];
-
-	[renderEncoder endEncoding];
 
 	// present the drawable and buffer, unless the view presents with its transaction
 	if (view.presentsWithTransaction == NO) {
@@ -525,6 +464,208 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 #endif //DEBUG_DRAWING
 	
 } // end drawInMTKView:
+
+
+//========== clearColor ========================================================
+//
+// Purpose:		The background color the view clears to.
+//
+//==============================================================================
+- (MTLClearColor)clearColor
+{
+	float bgColor[4];
+	if (backgroundColor[3] == 0.0) {
+		// Default color. The host view sets the explicit RGBA via
+		// `-setBackgroundColorRGBA:` (Phase 2g). Until that fires we
+		// fall back to mid-grey so the renderer never reaches into
+		// AppKit for `NSColor.controlBackgroundColor`.
+		bgColor[0] = 0.93f;
+		bgColor[1] = 0.93f;
+		bgColor[2] = 0.93f;
+		bgColor[3] = 1.0;
+	} else {
+		bgColor[0] = backgroundColor[0];
+		bgColor[1] = backgroundColor[1];
+		bgColor[2] = backgroundColor[2];
+		bgColor[3] = backgroundColor[3];
+	}
+
+	return MTLClearColorMake(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
+
+} // end clearColor
+
+
+//========== encodeDrawWithCommandBuffer:... ===================================
+//
+// Purpose:		Encodes one frame of the directive into a render pass that
+//				resolves into resolveTexture. Returns NO if there is no pass.
+//
+//==============================================================================
+- (BOOL)encodeDrawWithCommandBuffer:(id<MTLCommandBuffer>)commandBuffer
+				 multisampleTexture:(id<MTLTexture>)multisampleTexture
+					   depthTexture:(id<MTLTexture>)depthTexture
+					 resolveTexture:(id<MTLTexture>)resolveTexture
+						 clearColor:(MTLClearColor)clearColor
+						 boundsOnly:(BOOL)boundsOnly
+{
+	MTLRenderPassDescriptor *renderPassDescriptor = MTLRenderPassDescriptor.renderPassDescriptor;
+	if (renderPassDescriptor == nil) {
+		return NO;
+	}
+
+	renderPassDescriptor.colorAttachments[0].texture = multisampleTexture;
+	renderPassDescriptor.colorAttachments[0].resolveTexture = resolveTexture;
+	renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+	renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+	renderPassDescriptor.colorAttachments[0].clearColor = clearColor;
+
+	renderPassDescriptor.depthAttachment.texture = depthTexture;
+	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
+	renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+
+	id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+	renderEncoder.label = @"Drawable Render Encoder";
+
+	[renderEncoder setRenderPipelineState:_pipelineState];
+	[renderEncoder setDepthStencilState:_depthStencilState];
+
+	// Advance the buffer index for multiple buffering
+	_currentUniformBufferIndex = (_currentUniformBufferIndex + 1) % MaxBuffersInFlight;
+	id<MTLBuffer> vertexUniformBuffer = _vertexUniformBuffers[_currentUniformBufferIndex];
+
+	struct VertexUniform vertexUniform;
+	vertexUniform.model_view_matrix	= simd_matrix4x4_from_array_transposed([camera modelView]);
+	vertexUniform.projection_matrix	= simd_matrix4x4_from_array_transposed([camera projection]);
+	vertexUniform.normal_matrix		= simd_normal_matrix_from_matrix4x4(vertexUniform.model_view_matrix);
+
+	void *vertexUniformBufferPointer = [vertexUniformBuffer contents];
+	memcpy(vertexUniformBufferPointer, &vertexUniform, sizeof(vertexUniform));
+
+	[renderEncoder setVertexBuffer:vertexUniformBuffer offset:0 atIndex:BufferIndexVertexUniforms];
+
+	// Nothing is a ghost until the ghost pass says so; it restores this when it
+	// is done. The vertex shader declares the binding, so it has to be present
+	// for every draw in the pass.
+	float ghostAlpha = 1.0f;
+	[renderEncoder setVertexBytes:&ghostAlpha length:sizeof(ghostAlpha) atIndex:BufferIndexGhostAlpha];
+
+	[renderEncoder setFragmentBuffer:metalDrawState(self).fragmentUniformBuffer
+							  offset:0
+							 atIndex:BufferIndexFragmentUniforms];
+
+	// DRAW!
+
+	LDrawShaderRenderer *ren = [[LDrawShaderRenderer alloc] initWithEncoder:renderEncoder
+																	  scale:[self zoomPercentageForViewport] / 100.
+																  modelView:[camera modelView]
+																 projection:[camera projection]];
+
+	[ren setBoundsOnlyDrawing:boundsOnly];
+	[self->fileBeingDrawn drawSelf:ren];
+
+	[ren finishDraw];
+
+	[self drawMarqueeWithEncoder:renderEncoder];
+
+	[renderEncoder endEncoding];
+
+	return YES;
+
+} // end encodeDrawWithCommandBuffer:...
+
+
+//========== newImageWithPixelSize:transparent: ================================
+//
+// Purpose:		Draws the directive once, off screen, and returns the picture.
+//
+// Notes:		The camera must already be set up for a surface of the same
+//				shape. Waits for the GPU. The pixels are premultiplied BGRA.
+//
+//==============================================================================
+- (CGImageRef)newImageWithPixelSize:(CGSize)pixelSize transparent:(BOOL)transparent
+{
+	NSUInteger	width		= (NSUInteger)pixelSize.width;
+	NSUInteger	height		= (NSUInteger)pixelSize.height;
+	NSUInteger	bytesPerRow	= width * 4;
+
+	if (width == 0 || height == 0 || _commandQueue == nil) {
+		return NULL;
+	}
+
+	id<MTLDevice>			device		= MetalGPU.device;
+	MTLTextureDescriptor	*descriptor	= nil;
+
+	descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+																    width:width
+																   height:height
+																mipmapped:NO];
+	descriptor.usage = MTLTextureUsageRenderTarget;
+	descriptor.storageMode = MTLStorageModePrivate;
+
+	id<MTLTexture>	resolveTexture	= [device newTextureWithDescriptor:descriptor];
+	// A shared buffer can be read on every GPU; a shared texture cannot.
+	id<MTLBuffer>	pixels			= [device newBufferWithLength:bytesPerRow * height
+													   options:MTLResourceStorageModeShared];
+	MTLClearColor	clearColor		= transparent ? MTLClearColorMake(0, 0, 0, 0) : [self clearColor];
+
+	[self createOffscreenTexturesForSize:pixelSize];
+	LDrawRendererMetalDrawState * state = metalDrawState(self);
+
+	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
+
+	id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+	commandBuffer.label = @"Offscreen Command Buffer";
+
+	BOOL encoded = commandBuffer != nil
+				&& [self encodeDrawWithCommandBuffer:commandBuffer
+								  multisampleTexture:state.offscreenColorTexture
+										depthTexture:state.offscreenDepthTexture
+									  resolveTexture:resolveTexture
+										  clearColor:clearColor
+										  boundsOnly:NO];
+	if (encoded == NO) {
+		dispatch_semaphore_signal(_inFlightSemaphore);
+		return NULL;
+	}
+
+	id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+	[blit copyFromTexture:resolveTexture
+			  sourceSlice:0
+			  sourceLevel:0
+			 sourceOrigin:MTLOriginMake(0, 0, 0)
+			   sourceSize:MTLSizeMake(width, height, 1)
+				 toBuffer:pixels
+		destinationOffset:0
+   destinationBytesPerRow:bytesPerRow
+ destinationBytesPerImage:bytesPerRow * height];
+	[blit endEncoding];
+
+	__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
+	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+		dispatch_semaphore_signal(block_sema);
+	}];
+	[commandBuffer commit];
+	[commandBuffer waitUntilCompleted];
+
+	if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+		return NULL;
+	}
+
+	NSData				*data		= [NSData dataWithBytes:pixels.contents length:bytesPerRow * height];
+	CGDataProviderRef	provider	= CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
+	CGColorSpaceRef		colorSpace	= CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	CGBitmapInfo		bitmapInfo	= kCGBitmapByteOrder32Little
+									| (transparent ? kCGImageAlphaPremultipliedFirst : kCGImageAlphaNoneSkipFirst);
+	CGImageRef			image		= CGImageCreate(width, height, 8, 32, bytesPerRow, colorSpace, bitmapInfo,
+												provider, NULL, false, kCGRenderingIntentDefault);
+
+	CGColorSpaceRelease(colorSpace);
+	CGDataProviderRelease(provider);
+
+	return image;
+
+} // end newImageWithPixelSize:transparent:
 
 
 //========== drawMarqueeWithEncoder: ===========================================

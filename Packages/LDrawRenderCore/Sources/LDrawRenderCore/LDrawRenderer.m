@@ -395,7 +395,7 @@
 //==============================================================================
 - (void)setDelegate:(id<LDrawRendererDelegate>)object withScroller:(id<LDrawCameraScroller>)newScroller
 {
-	// weak link.
+	// Both are weak: the host owns the renderer.
 	self->delegate = object;
 	self->scroller = newScroller;
 	[self->camera setScroller:newScroller];
