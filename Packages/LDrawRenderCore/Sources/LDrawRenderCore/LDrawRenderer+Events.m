@@ -229,7 +229,10 @@
 //==============================================================================
 - (void)rotationDragged:(Vector2)viewDirection
 {
-	if ([self projectionMode] != LDrawProjectionModePerspective)
+	// Turning a straight-on view makes it a 3D view, drawn in perspective. A 3D view keeps its projection, so a
+	// host that draws 3D without perspective does not jump into perspective.
+	if (	[self projectionMode] != LDrawProjectionModePerspective
+		&&	self->viewOrientation != LDrawViewOrientation3D)
 	{
 		[self setProjectionMode:LDrawProjectionModePerspective];
 		self->viewOrientation = LDrawViewOrientation3D;
