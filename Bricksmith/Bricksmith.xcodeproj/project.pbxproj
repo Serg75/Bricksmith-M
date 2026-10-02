@@ -29,7 +29,6 @@
 		0B04E98D1093BB4200E201EE /* PartBrowser.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E96B1093BB4200E201EE /* PartBrowser.xib */; };
 		0B04E98E1093BB4200E201EE /* PartBrowserAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E96D1093BB4200E201EE /* PartBrowserAccessories.xib */; };
 		0B04E9901093BB4200E201EE /* PieceCountPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9711093BB4200E201EE /* PieceCountPanel.xib */; };
-		0B04E9911093BB4200E201EE /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9731093BB4200E201EE /* Preferences.xib */; };
 		0B04E9921093BB4200E201EE /* RotationPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9751093BB4200E201EE /* RotationPanel.xib */; };
 		0B04E9931093BB4200E201EE /* ToolPalette.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9771093BB4200E201EE /* ToolPalette.xib */; };
 		0B04EF3710A6A38E00E201EE /* FocusRingView.h in Headers */ = {isa = PBXBuildFile; fileRef = 0B04EF3510A6A38E00E201EE /* FocusRingView.h */; };
@@ -142,6 +141,8 @@
 		0BF729C108AD849300E3DA53 /* PartBrowserDataSource.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729B108AD849300E3DA53 /* PartBrowserDataSource.m */; };
 		0BF729C608AD849300E3DA53 /* PreferencesDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BF729B608AD849300E3DA53 /* PreferencesDialogController.h */; };
 		0BF729C708AD849300E3DA53 /* PreferencesDialogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BF729B708AD849300E3DA53 /* PreferencesDialogController.m */; };
+		95BB00032A30768000FA9501 /* PreferencesForm.m in Sources */ = {isa = PBXBuildFile; fileRef = 95BB00022A30768000FA9501 /* PreferencesForm.m */; };
+		95BB00042A30768000FA9501 /* PreferencesForm.m in Sources */ = {isa = PBXBuildFile; fileRef = 95BB00022A30768000FA9501 /* PreferencesForm.m */; };
 		0BFC4CFD1076F61900293B60 /* ViewportArranger.h in Headers */ = {isa = PBXBuildFile; fileRef = 0BFC4CFB1076F61900293B60 /* ViewportArranger.h */; };
 		0BFC4CFE1076F61900293B60 /* ViewportArranger.m in Sources */ = {isa = PBXBuildFile; fileRef = 0BFC4CFC1076F61900293B60 /* ViewportArranger.m */; };
 		18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 95D115AA299E5D74008051BF /* InspectionLPubCommand.m */; };
@@ -257,7 +258,6 @@
 		956D9C132A30768000FA956B /* PartBrowser.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E96B1093BB4200E201EE /* PartBrowser.xib */; };
 		956D9C142A30768000FA956B /* PartBrowserAccessories.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E96D1093BB4200E201EE /* PartBrowserAccessories.xib */; };
 		956D9C152A30768000FA956B /* PieceCountPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9711093BB4200E201EE /* PieceCountPanel.xib */; };
-		956D9C162A30768000FA956B /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9731093BB4200E201EE /* Preferences.xib */; };
 		956D9C172A30768000FA956B /* RotationPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9751093BB4200E201EE /* RotationPanel.xib */; };
 		956D9C182A30768000FA956B /* ToolPalette.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B04E9771093BB4200E201EE /* ToolPalette.xib */; };
 		956D9C192A30768000FA956B /* InspectorLSynth.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0B30C6BD16DC61000023B3A6 /* InspectorLSynth.xib */; };
@@ -521,7 +521,6 @@
 		0B04E96C1093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/PartBrowser.xib; sourceTree = "<group>"; };
 		0B04E96E1093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/PartBrowserAccessories.xib; sourceTree = "<group>"; };
 		0B04E9721093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/PieceCountPanel.xib; sourceTree = "<group>"; };
-		0B04E9741093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/Preferences.xib; sourceTree = "<group>"; };
 		0B04E9761093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/RotationPanel.xib; sourceTree = "<group>"; };
 		0B04E9781093BB4200E201EE /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/ToolPalette.xib; sourceTree = "<group>"; };
 		0B04EF3510A6A38E00E201EE /* FocusRingView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FocusRingView.h; sourceTree = "<group>"; };
@@ -631,6 +630,8 @@
 		0BF729B108AD849300E3DA53 /* PartBrowserDataSource.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartBrowserDataSource.m; sourceTree = "<group>"; };
 		0BF729B608AD849300E3DA53 /* PreferencesDialogController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreferencesDialogController.h; sourceTree = "<group>"; };
 		0BF729B708AD849300E3DA53 /* PreferencesDialogController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreferencesDialogController.m; sourceTree = "<group>"; };
+		95BB00012A30768000FA9501 /* PreferencesForm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreferencesForm.h; sourceTree = "<group>"; };
+		95BB00022A30768000FA9501 /* PreferencesForm.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreferencesForm.m; sourceTree = "<group>"; };
 		0BFC4CFB1076F61900293B60 /* ViewportArranger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewportArranger.h; sourceTree = "<group>"; };
 		0BFC4CFC1076F61900293B60 /* ViewportArranger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ViewportArranger.m; sourceTree = "<group>"; };
 		1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
@@ -784,7 +785,6 @@
 				0B04E96B1093BB4200E201EE /* PartBrowser.xib */,
 				0B04E96D1093BB4200E201EE /* PartBrowserAccessories.xib */,
 				0B04E9711093BB4200E201EE /* PieceCountPanel.xib */,
-				0B04E9731093BB4200E201EE /* Preferences.xib */,
 				0B04E9751093BB4200E201EE /* RotationPanel.xib */,
 				9506E0FE18AA74BE0006CE9C /* SearchPanel.xib */,
 				0B04E9771093BB4200E201EE /* ToolPalette.xib */,
@@ -984,6 +984,8 @@
 				0B4F5E100F31632C00355631 /* PartLibraryController.m */,
 				0BF729B608AD849300E3DA53 /* PreferencesDialogController.h */,
 				0BF729B708AD849300E3DA53 /* PreferencesDialogController.m */,
+				95BB00012A30768000FA9501 /* PreferencesForm.h */,
+				95BB00022A30768000FA9501 /* PreferencesForm.m */,
 				0B2700850981FCEA0058A7BE /* ToolPalette.h */,
 				0B2700860981FCEA0058A7BE /* ToolPalette.m */,
 			);
@@ -1717,7 +1719,6 @@
 				0B04E98D1093BB4200E201EE /* PartBrowser.xib in Resources */,
 				0B04E98E1093BB4200E201EE /* PartBrowserAccessories.xib in Resources */,
 				0B04E9901093BB4200E201EE /* PieceCountPanel.xib in Resources */,
-				0B04E9911093BB4200E201EE /* Preferences.xib in Resources */,
 				0B04E9921093BB4200E201EE /* RotationPanel.xib in Resources */,
 				0B04E9931093BB4200E201EE /* ToolPalette.xib in Resources */,
 				0B30C6BF16DC61000023B3A6 /* InspectorLSynth.xib in Resources */,
@@ -1765,7 +1766,6 @@
 				956D9C132A30768000FA956B /* PartBrowser.xib in Resources */,
 				956D9C142A30768000FA956B /* PartBrowserAccessories.xib in Resources */,
 				956D9C152A30768000FA956B /* PieceCountPanel.xib in Resources */,
-				956D9C162A30768000FA956B /* Preferences.xib in Resources */,
 				956D9C172A30768000FA956B /* RotationPanel.xib in Resources */,
 				956D9C182A30768000FA956B /* ToolPalette.xib in Resources */,
 				956D9C192A30768000FA956B /* InspectorLSynth.xib in Resources */,
@@ -1799,6 +1799,7 @@
 				0BF729BF08AD849300E3DA53 /* LDrawColorPanelController.m in Sources */,
 				0BF729C108AD849300E3DA53 /* PartBrowserDataSource.m in Sources */,
 				0BF729C708AD849300E3DA53 /* PreferencesDialogController.m in Sources */,
+				95BB00032A30768000FA9501 /* PreferencesForm.m in Sources */,
 				0BC699CE08B93A0500DAF996 /* DimensionsPanel.m in Sources */,
 				0B356AF008D385B900695EEB /* PieceCountPanel.m in Sources */,
 				0B8EBE52093C0FAD00D87E0C /* InspectionComment.m in Sources */,
@@ -1873,6 +1874,7 @@
 				956D9C312A30768000FA956B /* LDrawColorPanelController.m in Sources */,
 				956D9C332A30768000FA956B /* PartBrowserDataSource.m in Sources */,
 				956D9C342A30768000FA956B /* PreferencesDialogController.m in Sources */,
+				95BB00042A30768000FA9501 /* PreferencesForm.m in Sources */,
 				956D9C362A30768000FA956B /* DimensionsPanel.m in Sources */,
 				956D9C372A30768000FA956B /* PieceCountPanel.m in Sources */,
 				956D9C382A30768000FA956B /* InspectionComment.m in Sources */,
@@ -2150,14 +2152,6 @@
 				0B04E9721093BB4200E201EE /* English */,
 			);
 			name = PieceCountPanel.xib;
-			sourceTree = "<group>";
-		};
-		0B04E9731093BB4200E201EE /* Preferences.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				0B04E9741093BB4200E201EE /* English */,
-			);
-			name = Preferences.xib;
 			sourceTree = "<group>";
 		};
 		0B04E9751093BB4200E201EE /* RotationPanel.xib */ = {

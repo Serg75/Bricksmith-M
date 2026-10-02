@@ -2,7 +2,7 @@
 //
 // File:		PreferencesDialogController.h
 //
-// Purpose:		Handles the user interface between the application and its 
+// Purpose:		Handles the user interface between the application and its
 //				preferences file.
 //
 //  Created by Allen Smith on 2/14/05.
@@ -10,145 +10,21 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-//Toolbar Tab Identifiers
-#define PREFS_GENERAL_TAB_IDENTIFIER	@"PreferencesTabGeneral"
-#define PREFS_LDRAW_TAB_IDENTIFIER		@"PreferencesTabLDraw"
-#define PREFS_STYLE_TAB_IDENTIFIER		@"PreferencesTabStyles"
-#define PREFS_LSYNTH_TAB_IDENTIFIER     @"PreferencesTabLSynth"
-
-// LDrawLSynthSelectionMode moved into LDrawLSynthConfigSource.h (LDrawCore) so
-// the model layer can interpret the preference without pulling in the
-// AppKit preferences pane.
-#import <LDrawCore/LDrawLSynthConfigSource.h>
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PreferencesDialogController
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface PreferencesDialogController : NSObject <NSToolbarDelegate, NSTextFieldDelegate>
-{
-		   IBOutlet NSWindow		*preferencesWindow;
+@interface PreferencesDialogController : NSObject
 
-	__weak          NSView			*blankContent; //the initial, empty content of the window in the Nib.
-	__weak IBOutlet NSView			*generalTabContentView;
-	__weak IBOutlet NSView			*stylesContentView;
-	__weak IBOutlet NSView			*ldrawContentView;
-	__weak IBOutlet NSView			*lsynthContentView;
-	
-	// General Tab
-	__weak IBOutlet NSMatrix		*mouseDraggingRadioButtons;
-	
-	__weak IBOutlet NSMatrix		*rotateModeRadioButtons;
-	__weak IBOutlet NSMatrix		*rightButtonRadioButtons;
-	__weak IBOutlet NSMatrix		*mouseWheelRadioButtons;
-
-	// Parts Tab
-	__weak IBOutlet NSTextField		*LDrawPathTextField;
-	__weak IBOutlet NSButton		*hideRemovedGroupsInStepsButton;
-	__weak IBOutlet NSButton		*ghostRemovedGroupsButton;
-	__weak IBOutlet NSButton		*ghostPreviousStepsButton;
-	__weak IBOutlet NSSlider		*ghostTransparencySlider;
-	__weak IBOutlet NSTextField		*ghostTransparencyText;
-
-	__weak IBOutlet NSButton		*stepPartListShowButton;
-	__weak IBOutlet NSButton		*stepPartListSubmodelsButton;
-	__weak IBOutlet NSButton		*stepPartListFollowsStepButton;
-	__weak IBOutlet NSButton		*stepPartListLPubScaleButton;
-	__weak IBOutlet NSTextField		*stepPartListOrientationsField;
-
-	// Style Tab
-	__weak IBOutlet NSColorWell		*backgroundColorWell;
-	
-	__weak IBOutlet NSColorWell		*modelsColorWell;
-	__weak IBOutlet NSColorWell		*stepsColorWell;
-	__weak IBOutlet NSColorWell		*partsColorWell;
-	__weak IBOutlet NSColorWell		*primitivesColorWell;
-	__weak IBOutlet NSColorWell		*colorsColorWell;
-	__weak IBOutlet NSColorWell		*commentsColorWell;
-	__weak IBOutlet NSColorWell		*unknownColorWell;
-	
-    // LSynth Tab
-	__weak IBOutlet NSTextField    	*lsynthExecutablePath;
-	__weak IBOutlet NSTextField    	*lsynthConfigurationPath;
-	__weak IBOutlet NSMatrix       	*lsynthSelectionModeMatrix;
-	__weak IBOutlet NSSlider       	*lsynthTransparencySlider;
-	__weak IBOutlet NSTextField    	*lsynthTransparencyText;
-	__weak IBOutlet NSColorWell    	*lsynthSelectionColorWell;
-	__weak IBOutlet NSButton       	*lsynthSaveSynthesizedParts;
-	__weak IBOutlet NSView         	*lsynthExecutableChooserAccessoryView;
-	__weak IBOutlet NSView         	*lsynthConfigurationChooserAccessoryView;
-	__weak NSTextField             	*lsynthTransparencyNumberChanged;
-	__weak IBOutlet NSButton       	*lsynthShowBasicPartsList;
-    
-    // Miscellaneous
-	__weak IBOutlet NSView			*folderChooserAccessoryView;
-
-	NSArray                			*topLevelObjects;	// holds NIB objects
-}
-
-//Initialization
+// Initialization
 + (void) doPreferences;
 - (void) showPreferencesWindow;
 
-- (void) setDialogValues;
-- (void) setGeneralTabValues;
-- (void) setStylesTabValues;
-- (void) setLDrawTabValues;
-- (void) setLSynthTabValues;
-
-//Actions
-- (void)changeTab:(id)sender;
-
-// - General Tab
-- (IBAction) gridSpacingChanged:(id)sender;
-- (IBAction) mouseDraggingChanged:(id)sender;
-- (IBAction) rightButtonChanged:(id)sender;
-- (IBAction) rotateModeChanged:(id)sender;
-- (IBAction) mouseWheelChanged:(id)sender;
-
-// - Styles Tab
-- (IBAction) backgroundColorWellChanged:(id)sender;
-- (IBAction) modelsColorWellChanged:(id)sender;
-- (IBAction) stepsColorWellChanged:(id)sender;
-- (IBAction) partsColorWellChanged:(id)sender;
-- (IBAction) primitivesColorWellChanged:(id)sender;
-- (IBAction) colorsColorWellChanged:(id)sender;
-- (IBAction) commentsColorWellChanged:(id)sender;
-- (IBAction) unknownColorWellChanged:(id)sender;
-
-// - LDraw Tab
-- (IBAction) chooseLDrawFolder:(id)sender;
-- (IBAction) pathTextFieldChanged:(id)sender;
-- (IBAction) reloadParts:(id)sender;
-- (IBAction) hideRemovedGroupsInStepsChanged:(id)sender;
-- (IBAction) ghostRemovedGroupsChanged:(id)sender;
-- (IBAction) ghostPreviousStepsChanged:(id)sender;
-- (IBAction) ghostTransparencySliderChanged:(id)sender;
-- (IBAction) ghostTransparencyTextChanged:(id)sender;
-- (IBAction) stepPartListShowChanged:(id)sender;
-- (IBAction) stepPartListSubmodelsChanged:(id)sender;
-- (IBAction) stepPartListFollowsStepChanged:(id)sender;
-- (IBAction) stepPartListLPubScaleChanged:(id)sender;
-- (IBAction) chooseStepPartListOrientations:(id)sender;
-- (IBAction) useDefaultStepPartListOrientations:(id)sender;
-
-// - LSynth Tab
-- (IBAction) lsynthChooseExecutable:(id)sender;
-- (IBAction) lsynthChooseConfiguration:(id)sender;
-- (IBAction) lsynthTransparencySliderChanged:(id)sender;
-- (IBAction) lsynthTransparencyTextChanged:(id)sender;
-- (IBAction) lsynthSelectionColorWellClicked:(id)sender;
-- (IBAction) lsynthSelectionModeChanged:(id)sender;
-- (IBAction) lsynthSaveSynthesizedPartsChanged:(id)sender;
-- (IBAction) lsynthShowBasicPartsListChanged:(id)sender;
-
-//Utilities
+// Utilities
 + (void) ensureDefaults;
 + (void) loadStepPartListOrientations;
 + (void) pushStepPartListDefaults;
-- (void) changeLDrawFolderPath:(NSString *) folderPath;
-- (void) selectPanelWithIdentifier:(NSString *)itemIdentifier;
 
 @end
