@@ -185,13 +185,17 @@ static double TurnAngle(NSUInteger turn)
 //
 // Purpose:		Whether a dragged connector pointing along the given axis lines
 //				up with a met one. Opposite axes line up too when either is
-//				open at both ends.
+//				open at both ends, and any axes do for a ball joint.
 //
 //------------------------------------------------------------------------------
 static BOOL AxesMeet(Vector3 axis, LDrawWorldConnector moving, LDrawWorldConnector met, double agreeing)
 {
 	double cosine = V3Dot(axis, met.axis);
 
+	if (moving.anyDirection || met.anyDirection)
+	{
+		return YES;
+	}
 	return (cosine >= agreeing) || (cosine <= -agreeing && (moving.bothEndsOpen || met.bothEndsOpen));
 }
 
@@ -205,7 +209,7 @@ static BOOL AxesMeet(Vector3 axis, LDrawWorldConnector moving, LDrawWorldConnect
 //------------------------------------------------------------------------------
 static void FaceEachOther(Vector3 axis, LDrawWorldConnector *moving, LDrawWorldConnector *met)
 {
-	if (V3Dot(axis, met->axis) >= 0.0)
+	if (V3Dot(axis, met->axis) >= 0.0 || moving->anyDirection || met->anyDirection)
 	{
 		return;
 	}
@@ -245,7 +249,8 @@ typedef struct
 @property (nonatomic) NSUInteger		votes;
 @property (nonatomic) double			distance;		// LDU the part moves
 @property (nonatomic) double			depth;			// how far along the line of sight it lands
-@property (nonatomic) BOOL				checked;		// votes are the free pairs, 0 if it clashes
+@property (nonatomic) BOOL				checked;		// votes are the free pairs, 0 if its boxes clash
+@property (nonatomic) BOOL				shapeChecked;	// votes are 0 if its shapes clash too
 @property (nonatomic) double			angle;			// radians it turns
 @property (nonatomic) Vector3			displacement;
 @property (nonatomic) double			score;
@@ -274,6 +279,9 @@ typedef struct
 
 // No placement, for when nothing is held.
 static const int64_t NoPlacement = INT64_MIN;
+
+// No part, for when the held placement slides on nothing.
+static const uint32_t NoOwner = UINT32_MAX;
 
 
 //==============================================================================
@@ -337,7 +345,11 @@ static const int64_t NoPlacement = INT64_MIN;
 @implementation LDrawSnapSolver
 {
 	int64_t			_heldPlacement;
+	uint32_t		_heldSlideOwner;		// the part the held placement slides on
 	NSMutableData	*_movingBounds;			// Box3 a part, in the model's coordinates
+	NSMutableData	*_movingPlacements;		// Matrix4 a part
+	NSMutableArray	*_movingShapes;			// LDrawPartShape or NSNull a part
+	NSUInteger		_movingShapeless;		// parts given no shape
 	NSMutableIndexSet *_excused;			// owners it may share space with where it started
 	Box3			_startBounds;			// the space it filled where it started
 	NSMutableData	*_movedBounds;			// Box3 a part, for one placement
@@ -360,6 +372,8 @@ static const int64_t NoPlacement = INT64_MIN;
 		_dropReach			= 0.0;
 		_maximumTurn		= M_PI;
 		_movingBounds		= [NSMutableData data];
+		_movingPlacements	= [NSMutableData data];
+		_movingShapes		= [NSMutableArray array];
 		_excused			= [NSMutableIndexSet indexSet];
 		_startBounds		= InvalidBox;
 		_movedBounds		= [NSMutableData data];
@@ -371,6 +385,7 @@ static const int64_t NoPlacement = INT64_MIN;
 		_angleWeight		= 20.0;
 		_dragWeight			= 3.0;
 		_heldPlacement		= NoPlacement;
+		_heldSlideOwner		= NoOwner;
 	}
 	return self;
 }
@@ -380,7 +395,8 @@ static const int64_t NoPlacement = INT64_MIN;
 //==============================================================================
 - (void)releaseHold
 {
-	_heldPlacement = NoPlacement;
+	_heldPlacement	= NoPlacement;
+	_heldSlideOwner	= NoOwner;
 }
 
 
@@ -646,6 +662,8 @@ static double DistanceFromSight(Point3 point, LDrawSightLine sight, double *outA
 	_sight			= sight;
 	_nearestDepth	= INFINITY;
 
+	[self addPlacementsSlidingOnHeldPartOf:movingConnectors anchor:anchor to:clusters];
+
 	while (decided == NO)
 	{
 		if (from < far)
@@ -727,6 +745,54 @@ static double DistanceFromSight(Point3 point, LDrawSightLine sight, double *outA
 	_sighting = NO;
 
 	return [self solutionFromRankedClusters:ranked];
+}
+
+
+//========== addPlacementsSlidingOnHeldPartOf:anchor:to: =======================
+//
+// Purpose:		The placements that slide the part along what the held placement
+//				slides on, found whatever the finger sees.
+//
+// Notes:		An axle or bar runs through the part that slides on it, so the
+//				finger often sees it in front of the held point. Hidden that
+//				way, a beam could not be moved along its axle.
+//
+//==============================================================================
+- (void)addPlacementsSlidingOnHeldPartOf:(LDrawWorldConnectors *)movingConnectors
+								  anchor:(Point3)anchor
+									  to:(LDrawSnapClusterTable *)clusters
+{
+	const LDrawWorldConnector	*moving	= movingConnectors.all;
+	Box3						around	= InvalidBox;
+
+	if (_heldSlideOwner == NoOwner)
+	{
+		return;
+	}
+	for (NSUInteger one = 0; one < movingConnectors.count; one++)
+	{
+		around = V3UnionBox(around, [self searchBoxForConnector:moving[one]
+														  reach:self.releaseDistance / self.pointsPerUnit]);
+	}
+
+	LDrawWorldConnectors		*found	= [self.connectorIndex connectorsInBox:around excludingOwner:moving[0].owner];
+	const LDrawWorldConnector	*met	= found.all;
+
+	for (NSUInteger other = 0; other < found.count; other++)
+	{
+		if (met[other].owner != _heldSlideOwner || met[other].slide == false)
+		{
+			continue;
+		}
+		for (NSUInteger one = 0; one < movingConnectors.count; one++)
+		{
+			if (moving[one].slide)
+			{
+				[self addPlacementOfConnector:moving[one] meeting:met[other] turn:NoTurn anchor:anchor
+										   to:clusters];
+			}
+		}
+	}
 }
 
 
@@ -959,9 +1025,10 @@ static double DistanceFromSight(Point3 point, LDrawSightLine sight, double *outA
 				LDrawWorldConnector	met		= known[sliding[index]];
 				Vector3				axis	= LDrawDirectionByMatrix(mover.axis, rotation);
 
-				if (mover.gender == met.gender || AxesMeet(axis, mover, met, agreeing) == NO)
+				if (mover.gender == met.gender || AxesMeet(axis, mover, met, agreeing) == NO
+					|| (turned == NO && met.owner == _heldSlideOwner))
 				{
-					continue;
+					continue;			// or found already, as the one held
 				}
 				FaceEachOther(axis, &mover, &met);
 
@@ -1482,15 +1549,16 @@ static double DistanceFromSight(Point3 point, LDrawSightLine sight, double *outA
 					  turn:(NSUInteger)turn
 {
 	Point3	seated	= V3Add(LDrawWorldConnectorMouth(met), V3MulScalar(met.axis, depth));
-	double	shared	= met.length - moving.length;
-	double	lowest	= MIN(shared, 0.0);
-	double	highest	= MAX(shared, 0.0);
+	double	lowest	= 0.0;
+	double	highest	= 0.0;
 	double	slide	= 0.0;
 
 	if (moving.slide == NO || met.slide == NO)
 	{
 		return seated;
 	}
+	LDrawWorldConnectorsSlideRange(moving, met, depth, &lowest, &highest);
+
 	slide = [self slideOfMoving:moving meeting:met seated:seated rotation:rotation turn:turn];
 	slide = MAX(lowest, MIN(highest, slide));
 	slide = [self freeSlide:slide of:moving along:met seated:depth lowest:lowest highest:highest];
@@ -1628,8 +1696,9 @@ static double DistanceFromSight(Point3 point, LDrawSightLine sight, double *outA
 	// Another pair may free a placement a check refused, so it is checked
 	// again.
 	[cluster.meetings appendBytes:&meeting length:sizeof(meeting)];
-	cluster.votes	= cluster.meetings.length / sizeof(LDrawSnapMeeting);
-	cluster.checked	= NO;
+	cluster.votes			= cluster.meetings.length / sizeof(LDrawSnapMeeting);
+	cluster.checked			= NO;
+	cluster.shapeChecked	= NO;
 }
 
 
@@ -1713,7 +1782,10 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 //==============================================================================
 - (void)clearMovingBounds
 {
-	_movingBounds.length = 0;
+	_movingBounds.length		= 0;
+	_movingPlacements.length	= 0;
+	_movingShapeless			= 0;
+	[_movingShapes removeAllObjects];
 }
 
 
@@ -1721,7 +1793,18 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 //==============================================================================
 - (void)addMovingBounds:(Box3)bounds
 {
+	[self addMovingBounds:bounds shape:nil placement:IdentityMatrix4];
+}
+
+
+//========== addMovingBounds:shape:placement: ==================================
+//==============================================================================
+- (void)addMovingBounds:(Box3)bounds shape:(nullable LDrawPartShape *)shape placement:(Matrix4)placement
+{
 	[_movingBounds appendBytes:&bounds length:sizeof(bounds)];
+	[_movingPlacements appendBytes:&placement length:sizeof(placement)];
+	[_movingShapes addObject:shape ?: (id)[NSNull null]];
+	_movingShapeless += (shape == nil) ? 1 : 0;
 }
 
 
@@ -1746,32 +1829,30 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 		return;
 	}
 
-	LDrawWorldConnectors		*nearby	= [self.connectorIndex connectorsInBox:whole excludingOwner:UINT32_MAX];
-	const LDrawWorldConnector	*around	= nearby.all;
+	NSIndexSet *owners = [self.connectorIndex ownersInBox:whole excludingOwner:NoOwner];
 
-	for (NSUInteger index = 0; index < nearby.count; index++)
-	{
-		uint32_t owner = around[index].owner;
-
-		if ([_excused containsIndex:owner] == NO && [self parts:parts count:count clashWithOwner:owner])
+	[owners enumerateIndexesUsingBlock:^(NSUInteger owner, BOOL *stop) {
+		if ([self parts:parts within:whole movedBy:IdentityMatrix4 clashWithOwner:(uint32_t)owner joined:NO
+				byShape:YES])
 		{
-			[_excused addIndex:owner];
+			[self->_excused addIndex:owner];
 		}
-	}
+	}];
 }
 
 
-//========== cluster:clashesForOwner: ==========================================
+//========== cluster:clashesForOwner:byShape: ==================================
 //
 // Purpose:		Whether a placement would put the dragged part through one
-//				that is already there.
+//				that is already there. Without the shapes only parts that have
+//				none are asked, by their boxes; the shapes cost more, and are
+//				asked only of a placement that may be taken.
 //
-// Notes:		Only the parts whose connectors are near the placement are
-//				asked, which is every part it could be through: a part filling
-//				the same space has connectors in it.
+// Notes:		Parts are found by their boxes, not their connectors: a thin
+//				part can go into a baseplate between its studs.
 //
 //==============================================================================
-- (BOOL)cluster:(LDrawSnapCluster *)cluster clashesForOwner:(uint32_t)owner
+- (BOOL)cluster:(LDrawSnapCluster *)cluster clashesForOwner:(uint32_t)owner byShape:(BOOL)byShape
 {
 	const Box3	*parts	= _movingBounds.bytes;
 	NSUInteger	count	= _movingBounds.length / sizeof(Box3);
@@ -1791,57 +1872,165 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 		whole = V3UnionBox(whole, moved[index]);
 	}
 
-	BOOL goingBack = BoxesAlike(whole, _startBounds, BackWhereItWas);
+	BOOL							goingBack	= BoxesAlike(whole, _startBounds, BackWhereItWas);
+	NSIndexSet						*owners		= [self.connectorIndex ownersInBox:whole excludingOwner:owner];
+	__block LDrawWorldConnectors	*nearby		= nil;		// looked up when a part is near enough
+	__block BOOL					clashes		= NO;
 
-	LDrawWorldConnectors		*nearby	= [self.connectorIndex connectorsInBox:whole
-															   excludingOwner:owner];
-	const LDrawWorldConnector	*around	= nearby.all;
-	NSUInteger					found	= nearby.count;
-	uint32_t					asked	= UINT32_MAX;
+	[owners enumerateIndexesUsingBlock:^(NSUInteger asked, BOOL *stop) {
+		if (goingBack && [self->_excused containsIndex:asked])
+		{
+			return;			// put back against it
+		}
+		if (BoxesClash(whole, [self.connectorIndex boundsOfOwner:(uint32_t)asked]) == NO)
+		{
+			return;			// nowhere near it, whatever it is made of
+		}
+		nearby = nearby ?: [self.connectorIndex connectorsInBox:whole excludingOwner:owner];
 
-	for (NSUInteger index = 0; index < found; index++)
+		// Parts held together, or on the same axle, share space by design,
+		// so only their shapes can tell.
+		BOOL joined = PlacementJoins(cluster, (uint32_t)asked)
+				   || [self cluster:cluster slidesBeside:(uint32_t)asked among:nearby.all count:nearby.count];
+
+		clashes = [self parts:moved within:whole movedBy:cluster.placement clashWithOwner:(uint32_t)asked
+					   joined:joined byShape:byShape];
+		*stop = clashes;
+	}];
+	return clashes;
+}
+
+
+//========== cluster:slidesBeside:among:count: ================================
+//
+// Purpose:		Whether the placement slides the part along an axle or bar that
+//				the other part is on as well. Their boxes may overlap: how
+//				close they come along the axle is kept by the length each fills
+//				on it.
+//
+// Notes:		Only the connectors in the dragged part's box are given, so a
+//				part elsewhere on the axle is not beside it.
+//
+//==============================================================================
+- (BOOL)cluster:(LDrawSnapCluster *)cluster
+   slidesBeside:(uint32_t)owner
+		  among:(const LDrawWorldConnector *)around
+		  count:(NSUInteger)found
+{
+	const LDrawSnapMeeting	*meetings	= cluster.meetings.bytes;
+	NSUInteger				count		= cluster.meetings.length / sizeof(LDrawSnapMeeting);
+	double					start		= 0.0;
+	double					finish		= 0.0;
+
+	for (NSUInteger index = 0; index < count; index++)
 	{
-		if (around[index].owner == asked)
+		if (meetings[index].met.slide == false)
 		{
-			continue;			// that part has been looked at already
+			continue;
 		}
-		asked = around[index].owner;
-
-		if (PlacementJoins(cluster, asked) || (goingBack && [_excused containsIndex:asked]))
+		for (NSUInteger other = 0; other < found; other++)
 		{
-			continue;			// held by this part, or put back against it: they fit
-		}
-		if (BoxesClash(whole, [self.connectorIndex boundsOfOwner:asked]) == NO)
-		{
-			continue;			// nowhere near it, whatever it is made of
-		}
-		if ([self parts:moved count:count clashWithOwner:asked])
-		{
-			return YES;
+			if (around[other].owner == owner
+				&& [self connector:around[other] liesAlong:meetings[index].met start:&start finish:&finish])
+			{
+				return YES;
+			}
 		}
 	}
 	return NO;
 }
 
 
-//========== parts:count:clashWithOwner: =======================================
+//---------- ShapeIsReady ----------------------------------------------[static]--
 //
-// Purpose:		Whether any part of the dragged thing shares space with any
-//				part of another. Both sides are asked part by part, because a
-//				box around a submodel covers space its parts leave free.
+// Purpose:		Whether a part's shape can be asked: built, and with something
+//				in it. A drag does not wait for a shape still being built, and
+//				a part without triangles has no shape to tell by.
+//
+//------------------------------------------------------------------------------
+static BOOL ShapeIsReady(LDrawPartShape *shape)
+{
+	return shape.isBuilt && shape.solidCellCount > 0;
+}
+
+
+//---------- OverlapOfBoxes --------------------------------------------[static]--
+//------------------------------------------------------------------------------
+static Box3 OverlapOfBoxes(Box3 one, Box3 other)
+{
+	Box3 overlap;
+
+	overlap.min = V3Make(MAX(one.min.x, other.min.x), MAX(one.min.y, other.min.y), MAX(one.min.z, other.min.z));
+	overlap.max = V3Make(MIN(one.max.x, other.max.x), MIN(one.max.y, other.max.y), MIN(one.max.z, other.max.z));
+
+	return overlap;
+}
+
+
+//========== parts:within:movedBy:clashWithOwner:joined:byShape: ===============
+//
+// Purpose:		Whether any part of the dragged thing, moved as given, goes into
+//				any part of another. Both sides are asked part by part, because
+//				a box around a submodel covers space its parts leave free.
+//
+// Notes:		Boxes that overlap are looked at again by the parts' shapes,
+//				which tell a stud in a hole from a part through a wall. Without
+//				shapes the boxes decide, except for parts held together, whose
+//				boxes always overlap. Parts held together whose shapes are not
+//				ready yet are refused: only the shapes can tell, and a hinge
+//				would otherwise swing into its base. Without asking the shapes,
+//				only parts that have none can clash.
 //
 //==============================================================================
-- (BOOL)parts:(const Box3 *)moved count:(NSUInteger)count clashWithOwner:(uint32_t)owner
+- (BOOL)parts:(const Box3 *)moved
+	   within:(Box3)whole
+	  movedBy:(Matrix4)correction
+clashWithOwner:(uint32_t)owner
+	   joined:(BOOL)joined
+	  byShape:(BOOL)byShape
 {
-	NSUInteger theirs = [self.connectorIndex partBoundsCountOfOwner:owner];
+	const Matrix4	*placements	= _movingPlacements.bytes;
+	NSUInteger		count		= _movingBounds.length / sizeof(Box3);
+	NSUInteger		theirs		= 0;
+	const Box3		*boxes		= [self.connectorIndex partBoundsOfOwner:owner count:&theirs];
+	const Matrix4	*sites		= [self.connectorIndex partPlacementsOfOwner:owner];
+	NSArray			*shapes		= nil;		// looked up when two boxes first overlap
 
+	if (byShape == NO && (joined || (_movingShapeless == 0
+									 && [self.connectorIndex partsWithoutShapeOfOwner:owner] == 0)))
+	{
+		return NO;
+	}
 	for (NSUInteger other = 0; other < theirs; other++)
 	{
-		Box3 box = [self.connectorIndex partBoundsOfOwner:owner atIndex:other];
-
+		if (BoxesClash(whole, boxes[other]) == NO)
+		{
+			continue;			// nowhere near the dragged thing
+		}
 		for (NSUInteger index = 0; index < count; index++)
 		{
-			if (BoxesClash(moved[index], box))
+			if (BoxesClash(moved[index], boxes[other]) == NO)
+			{
+				continue;
+			}
+			shapes = shapes ?: [self.connectorIndex partShapesOfOwner:owner];
+
+			id		shape	= shapes[other];
+			id		mine	= _movingShapes[index];
+			BOOL	given	= (shape != [NSNull null] && mine != [NSNull null]);
+
+			if (given && ShapeIsReady(shape) && ShapeIsReady(mine))
+			{
+				if (byShape
+					&& [mine placedAt:Matrix4Multiply(placements[index], correction)
+						  goesInto:shape
+						  placedAt:sites[other]
+							within:OverlapOfBoxes(moved[index], boxes[other])])
+				{
+					return YES;
+				}
+			}
+			else if (joined == NO || (given && byShape))
 			{
 				return YES;
 			}
@@ -1912,7 +2101,7 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 	if (held != nil)
 	{
 		[self scoreCluster:held owner:owner dragDirection:dragDirection];
-		if (held.votes > 0)
+		if ([self clusterFits:held owner:owner])
 		{
 			[scored addObject:held];
 			best = held.score;
@@ -1951,15 +2140,20 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 		{
 			continue;			// every connector it would use is taken
 		}
-		[scored addObject:cluster];
 
 		// Only a placement that could be taken up raises the bar. One too far
 		// to latch on to cannot be chosen, so it must not stop nearer ones
-		// from being looked at.
-		if ([self screenDistance:cluster] <= self.acquireDistance)
+		// from being looked at. One that reaches the bar may be the one
+		// taken, so it is asked about its shapes first; the rest rank below.
+		if ([self screenDistance:cluster] <= self.acquireDistance && cluster.score >= best)
 		{
-			best = MAX(best, cluster.score);
+			if ([self clusterFits:cluster owner:owner] == NO)
+			{
+				continue;
+			}
+			best = cluster.score;
 		}
+		[scored addObject:cluster];
 	}
 
 	return [scored sortedArrayUsingComparator:^NSComparisonResult(LDrawSnapCluster *one,
@@ -2005,10 +2199,34 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 	cluster.votes	= [self freeMeetingsOfCluster:cluster owner:owner];
 	cluster.checked	= YES;
 
-	if (cluster.votes > 0 && [self cluster:cluster clashesForOwner:owner])
+	if (cluster.votes > 0 && [self cluster:cluster clashesForOwner:owner byShape:NO])
 	{
 		cluster.votes = 0;
 	}
+}
+
+
+//========== clusterFits:owner: ================================================
+//
+// Purpose:		Whether a placement is free and puts the part through nothing,
+//				by the parts' shapes as well as their boxes.
+//
+//==============================================================================
+- (BOOL)clusterFits:(LDrawSnapCluster *)cluster owner:(uint32_t)owner
+{
+	[self checkCluster:cluster owner:owner];
+
+	if (cluster.shapeChecked == NO)
+	{
+		cluster.shapeChecked = YES;
+
+		if (cluster.votes > 0 && [self cluster:cluster clashesForOwner:owner byShape:YES])
+		{
+			cluster.votes = 0;
+			cluster.score = 0.0;
+		}
+	}
+	return (cluster.votes > 0);
 }
 
 
@@ -2109,7 +2327,19 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 //==============================================================================
 - (LDrawSnapSolution)holdCluster:(LDrawSnapCluster *)cluster
 {
-	_heldPlacement = cluster.identifier;
+	const LDrawSnapMeeting	*meetings	= cluster.meetings.bytes;
+	NSUInteger				count		= cluster.meetings.length / sizeof(LDrawSnapMeeting);
+
+	_heldPlacement	= cluster.identifier;
+	_heldSlideOwner	= NoOwner;
+
+	for (NSUInteger index = 0; index < count && _heldSlideOwner == NoOwner; index++)
+	{
+		if (meetings[index].met.slide)
+		{
+			_heldSlideOwner = meetings[index].met.owner;
+		}
+	}
 
 	return (LDrawSnapSolution){
 		.snapped	= true,
@@ -2169,7 +2399,12 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 
 		for (NSUInteger other = 0; other < found && taken == NO; other++)
 		{
-			if (near[other].owner == owner || near[other].gender != meetings[index].movingGender)
+			// Another row of fingers on the same line is in the way whatever
+			// finger it starts with.
+			BOOL rival = (near[other].kind == LDrawConnectorKindFinger && met.kind == LDrawConnectorKindFinger)
+					  || near[other].gender == meetings[index].movingGender;
+
+			if (near[other].owner == owner || rival == NO)
 			{
 				continue;		// the part being dragged, or not after the same place
 			}
@@ -2196,6 +2431,12 @@ static BOOL BoxesAlike(Box3 one, Box3 other, double tolerance)
 	double start	= 0.0;
 	double finish	= 0.0;
 
+	// A ball in a socket has no length to share, only the point.
+	if (one.length == 0.0 && meeting.start == meeting.finish)
+	{
+		return V3Length(V3Sub(LDrawWorldConnectorMouth(one), LDrawWorldConnectorMouth(meeting.met)))
+			<= CoincidentDistance;
+	}
 	if ([self connector:one liesAlong:meeting.met start:&start finish:&finish] == NO)
 	{
 		return NO;

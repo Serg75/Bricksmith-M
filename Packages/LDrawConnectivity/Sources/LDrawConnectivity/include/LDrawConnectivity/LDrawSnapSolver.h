@@ -114,6 +114,14 @@ typedef struct
 - (void)clearMovingBounds;
 - (void)addMovingBounds:(Box3)bounds;
 
+/// The same, with the part's shape and placement where it is now, so parts
+/// whose boxes overlap are asked whether they really go into each other. Then
+/// even parts held together are refused when they do, such as a hinge swung
+/// into its own base. The solver never builds a shape. Until the caller has,
+/// the boxes decide, and a placement that holds the part to another whose box
+/// it overlaps is refused.
+- (void)addMovingBounds:(Box3)bounds shape:(nullable LDrawPartShape *)shape placement:(Matrix4)placement;
+
 /// Excuses every part the dragged one already shares space with, as its boxes
 /// stand now, from being refused for it when it is put back there. A model as
 /// built has parts whose boxes overlap though the parts themselves fit

@@ -23,6 +23,9 @@ typedef NS_ENUM(uint8_t, LDrawShadowMetaKind)
 	LDrawShadowMetaKindCylinder	= 0,	// SNAP_CYL
 	LDrawShadowMetaKindClear	= 1,	// SNAP_CLEAR
 	LDrawShadowMetaKindInclude	= 2,	// SNAP_INCL
+	LDrawShadowMetaKindFinger	= 3,	// SNAP_FGR
+	LDrawShadowMetaKindClip		= 4,	// SNAP_CLP
+	LDrawShadowMetaKindGeneric	= 5,	// SNAP_GEN
 };
 
 
@@ -40,6 +43,10 @@ typedef NS_ENUM(uint8_t, LDrawShadowMetaKind)
 @property (nonatomic, readonly) BOOL						centered;
 @property (nonatomic, readonly) BOOL						slide;
 @property (nonatomic, readonly, copy) NSData				*sections;		// LDrawConnectorSection array
+@property (nonatomic, readonly, copy, nullable) NSString	*group;
+@property (nonatomic, readonly, copy, nullable) NSString	*boundingShape;	// "sph", "box" and so on
+@property (nonatomic, readonly) BOOL						matchesSize;	// match=size
+@property (nonatomic, readonly) BOOL						anyDirection;	// placement=free
 
 @end
 

@@ -22,6 +22,10 @@
 // Rounding for duplicate keys: three decimals, well below the 20 / 8 LDU grid.
 static const double DuplicateScale = 1000.0;
 
+// How deep references are followed for a part's geometry. Library files nest
+// a few levels; this only stops a file that references itself.
+static const NSUInteger MaximumReferenceDepth = 32;
+
 
 /// The fields that make two records the same connector, rounded to ignore
 /// float noise.
@@ -41,6 +45,9 @@ typedef struct
 	uint8_t	caps;
 	uint8_t	centered;
 	uint8_t	slide;
+	uint8_t	anyDirection;
+	uint8_t	matchesSize;
+	uint32_t	match;
 
 } LDrawRecordFingerprint;
 
@@ -236,6 +243,9 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 	print.caps		= connector.caps;
 	print.centered	= connector.centered;
 	print.slide		= connector.slide;
+	print.anyDirection	= connector.anyDirection;
+	print.matchesSize	= connector.matchesSize;
+	print.match		= connector.match;
 
 	key = [NSMutableData dataWithBytes:&print length:sizeof(print)];
 
@@ -263,6 +273,7 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 	LDrawSubfileReader										*_reader;
 	NSObject												*_setsLock;
 	NSObject												*_buildLock;	// one builder at a time
+	NSMutableDictionary<NSString *, LDrawPartShape *>		*_shapes;		// under _setsLock
 }
 
 // Both accessors are custom, so the ivar must be synthesized by hand.
@@ -292,6 +303,7 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 		_reader				= [[LDrawSubfileReader alloc] initWithPaths:paths];
 		_setsLock			= [[NSObject alloc] init];
 		_buildLock			= [[NSObject alloc] init];
+		_shapes				= [NSMutableDictionary dictionary];
 	}
 	return self;
 }
@@ -384,9 +396,73 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 		@synchronized (_setsLock)
 		{
 			[_sets removeAllObjects];
+			[_shapes removeAllObjects];
 		}
 		[_records removeAllObjects];
 		[_reader removeAllReferences];
+	}
+}
+
+
+//========== shapeForPartNamed: ================================================
+//==============================================================================
+- (LDrawPartShape *)shapeForPartNamed:(NSString *)partName
+{
+	NSString		*key	= [LDrawSubfileReader normalizedName:partName];
+	LDrawPartShape	*shape	= nil;
+
+	@synchronized (_setsLock)
+	{
+		shape = _shapes[key];
+
+		if (shape == nil)
+		{
+			__weak LDrawConnectorLibrary *library = self;
+
+			shape = [[LDrawPartShape alloc] initWithTriangles:^NSData *{
+				NSMutableData *triangles = [NSMutableData data];
+
+				[library appendTrianglesOfFileNamed:key transform:IdentityMatrix4 depth:0 to:triangles];
+				return triangles;
+			}];
+			_shapes[key] = shape;
+		}
+	}
+	return shape;
+}
+
+
+//========== appendTrianglesOfFileNamed:transform:depth:to: ====================
+//
+// Purpose:		Every triangle of a library file and of the files it references,
+//				in the coordinates the transform takes the file to.
+//
+//==============================================================================
+- (void)appendTrianglesOfFileNamed:(NSString *)name
+						 transform:(Matrix4)transform
+							 depth:(NSUInteger)depth
+								to:(NSMutableData *)triangles
+{
+	NSData		*own	= [_reader trianglesInFileNamed:name];
+	const float	*corner	= own.bytes;
+	NSUInteger	count	= own.length / (3 * sizeof(float));
+
+	if (depth > MaximumReferenceDepth)
+	{
+		return;
+	}
+	for (NSUInteger index = 0; index < count; index++)
+	{
+		Point3	point	= V3MulPointByProjMatrix(V3Make(corner[3 * index], corner[3 * index + 1],
+														corner[3 * index + 2]), transform);
+		float	placed[3] = { (float)point.x, (float)point.y, (float)point.z };
+
+		[triangles appendBytes:placed length:sizeof(placed)];
+	}
+	for (LDrawSubfileReference *reference in [_reader referencesInFileNamed:name])
+	{
+		[self appendTrianglesOfFileNamed:reference.name transform:Matrix4Multiply(reference.transform, transform)
+								   depth:depth + 1 to:triangles];
 	}
 }
 
@@ -501,7 +577,7 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 //========== applyShadowFileForName:to: ========================================
 //
 // Purpose:		Applies the file's shadow metas in order. SNAP_CLEAR removes
-//				records, SNAP_INCL adds another file's, and SNAP_CYL adds one.
+//				records, SNAP_INCL adds another file's, and the others add one.
 //
 //==============================================================================
 - (void)applyShadowFileForName:(NSString *)name to:(NSMutableArray<LDrawConnectorRecord *> *)records
@@ -521,7 +597,10 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 				break;
 
 			case LDrawShadowMetaKindCylinder:
-				[records addObject:[self recordForCylinderMeta:meta]];
+			case LDrawShadowMetaKindFinger:
+			case LDrawShadowMetaKindClip:
+			case LDrawShadowMetaKindGeneric:
+				[records addObject:[self recordForShapeMeta:meta]];
 				break;
 		}
 	}
@@ -583,27 +662,76 @@ static NSUInteger ProvenanceRank(LDrawConnectorProvenance provenance)
 }
 
 
-//========== recordForCylinderMeta: ============================================
+//---------- MatchOfMeta -----------------------------------------------[static]--
 //
-// Purpose:		A SNAP_CYL meta as a connector. The cylinder runs along the
-//				frame's -Y, like a stud.
+// Purpose:		What a connector must share with another to mate, as a number:
+//				its group, and for fingers their radius, and for a generic
+//				shape its type. Zero for a cylinder or clip without a group.
+//
+//------------------------------------------------------------------------------
+static uint32_t MatchOfMeta(LDrawShadowMeta *meta)
+{
+	NSMutableString	*text	= [NSMutableString stringWithString:meta.group ?: @""];
+	uint32_t		hash	= 2166136261u;			// FNV-1a
+
+	switch (meta.kind)
+	{
+		case LDrawShadowMetaKindFinger:
+		{
+			const LDrawConnectorSection *section = meta.sections.bytes;
+
+			[text appendFormat:@"|finger %.3f", (meta.sections.length > 0) ? section->radius : 0.0];
+			break;
+		}
+		case LDrawShadowMetaKindGeneric:
+			[text appendFormat:@"|generic %@", meta.boundingShape ?: @""];
+			break;
+
+		default:
+			if (meta.group == nil)
+			{
+				return 0;
+			}
+			break;
+	}
+	for (const char *byte = text.UTF8String; *byte != 0; byte++)
+	{
+		hash = (hash ^ (uint8_t)*byte) * 16777619u;
+	}
+	return (hash == 0) ? 1 : hash;
+}
+
+
+//========== recordForShapeMeta: ===============================================
+//
+// Purpose:		A cylinder, finger, clip or generic meta as a connector. The
+//				shape runs along the frame's -Y, like a stud.
 //
 //==============================================================================
-- (LDrawConnectorRecord *)recordForCylinderMeta:(LDrawShadowMeta *)meta
+- (LDrawConnectorRecord *)recordForShapeMeta:(LDrawShadowMeta *)meta
 {
+	static const LDrawConnectorKind kinds[] = {
+		[LDrawShadowMetaKindCylinder]	= LDrawConnectorKindCylinder,
+		[LDrawShadowMetaKindFinger]		= LDrawConnectorKindFinger,
+		[LDrawShadowMetaKindClip]		= LDrawConnectorKindClip,
+		[LDrawShadowMetaKindGeneric]	= LDrawConnectorKindGeneric,
+	};
 	LDrawConnectorRecord	*record	= [[LDrawConnectorRecord alloc] init];
 	Matrix4					frame	= meta.frame;
 	LDrawConnector			connector = {
-		.position	= V3Make(frame.element[3][0], frame.element[3][1], frame.element[3][2]),
-		.axis		= V3Normalize(V3Make(-frame.element[1][0], -frame.element[1][1], -frame.element[1][2])),
-		.reference	= V3Normalize(V3Make(frame.element[0][0], frame.element[0][1], frame.element[0][2])),
-		.grid		= meta.grid,
-		.kind		= LDrawConnectorKindCylinder,
-		.gender		= meta.gender,
-		.caps		= meta.caps,
-		.provenance	= LDrawConnectorProvenanceShadow,
-		.centered	= meta.centered,
-		.slide		= meta.slide,
+		.position		= V3Make(frame.element[3][0], frame.element[3][1], frame.element[3][2]),
+		.axis			= V3Normalize(V3Make(-frame.element[1][0], -frame.element[1][1], -frame.element[1][2])),
+		.reference		= V3Normalize(V3Make(frame.element[0][0], frame.element[0][1], frame.element[0][2])),
+		.grid			= meta.grid,
+		.kind			= kinds[meta.kind],
+		.gender			= meta.gender,
+		.caps			= meta.caps,
+		.provenance		= LDrawConnectorProvenanceShadow,
+		.centered		= meta.centered,
+		.slide			= meta.slide,
+		.anyDirection	= meta.anyDirection,
+		.matchesSize	= meta.matchesSize,
+		.match			= MatchOfMeta(meta),
 	};
 
 	record.connector	= connector;

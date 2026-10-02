@@ -7,8 +7,7 @@
 //              such as a stud, a stud hole, a pin or a hole, in the part's
 //              own coordinates.
 //
-//  Notes:      The kinds match LDCad's SNAP metas. Only cylinders are read
-//              from the shadow library for now.
+//  Notes:      The kinds match LDCad's SNAP metas.
 //
 //  Created by Sergey Slobodenyuk on 2026-09-19.
 //
@@ -24,8 +23,8 @@ typedef NS_ENUM(uint8_t, LDrawConnectorKind)
 {
 	LDrawConnectorKindCylinder	= 0,	// studs, stud holes, pins, axles, holes
 	LDrawConnectorKindClip		= 1,	// always female; takes a male cylinder
-	LDrawConnectorKindFinger	= 2,	// matches only other fingers
-	LDrawConnectorKindGeneric	= 3,	// matches only by group name
+	LDrawConnectorKindFinger	= 2,	// hinge fingers; matches only other fingers
+	LDrawConnectorKindGeneric	= 3,	// any other shape, such as a ball joint; matches by group
 };
 
 typedef NS_ENUM(uint8_t, LDrawConnectorGender)
@@ -109,6 +108,10 @@ typedef struct
 /// A connector in its part's coordinates. A cylinder runs from position along
 /// axis, or starts half its length back when it is centered. Studs rise along
 /// -Y, so a stud's axis is (0, -1, 0).
+///
+/// A row of hinge fingers has a section for each finger and the gender of its
+/// first. A clip is one section. A generic shape is a point, with its size as
+/// the radius of its one section.
 typedef struct
 {
 	Point3						position;
@@ -124,6 +127,10 @@ typedef struct
 	LDrawConnectorProvenance	provenance;
 	bool						centered;		// position is the middle, not an end
 	bool						slide;			// may slide along the axis, as an axle does
+	bool						anyDirection;	// meets in any direction, as a ball joint does
+	bool						matchesSize;	// a generic shape that only takes one its size
+	uint32_t					match;			// must be equal to mate: from the group, and a
+												// finger row's radius or a generic shape's type
 
 } LDrawConnector;
 

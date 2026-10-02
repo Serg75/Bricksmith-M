@@ -3,8 +3,8 @@
 //  File:       LDrawSubfileReader.m
 //  Package:    LDrawConnectivity
 //
-//  Purpose:    Reads the subfile references of library files, with a cache
-//              per file.
+//  Purpose:    Reads the subfile references and polygons of library files,
+//              with a cache per file.
 //
 //  Created by Sergey Slobodenyuk on 2026-09-19.
 //
@@ -50,7 +50,8 @@ static NSString *NormalizedName(NSString *name)
 
 @implementation LDrawSubfileReader
 {
-	NSMutableDictionary<NSString *, id>	*_cache;	// name -> references, or NSNull if missing
+	NSMutableDictionary<NSString *, id>	*_cache;		// name -> references, or NSNull if missing
+	NSMutableDictionary<NSString *, id>	*_triangles;	// name -> NSData, or NSNull if missing
 	LDrawPaths							*_paths;
 }
 
@@ -61,8 +62,9 @@ static NSString *NormalizedName(NSString *name)
 	self = [super init];
 	if (self != nil)
 	{
-		_cache = [NSMutableDictionary dictionary];
-		_paths = (paths != nil) ? paths : [LDrawPaths sharedPaths];
+		_cache		= [NSMutableDictionary dictionary];
+		_triangles	= [NSMutableDictionary dictionary];
+		_paths		= (paths != nil) ? paths : [LDrawPaths sharedPaths];
 	}
 	return self;
 }
@@ -119,7 +121,36 @@ static NSString *NormalizedName(NSString *name)
 	@synchronized (self)
 	{
 		[_cache removeAllObjects];
+		[_triangles removeAllObjects];
 	}
+}
+
+
+//========== trianglesInFileNamed: =============================================
+//==============================================================================
+- (nullable NSData *)trianglesInFileNamed:(NSString *)name
+{
+	NSString	*key	= NormalizedName(name);
+	id			cached	= nil;
+
+	@synchronized (self)
+	{
+		cached = _triangles[key];
+	}
+	if (cached == nil)
+	{
+		NSString *path = [_paths pathForPartName:key];
+		cached = (path != nil) ? [self readTrianglesAtPath:path] : nil;
+		if (cached == nil)
+		{
+			cached = [NSNull null];
+		}
+		@synchronized (self)
+		{
+			_triangles[key] = cached;
+		}
+	}
+	return (cached == [NSNull null]) ? nil : cached;
 }
 
 
@@ -146,6 +177,59 @@ static NSString *NormalizedName(NSString *name)
 }
 
 
+//---------- TextOfFile ------------------------------------------------[static]--
+//------------------------------------------------------------------------------
+static NSString *TextOfFile(NSString *path)
+{
+	NSString *text = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL];
+
+	// Older library files are Latin-1.
+	return text ?: [NSString stringWithContentsOfFile:path encoding:NSISOLatin1StringEncoding error:NULL];
+}
+
+
+//========== readTrianglesAtPath: ==============================================
+//
+// Purpose:		Parses every type 3 and type 4 line: "3 color x1 y1 z1 x2 y2 z2
+//				x3 y3 z3", and a fourth corner for a quad.
+//
+//==============================================================================
+- (nullable NSData *)readTrianglesAtPath:(NSString *)path
+{
+	NSString		*text		= TextOfFile(path);
+	NSMutableData	*triangles	= [NSMutableData data];
+
+	if (text == nil)
+	{
+		return nil;
+	}
+	[text enumerateLinesUsingBlock:^(NSString *line, BOOL *stop) {
+		NSArray<NSString *>	*fields	= [[line componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet]
+									   filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"length > 0"]];
+		BOOL				quad	= [fields.firstObject isEqualToString:@"4"];
+		float				v[12];
+
+		if (fields.count < (quad ? 14u : 11u) || (quad == NO && [fields.firstObject isEqualToString:@"3"] == NO))
+		{
+			return;
+		}
+		for (NSUInteger index = 0; index < (quad ? 12u : 9u); index++)
+		{
+			v[index] = fields[2 + index].floatValue;
+		}
+		[triangles appendBytes:v length:9 * sizeof(float)];
+
+		if (quad)
+		{
+			float other[9] = { v[0], v[1], v[2], v[6], v[7], v[8], v[9], v[10], v[11] };
+
+			[triangles appendBytes:other length:sizeof(other)];
+		}
+	}];
+	return triangles;
+}
+
+
 //========== readReferencesAtPath: =============================================
 //
 // Purpose:		Parses every type 1 line: "1 color x y z a b c d e f g h i name".
@@ -156,14 +240,9 @@ static NSString *NormalizedName(NSString *name)
 //==============================================================================
 - (nullable NSArray<LDrawSubfileReference *> *)readReferencesAtPath:(NSString *)path
 {
-	NSString		*text		= [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL];
+	NSString		*text		= TextOfFile(path);
 	NSMutableArray	*references	= [NSMutableArray array];
 
-	if (text == nil)
-	{
-		// Older library files are Latin-1.
-		text = [NSString stringWithContentsOfFile:path encoding:NSISOLatin1StringEncoding error:NULL];
-	}
 	if (text == nil)
 	{
 		return nil;

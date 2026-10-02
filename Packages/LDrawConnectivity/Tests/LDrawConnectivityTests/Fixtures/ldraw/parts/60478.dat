@@ -1,0 +1,31 @@
+0 Plate  1 x  2 with Handle on End
+0 Name: 60478.dat
+0 Author: Michael Heidemann [mikeheide]
+0 !LDRAW_ORG Part UPDATE 2024-03
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2009-09-03 [PTadmin] Official Update 2009-02
+0 !HISTORY 2021-11-03 [MagFors] used handle primitive
+0 !HISTORY 2024-04-28 [OrionP] Official Update 2024-03
+
+
+1 16 0 4 0 0 0 -1 0 -1 0 1 0 0 stud3.dat
+0 BFC INVERTNEXT
+1 16 0 8 0 -16 0 0 0 -4 0 0 0 -6 box5.dat
+4 16 -20 8 10 -16 8 6 -16 8 -6 -20 8 -10
+4 16 -20 8 -10 -16 8 -6 16 8 -6 20 8 -10
+3 16 20 8 -4 20 8 -10 16 8 -6
+4 16 16 8 -6 16 8 6 20 8 4 20 8 -4
+3 16 16 8 6 20 8 10 20 8 4
+4 16 20 8 10 16 8 6 -16 8 6 -20 8 10
+1 16 0 0 0 -1 0 0 0 1 0 0 0 -1 stug-1x2.dat
+1 16 20 4 0 0 -1 0 4 0 0 0 0 -4 rect.dat
+1 16 30 2 4 0 0 -4 4 0 0 0 -8 0 4-4cylo.dat
+1 16 20 4 0 0 -40 0 4 0 0 0 0 10 box3u4a.dat
+3 16 20 0 4 20 0 10 -20 0 10
+4 16 -20 0 10 -20 0 -10 20 0 -4 20 0 4
+3 16 -20 0 -10 20 0 -10 20 0 -4
+1 16 30 0 -7 0 0 -1 0 1 0 1 0 0 phandle1.dat
+1 16 30 0 7 0 0 -1 0 1 0 -1 0 0 phandle1.dat

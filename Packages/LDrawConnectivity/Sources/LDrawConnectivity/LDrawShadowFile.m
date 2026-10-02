@@ -111,17 +111,20 @@ static LDrawSectionShape SectionShape(NSString *token)
 
 
 //---------- Caps ------------------------------------------------------[static]--
+//
+// Purpose:		Reads "caps", which LDCad takes as "one" when it is missing.
+//
 //------------------------------------------------------------------------------
 static LDrawConnectorCaps Caps(NSString * _Nullable token)
 {
 	NSString *caps = token.lowercaseString;
 
-	if ([caps isEqualToString:@"one"])	{ return LDrawConnectorCapsOne; }
+	if ([caps isEqualToString:@"none"])	{ return LDrawConnectorCapsNone; }
 	if ([caps isEqualToString:@"two"])	{ return LDrawConnectorCapsTwo; }
 	if ([caps isEqualToString:@"a"])	{ return LDrawConnectorCapsA; }
 	if ([caps isEqualToString:@"b"])	{ return LDrawConnectorCapsB; }
 
-	return LDrawConnectorCapsNone;
+	return LDrawConnectorCapsOne;
 }
 
 
@@ -244,6 +247,19 @@ static NSData *SectionsFromAttributes(NSDictionary<NSString *, NSString *> *attr
 }
 
 
+//---------- OneSection ------------------------------------------------[static]--
+//
+// Purpose:		A profile of one round section.
+//
+//------------------------------------------------------------------------------
+static NSData *OneSection(double radius, double length)
+{
+	LDrawConnectorSection section = { .radius = radius, .length = length, .shape = LDrawSectionShapeRound };
+
+	return [NSData dataWithBytes:&section length:sizeof(section)];
+}
+
+
 @implementation LDrawShadowMeta
 
 //========== initWithLine: =====================================================
@@ -251,7 +267,12 @@ static NSData *SectionsFromAttributes(NSDictionary<NSString *, NSString *> *attr
 // Purpose:		Reads one meta, or returns nil when the line is not a meta
 //				this package reads.
 //
-// Notes:		SNAP_CLP, SNAP_FGR and SNAP_GEN are skipped for now.
+// Notes:		A row of fingers is a section for each finger, starting with
+//				the gender of the first. It is centered unless it says
+//				otherwise, which is how the fingers of LDraw parts sit, and it
+//				fits from either end. A clip is always female, and slides along
+//				the bar it holds when the bar slides. A generic shape keeps its
+//				size as the radius of one section.
 //
 //==============================================================================
 - (nullable instancetype)initWithLine:(NSString *)line
@@ -287,6 +308,18 @@ static NSData *SectionsFromAttributes(NSDictionary<NSString *, NSString *> *attr
 	{
 		_kind = LDrawShadowMetaKindInclude;
 	}
+	else if ([name isEqualToString:@"SNAP_FGR"])
+	{
+		_kind = LDrawShadowMetaKindFinger;
+	}
+	else if ([name isEqualToString:@"SNAP_CLP"])
+	{
+		_kind = LDrawShadowMetaKindClip;
+	}
+	else if ([name isEqualToString:@"SNAP_GEN"])
+	{
+		_kind = LDrawShadowMetaKindGeneric;
+	}
 	else
 	{
 		return nil;
@@ -305,7 +338,51 @@ static NSData *SectionsFromAttributes(NSDictionary<NSString *, NSString *> *attr
 	_scaleRule	= ScaleRule(attributes[@"scale"]);
 	_centered	= AttributeIs(attributes[@"center"], @"true");
 	_slide		= AttributeIs(attributes[@"slide"], @"true");
+	_group		= [attributes[@"group"] copy];
 
+	switch (_kind)
+	{
+		case LDrawShadowMetaKindFinger:
+		{
+			NSMutableData	*fingers	= [NSMutableData data];
+			double			radius		= attributes[@"radius"].doubleValue;
+
+			for (NSString *token in Tokens(attributes[@"seq"] ?: @""))
+			{
+				[fingers appendData:OneSection(radius, token.doubleValue)];
+			}
+			_sections		= fingers;
+			_gender			= AttributeIs(attributes[@"genderofs"], @"F")
+								? LDrawConnectorGenderFemale : LDrawConnectorGenderMale;
+			_caps			= LDrawConnectorCapsNone;
+			_centered		= (AttributeIs(attributes[@"center"], @"false") == NO);
+			_slide			= NO;
+			break;
+		}
+		case LDrawShadowMetaKindClip:
+		{
+			double radius = attributes[@"radius"] ? attributes[@"radius"].doubleValue : 4.0;
+			double length = attributes[@"length"] ? attributes[@"length"].doubleValue : 8.0;
+
+			_sections	= OneSection(radius, length);
+			_gender		= LDrawConnectorGenderFemale;
+			_caps		= LDrawConnectorCapsNone;
+			_slide		= (AttributeIs(attributes[@"slide"], @"false") == NO);
+			break;
+		}
+		case LDrawShadowMetaKindGeneric:
+		{
+			NSArray<NSString *> *bounding = Tokens(attributes[@"bounding"] ?: @"");
+
+			_boundingShape	= bounding.firstObject.lowercaseString;
+			_sections		= OneSection((bounding.count > 1) ? bounding[1].doubleValue : 0.0, 0.0);
+			_matchesSize	= AttributeIs(attributes[@"match"], @"size");
+			_anyDirection	= AttributeIs(attributes[@"placement"], @"free");
+			break;
+		}
+		default:
+			break;
+	}
 	return self;
 }
 

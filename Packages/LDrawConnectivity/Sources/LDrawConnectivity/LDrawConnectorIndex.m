@@ -20,6 +20,12 @@ static const double CellHeight	= 8.0;
 // A guard against bad data. Real connectors cross far fewer cells.
 static const NSUInteger MaximumConnectorCells = 4096;
 
+// Part boxes go in coarser cells: a box covers many connector cells.
+static const double BoxCellSize = 40.0;
+
+// A guard against bad data. The largest baseplate covers about 2,500 cells.
+static const NSUInteger MaximumBoxCells = 65536;
+
 
 /// One connector in a cell: its owner and its index in the owner's list.
 typedef struct
@@ -34,9 +40,13 @@ typedef struct
 {
 	NSMutableDictionary<NSNumber *, LDrawWorldConnectors *>	*_connectorsByOwner;
 	NSMutableDictionary<NSNumber *, NSMutableData *>		*_boundsByOwner;		// owner -> Box3 a part
+	NSMutableDictionary<NSNumber *, NSMutableData *>		*_placementsByOwner;	// owner -> Matrix4 a part
+	NSMutableDictionary<NSNumber *, NSMutableArray *>		*_shapesByOwner;		// owner -> shape or NSNull a part
+	NSMutableDictionary<NSNumber *, NSNumber *>				*_shapelessByOwner;		// owner -> parts without one
 	Box3													_occupied;
 	BOOL													_occupiedIsKnown;
 	CFMutableDictionaryRef									_cells;			// cell key -> NSMutableData of places
+	CFMutableDictionaryRef									_boxCells;		// cell key -> NSMutableData of owners
 	NSUInteger												_connectorCount;
 }
 
@@ -49,9 +59,13 @@ typedef struct
 	{
 		_connectorsByOwner	= [NSMutableDictionary dictionary];
 		_boundsByOwner		= [NSMutableDictionary dictionary];
+		_placementsByOwner	= [NSMutableDictionary dictionary];
+		_shapesByOwner		= [NSMutableDictionary dictionary];
+		_shapelessByOwner	= [NSMutableDictionary dictionary];
 		// Keyed by the raw number: a cell key is too large to box without
 		// allocating, and a query looks up thousands of cells.
 		_cells				= CFDictionaryCreateMutable(NULL, 0, NULL, &kCFTypeDictionaryValueCallBacks);
+		_boxCells			= CFDictionaryCreateMutable(NULL, 0, NULL, &kCFTypeDictionaryValueCallBacks);
 	}
 	return self;
 }
@@ -150,11 +164,97 @@ static void EnumerateCellsAlongRun(LDrawWorldConnector connector, void (^visit)(
 }
 
 
+//---------- BoxCellRange ----------------------------------------------[static]--
+//
+// Purpose:		The first and last cell of the box grid that a box reaches into
+//				along each axis, and how many cells that makes: none for an
+//				empty box.
+//
+//------------------------------------------------------------------------------
+static double BoxCellRange(Box3 box, int64_t *first, int64_t *last)
+{
+	if ((box.min.x <= box.max.x && box.min.y <= box.max.y && box.min.z <= box.max.z) == NO)
+	{
+		return 0.0;			// empty, or not a number
+	}
+	first[0]	= (int64_t)floor(box.min.x / BoxCellSize);
+	first[1]	= (int64_t)floor(box.min.y / BoxCellSize);
+	first[2]	= (int64_t)floor(box.min.z / BoxCellSize);
+	last[0]		= (int64_t)floor(box.max.x / BoxCellSize);
+	last[1]		= (int64_t)floor(box.max.y / BoxCellSize);
+	last[2]		= (int64_t)floor(box.max.z / BoxCellSize);
+
+	return (double)(last[0] - first[0] + 1) * (double)(last[1] - first[1] + 1) * (double)(last[2] - first[2] + 1);
+}
+
+
+//---------- EnumerateBoxCells -----------------------------------------[static]--
+//
+// Purpose:		Visits every cell of the box grid that a box reaches into. A box
+//				too large for real data visits none.
+//
+//------------------------------------------------------------------------------
+static void EnumerateBoxCells(Box3 box, void (^visit)(int64_t key))
+{
+	int64_t	first[3]	= { 0, 0, 0 };
+	int64_t	last[3]		= { 0, 0, 0 };
+	double	cells		= BoxCellRange(box, first, last);
+
+	if (cells == 0.0 || cells > (double)MaximumBoxCells)
+	{
+		return;
+	}
+	for (int64_t x = first[0]; x <= last[0]; x++)
+	{
+		for (int64_t y = first[1]; y <= last[1]; y++)
+		{
+			for (int64_t z = first[2]; z <= last[2]; z++)
+			{
+				visit(LDrawCellKey(x, y, z));
+			}
+		}
+	}
+}
+
+
 //---------- CellAtKey -------------------------------------------------[static]--
 //------------------------------------------------------------------------------
 static NSMutableData *CellAtKey(CFMutableDictionaryRef cells, int64_t key)
 {
 	return (__bridge NSMutableData *)CFDictionaryGetValue(cells, (const void *)(intptr_t)key);
+}
+
+
+//---------- RemoveOwnerFromBoxCell ------------------------------------[static]--
+//------------------------------------------------------------------------------
+static void RemoveOwnerFromBoxCell(NSMutableData *cell, uint32_t owner)
+{
+	uint32_t	*owners	= cell.mutableBytes;
+	NSUInteger	count	= cell.length / sizeof(uint32_t);
+	NSUInteger	kept	= 0;
+
+	for (NSUInteger index = 0; index < count; index++)
+	{
+		if (owners[index] != owner)
+		{
+			owners[kept] = owners[index];
+			kept++;
+		}
+	}
+	cell.length = kept * sizeof(uint32_t);
+}
+
+
+//---------- BoxesMeet -------------------------------------------------[static]--
+//
+// Purpose:		Whether two boxes overlap or touch.
+//
+//------------------------------------------------------------------------------
+static BOOL BoxesMeet(Box3 one, Box3 other)
+{
+	return (one.min.x <= other.max.x) && (one.max.x >= other.min.x)
+		&& (one.min.y <= other.max.y) && (one.max.y >= other.min.y)
+		&& (one.min.z <= other.max.z) && (one.max.z >= other.min.z);
 }
 
 
@@ -169,9 +269,7 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 	Point3	end		= V3Add(mouth, V3MulScalar(connector.axis, connector.length));
 	Box3	run		= V3BoundsFromPoints(mouth, end);
 
-	return (run.min.x <= box.max.x) && (run.max.x >= box.min.x)
-		&& (run.min.y <= box.max.y) && (run.max.y >= box.min.y)
-		&& (run.min.z <= box.max.z) && (run.max.z >= box.min.z);
+	return BoxesMeet(run, box);
 }
 
 
@@ -182,6 +280,7 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 - (void)dealloc
 {
 	CFRelease(_cells);
+	CFRelease(_boxCells);
 }
 
 
@@ -241,14 +340,55 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 //==============================================================================
 - (void)addBounds:(Box3)bounds forOwner:(uint32_t)owner
 {
-	NSMutableData *boxes = _boundsByOwner[@(owner)];
+	[self addBounds:bounds shape:nil placement:IdentityMatrix4 forOwner:owner];
+}
+
+
+//========== addBounds:shape:placement:forOwner: ===============================
+//==============================================================================
+- (void)addBounds:(Box3)bounds
+			shape:(nullable LDrawPartShape *)shape
+		placement:(Matrix4)placement
+		 forOwner:(uint32_t)owner
+{
+	NSNumber		*key		= @(owner);
+	NSMutableData	*boxes		= _boundsByOwner[key];
 
 	if (boxes == nil)
 	{
-		boxes = [NSMutableData data];
-		_boundsByOwner[@(owner)] = boxes;
+		boxes						= [NSMutableData data];
+		_boundsByOwner[key]			= boxes;
+		_placementsByOwner[key]		= [NSMutableData data];
+		_shapesByOwner[key]			= [NSMutableArray array];
 	}
 	[boxes appendBytes:&bounds length:sizeof(bounds)];
+	[_placementsByOwner[key] appendBytes:&placement length:sizeof(placement)];
+	[_shapesByOwner[key] addObject:shape ?: (id)[NSNull null]];
+
+	EnumerateBoxCells(bounds, ^(int64_t cellKey) {
+		NSMutableData *cell = CellAtKey(self->_boxCells, cellKey);
+
+		if (cell == nil)
+		{
+			cell = [NSMutableData data];
+			CFDictionarySetValue(self->_boxCells, (const void *)(intptr_t)cellKey, (__bridge const void *)cell);
+		}
+
+		// An owner's parts come one after another, so this keeps most cells
+		// to one entry an owner.
+		const uint32_t	*owners	= cell.bytes;
+		NSUInteger		count	= cell.length / sizeof(uint32_t);
+
+		if (count == 0 || owners[count - 1] != owner)
+		{
+			[cell appendBytes:&owner length:sizeof(owner)];
+		}
+	});
+
+	if (shape == nil)
+	{
+		_shapelessByOwner[key] = @(_shapelessByOwner[key].unsignedIntegerValue + 1);
+	}
 }
 
 
@@ -284,12 +424,13 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 //==============================================================================
 - (Box3)boundsOfOwner:(uint32_t)owner
 {
-	NSUInteger	count	= [self partBoundsCountOfOwner:owner];
+	NSUInteger	count	= 0;
+	const Box3	*boxes	= [self partBoundsOfOwner:owner count:&count];
 	Box3		bounds	= InvalidBox;
 
 	for (NSUInteger index = 0; index < count; index++)
 	{
-		bounds = V3UnionBox(bounds, [self partBoundsOfOwner:owner atIndex:index]);
+		bounds = V3UnionBox(bounds, boxes[index]);
 	}
 	return bounds;
 }
@@ -317,6 +458,66 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 }
 
 
+//========== partShapeOfOwner:atIndex: =========================================
+//==============================================================================
+- (nullable LDrawPartShape *)partShapeOfOwner:(uint32_t)owner atIndex:(NSUInteger)index
+{
+	NSArray *shapes = _shapesByOwner[@(owner)];
+	id		shape	= (index < shapes.count) ? shapes[index] : nil;
+
+	return (shape == [NSNull null]) ? nil : shape;
+}
+
+
+//========== partPlacementOfOwner:atIndex: =====================================
+//==============================================================================
+- (Matrix4)partPlacementOfOwner:(uint32_t)owner atIndex:(NSUInteger)index
+{
+	NSData *placements = _placementsByOwner[@(owner)];
+
+	if (index >= placements.length / sizeof(Matrix4))
+	{
+		return IdentityMatrix4;
+	}
+	return ((const Matrix4 *)placements.bytes)[index];
+}
+
+
+//========== partBoundsOfOwner:count: ==========================================
+//==============================================================================
+- (nullable const Box3 *)partBoundsOfOwner:(uint32_t)owner count:(NSUInteger *)count
+{
+	NSData *boxes = _boundsByOwner[@(owner)];
+
+	*count = boxes.length / sizeof(Box3);
+	return boxes.bytes;
+}
+
+
+//========== partPlacementsOfOwner: ============================================
+//==============================================================================
+- (nullable const Matrix4 *)partPlacementsOfOwner:(uint32_t)owner
+{
+	return _placementsByOwner[@(owner)].bytes;
+}
+
+
+//========== partShapesOfOwner: ================================================
+//==============================================================================
+- (NSArray *)partShapesOfOwner:(uint32_t)owner
+{
+	return _shapesByOwner[@(owner)] ?: @[];
+}
+
+
+//========== partsWithoutShapeOfOwner: =========================================
+//==============================================================================
+- (NSUInteger)partsWithoutShapeOfOwner:(uint32_t)owner
+{
+	return _shapelessByOwner[@(owner)].unsignedIntegerValue;
+}
+
+
 //========== removeOwner: ======================================================
 //==============================================================================
 - (void)removeOwner:(uint32_t)owner
@@ -324,10 +525,23 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 	LDrawWorldConnectors		*connectors	= _connectorsByOwner[@(owner)];
 	const LDrawWorldConnector	*placed		= connectors.all;
 	NSUInteger					count		= connectors.count;
+	NSUInteger					boxCount	= 0;
+	const Box3					*boxes		= [self partBoundsOfOwner:owner count:&boxCount];
 
-	if (connectors == nil)
+	for (NSUInteger index = 0; index < boxCount; index++)
 	{
-		return;
+		EnumerateBoxCells(boxes[index], ^(int64_t key) {
+			NSMutableData *cell = CellAtKey(self->_boxCells, key);
+
+			if (cell != nil)
+			{
+				RemoveOwnerFromBoxCell(cell, owner);
+				if (cell.length == 0)
+				{
+					CFDictionaryRemoveValue(self->_boxCells, (const void *)(intptr_t)key);
+				}
+			}
+		});
 	}
 	for (NSUInteger index = 0; index < count; index++)
 	{
@@ -347,6 +561,9 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 	_connectorCount -= count;
 	[_connectorsByOwner removeObjectForKey:@(owner)];
 	[_boundsByOwner removeObjectForKey:@(owner)];
+	[_placementsByOwner removeObjectForKey:@(owner)];
+	[_shapesByOwner removeObjectForKey:@(owner)];
+	[_shapelessByOwner removeObjectForKey:@(owner)];
 	_occupiedIsKnown = NO;
 }
 
@@ -377,7 +594,11 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 {
 	[_connectorsByOwner removeAllObjects];
 	[_boundsByOwner removeAllObjects];
+	[_placementsByOwner removeAllObjects];
+	[_shapesByOwner removeAllObjects];
+	[_shapelessByOwner removeAllObjects];
 	CFDictionaryRemoveAllValues(_cells);
+	CFDictionaryRemoveAllValues(_boxCells);
 	_connectorCount		= 0;
 	_occupiedIsKnown	= NO;
 }
@@ -470,6 +691,75 @@ static BOOL RunReachesBox(LDrawWorldConnector connector, Box3 box)
 	CFRelease(answered);
 
 	return found;
+}
+
+
+//========== ownersInBox:excludingOwner: =======================================
+//==============================================================================
+- (NSIndexSet *)ownersInBox:(Box3)box excludingOwner:(uint32_t)owner
+{
+	NSMutableIndexSet	*found		= [NSMutableIndexSet indexSet];
+	NSMutableIndexSet	*asked		= [NSMutableIndexSet indexSet];
+	int64_t				first[3]	= { 0, 0, 0 };
+	int64_t				last[3]		= { 0, 0, 0 };
+	double				cells		= BoxCellRange(box, first, last);
+
+	if (cells == 0.0)
+	{
+		return found;
+	}
+
+	// A box with more cells than the model has owners is faster to answer by
+	// walking the model.
+	if (cells > (double)_boundsByOwner.count || cells > (double)MaximumBoxCells)
+	{
+		for (NSNumber *other in _boundsByOwner)
+		{
+			if (other.unsignedIntValue != owner && [self owner:other.unsignedIntValue hasPartInBox:box])
+			{
+				[found addIndex:other.unsignedIntValue];
+			}
+		}
+		return found;
+	}
+	EnumerateBoxCells(box, ^(int64_t key) {
+		NSData			*cell	= CellAtKey(self->_boxCells, key);
+		const uint32_t	*owners	= cell.bytes;
+		NSUInteger		count	= cell.length / sizeof(uint32_t);
+
+		for (NSUInteger index = 0; index < count; index++)
+		{
+			if (owners[index] == owner || [asked containsIndex:owners[index]])
+			{
+				continue;
+			}
+			[asked addIndex:owners[index]];
+
+			if ([self owner:owners[index] hasPartInBox:box])
+			{
+				[found addIndex:owners[index]];
+			}
+		}
+	});
+	return found;
+}
+
+
+//========== owner:hasPartInBox: ===============================================
+//==============================================================================
+- (BOOL)owner:(uint32_t)owner hasPartInBox:(Box3)box
+{
+	NSUInteger	count	= 0;
+	const Box3	*boxes	= [self partBoundsOfOwner:owner count:&count];
+
+	for (NSUInteger index = 0; index < count; index++)
+	{
+		if (BoxesMeet(boxes[index], box))
+		{
+			return YES;
+		}
+	}
+	return NO;
 }
 
 

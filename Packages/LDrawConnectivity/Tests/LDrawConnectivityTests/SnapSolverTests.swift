@@ -94,22 +94,25 @@ func connector(_ position: (Double, Double, Double), axis: (Double, Double, Doub
                    = [(6, 4, .round)],
                kind: LDrawConnectorKind = .cylinder, gender: LDrawConnectorGender,
                owner: UInt32 = 1, slide: Bool = false, centered: Bool = false,
-               bothEndsOpen: Bool = false) -> LDrawWorldConnector {
-    let empty = LDrawConnectorSection(radius: 0, length: 0, shape: .round)
-    var sections = [LDrawConnectorSection](repeating: empty, count: 4)
+               bothEndsOpen: Bool = false, anyDirection: Bool = false,
+               match: UInt32 = 0) -> LDrawWorldConnector {
+    let empty = LDrawWorldSection(radius: 0, length: 0, shape: .round)
+    var sections = [LDrawWorldSection](repeating: empty, count: 9)
 
-    for (index, section) in profile.prefix(4).enumerated() {
-        sections[index] = LDrawConnectorSection(radius: section.radius, length: section.length,
-                                                shape: section.shape)
+    for (index, section) in profile.prefix(9).enumerated() {
+        sections[index] = LDrawWorldSection(radius: Float(section.radius), length: Float(section.length),
+                                            shape: section.shape)
     }
 
     return LDrawWorldConnector(position: V3Make(position.0, position.1, position.2),
                                axis: V3Make(axis.0, axis.1, axis.2),
                                length: profile.reduce(0) { $0 + $1.length },
-                               sections: (sections[0], sections[1], sections[2], sections[3]),
-                               owner: owner, sectionCount: UInt8(min(profile.count, 4)),
+                               sections: (sections[0], sections[1], sections[2], sections[3], sections[4],
+                                          sections[5], sections[6], sections[7], sections[8]),
+                               owner: owner, sectionCount: UInt8(min(profile.count, 9)),
                                kind: kind, gender: gender,
-                               centered: centered, slide: slide, bothEndsOpen: bothEndsOpen)
+                               centered: centered, slide: slide, bothEndsOpen: bothEndsOpen,
+                               anyDirection: anyDirection, matchesSize: false, match: match)
 }
 
 
@@ -158,6 +161,34 @@ struct ConnectorPairTests {
         let hole = connector((0, 0, 0), axis: (0, -1, 0), profile: [(6, 4, .axle)], gender: .female, owner: 2)
 
         #expect(mate(pin, hole).holds == false)
+    }
+
+    @Test("An axle turns in a round hole")
+    func axleInRoundHole() {
+        let axle = connector((0, 0, 0), axis: (0, -1, 0), profile: [(6, 40, .axle)], gender: .male, owner: 1)
+        let hole = connector((0, 0, 0), axis: (0, -1, 0), profile: [(8, 2, .round), (6, 16, .round)],
+                             gender: .female, owner: 2)
+
+        #expect(mate(axle, hole).holds)
+        #expect(mate(hole, axle).holds)
+        #expect(mate(axle, hole).depth == 2)            // past the counterbore
+    }
+
+    @Test("A hole with collars slides along an axle up to flush with either end")
+    func collaredHoleRange() {
+        let axle = connector((0, 0, 0), axis: (1, 0, 0), profile: [(6, 120, .axle)], gender: .male, owner: 1,
+                             slide: true)
+        let hole = connector((0, 0, 0), axis: (1, 0, 0), profile: [(8, 2, .round), (6, 16, .round), (8, 2, .round)],
+                             gender: .female, owner: 2, slide: true)
+        let depth = mate(hole, axle).depth
+        var lowest = 0.0
+        var highest = 0.0
+
+        LDrawWorldConnectorsSlideRange(hole, axle, depth, &lowest, &highest)
+
+        #expect(depth == -2)                            // the narrow part at the axle's end
+        #expect(depth + lowest == 0)
+        #expect(depth + highest == 100)
     }
 
     @Test("A stud enters the square hole under a plate")
@@ -374,6 +405,88 @@ struct SnapSolverTests {
 }
 
 
+@Suite("Hinges, clips and ball joints")
+struct TurnableJointTests {
+
+    @Test("A single finger fits between two, and two do not fit two")
+    func fingersInterleave() {
+        let single = connector((0, 0, 0), axis: (0, 0, 1), profile: [(0, 8, .round)],
+                               kind: .finger, gender: .male, owner: 1, centered: true, bothEndsOpen: true)
+        let double = connector((0, 0, 0), axis: (0, 0, 1), profile: [(0, 4, .round), (0, 8, .round), (0, 4, .round)],
+                               kind: .finger, gender: .male, owner: 2, centered: true, bothEndsOpen: true)
+
+        #expect(mate(single, double).holds)
+        #expect(mate(single, double).depth == 4)        // their middles meet
+        #expect(mate(double, double).holds == false)
+    }
+
+    @Test("A hinge top goes back onto its base at the angle it was turned to")
+    func hingeKeepsItsAngle() throws {
+        let scene = SnapScene()
+
+        try scene.place("3937.dat", at: (0, 0, 0), owner: 1)
+
+        // The top turned 45 degrees about the hinge's axis, which runs along X
+        // through (0, 10, 0), and then moved a little off it.
+        var placement = Matrix4Rotate(IdentityMatrix4, V3Make(45, 0, 0))
+        let hinge = V3MulPointByProjMatrix(V3Make(0, 10, 0), placement)
+
+        placement = Matrix4Translate(placement, V3Make(0 - hinge.x + 3, 10 - hinge.y + 2, 0 - hinge.z))
+
+        let set = try #require(ConnectivityFixtures.shadowConnectorSet("3938.dat"))
+        let moving = LDrawWorldConnectors(from: set, placement: placement, owner: 99)
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(isTurned(solution.transform) == false)
+        #expect(translation(solution.transform) == (-3, -2, 0))
+    }
+
+    @Test("A clip snaps onto a bar where it is held along it")
+    func clipOnABar() {
+        let index = LDrawConnectorIndex()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+
+        solver.pointsPerUnit = 1
+        index.setConnectors([connector((0, 0, 0), axis: (0, 0, 1), profile: [(4, 40, .round)],
+                                       gender: .male, owner: 1, slide: true)].buffer, forOwner: 1)
+
+        // A clip facing the other way, 3 LDU off the bar and 5 along it.
+        let clip = [connector((3, 2, 13), axis: (0, 0, -1), profile: [(4, 8, .round)], kind: .clip,
+                              gender: .female, owner: 2, slide: true, bothEndsOpen: true)].buffer
+        let solution = solver.solution(for: clip, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(translation(solution.transform) == (-3, -2, 0))
+    }
+
+    @Test("A ball goes into a socket of its match, however the part is turned")
+    func ballIntoSocket() {
+        let index = LDrawConnectorIndex()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+
+        solver.pointsPerUnit = 1
+        index.setConnectors([connector((0, 0, 0), axis: (0, -1, 0), profile: [(8, 0, .round)], kind: .generic,
+                                       gender: .female, owner: 1, anyDirection: true, match: 7)].buffer,
+                            forOwner: 1)
+
+        func ball(match: UInt32) -> LDrawWorldConnectors {
+            [connector((2, 3, -1), axis: (0.6, 0, 0.8), profile: [(8, 0, .round)], kind: .generic,
+                       gender: .male, owner: 2, anyDirection: true, match: match)].buffer
+        }
+
+        let taken = solver.solution(for: ball(match: 7), dragDirection: V3Make(0, 0, 0))
+
+        solver.releaseHold()
+
+        #expect(taken.snapped)
+        #expect(isTurned(taken.transform) == false)
+        #expect(translation(taken.transform) == (-2, -3, 1))
+        #expect(solver.solution(for: ball(match: 8), dragDirection: V3Make(0, 0, 0)).snapped == false)
+    }
+}
+
+
 @Suite("Connectors that slide along each other")
 struct SnapSlideTests {
 
@@ -482,6 +595,39 @@ struct SnapSlideTests {
         #expect(free.snapped)                                   // past the first beam
         #expect(over.snapped)
         #expect(translation(over.transform) == (18, -2, 0))     // pushed off the first beam
+    }
+
+    @Test("A beam with collared holes goes flush onto either end of an axle, beside a brick on it")
+    func flushAtEitherEnd() {
+        let index = LDrawConnectorIndex()
+        let solver = LDrawSnapSolver(connectorIndex: index)
+        let collared: [(radius: Double, length: Double, shape: LDrawSectionShape)]
+            = [(8, 2, .round), (6, 16, .round), (8, 2, .round)]
+
+        solver.pointsPerUnit = 1
+
+        // An axle 60 long lying along X from the origin, through a brick's
+        // hole over its middle 20.
+        index.setConnectors([connector((0, 0, 0), axis: (1, 0, 0), profile: [(6, 60, .axle)],
+                                       gender: .male, owner: 1, slide: true)].buffer, forOwner: 1)
+        index.setConnectors([connector((20, 0, 0), axis: (1, 0, 0), profile: collared,
+                                       gender: .female, owner: 2, slide: true)].buffer, forOwner: 2)
+
+        func beam(at x: Double) -> LDrawWorldConnectors {
+            [connector((x, 2, 0), axis: (1, 0, 0), profile: collared, gender: .female, owner: 3,
+                       slide: true)].buffer
+        }
+
+        let start = solver.solution(for: beam(at: -3), dragDirection: V3Make(0, 0, 0))
+
+        solver.releaseHold()
+
+        let end = solver.solution(for: beam(at: 43), dragDirection: V3Make(0, 0, 0))
+
+        #expect(start.snapped)
+        #expect(translation(start.transform) == (3, -2, 0))
+        #expect(end.snapped)
+        #expect(translation(end.transform) == (-3, -2, 0))
     }
 
     @Test("A hole open at both ends takes an axle from either end")
@@ -685,6 +831,36 @@ struct SightTests {
         #expect(passed.snapped == false)
     }
 
+    @Test("A part sliding on an axle stays on it where the axle is seen in front of the held point")
+    func slideSeenBehindItsAxle() throws {
+        func step(_ solver: LDrawSnapSolver, at x: Double, surface: Double) -> LDrawSnapSolution {
+            let hole = [connector((x, 0, 0), axis: (1, 0, 0), profile: [(6, 20, .axle)], gender: .female,
+                                  owner: 99, slide: true, bothEndsOpen: true)].buffer
+            let sight = LDrawSightLine(origin: V3Make(x + 10, -1000, 0), direction: V3Make(0, 1, 0),
+                                       grab: V3Make(x + 10, -4, 0), surface: surface)
+
+            return solver.solution(for: hole, alongSight: sight, dragDirection: V3Make(0, 0, 0))
+        }
+
+        let scene = SnapScene()
+
+        scene.index.setConnectors([connector((0, 0, 0), axis: (1, 0, 0), profile: [(6, 100, .axle)],
+                                             gender: .male, owner: 1, slide: true, bothEndsOpen: true)].buffer,
+                                  forOwner: 1)
+
+        // Picked up on the axle, then slid 3 LDU along it, where the finger
+        // sees the axle 6 LDU in front of the held point.
+        let picked = step(scene.solver, at: 40, surface: .infinity)
+        let slid = step(scene.solver, at: 43, surface: 1000 - 10)
+
+        scene.solver.releaseHold()
+
+        #expect(picked.snapped)
+        #expect(slid.snapped)
+        #expect(translation(slid.transform) == (0, 0, 0))
+        #expect(step(scene.solver, at: 43, surface: 1000 - 10).snapped == false)      // not held: hidden
+    }
+
     /// An axle 60 long along X from the origin, with a wheel on it from 20 to
     /// 40, both open at both ends.
     private func axleWithAWheel() -> SnapScene {
@@ -749,6 +925,147 @@ struct ClashTests {
                            V3Make(position.0 + width / 2, position.1 + height, position.2 + depth / 2))
     }
 
+    @Test("A clip goes round a bar only once both their shapes are ready")
+    func heldTogetherWaitsForShapes() {
+        let solid = { LDrawPartShape(triangles: { blockTriangles(80, 8, 8, from: (0, -4, -4)) }) }
+        let roundTheBar = { () -> LDrawPartShape in
+            var both = blockTriangles(8, 4, 16, from: (0, -8, -8))
+
+            both.append(blockTriangles(8, 4, 16, from: (0, 4, -8)))
+            return LDrawPartShape(triangles: { both })
+        }
+
+        // A clip whose box goes round the bar's, as a clip does: only the
+        // shapes tell that it closes round the bar and not through it.
+        func snaps(bar: LDrawPartShape, clip: LDrawPartShape) -> Bool {
+            let scene = SnapScene()
+            let barConnector = [connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 80, .round)], gender: .male,
+                                          owner: 1, slide: true)].buffer
+            let moving = [connector((36, 2, 0), axis: (1, 0, 0), profile: [(4, 8, .round)], kind: .clip,
+                                    gender: .female, owner: 99, slide: true, bothEndsOpen: true)].buffer
+
+            scene.index.setConnectors(barConnector, forOwner: 1)
+            scene.index.addBounds(V3BoundsFromPoints(V3Make(0, -4, -4), V3Make(80, 4, 4)), shape: bar,
+                                  placement: IdentityMatrix4, forOwner: 1)
+            scene.solver.addMovingBounds(V3BoundsFromPoints(V3Make(36, -6, -8), V3Make(44, 10, 8)), shape: clip,
+                                         placement: Matrix4Translate(IdentityMatrix4, V3Make(36, 2, 0)))
+
+            return scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0)).snapped
+        }
+
+        let bar = solid()
+        let clip = roundTheBar()
+        let empty = LDrawPartShape(triangles: { Data() })
+
+        #expect(snaps(bar: bar, clip: clip) == false)       // the bar is not built yet
+        #expect(bar.isBuilt == false)
+
+        bar.build()
+        clip.build()
+        empty.build()
+        #expect(snaps(bar: bar, clip: clip))
+        #expect(snaps(bar: bar, clip: roundTheBar()) == false)      // the clip is not built yet
+        #expect(snaps(bar: empty, clip: clip) == false)
+
+        let through = LDrawPartShape(triangles: { blockTriangles(8, 16, 16, from: (0, -8, -8)) })
+
+        through.build()
+        #expect(snaps(bar: bar, clip: through) == false)        // solid, so through the bar
+    }
+
+    @Test("A part elsewhere on the same bar is not beside the dragged one")
+    func elsewhereOnTheBar() throws {
+        let scene = SnapScene()
+        let bar = [connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 80, .round)], gender: .male,
+                             owner: 1, slide: true)].buffer
+        let farClip = [connector((70, 0, 0), axis: (1, 0, 0), profile: [(4, 8, .round)], kind: .clip,
+                                 gender: .female, owner: 2, slide: true, bothEndsOpen: true)].buffer
+
+        // Something built with a clip at the far end of the bar, and a panel
+        // over the middle that the dragged clip's box goes into.
+        scene.index.setConnectors(bar, bounds: bounds(width: 80, height: 8, depth: 8, at: (40, -4, 0)),
+                                  forOwner: 1)
+        scene.index.setConnectors(farClip, bounds: bounds(width: 20, height: 20, depth: 20, at: (74, -10, 0)),
+                                  forOwner: 2)
+        scene.index.addBounds(bounds(width: 20, height: 20, depth: 20, at: (50, -8, 0)), forOwner: 2)
+
+        let moving = [connector((36, 2, 0), axis: (1, 0, 0), profile: [(4, 8, .round)], kind: .clip,
+                                gender: .female, owner: 99, slide: true, bothEndsOpen: true)].buffer
+
+        scene.solver.addMovingBounds(bounds(width: 20, height: 20, depth: 20, at: (40, -8, 0)))
+
+        #expect(scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0)).snapped == false)
+    }
+
+    @Test("A part is refused through a baseplate between its studs")
+    func throughABaseplateBetweenItsStuds() throws {
+        let scene = SnapScene()
+
+        // A baseplate whose only stud is far off, and a plate held up over it.
+        scene.index.setConnectors(try SnapScene.connectors("3024.dat", at: (300, 0, 300), owner: 1),
+                                  bounds: bounds(width: 640, height: 8, depth: 640, at: (0, 0, 0)), forOwner: 1)
+        try scene.place("3024.dat", at: (0, -40, 0), owner: 2)
+
+        // A part whose stud would go into the plate from below goes on top
+        // of it instead when it would hang down through the baseplate.
+        let moving = try SnapScene.connectors("3024.dat", at: (0, -30, 0), owner: 99)
+
+        scene.solver.addMovingBounds(bounds(width: 20, height: 40, depth: 20, at: (0, -30, 0)))
+
+        let hanging = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        scene.solver.clearMovingBounds()
+        scene.solver.releaseHold()
+        scene.solver.addMovingBounds(bounds(width: 20, height: 20, depth: 20, at: (0, -30, 0)))
+
+        let short = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(hanging.snapped)
+        #expect(translation(hanging.transform).y == -18)        // on top of the plate
+        #expect(short.snapped)
+        #expect(translation(short.transform).y == -2)           // under it, clear of the baseplate
+    }
+
+    /// How far a part moves when its stud goes into a plate held up over a
+    /// baseplate, hanging down through the baseplate if it goes in from
+    /// below. The baseplate has the given shape, and the part a built one.
+    private func hangingUnder(baseplate shape: LDrawPartShape) throws -> Double {
+        let scene = SnapScene()
+        let hanging = LDrawPartShape(triangles: { blockTriangles(20, 40, 20) })
+
+        scene.index.setConnectors(try SnapScene.connectors("3024.dat", at: (300, 0, 300), owner: 1),
+                                  forOwner: 1)
+        scene.index.addBounds(bounds(width: 640, height: 8, depth: 640, at: (0, 0, 0)), shape: shape,
+                              placement: Matrix4Translate(IdentityMatrix4, V3Make(-320, 0, -320)), forOwner: 1)
+        try scene.place("3024.dat", at: (0, -40, 0), owner: 2)
+
+        let moving = try SnapScene.connectors("3024.dat", at: (0, -30, 0), owner: 99)
+
+        hanging.build()
+        scene.solver.addMovingBounds(bounds(width: 20, height: 40, depth: 20, at: (0, -30, 0)), shape: hanging,
+                                     placement: Matrix4Translate(IdentityMatrix4, V3Make(-10, -30, -10)))
+
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        return solution.snapped ? translation(solution.transform).y : .nan
+    }
+
+    @Test("A part whose shape is not built yet is held off by its box, and the drag does not build it")
+    func shapeNotBuiltYet() throws {
+        let baseplate = LDrawPartShape(triangles: { blockTriangles(640, 8, 640) })
+
+        #expect(try hangingUnder(baseplate: baseplate) == -18)       // on top of the plate
+        #expect(baseplate.isBuilt == false)
+    }
+
+    @Test("A part with no triangles is held off by its box")
+    func emptyShape() throws {
+        let baseplate = LDrawPartShape(triangles: { Data() })
+
+        baseplate.build()
+        #expect(try hangingUnder(baseplate: baseplate) == -18)       // on top of the plate
+    }
+
     @Test("A wide plate does not land through a small one beside it")
     func doesNotSwallowASmallPlate() throws {
         let scene = SnapScene()
@@ -798,6 +1115,32 @@ struct ClashTests {
         #expect(solution.snapped)
         #expect(solution.voteCount == 1)
         #expect(landing((-10, -8, -10), by: solution.transform) == (-10, -16, -10))
+    }
+
+    @Test("Parts on one bar may share space in their boxes, and stop by the length they fill on it")
+    func besideOnABar() throws {
+        let scene = SnapScene()
+        let bar = [connector((0, 0, 0), axis: (1, 0, 0), profile: [(4, 80, .round)], gender: .male,
+                             owner: 1, slide: true)].buffer
+        let neighbor = [connector((50, 0, 0), axis: (1, 0, 0), profile: [(4, 8, .round)], kind: .clip,
+                                  gender: .female, owner: 2, slide: true, bothEndsOpen: true)].buffer
+
+        scene.index.setConnectors(bar, bounds: bounds(width: 80, height: 8, depth: 8, at: (40, -4, 0)),
+                                  forOwner: 1)
+        scene.index.setConnectors(neighbor, bounds: bounds(width: 20, height: 20, depth: 20, at: (54, -10, 0)),
+                                  forOwner: 2)
+
+        // A clip with a box as wide as the neighbor's: 5 LDU of the boxes
+        // overlap, but the clips are 6 LDU apart on the bar.
+        let moving = [connector((36, 2, 0), axis: (1, 0, 0), profile: [(4, 8, .round)], kind: .clip,
+                                gender: .female, owner: 99, slide: true, bothEndsOpen: true)].buffer
+
+        scene.solver.addMovingBounds(bounds(width: 20, height: 20, depth: 20, at: (40, -8, 0)))
+
+        let solution = scene.solver.solution(for: moving, dragDirection: V3Make(0, 0, 0))
+
+        #expect(solution.snapped)
+        #expect(translation(solution.transform) == (0, -2, 0))
     }
 
     @Test("Without bounds the same placement is allowed")
@@ -1405,6 +1748,23 @@ struct ConnectorIndexTests {
 
         index.removeOwner(1)
         #expect(index.connectorCount == 0)
+    }
+
+    @Test("A part is found by its box where it has no connectors, until it is taken out")
+    func ownersByBox() {
+        let index = LDrawConnectorIndex()
+        let between = V3BoundsFromPoints(V3Make(12, -10, 12), V3Make(28, 10, 28))
+
+        // A baseplate with one stud, and a box beside the stud.
+        index.setConnectors([connector((10, 0, 10), axis: (0, -1, 0), gender: .male, owner: 1)].buffer,
+                            bounds: V3BoundsFromPoints(V3Make(-320, 0, -320), V3Make(320, 4, 320)), forOwner: 1)
+
+        #expect(index.connectors(inBox: between, excludingOwner: 0).count == 0)
+        #expect(index.owners(inBox: between, excludingOwner: 0).contains(1))
+        #expect(index.owners(inBox: between, excludingOwner: 1).isEmpty)
+
+        index.removeOwner(1)
+        #expect(index.owners(inBox: between, excludingOwner: 0).isEmpty)
     }
 
     @Test("A baseplate's studs are all indexed")

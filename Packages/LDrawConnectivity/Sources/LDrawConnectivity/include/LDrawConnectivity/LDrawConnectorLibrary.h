@@ -19,6 +19,7 @@
 #import <LDrawCore/LDrawPaths.h>
 
 #import <LDrawConnectivity/LDrawConnectorSet.h>
+#import <LDrawConnectivity/LDrawPartShape.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -40,7 +41,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// the library cannot find the part.
 - (nullable LDrawConnectorSet *)connectorSetForPartNamed:(NSString *)partName;
 
-/// Forgets every set built so far, for when the part library changes.
+/// The solid shape of a part, one object a part name. It reads the part's
+/// geometry when it is first needed.
+- (LDrawPartShape *)shapeForPartNamed:(NSString *)partName;
+
+/// Forgets every set and shape built so far, for when the part library
+/// changes.
 - (void)removeAllConnectorSets;
 
 @end

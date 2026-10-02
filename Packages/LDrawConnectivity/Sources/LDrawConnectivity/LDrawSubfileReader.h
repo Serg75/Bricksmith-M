@@ -3,8 +3,9 @@
 //  File:       LDrawSubfileReader.h
 //  Package:    LDrawConnectivity
 //
-//  Purpose:    Reads only the subfile references (type 1 lines) of library
-//              files, and caches them per file.
+//  Purpose:    Reads the subfile references (type 1 lines) of library files,
+//              and on request their triangles and quads, and caches them per
+//              file.
 //
 //  Notes:      The part library is not used because it flattens parts on
 //              load, which removes the references connectors come from.
@@ -39,6 +40,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// The references in a library file such as "3001.dat" or "s/3001s01.dat",
 /// found through LDrawPaths. Nil when there is no such file.
 - (nullable NSArray<LDrawSubfileReference *> *)referencesInFileNamed:(NSString *)name;
+
+/// The triangles of a library file's own type 3 and type 4 lines, a quad as
+/// two, in its coordinates: nine floats a triangle. Nil when there is no such
+/// file.
+- (nullable NSData *)trianglesInFileNamed:(NSString *)name;
 
 /// The library-relative path of a file, such as "parts/s/3001s01.dat".
 - (nullable NSString *)relativePathForFileNamed:(NSString *)name;

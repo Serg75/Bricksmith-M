@@ -16,6 +16,7 @@
 #import <LDrawConnectivity/LDrawConnectorIndex.h>
 #import <LDrawConnectivity/LDrawConnectorLibrary.h>
 #import <LDrawConnectivity/LDrawConnectorSet.h>
+#import <LDrawConnectivity/LDrawPartShape.h>
 #import <LDrawConnectivity/LDrawSnapSolver.h>
 #import <LDrawConnectivity/LDrawWorldConnector.h>
 #import <LDrawConnectivity/LDrawWorldConnectors.h>

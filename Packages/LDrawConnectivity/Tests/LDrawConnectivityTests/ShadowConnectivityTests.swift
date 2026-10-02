@@ -109,6 +109,59 @@ struct ShadowConnectivityTests {
     }
 
 
+    // MARK: - Hinges, clips and ball joints
+
+    @Test("A hinge's fingers are one centered row, a section a finger")
+    func hingeFingers() throws {
+        let base = try set("3937.dat")
+        let top = try set("3938.dat")
+        let row = try #require(base.connectors.first { $0.kind == .finger })
+        let other = try #require(top.connectors.first { $0.kind == .finger })
+
+        #expect(row.gender == .female)
+        #expect(row.centered)
+        #expect(row.caps == .none)                      // it fits from either end
+        #expect(ConnectorPoint(row.position, axis: row.axis) == ConnectorPoint(0, 10, 0, axis: (1, 0, 0)))
+        #expect(sections(base, row).map(\.length) == [18, 4, 18])
+        #expect(sections(base, row).allSatisfy { $0.radius == 4 })
+        #expect(other.gender == .male)
+        #expect(other.match == row.match)               // same group and radius
+    }
+
+    @Test("A single finger comes from a primitive, in the same group as the two fingers it fits")
+    func lockingHingeFingers() throws {
+        let single = try #require(try set("44301a.dat").connectors.first { $0.kind == .finger })
+        let double = try #require(try set("44302a.dat").connectors.first { $0.kind == .finger })
+
+        #expect(single.provenance == .inherited)
+        #expect(single.match == double.match)
+        #expect(single.gender == .male && double.gender == .male)
+    }
+
+    @Test("A clip is female, open at both ends, and slides along the bar it holds")
+    func clip() throws {
+        let tile = try set("15712.dat")
+        let clip = try #require(tile.connectors.first { $0.kind == .clip })
+
+        #expect(clip.gender == .female)
+        #expect(clip.caps == .none)
+        #expect(clip.centered)
+        #expect(clip.slide)
+        #expect(sections(tile, clip) == [LDrawConnectorSection(radius: 4, length: 8, shape: .round)])
+    }
+
+    @Test("A ball meets its socket in any direction")
+    func ballJoint() throws {
+        let ball = try #require(try set("14417.dat").connectors.first { $0.kind == .generic })
+        let socket = try #require(try set("14418.dat").connectors.first { $0.kind == .generic })
+
+        #expect(ball.gender == .male && socket.gender == .female)
+        #expect(ball.anyDirection && socket.anyDirection)
+        #expect(ball.match == socket.match)
+        #expect(ConnectorPoint(ball.position, axis: (0, 0, 0)) == ConnectorPoint(0, 4, -20, axis: (0, 0, 0)))
+    }
+
+
     // MARK: - The rules of the walk
 
     @Test("A meta that is commented out is not read")

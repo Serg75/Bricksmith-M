@@ -94,7 +94,7 @@ static BOOL RunCovers(LDrawWorldConnector connector, Point3 point, double margin
 	for (NSUInteger index = 0; index < set.connectorCount; index++)
 	{
 		LDrawConnector			connector	= [set connectorAtIndex:index];
-		LDrawConnectorSection	profile[LDrawWorldConnectorSectionLimit] = {};
+		LDrawWorldSection		profile[LDrawWorldConnectorSectionLimit] = {};
 		NSUInteger				kept		= 0;
 		double					length		= 0.0;
 
@@ -104,7 +104,11 @@ static BOOL RunCovers(LDrawWorldConnector connector, Point3 point, double margin
 
 			if (kept < LDrawWorldConnectorSectionLimit)
 			{
-				profile[kept] = run;
+				profile[kept] = (LDrawWorldSection){
+					.radius	= (float)run.radius,
+					.length	= (float)run.length,
+					.shape	= run.shape,
+				};
 				kept++;
 				length += run.length;
 			}
@@ -123,6 +127,9 @@ static BOOL RunCovers(LDrawWorldConnector connector, Point3 point, double margin
 				.centered		= connector.centered,
 				.slide			= connector.slide,
 				.bothEndsOpen	= (connector.caps == LDrawConnectorCapsNone),
+				.anyDirection	= connector.anyDirection,
+				.matchesSize	= connector.matchesSize,
+				.match			= connector.match,
 			};
 			memcpy(world.sections, profile, sizeof(profile));
 			[self addConnector:world];

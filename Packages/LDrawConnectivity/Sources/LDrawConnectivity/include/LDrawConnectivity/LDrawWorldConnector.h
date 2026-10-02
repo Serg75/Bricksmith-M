@@ -22,16 +22,27 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// The most sections kept per connector. The shadow library uses at most
-/// three.
-#define LDrawWorldConnectorSectionLimit 4
+/// The most sections kept per connector: the most a cylinder in the shadow
+/// library has, and the most fingers in a row.
+#define LDrawWorldConnectorSectionLimit 9
+
+/// One length of a placed connector's profile, kept small because the solver
+/// copies placed connectors often.
+typedef struct
+{
+	float				radius;
+	float				length;
+	LDrawSectionShape	shape;
+
+} LDrawWorldSection;
+
 
 typedef struct
 {
 	Point3					position;
 	Vector3					axis;			// unit length
 	double					length;			// the whole profile
-	LDrawConnectorSection	sections[LDrawWorldConnectorSectionLimit];
+	LDrawWorldSection		sections[LDrawWorldConnectorSectionLimit];
 	uint32_t				owner;			// which placed part this belongs to
 	uint8_t					sectionCount;
 	LDrawConnectorKind		kind;
@@ -39,6 +50,9 @@ typedef struct
 	bool					centered;		// position is the middle of the run
 	bool					slide;			// may sit anywhere along the axis
 	bool					bothEndsOpen;	// may be met from either end
+	bool					anyDirection;	// meets in any direction, as a ball joint does
+	bool					matchesSize;	// a generic shape that only takes one its size
+	uint32_t				match;			// must be equal to mate
 
 } LDrawWorldConnector;
 
@@ -79,9 +93,17 @@ static inline LDrawWorldConnector LDrawWorldConnectorReversed(LDrawWorldConnecto
 	}
 	reversed.axis = V3MulScalar(connector.axis, -1.0);
 
+	// A row of fingers alternates, so an even row starts with the other gender
+	// from its far end.
+	if (connector.kind == LDrawConnectorKindFinger && count % 2 == 0)
+	{
+		reversed.gender = (connector.gender == LDrawConnectorGenderMale)
+						? LDrawConnectorGenderFemale : LDrawConnectorGenderMale;
+	}
+
 	for (NSUInteger index = 0; index < count; index++)
 	{
-		LDrawConnectorSection section = connector.sections[count - 1 - index];
+		LDrawWorldSection section = connector.sections[count - 1 - index];
 
 		// A flexible end joins the section on its other side once reversed.
 		if (section.shape == LDrawSectionShapeFlexToPrevious)
@@ -98,15 +120,26 @@ static inline LDrawWorldConnector LDrawWorldConnectorReversed(LDrawWorldConnecto
 }
 
 
-/// Whether the two can mate: opposite genders, matching shapes and radii, and
-/// axes within the tolerance. Position is not tested, and neither is the
-/// owner: a part's own connectors mate with each other inside it.
+/// Whether the two can mate: the same match, and axes within the tolerance
+/// unless either meets in any direction. Cylinders and clips also need
+/// opposite genders and matching shapes and radii, and rows of fingers must
+/// fit into each other. Position is not tested, and neither is the owner: a
+/// part's own connectors mate with each other inside it.
 ///
 /// `depth` is how far the first connector's mouth sits along the second's
 /// axis, from its mouth. It is zero for a stud in a stud hole, and the depth
-/// of the narrow part for a bar inside a tube.
+/// of the narrow part for a bar inside a tube. Rows of fingers meet where
+/// their positions do: the middle of a centered row.
 extern BOOL LDrawWorldConnectorsMate(LDrawWorldConnector one, LDrawWorldConnector other,
 									 double axisTolerance, double * _Nullable depth);
+
+/// How far a connector that slides on another may go past the seat the mate
+/// gave at `depth`, either way along the other's axis. The sections that met
+/// there stay within each other, and the shorter connector stays within the
+/// longer one when that leaves room, so a beam on an axle may sit flush with
+/// either end.
+extern void LDrawWorldConnectorsSlideRange(LDrawWorldConnector moving, LDrawWorldConnector met, double depth,
+										   double *lowest, double *highest);
 
 
 //---------- LDrawBoxByMatrix --------------------------------------------------
