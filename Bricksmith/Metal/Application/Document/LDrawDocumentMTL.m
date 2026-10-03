@@ -67,8 +67,6 @@
 	NSArray         *selectedObjects    = [self selectedObjects];
 	id              lastSelectedItem    = [outlineView itemAtRow:[outlineView selectedRow]];
 	LDrawMPDModel   *selectedModel      = [self selectedModel];
-	LDrawStep       *selectedStep       = [self selectedStep];
-	NSInteger		selectedStepIndex	= 0;
 	NSInteger       counter             = 0;
 	
 	//Deselect all the previously-selected directives
@@ -95,17 +93,7 @@
 	{
 		// Put the selection on screen (if we need to)
 		[self setActiveModel:selectedModel];
-
-		// Advance to the current step (if we need to)
-		if(selectedStep != nil)
-		{
-			selectedStepIndex = [selectedModel indexOfDirective:(LDrawDirective *)selectedStep];
-
-			if(selectedStepIndex > [selectedModel maxStepIndexToOutput])
-			{
-				[self setCurrentStep:selectedStepIndex]; // update document UI
-			}
-		}
+		[self showStepOfSelection];
 	}
 	[[self documentContents] noteNeedsDisplay];
 

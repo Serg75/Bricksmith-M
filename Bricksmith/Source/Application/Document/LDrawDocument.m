@@ -1161,6 +1161,41 @@ void AppendChoicesToNewItem(
 }//end setZoomPercentage:
 
 
+//========== showStepOfSelection ===============================================
+//
+// Purpose:		Changes the current step so that it holds the selection.
+//
+//==============================================================================
+- (void) showStepOfSelection
+{
+	NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
+	NSArray			*selectedObjects	= [self selectedObjects];
+	LDrawMPDModel	*selectedModel		= [self selectedModel];
+	LDrawStep		*selectedStep		= [self selectedStep];
+	NSInteger		 selectedStepIndex	= 0;
+	NSInteger		 currentStepIndex	= 0;
+	BOOL			 onlyStepSelected	= NO;
+	BOOL			 goesBack			= NO;
+
+	if(selectedModel == nil || selectedStep == nil)
+		return;
+
+	selectedStepIndex	= [selectedModel indexOfDirective:selectedStep];
+	currentStepIndex	= [selectedModel maxStepIndexToOutput];
+	onlyStepSelected	= [selectedObjects count] == 1
+						  && [[selectedObjects firstObject] isKindOfClass:[LDrawStep class]];
+	goesBack			= onlyStepSelected && [userDefaults boolForKey:STEP_SELECTION_GOES_BACK_KEY];
+
+	// Go forward for any selection, so it is drawn. Go back only for a step
+	// selected by itself, so a click on a part in the view keeps the step.
+	if(selectedStepIndex > currentStepIndex || (goesBack && selectedStepIndex < currentStepIndex))
+	{
+		[self setCurrentStep:selectedStepIndex];
+	}
+
+}//end showStepOfSelection
+
+
 #pragma mark -
 #pragma mark ACTIONS
 #pragma mark -

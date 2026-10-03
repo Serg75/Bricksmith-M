@@ -28,6 +28,8 @@
 // Stored as whole percent transparent, 0 solid to 100 invisible, matching how
 // the LSynth selection transparency is stored. The alpha is 1 - percent/100.
 #define GHOST_TRANSPARENCY_KEY						@"Ghost Transparency"
+// Selecting an earlier step in the file contents goes back to it. On by default.
+#define STEP_SELECTION_GOES_BACK_KEY				@"Step Selection Goes Back"
 
 // Shows the parts list for the step on display. Off by default.
 #define SHOW_STEP_PART_LIST_KEY						@"Show Step Part List"

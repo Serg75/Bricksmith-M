@@ -120,6 +120,7 @@
 - (void) selectDirectives:(NSArray *)directivesToSelect;
 - (void) setSelectionToHidden:(BOOL)hideFlag;
 - (void) setZoomPercentage:(CGFloat)newPercentage;
+- (void) showStepOfSelection;
 
 // Actions
 - (void) changeLDrawColor:(id)sender;

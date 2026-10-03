@@ -256,6 +256,7 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 	NSTextField		*rotateModeNote;
 
 	// Steps Pane
+	NSSwitch		*stepSelectionGoesBackSwitch;
 	NSSwitch		*hideRemovedGroupsInStepsSwitch;
 	NSSwitch		*ghostRemovedGroupsSwitch;
 	NSSwitch		*ghostPreviousStepsSwitch;
@@ -611,11 +612,15 @@ PreferencesDialogController *preferencesDialog = nil;
 
 //========== makeStepsPane =====================================================
 //
-// Purpose:		Removed groups, ghosts and the step parts list.
+// Purpose:		Step selection, removed groups, ghosts and the step parts list.
 //
 //==============================================================================
 - (NSScrollView *) makeStepsPane
 {
+	NSString	*selectionNote		= NSLocalizedString(@"Selecting a later step in the file contents always moves "
+														@"forward to it. With this off, selecting an earlier step "
+														@"leaves the step on display as it is.", nil);
+	NSString	*goesBackTitle		= NSLocalizedString(@"Go back to an earlier step when it is selected", nil);
 	NSString	*groupsNote			= NSLocalizedString(@"Parts in an MLCAD group disappear once you reach a step "
 														@"that removes the group. The All view always applies every "
 														@"removal; a ghost draws the group see-through there instead "
@@ -635,6 +640,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSButton	*defaultButton		= nil;
 	NSView		*transparencyGroup	= nil;
 	NSView		*orientationsGroup	= nil;
+	NSView		*goesBackRow		= nil;
 	NSView		*hideRow			= nil;
 	NSView		*ghostGroupsRow		= nil;
 	NSView		*ghostStepsRow		= nil;
@@ -644,11 +650,14 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSView		*followsStepRow		= nil;
 	NSView		*lpubScaleRow		= nil;
 	NSView		*orientationsRow	= nil;
+	NSView		*selectionSection	= nil;
 	NSView		*groupsSection		= nil;
 	NSView		*previousSection	= nil;
 	NSView		*ghostsSection		= nil;
 	NSView		*partListSection	= nil;
 
+	stepSelectionGoesBackSwitch = [PreferencesForm switchWithTarget:self
+															 action:@selector(stepSelectionGoesBackChanged:)];
 	hideRemovedGroupsInStepsSwitch = [PreferencesForm switchWithTarget:self
 															   action:@selector(hideRemovedGroupsInStepsChanged:)];
 	ghostRemovedGroupsSwitch = [PreferencesForm switchWithTarget:self
@@ -688,6 +697,7 @@ PreferencesDialogController *preferencesDialog = nil;
 										  noteField:&orientationsNote];
 	stepPartListOrientationsField = orientationsNote;
 
+	goesBackRow		= [PreferencesForm rowWithTitle:goesBackTitle control:stepSelectionGoesBackSwitch];
 	hideRow			= [PreferencesForm rowWithTitle:NSLocalizedString(@"Hide in Steps view mode", nil)
 											control:hideRemovedGroupsInStepsSwitch];
 	ghostGroupsRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Show as ghosts in All view mode", nil)
@@ -704,6 +714,9 @@ PreferencesDialogController *preferencesDialog = nil;
 	lpubScaleRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Draw on LPub3D's page", nil)
 											control:stepPartListLPubScaleSwitch];
 
+	selectionSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Step Selection", nil)
+													rows:@[goesBackRow]
+												  footer:selectionNote];
 	groupsSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Removed Groups", nil)
 												 rows:@[hideRow, ghostGroupsRow]
 											   footer:groupsNote];
@@ -718,7 +731,8 @@ PreferencesDialogController *preferencesDialog = nil;
 														  lpubScaleRow, orientationsRow]
 												 footer:partListNote];
 
-	return [PreferencesForm paneWithSections:@[groupsSection, previousSection, ghostsSection, partListSection]];
+	return [PreferencesForm paneWithSections:@[selectionSection, groupsSection, previousSection, ghostsSection,
+											   partListSection]];
 
 }//end makeStepsPane
 
@@ -1000,11 +1014,13 @@ PreferencesDialogController *preferencesDialog = nil;
 - (void) setStepsPaneValues
 {
 	NSUserDefaults	*userDefaults		= [NSUserDefaults standardUserDefaults];
+	BOOL			 selectionGoesBack	= [userDefaults boolForKey:STEP_SELECTION_GOES_BACK_KEY];
 	BOOL			 hideRemovedGroups	= [userDefaults boolForKey:HIDE_REMOVED_GROUPS_IN_STEPS_KEY];
 	BOOL			 ghostRemovedGroups	= [userDefaults boolForKey:GHOST_REMOVED_GROUPS_KEY];
 	BOOL			 ghostPreviousSteps	= [userDefaults boolForKey:GHOST_PREVIOUS_STEPS_KEY];
 	NSInteger		 ghostTransparency	= [userDefaults integerForKey:GHOST_TRANSPARENCY_KEY];
 
+	[stepSelectionGoesBackSwitch setState:(selectionGoesBack ? NSControlStateValueOn : NSControlStateValueOff)];
 	[hideRemovedGroupsInStepsSwitch setState:(hideRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
 	[ghostRemovedGroupsSwitch setState:(ghostRemovedGroups ? NSControlStateValueOn : NSControlStateValueOff)];
 	[ghostPreviousStepsSwitch setState:(ghostPreviousSteps ? NSControlStateValueOn : NSControlStateValueOff)];
@@ -1236,6 +1252,22 @@ PreferencesDialogController *preferencesDialog = nil;
 
 #pragma mark -
 #pragma mark Steps Pane
+
+//========== stepSelectionGoesBackChanged: =====================================
+//
+// Purpose:		The user toggled whether selecting an earlier step goes back to
+//				it.
+//
+//==============================================================================
+- (IBAction) stepSelectionGoesBackChanged:(id)sender
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 goesBack		= ([stepSelectionGoesBackSwitch state] == NSControlStateValueOn);
+
+	[userDefaults setBool:goesBack forKey:STEP_SELECTION_GOES_BACK_KEY];
+
+}//end stepSelectionGoesBackChanged:
+
 
 //========== hideRemovedGroupsInStepsChanged: ==================================
 //
