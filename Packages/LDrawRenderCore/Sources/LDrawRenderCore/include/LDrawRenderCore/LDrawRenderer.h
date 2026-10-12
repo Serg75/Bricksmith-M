@@ -207,6 +207,10 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 /// inverse of -modelPointForPoint:. Use it to draw something that must stay
 /// put against the model while it is panned and zoomed.
 - (Point2)viewPointForModelPoint:(Point3)modelPoint;
+/// The box around where these model points land on screen, in view
+/// coordinates. Empty with no points.
+- (Box2)viewBoxForModelPoints:(const Point3 *)points count:(NSUInteger)count;
+- (void)getViewPoints:(Point2 *)outPoints forModelPoints:(const Point3 *)points count:(NSUInteger)count;
 
 - (Point3)modelPointForPoint:(Point2)viewPoint;
 - (Point3)modelPointForPoint:(Point2)viewPoint depthReferencePoint:(Point3)depthPoint;

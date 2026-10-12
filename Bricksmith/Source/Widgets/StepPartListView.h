@@ -60,9 +60,29 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, weak, nullable) id<StepPartListViewDelegate> delegate;
 
 /// Shows what the presentation says: the page, the frame, the icons, the
-/// labels and the pins. Its rectangles are in this view's (flipped)
-/// coordinates. Nil shows nothing.
+/// labels, the pins and the callouts. Its rectangles are in this view's
+/// (flipped) coordinates. Nil shows nothing.
 - (void) showPresentation:(nullable LDrawStepPartListPresentation *)presentation;
+
+// MARK: Callouts
+
+/// Each callout's arrows, in this view's coordinates: one block of
+/// LDrawStepCalloutArrow values per box, in the order of the presentation's
+/// boxes. They are worked out against the viewport's camera. Set them before
+/// showing a presentation, and again when the camera moves.
+@property (nonatomic, copy, nullable) NSArray<NSData *> *calloutArrows;
+
+/// Forgets the pictures made of the callouts' submodels, so the next
+/// presentation draws them again. Call it when what they show may have
+/// changed.
+- (void) discardCalloutPictures;
+
+/// What the way back says, or nil for none. Shown as a button in the view's
+/// bottom left corner while a called-out submodel is on display.
+@property (nonatomic, copy, nullable) NSString *returnTitle;
+
+/// Where that button is, or an empty rect when there is none.
+- (NSRect) returnButtonRect;
 
 // MARK: Interaction
 //

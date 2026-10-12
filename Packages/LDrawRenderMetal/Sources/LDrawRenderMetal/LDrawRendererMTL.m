@@ -37,6 +37,34 @@
 
 
 #pragma mark -
+#pragma mark LDrawPictureScroller
+#pragma mark -
+
+
+//========== LDrawPictureScroller ==============================================
+//
+// Purpose:		Stands in for a view when a picture is drawn off screen. A
+//				camera does nothing until it has a scroller, and here there are
+//				no scroll bars to update.
+//
+//==============================================================================
+@interface LDrawPictureScroller : NSObject <LDrawCameraScroller>
+@end
+
+@implementation LDrawPictureScroller
+
+- (void)reflectLogicalDocumentRect:(Box2)newDocumentRect visibleRect:(Box2)visibleRect
+{
+}
+
+- (void)reflectScaleFactor:(CGFloat)newScaleFactor
+{
+}
+
+@end
+
+
+#pragma mark -
 #pragma mark LDrawRendererMetalDrawState
 #pragma mark -
 
@@ -666,6 +694,55 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	return image;
 
 } // end newImageWithPixelSize:transparent:
+
+
+//---------- newImageOfDirective:center:zoomPercentage:size:scale: ---[static]--
+//
+// Purpose:		A picture of a directive seen straight on with no perspective,
+//				on a clear background.
+//
+// Notes:		One renderer is kept for every picture, because making one is
+//				not cheap. It lets go of the directive afterwards.
+//
+//------------------------------------------------------------------------------
++ (CGImageRef)newImageOfDirective:(LDrawDirective *)directive
+						   center:(Point3)center
+				   zoomPercentage:(CGFloat)zoomPercentage
+							 size:(CGSize)size
+							scale:(CGFloat)scale
+{
+	static LDrawRenderer		*renderer	= nil;
+	static LDrawPictureScroller	*scroller	= nil;
+
+	if (directive == nil || size.width < 1.0 || size.height < 1.0 || scale <= 0.0) {
+		return NULL;
+	}
+
+	if (renderer == nil) {
+		scroller = [[LDrawPictureScroller alloc] init];
+		renderer = [[LDrawRenderer alloc] initWithBounds:size];
+
+		[renderer setDelegate:nil withScroller:scroller];
+		[renderer setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
+		[renderer prepareMetal];
+		[renderer setProjectionMode:LDrawProjectionModeOrthographic];
+	}
+
+	// The size first: the zoom and the scroll are worked out against it.
+	[renderer setGraphicsSurfaceSize:V2MakeSize(size.width, size.height)];
+	[renderer setLDrawDirective:directive];
+	[renderer setViewingAngle:ZeroPoint3];
+	[renderer setZoomPercentage:zoomPercentage];
+	[renderer scrollCenterToModelPoint:center];
+
+	CGSize		pixelSize	= CGSizeMake(ceil(size.width * scale), ceil(size.height * scale));
+	CGImageRef	picture		= [renderer newImageWithPixelSize:pixelSize transparent:YES];
+
+	[renderer setLDrawDirective:nil];
+
+	return picture;
+
+} // end newImageOfDirective:center:zoomPercentage:size:scale:
 
 
 //========== drawMarqueeWithEncoder: ===========================================

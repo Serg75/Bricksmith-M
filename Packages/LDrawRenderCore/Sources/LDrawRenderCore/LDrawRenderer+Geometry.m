@@ -146,6 +146,65 @@
 } // end viewPointForModelPoint:
 
 
+//========== viewBoxForModelPoints:count: ======================================
+//
+// Purpose:		The box around where these model points land on screen, in view
+//				coordinates.
+//
+// Notes:		The same projection as -viewPointForModelPoint:, with the
+//				camera's matrices read once for all the points.
+//
+//==============================================================================
+- (Box2)viewBoxForModelPoints:(const Point3 *)points count:(NSUInteger)count
+{
+	if (count == 0)
+		return ZeroBox2;
+
+	Matrix4	modelView	= Matrix4CreateFromFloats([camera modelView]);
+	Matrix4	projection	= Matrix4CreateFromFloats([camera projection]);
+	Box2	viewport	= [self viewport];
+	Point2	minimum		= V2Make(INFINITY, INFINITY);
+	Point2	maximum		= V2Make(-INFINITY, -INFINITY);
+
+	for (NSUInteger index = 0; index < count; index++)
+	{
+		Point3	projected	= V3Project(points[index], modelView, projection, viewport);
+		Point2	viewPoint	= [self convertPointFromViewport:V2Make(projected.x, projected.y)];
+
+		minimum = V2Make(MIN(minimum.x, viewPoint.x), MIN(minimum.y, viewPoint.y));
+		maximum = V2Make(MAX(maximum.x, viewPoint.x), MAX(maximum.y, viewPoint.y));
+	}
+
+	return V2MakeBoxFromPoints(minimum, maximum);
+
+} // end viewBoxForModelPoints:count:
+
+
+//========== getViewPoints:forModelPoints:count: ===============================
+//
+// Purpose:		Where each of these model points lands on screen, in view
+//				coordinates.
+//
+// Notes:		The same projection as -viewPointForModelPoint:, with the
+//				camera's matrices read once for all the points.
+//
+//==============================================================================
+- (void)getViewPoints:(Point2 *)outPoints forModelPoints:(const Point3 *)points count:(NSUInteger)count
+{
+	Matrix4	modelView	= Matrix4CreateFromFloats([camera modelView]);
+	Matrix4	projection	= Matrix4CreateFromFloats([camera projection]);
+	Box2	viewport	= [self viewport];
+
+	for (NSUInteger index = 0; index < count; index++)
+	{
+		Point3 projected = V3Project(points[index], modelView, projection, viewport);
+
+		outPoints[index] = [self convertPointFromViewport:V2Make(projected.x, projected.y)];
+	}
+
+} // end getViewPoints:forModelPoints:count:
+
+
 //========== pointsPerLDUAtModelPoint: =========================================
 //
 // Purpose:		How many points one LDU covers on screen beside this model

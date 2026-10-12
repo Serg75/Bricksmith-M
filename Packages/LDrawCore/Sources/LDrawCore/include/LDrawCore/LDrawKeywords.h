@@ -105,6 +105,8 @@ static NSString * const	LPUB_PLI_CONSTRAIN_COLS		= @"COLS";
 static NSString * const	LPUB_ASSEM					= @"ASSEM";
 static NSString * const	LPUB_BOM					= @"BOM";
 static NSString * const	LPUB_MODEL_SCALE			= @"MODEL_SCALE";
+static NSString * const	LPUB_SHOW_STEP_NUMBER		= @"SHOW_STEP_NUMBER";
+static NSString * const	LPUB_PLACEMENT				= @"PLACEMENT";
 static NSString * const	LPUB_RESOLUTION				= @"RESOLUTION";
 static NSString * const	LPUB_RESOLUTION_DPI			= @"DPI";
 static NSString * const	LPUB_RESOLUTION_DPCM		= @"DPCM";
@@ -115,5 +117,28 @@ static NSString * const	LPUB_PAGE_SIZE				= @"SIZE";
 static NSString * const	LPUB_PAGE_ORIENTATION		= @"ORIENTATION";
 static NSString * const	LPUB_PAGE_PORTRAIT			= @"PORTRAIT";
 static NSString * const	LPUB_PAGE_LANDSCAPE			= @"LANDSCAPE";
+
+// LPub CALLOUT.
+static NSString * const	LPUB_CALLOUT				= @"CALLOUT";
+static NSString * const	LPUB_CALLOUT_BEGIN			= @"BEGIN";
+static NSString * const	LPUB_CALLOUT_END			= @"END";
+static NSString * const	LPUB_CALLOUT_DIVIDER		= @"DIVIDER";
+static NSString * const	LPUB_CALLOUT_DIVIDER_POINTER	= @"DIVIDER_POINTER";
+static NSString * const	LPUB_CALLOUT_ASSEMBLED		= @"ASSEMBLED";
+static NSString * const	LPUB_CALLOUT_ROTATED		= @"ROTATED";
+static NSString * const	LPUB_CALLOUT_POINTER		= @"POINTER";
+static NSString * const	LPUB_CALLOUT_ALLOC			= @"ALLOC";
+static NSString * const	LPUB_CALLOUT_HORIZONTAL		= @"HORIZONTAL";
+static NSString * const	LPUB_CALLOUT_VERTICAL		= @"VERTICAL";
+static NSString * const	LPUB_CALLOUT_PER_STEP		= @"PER_STEP";
+static NSString * const	LPUB_CALLOUT_BORDER			= @"BORDER";
+static NSString * const	LPUB_CALLOUT_BACKGROUND		= @"BACKGROUND";
+static NSString * const	LPUB_CALLOUT_SUBMODEL_COLOR	= @"SUBMODEL_BACKGROUND_COLOR";
+static NSString * const	LPUB_CALLOUT_MARGINS		= @"MARGINS";
+static NSString * const	LPUB_CALLOUT_SEPARATOR		= @"SEPARATOR";
+static NSString * const	LPUB_CALLOUT_STEP_NUMBER	= @"STEP_NUMBER";
+static NSString * const	LPUB_CALLOUT_INSTANCE_COUNT	= @"INSTANCE_COUNT";
+static NSString * const	LPUB_CALLOUT_FONT			= @"FONT";
+static NSString * const	LPUB_CALLOUT_FONT_COLOR		= @"FONT_COLOR";
 
 #endif

@@ -29,7 +29,19 @@ struct LPubCommandTests {
                                "LPubModelScale",
                                "LPubResolution",
                                "LPubPageSize",
-                               "LPubPageOrientation"])
+                               "LPubPageOrientation",
+                               "LPubCallout",
+                               "LPubCalloutPointer",
+                               "LPubPlacement",
+                               "LPubCalloutAlloc",
+                               "LPubCalloutPliPerStep",
+                               "LPubCalloutBorder",
+                               "LPubCalloutBackground",
+                               "LPubCalloutSubmodelColor",
+                               "LPubCalloutMargins",
+                               "LPubCalloutSeparator",
+                               "LPubCalloutFont",
+                               "LPubAssemShowStepNumber"])
     }
 
     @Test("The LPub text and the whole line are archived, and they read back")
@@ -101,6 +113,15 @@ struct LPubCommandTests {
         command.finishParsing(scanner)
 
         #expect(command.lPubCommandString == "str2 str3")
+    }
+
+    @Test("The words of a command keep a quoted value whole")
+    func wordsKeepQuotedValues() {
+        let command = LPubCommand()
+        command.lPubCommandString = "CALLOUT  STEP_NUMBER FONT \"Times New Roman,36,-1,5,75,0,0,0,0,0\""
+
+        #expect(command.lPubCommandWords == ["CALLOUT", "STEP_NUMBER", "FONT",
+                                             "\"Times New Roman,36,-1,5,75,0,0,0,0,0\""])
     }
 
     @Test("The command text is copied, not shared")

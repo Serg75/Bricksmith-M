@@ -133,6 +133,22 @@
 }//end entryWithOutlinePoints:
 
 
+//========== entryWithColor: ===================================================
+///
+/// @abstract	A copy of this entry in another color.
+///
+//==============================================================================
+- (LDrawStepPartListEntry *) entryWithColor:(LDrawColor *)color
+{
+	LDrawStepPartListEntry *colored = [self duplicateWithQuantity:self.quantity];
+
+	colored->_color = color;
+
+	return colored;
+
+}//end entryWithColor:
+
+
 //========== entryWithListOrientation: =========================================
 ///
 /// @abstract	A copy of this entry turned by this matrix.

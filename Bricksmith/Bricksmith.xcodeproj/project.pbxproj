@@ -381,11 +381,15 @@
 		BB0300000000000000000003 /* LDrawRenderMetal in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000003 /* LDrawRenderMetal */; };
 		BB0300000000000000000004 /* LDrawEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000004 /* LDrawEditing */; };
 		BB0300000000000000000005 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000005 /* LDrawFeatures */; };
+		BB0300000000000000000006 /* LDrawStepRendering in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000006 /* LDrawStepRendering */; };
+		BB0300000000000000000007 /* LDrawStepEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000007 /* LDrawStepEditing */; };
 		BB0300000000000000000011 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000011 /* LDrawCore */; };
 		BB0300000000000000000012 /* LDrawRenderCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000012 /* LDrawRenderCore */; };
 		BB0300000000000000000013 /* LDrawRenderOpenGL in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000013 /* LDrawRenderOpenGL */; };
 		BB0300000000000000000014 /* LDrawEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000014 /* LDrawEditing */; };
 		BB0300000000000000000015 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000015 /* LDrawFeatures */; };
+		BB0300000000000000000016 /* LDrawStepRendering in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000016 /* LDrawStepRendering */; };
+		BB0300000000000000000017 /* LDrawStepEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000017 /* LDrawStepEditing */; };
 		BB0300000000000000000021 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000021 /* LDrawCore */; };
 		BB0300000000000000000022 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000022 /* LDrawFeatures */; };
 		BB11000000000000000000 /* StepPartListView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000000 /* StepPartListView.h */; };
@@ -730,6 +734,8 @@
 				BB0300000000000000000013 /* LDrawRenderOpenGL in Frameworks */,
 				BB0300000000000000000014 /* LDrawEditing in Frameworks */,
 				BB0300000000000000000015 /* LDrawFeatures in Frameworks */,
+				BB0300000000000000000016 /* LDrawStepRendering in Frameworks */,
+				BB0300000000000000000017 /* LDrawStepEditing in Frameworks */,
 				8D15AC340486D014006FF6A4 /* Cocoa.framework in Frameworks */,
 				0B491FF707F64B5800AC0C10 /* OpenGL.framework in Frameworks */,
 				5D7BBA2E2A1BE5FC1C1EEADC /* UniformTypeIdentifiers.framework in Frameworks */,
@@ -750,6 +756,8 @@
 				BB0300000000000000000003 /* LDrawRenderMetal in Frameworks */,
 				BB0300000000000000000004 /* LDrawEditing in Frameworks */,
 				BB0300000000000000000005 /* LDrawFeatures in Frameworks */,
+				BB0300000000000000000006 /* LDrawStepRendering in Frameworks */,
+				BB0300000000000000000007 /* LDrawStepEditing in Frameworks */,
 				956D9C892A30768000FA956B /* Cocoa.framework in Frameworks */,
 				956D9C8C2A30768000FA956B /* Carbon.framework in Frameworks */,
 				956D9C8D2A30768000FA956B /* AMSProgressBar.framework in Frameworks */,
@@ -1554,6 +1562,8 @@
 				BB0200000000000000000013 /* LDrawRenderOpenGL */,
 				BB0200000000000000000014 /* LDrawEditing */,
 				BB0200000000000000000015 /* LDrawFeatures */,
+				BB0200000000000000000016 /* LDrawStepRendering */,
+				BB0200000000000000000017 /* LDrawStepEditing */,
 			);
 			productInstallPath = "$(HOME)/Applications";
 			productName = "Mac LDraw";
@@ -1584,6 +1594,8 @@
 				BB0200000000000000000003 /* LDrawRenderMetal */,
 				BB0200000000000000000004 /* LDrawEditing */,
 				BB0200000000000000000005 /* LDrawFeatures */,
+				BB0200000000000000000006 /* LDrawStepRendering */,
+				BB0200000000000000000007 /* LDrawStepEditing */,
 			);
 			productInstallPath = "$(HOME)/Applications";
 			productName = "Mac LDraw";
@@ -2727,6 +2739,16 @@
 			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawFeatures;
 		};
+		BB0200000000000000000006 /* LDrawStepRendering */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawStepRendering;
+		};
+		BB0200000000000000000007 /* LDrawStepEditing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawStepEditing;
+		};
 		BB0200000000000000000011 /* LDrawCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
@@ -2751,6 +2773,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawFeatures;
+		};
+		BB0200000000000000000016 /* LDrawStepRendering */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawStepRendering;
+		};
+		BB0200000000000000000017 /* LDrawStepEditing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawStepEditing;
 		};
 		BB0200000000000000000021 /* LDrawCore */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -11,6 +11,8 @@
 
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
+#import <LDrawFeatures/LDrawStepCallout.h>
+
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
@@ -21,6 +23,7 @@
 #import <LDrawCore/LPubModelScale.h>
 #import <LDrawCore/LPubPageOrientation.h>
 #import <LDrawCore/LPubPageSize.h>
+#import <LDrawCore/LPubPlacement.h>
 #import <LDrawCore/LPubPliCameraAngles.h>
 #import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/LPubPliIgnore.h>
@@ -28,6 +31,8 @@
 #import <LDrawCore/LPubResolution.h>
 
 #import <LDrawFeatures/LDrawStepPartList.h>
+
+#import "LDrawStepPartListInternal.h"
 
 
 static const double VIEWPORT_MARGIN						= 12.0;
@@ -44,6 +49,9 @@ static const double BACKGROUND_CONTRAST				= 0.10;
 
 /// LPub3D's default page, parts list and border margin, in inches.
 static const double LPUB_MARGIN_INCHES					= 0.05;
+
+/// The resolution LPub3D prints at when a file says nothing.
+static const double LPUB_DEFAULT_DOTS_PER_INCH			= 150.0;
 
 /// Points left clear around the page when it is fitted to a view, so its edges
 /// stay off the view's border.
@@ -209,6 +217,14 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 
 
 // MARK: - PLACEMENT -
+
+
+//---------- frameInsetForPointsPerPageInch: -------------------------[static]--
++ (double) frameInsetForPointsPerPageInch:(double)pointsPerPageInch
+{
+	return FrameInsetForPointsPerPageInch(pointsPerPageInch);
+
+}//end frameInsetForPointsPerPageInch:
 
 
 //---------- frameRectForFrameSize:inHostSize:pointsPerPageInch: -----[static]--
@@ -995,10 +1011,113 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 }//end pageSizeInInchesInModel:
 
 
+//---------- assemblyPlacementForVisibleStepOfModel: -----------------[static]--
++ (nullable LPubPlacement *) assemblyPlacementForVisibleStepOfModel:(nullable LDrawModel *)model
+{
+	return [self directiveInForceForStep:[model visibleStep]
+							   excluding:nil
+								matching:^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubPlacement class]]
+			&& ((LPubPlacement *)directive).branch == LPubPlacementBranchAssembly;
+	}];
+
+}//end assemblyPlacementForVisibleStepOfModel:
+
+
+//---------- inchesPerUnitInModel: -----------------------------------[static]--
++ (double) inchesPerUnitInModel:(nullable LDrawModel *)model
+{
+	LPubResolution *resolution = [self resolutionInModel:model];
+
+	return (resolution != nil) ? resolution.inchesPerUnit : 1.0;
+
+}//end inchesPerUnitInModel:
+
+
+//---------- inchesPerDotInModel: ------------------------------------[static]--
++ (double) inchesPerDotInModel:(nullable LDrawModel *)model
+{
+	LPubResolution *resolution = [self resolutionInModel:model];
+
+	if (resolution == nil || resolution.dotsPerUnit <= 0.0) {
+		return 1.0 / LPUB_DEFAULT_DOTS_PER_INCH;
+	}
+
+	return resolution.inchesPerUnit / resolution.dotsPerUnit;
+
+}//end inchesPerDotInModel:
+
+
+//---------- submodelDepthOfModel: -----------------------------------[static]--
++ (NSUInteger) submodelDepthOfModel:(nullable LDrawModel *)model
+{
+	LDrawModel *first = [[model enclosingFile] firstModel];
+
+	if (model == nil || first == nil || first == model) {
+		return 0;
+	}
+
+	NSHashTable	*visitedModels	= [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
+	NSUInteger	 depth			= [self depthOfModel:model underModel:first visitedModels:visitedModels];
+
+	return (depth == NSNotFound) ? 0 : depth;
+
+}//end submodelDepthOfModel:
+
+
+//---------- depthOfModel:underModel:visitedModels: ------------------[static]--
+///
+/// @abstract	How many placements lead from a model down to the target, by the
+/// 			first way found in file order. NSNotFound when none does.
+///
+/// @discussion	LPub3D does not follow a placement inside PART BEGIN IGN.
+///
+//------------------------------------------------------------------------------
++ (NSUInteger) depthOfModel:(LDrawModel *)target
+				 underModel:(LDrawModel *)model
+			  visitedModels:(NSHashTable *)visitedModels
+{
+	BOOL ignoring = NO;
+
+	[visitedModels addObject:model];
+
+	for (LDrawStep *step in [model steps]) {
+		for (LDrawDirective *directive in [step subdirectives]) {
+
+			if ([directive isKindOfClass:[LPubPliIgnore class]]
+				&& ((LPubPliIgnore *)directive).branch == LPubPliIgnoreBranchPart) {
+				ignoring = ((LPubPliIgnore *)directive).beginsRange;
+				continue;
+			}
+
+			if (ignoring || [directive isKindOfClass:[LDrawPart class]] == NO) {
+				continue;
+			}
+
+			LDrawModel *placed = [(LDrawPart *)directive referencedMPDSubmodel];
+
+			if (placed == target) {
+				return 1;
+			}
+
+			if (placed != nil && [visitedModels containsObject:placed] == NO) {
+				NSUInteger deeper = [self depthOfModel:target underModel:placed visitedModels:visitedModels];
+
+				if (deeper != NSNotFound) {
+					return deeper + 1;
+				}
+			}
+		}
+	}
+
+	return NSNotFound;
+
+}//end depthOfModel:underModel:visitedModels:
+
+
 //---------- resolutionInModel: --------------------------------------[static]--
 ///
-/// @abstract	The RESOLUTION in force, or nil. Read only for the unit the
-/// 			page size is written in.
+/// @abstract	The RESOLUTION in force, or nil.
 ///
 //------------------------------------------------------------------------------
 + (nullable LPubResolution *) resolutionInModel:(nullable LDrawModel *)model
@@ -1111,6 +1230,19 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 }//end pageAnchorInModel:
 
 
+//---------- assemblyOutlinePointsInModel: ---------------------------[static]--
+///
+/// @abstract	The points the parts the model has on display reach furthest
+/// 			out to.
+///
+//------------------------------------------------------------------------------
++ (nullable NSData *) assemblyOutlinePointsInModel:(nullable LDrawModel *)model
+{
+	return [LDrawStepPartList outlinePointsOfModel:model];
+
+}//end assemblyOutlinePointsInModel:
+
+
 //---------- drawsPageInModel: ---------------------------------------[static]--
 ///
 /// @abstract	Whether the step on display is drawn on LPub3D's page.
@@ -1134,17 +1266,28 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 }//end drawsPageInModel:
 
 
-//---------- showsListOrPageInModel: ---------------------------------[static]--
+//---------- showsAnythingInModel: -----------------------------------[static]--
 ///
-/// @abstract	Whether the host shows the step's list, its page, or both.
+/// @abstract	Whether the host shows the step's list, its page or its
+/// 			callouts.
+///
+/// @discussion	A step that hides its list still shows its callouts, as long as
+/// 			the list is switched on in the preferences.
 ///
 //------------------------------------------------------------------------------
-+ (BOOL) showsListOrPageInModel:(nullable LDrawModel *)model
++ (BOOL) showsAnythingInModel:(nullable LDrawModel *)model
 {
-	return [model stepDisplay]
-		&& ([LDrawStepPartList isShownForVisibleStepOfModel:model] || [self drawsPageInModel:model]);
+	if ([model stepDisplay] == NO) {
+		return NO;
+	}
 
-}//end showsListOrPageInModel:
+	if ([LDrawStepPartList isShownForVisibleStepOfModel:model] || [self drawsPageInModel:model]) {
+		return YES;
+	}
+
+	return [LDrawStepPartList isEnabled] && [LDrawStepCallout calloutsForVisibleStepOfModel:model].count > 0;
+
+}//end showsAnythingInModel:
 
 
 //---------- pageRectCenteredOn:assemblyScale:inModel: ---------------[static]--

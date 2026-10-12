@@ -2417,6 +2417,65 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 }//end viewPointForModelPoint:
 
 
+//========== modelPointForViewPoint:depthReferencePoint: =======================
+//
+// Purpose:		The model point drawn at a point of this view, as deep in the
+//				model as the reference point.
+//
+// Notes:		Used to keep the place of something an overlay has put on
+//				screen, like the middle of the LPub3D page.
+//
+//==============================================================================
+- (Point3) modelPointForViewPoint:(NSPoint)viewPoint depthReferencePoint:(Point3)depthPoint
+{
+	[self makeCurrentContext];
+
+	return [self->renderer modelPointForPoint:V2Make(viewPoint.x, viewPoint.y) depthReferencePoint:depthPoint];
+
+}//end modelPointForViewPoint:depthReferencePoint:
+
+
+//========== viewRectForModelPoints: ===========================================
+//
+// Purpose:		The rectangle around where these model points land in this
+//				view. The points are Point3 values.
+//
+// Notes:		Used to find where an assembly is drawn, from the points its
+//				parts reach furthest out to.
+//
+//==============================================================================
+- (NSRect) viewRectForModelPoints:(NSData *)points
+{
+	[self makeCurrentContext];
+
+	Box2 box = [self->renderer viewBoxForModelPoints:points.bytes count:points.length / sizeof(Point3)];
+
+	return NSMakeRect(box.origin.x, box.origin.y, box.size.width, box.size.height);
+
+}//end viewRectForModelPoints:
+
+
+//========== viewPointsForModelPoints: =========================================
+//
+// Purpose:		Where each of these model points lands in this view. The points
+//				are Point3 values, and the answer holds a Point2 for each.
+//
+// Notes:		Used to find the outline of what an arrow points at.
+//
+//==============================================================================
+- (NSData *) viewPointsForModelPoints:(NSData *)points
+{
+	NSUInteger		 count		= points.length / sizeof(Point3);
+	NSMutableData	*viewPoints	= [NSMutableData dataWithLength:count * sizeof(Point2)];
+
+	[self makeCurrentContext];
+	[self->renderer getViewPoints:viewPoints.mutableBytes forModelPoints:points.bytes count:count];
+
+	return viewPoints;
+
+}//end viewPointsForModelPoints:
+
+
 //========== pointsPerLDUAtModelPoint: =========================================
 //
 // Purpose:		How many points one LDU covers on screen beside this model

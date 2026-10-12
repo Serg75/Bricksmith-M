@@ -43,6 +43,10 @@ typedef NS_ENUM(NSInteger, LPubMetaScope) {
 /// Command's substring after !LPUB.
 @property (nonatomic, copy) NSString *lPubCommandString;
 
+/// The words of that text, split the way the file parser splits them: a
+/// quoted value stays whole.
+@property (nonatomic, readonly) NSArray<NSString *> *lPubCommandWords;
+
 /// Reads the scope keyword at *index, if there is one, and moves *index past
 /// it. Returns Unspecified when there is none.
 + (LPubMetaScope) scopeInParameters:(NSArray<NSString *> *)parameters index:(NSUInteger *)index;

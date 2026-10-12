@@ -334,16 +334,28 @@ static LPubMetaScope ScopeForKeyword(NSString *keyword)
 {
 	[self adoptCommandString:newString];
 
-	// Split the text the way the file parser does, so a quoted name stays whole.
-	NSScanner			*scanner	= [NSScanner scannerWithString:newString ?: @""];
-	NSArray<NSString *>	*tokens		= [scanner scanSubstringsWithQuotations];
-	LPubCommand			*reparsed	= [[self class] lpubCommandInstance:tokens];
+	LPubCommand *reparsed = [[self class] lpubCommandInstance:self.lPubCommandWords];
 
 	if (reparsed != nil) {
 		[self adoptPropertiesFromCommand:reparsed];
 	}
 
 }//end setLPubCommandString:
+
+
+//========== lPubCommandWords ==================================================
+///
+/// @abstract	The words of the command, split the way the file parser splits
+/// 			them, so a quoted name stays whole.
+///
+//==============================================================================
+- (NSArray<NSString *> *) lPubCommandWords
+{
+	NSScanner *scanner = [NSScanner scannerWithString:self.lPubCommandString ?: @""];
+
+	return [scanner scanSubstringsWithQuotations];
+
+}//end lPubCommandWords
 
 
 //========== adoptCommandString: ===============================================

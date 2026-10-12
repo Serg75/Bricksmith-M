@@ -73,10 +73,23 @@
 #import <LDrawCore/LDrawLSynthDirective.h>
 
 // LPub
+#import <LDrawCore/LPubAssemShowStepNumber.h>
+#import <LDrawCore/LPubCallout.h>
+#import <LDrawCore/LPubCalloutAlloc.h>
+#import <LDrawCore/LPubCalloutBackground.h>
+#import <LDrawCore/LPubCalloutBorder.h>
+#import <LDrawCore/LPubCalloutFont.h>
+#import <LDrawCore/LPubCalloutMargins.h>
+#import <LDrawCore/LPubCalloutPliPerStep.h>
+#import <LDrawCore/LPubCalloutPointer.h>
+#import <LDrawCore/LPubCalloutSeparator.h>
+#import <LDrawCore/LPubCalloutSubmodelColor.h>
+#import <LDrawCore/LPubColor.h>
 #import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/LPubModelScale.h>
 #import <LDrawCore/LPubPageOrientation.h>
 #import <LDrawCore/LPubPageSize.h>
+#import <LDrawCore/LPubPlacement.h>
 #import <LDrawCore/LPubPliCameraAngles.h>
 #import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/LPubPliIgnore.h>

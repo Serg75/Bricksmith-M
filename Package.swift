@@ -16,6 +16,10 @@ let package = Package(
         .library(name: "LDrawRenderOpenGL", targets: ["LDrawRenderOpenGL"]),
         .library(name: "LDrawEditing", targets: ["LDrawEditing"]),
         .library(name: "LDrawFeatures", targets: ["LDrawFeatures"]),
+        // What a host draws of a step: its callouts and the labels of its parts list. No editing.
+        .library(name: "LDrawStepRendering", targets: ["LDrawStepRendering"]),
+        // What a host that edits callouts adds to that.
+        .library(name: "LDrawStepEditing", targets: ["LDrawStepEditing"]),
         .library(name: "LDrawConnectivity", targets: ["LDrawConnectivity"]),
     ],
     targets: [
@@ -74,6 +78,18 @@ let package = Package(
             publicHeadersPath: "include"
         ),
         .target(
+            name: "LDrawStepRendering",
+            dependencies: ["LDrawCore", "LDrawFeatures"],
+            path: "Packages/LDrawStepRendering/Sources/LDrawStepRendering",
+            publicHeadersPath: "include"
+        ),
+        .target(
+            name: "LDrawStepEditing",
+            dependencies: ["LDrawCore", "LDrawFeatures"],
+            path: "Packages/LDrawStepEditing/Sources/LDrawStepEditing",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "LDrawConnectivity",
             dependencies: ["LDrawCore"],
             path: "Packages/LDrawConnectivity/Sources/LDrawConnectivity",
@@ -88,6 +104,16 @@ let package = Package(
             name: "LDrawFeaturesTests",
             dependencies: ["LDrawFeatures", "LDrawCore"],
             path: "Packages/LDrawFeatures/Tests/LDrawFeaturesTests"
+        ),
+        .testTarget(
+            name: "LDrawStepRenderingTests",
+            dependencies: ["LDrawStepRendering", "LDrawFeatures", "LDrawCore"],
+            path: "Packages/LDrawStepRendering/Tests/LDrawStepRenderingTests"
+        ),
+        .testTarget(
+            name: "LDrawStepEditingTests",
+            dependencies: ["LDrawStepEditing", "LDrawFeatures", "LDrawCore"],
+            path: "Packages/LDrawStepEditing/Tests/LDrawStepEditingTests"
         ),
         .testTarget(
             name: "LDrawConnectivityTests",

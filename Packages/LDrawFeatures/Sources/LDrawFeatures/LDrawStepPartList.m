@@ -22,19 +22,27 @@
 #import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawGroupable.h>
+#import <LDrawCore/LDrawLine.h>
 #import <LDrawCore/LDrawLSynth.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/LDrawQuadrilateral.h>
+#import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawLocalization.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawStepPartListEntry.h>
+#import <LDrawCore/LPubCallout.h>
 #import <LDrawCore/LPubPliIgnore.h>
 #import <LDrawCore/LPubPliShow.h>
 #import <LDrawCore/LPubPliSubstitute.h>
 #import <LDrawCore/LDrawUtilities.h>
+
 #import <LDrawFeatures/LDrawPartListOrientations.h>
+#import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
+
+#import "LDrawStepPartListInternal.h"
 
 
 /// The range a frame width may be set to. Below the minimum a stud is a few
@@ -46,11 +54,51 @@ static const double STEP_PART_LIST_MAXIMUM_WIDTH_INCHES = 6.0;
 /// well under an inch. The maximum is the width's.
 static const double STEP_PART_LIST_MINIMUM_HEIGHT_INCHES = 0.25;
 
+/// How many directions a part's shape is measured along: the three axes, and
+/// the diagonals of the faces and of the body of a cube. Each is also measured
+/// backwards.
+#define SHAPE_DIRECTION_COUNT 13
+
+static const Vector3 SHAPE_DIRECTIONS[SHAPE_DIRECTION_COUNT] = {
+	{ 1.0,  0.0,  0.0 }, { 0.0,  1.0,  0.0 }, { 0.0,  0.0,  1.0 },
+	{ 1.0,  1.0,  0.0 }, { 1.0, -1.0,  0.0 }, { 1.0,  0.0,  1.0 },
+	{ 1.0,  0.0, -1.0 }, { 0.0,  1.0,  1.0 }, { 0.0,  1.0, -1.0 },
+	{ 1.0,  1.0,  1.0 }, { 1.0,  1.0, -1.0 }, { 1.0, -1.0,  1.0 }, { 1.0, -1.0, -1.0 },
+};
+
+/// How deep a part's subparts are followed. Real parts are far shallower.
+static const NSUInteger MAXIMUM_SHAPE_DEPTH = 24;
+
 static BOOL		StepPartList_enabled				= NO;
 static BOOL		StepPartList_includesSubmodels		= NO;
 static BOOL		StepPartList_followsStepRotation	= YES;
 static BOOL		StepPartList_usesLPubScale			= NO;
 static LDrawPartListOrientations *StepPartList_partOrientations = nil;
+
+
+//========== NoteShapePoint() ==================================================
+///
+/// @abstract	Keeps a point when it reaches further along one of the shape
+/// 			directions, or against it, than any point before.
+///
+//==============================================================================
+static void NoteShapePoint(Point3 point, Point3 *furthest, double *reach)
+{
+	for (NSUInteger index = 0; index < SHAPE_DIRECTION_COUNT; index++) {
+		Vector3	direction	= SHAPE_DIRECTIONS[index];
+		double	along		= point.x * direction.x + point.y * direction.y + point.z * direction.z;
+
+		if (along > reach[index * 2]) {
+			reach[index * 2]	= along;
+			furthest[index * 2]	= point;
+		}
+		if (-along > reach[index * 2 + 1]) {
+			reach[index * 2 + 1]	= -along;
+			furthest[index * 2 + 1]	= point;
+		}
+	}
+
+}//end NoteShapePoint
 
 
 //------------------------------------------------------------------------------
@@ -149,11 +197,150 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	NSMutableDictionary<NSString *, LDrawStepPartListEntry *>
 								*entriesByKey	= [NSMutableDictionary dictionary];
 
+	[self collectStep:step
+		   intoGroups:entriesByKey
+				order:keyOrder
+				 path:path
+	   inheritedColor:nil
+		shouldMeasure:shouldMeasure];
+
+	return [self entriesInOrder:keyOrder groups:entriesByKey];
+
+}//end entriesForStep:path:shouldMeasure:
+
+
+//---------- entriesForStep:inheritingColor: -------------------------[static]--
+///
+/// @abstract	Entries for one step of a submodel, in display order. Its parts
+/// 			in the main color take `color`, the color the submodel is placed
+/// 			in.
+///
+//------------------------------------------------------------------------------
++ (NSArray<LDrawStepPartListEntry *> *) entriesForStep:(LDrawStep *)step
+									   inheritingColor:(nullable LDrawColor *)color
+{
+	NSMutableArray<NSString *>	*keyOrder		= [NSMutableArray array];
+	NSMutableDictionary<NSString *, LDrawStepPartListEntry *>
+								*entriesByKey	= [NSMutableDictionary dictionary];
+
+	NSHashTable	*path	= [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
+	LDrawModel	*model	= [step enclosingModel];
+
+	if (model != nil) {
+		[path addObject:model];
+	}
+
+	[self collectStep:step
+		   intoGroups:entriesByKey
+				order:keyOrder
+				 path:path
+	   inheritedColor:color
+		shouldMeasure:YES];
+
+	return [self entriesInOrder:keyOrder groups:entriesByKey];
+
+}//end entriesForStep:inheritingColor:
+
+
+//---------- entriesForSubmodelsPlacedByParts:inModel: ---------------[static]--
+///
+/// @abstract	The rows the submodels these parts place would add to a list:
+/// 			every step of each submodel, once for each part.
+///
+/// @discussion	`model` is the model the parts are in. A part that places no
+/// 			submodel, or one that is really a part, adds nothing.
+///
+//------------------------------------------------------------------------------
++ (NSArray<LDrawStepPartListEntry *> *) entriesForSubmodelsPlacedByParts:(NSArray<LDrawPart *> *)parts
+																 inModel:(nullable LDrawModel *)model
+{
+	NSMutableArray<NSString *>	*keyOrder		= [NSMutableArray array];
+	NSMutableDictionary<NSString *, LDrawStepPartListEntry *>
+								*entriesByKey	= [NSMutableDictionary dictionary];
+
+	NSHashTable *path = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
+
+	if (model != nil) {
+		[path addObject:model];
+	}
+
+	for (LDrawPart *part in parts) {
+		LDrawModel *submodel = [self assemblyPlacedByPart:part];
+
+		if (submodel != nil) {
+			[self collectSubmodel:submodel
+					 placedByPart:part
+					   intoGroups:entriesByKey
+							order:keyOrder
+							 path:path
+				   inheritedColor:nil
+					shouldMeasure:YES];
+		}
+	}
+
+	return [self entriesInOrder:keyOrder groups:entriesByKey];
+
+}//end entriesForSubmodelsPlacedByParts:inModel:
+
+
+//---------- entriesInOrder:groups: ----------------------------------[static]--
+///
+/// @abstract	The collected rows in display order, each turned as the list
+/// 			shows it.
+///
+//------------------------------------------------------------------------------
++ (NSArray<LDrawStepPartListEntry *> *) entriesInOrder:(NSArray<NSString *> *)keyOrder
+												groups:(NSDictionary<NSString *, LDrawStepPartListEntry *> *)groups
+{
+	NSMutableArray<LDrawStepPartListEntry *> *entries = [NSMutableArray arrayWithCapacity:keyOrder.count];
+
+	// Only when the icons do not follow the step's rotation. Following the
+	// step, they line up with the assembly instead.
+	LDrawPartListOrientations *orientations = [self followsStepRotation] ? nil : [self partOrientations];
+
+	for (NSString *key in keyOrder) {
+		LDrawStepPartListEntry *entry = groups[key];
+
+		if (orientations != nil) {
+			entry = [entry entryWithListOrientation:[orientations orientationForPartName:entry.partName]];
+		}
+		[entries addObject:entry];
+	}
+
+	return [self sortedEntries:entries];
+
+}//end entriesInOrder:groups:
+
+
+//---------- collectStep:intoGroups:order:path:inheritedColor:shouldMeasure: --[static]--
+///
+/// @abstract	Adds what one step lists to the groups collected so far.
+///
+/// @discussion	A step calls this for itself, and again for each step of a
+/// 			submodel whose callout lists its parts in the parent's list.
+/// 			`inheritedColor` is the color that submodel is placed in, which
+/// 			its parts in the main color take. Nil for the step itself.
+///
+//------------------------------------------------------------------------------
++ (void) collectStep:(LDrawStep *)step
+		  intoGroups:(NSMutableDictionary<NSString *, LDrawStepPartListEntry *> *)entriesByKey
+			   order:(NSMutableArray<NSString *> *)keyOrder
+				path:(NSHashTable *)path
+	  inheritedColor:(nullable LDrawColor *)inheritedColor
+	   shouldMeasure:(BOOL)shouldMeasure
+{
 	// `PLI BEGIN IGN` and `PLI BEGIN SUB` share one END, so a `PLI END` closes
 	// whichever opened last. They nest, so they are a stack, and an END with
 	// nothing open does nothing. `PART BEGIN IGN` has its own END and depth.
 	NSMutableArray<LDrawStepPartListRange *>	*pliRanges			= [NSMutableArray array];
 	NSInteger									 partIgnoreDepth	= 0;
+
+	// The callout the walk is inside, if any. LPub3D does not nest them.
+	LPubCallout	*openCallout = nil;
+
+	// The step's callouts, collected when the first one is met: most steps
+	// call nothing out.
+	NSArray<LDrawStepCallout *> *callouts = nil;
 
 	for (LDrawDirective *directive in [self flattenedDirectives:[step subdirectives]]) {
 
@@ -193,14 +380,62 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			continue;
 		}
 
+		if ([directive isKindOfClass:[LPubCallout class]]) {
+			LPubCallout *bracket = (LPubCallout *)directive;
+
+			if (bracket.line == LPubCalloutLineBegin) {
+				openCallout = bracket;
+			}
+			else if (bracket.line == LPubCalloutLineEnd) {
+				openCallout = nil;
+			}
+			continue;
+		}
+
 		// A substitute with no color of its own takes the first part's.
 		for (LDrawStepPartListRange *range in pliRanges) {
 			if (range.firstColor == nil && [directive isKindOfClass:[LDrawPart class]]) {
-				range.firstColor = [(LDrawPart *)directive LDrawColor];
+				range.firstColor = [self colorOfPart:(LDrawPart *)directive inheriting:inheritedColor];
 			}
 		}
 
-		if (pliRanges.count > 0 || partIgnoreDepth > 0) {
+		if (pliRanges.count > 0 || partIgnoreDepth > 0 || [self isBuiltDirective:directive] == NO) {
+			continue;
+		}
+
+		// A submodel a callout shows the steps of is built in the callout's box,
+		// so it is no row of this list. Its parts are listed here instead when
+		// the file says so.
+		LDrawModel *calledOut = nil;
+
+		if (openCallout != nil && openCallout.mode == LPubCalloutModeUnassembled
+			&& [directive isKindOfClass:[LDrawPart class]]) {
+			calledOut = [self assemblyPlacedByPart:(LDrawPart *)directive];
+		}
+
+		if (calledOut != nil) {
+			if (callouts == nil) {
+				callouts = [LDrawStepCallout calloutsForStep:step];
+			}
+
+			// Each callout says for itself who lists its parts.
+			BOOL listsCalloutParts = NO;
+
+			for (LDrawStepCallout *callout in callouts) {
+				if (callout.beginDirective == openCallout) {
+					listsCalloutParts = (callout.listsOwnParts == NO);
+				}
+			}
+
+			if (listsCalloutParts) {
+				[self collectSubmodel:calledOut
+						 placedByPart:(LDrawPart *)directive
+						   intoGroups:entriesByKey
+								order:keyOrder
+								 path:path
+					   inheritedColor:inheritedColor
+						shouldMeasure:shouldMeasure];
+			}
 			continue;
 		}
 
@@ -210,8 +445,13 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			continue;
 		}
 
-		// Once per row, not once per instance: every instance of a submodel is
-		// the same submodel.
+		// A part in the main color takes the color its submodel is placed in.
+		if (inheritedColor != nil && [entry.color colorCode] == LDrawCurrentColor) {
+			entry = [entry entryWithColor:inheritedColor];
+		}
+
+		// Once per row, not once per instance: every instance of a submodel
+		// is the same submodel.
 		if (shouldMeasure && entry.isSubmodel && entriesByKey[entry.groupKey] == nil
 			&& [directive isKindOfClass:[LDrawPart class]]) {
 			LDrawModel *submodel = [self submodelForPart:(LDrawPart *)directive
@@ -228,24 +468,98 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 		[self addSubstituteOfRange:range toGroups:entriesByKey order:keyOrder];
 	}
 
-	NSMutableArray<LDrawStepPartListEntry *> *entries = [NSMutableArray arrayWithCapacity:keyOrder.count];
+}//end collectStep:intoGroups:order:path:inheritedColor:shouldMeasure:
 
-	// Only when the icons do not follow the step's rotation. Following the
-	// step, they line up with the assembly instead.
-	LDrawPartListOrientations *orientations = [self followsStepRotation] ? nil : [self partOrientations];
 
-	for (NSString *key in keyOrder) {
-		LDrawStepPartListEntry *entry = entriesByKey[key];
-
-		if (orientations != nil) {
-			entry = [entry entryWithListOrientation:[orientations orientationForPartName:entry.partName]];
-		}
-		[entries addObject:entry];
+//---------- collectSubmodel:placedByPart:intoGroups:order:path:inheritedColor:shouldMeasure: --[static]--
+///
+/// @abstract	Adds the parts of every step of a submodel, in the color the
+/// 			part places it in. Nothing for one already being walked.
+///
+//------------------------------------------------------------------------------
++ (void) collectSubmodel:(LDrawModel *)submodel
+			placedByPart:(LDrawPart *)part
+			  intoGroups:(NSMutableDictionary<NSString *, LDrawStepPartListEntry *> *)entriesByKey
+				   order:(NSMutableArray<NSString *> *)keyOrder
+					path:(NSHashTable *)path
+		  inheritedColor:(nullable LDrawColor *)inheritedColor
+		   shouldMeasure:(BOOL)shouldMeasure
+{
+	if ([path containsObject:submodel]) {
+		return;
 	}
 
-	return [self sortedEntries:entries];
+	LDrawColor *placedColor = [self colorOfPart:part inheriting:inheritedColor];
 
-}//end entriesForStep:path:shouldMeasure:
+	[path addObject:submodel];
+
+	for (LDrawStep *step in [submodel steps]) {
+		[self collectStep:step
+			   intoGroups:entriesByKey
+					order:keyOrder
+					 path:path
+		   inheritedColor:placedColor
+			shouldMeasure:shouldMeasure];
+	}
+
+	[path removeObject:submodel];
+
+}//end collectSubmodel:placedByPart:intoGroups:order:path:inheritedColor:shouldMeasure:
+
+
+//---------- assemblyPlacedByPart: -----------------------------------[static]--
+///
+/// @abstract	The submodel a part places, or nil when it places none or one
+/// 			that is really a part.
+///
+//------------------------------------------------------------------------------
++ (nullable LDrawModel *) assemblyPlacedByPart:(LDrawPart *)part
+{
+	LDrawModel *submodel = [self submodelForPart:part library:[LDrawPartLibrary sharedPartLibraryIfRegistered]];
+
+	return [self isPartLikeModel:submodel] ? nil : submodel;
+
+}//end assemblyPlacedByPart:
+
+
+//---------- rowKeyOfPlacement: --------------------------------------[static]--
+///
+/// @abstract	The key of the row a part that places a submodel is counted in.
+///
+/// @discussion	Nothing is measured for it, so it is cheap to ask for.
+///
+//------------------------------------------------------------------------------
++ (NSString *) rowKeyOfPlacement:(LDrawPart *)part
+{
+	LDrawStepPartListEntry *row = [[LDrawStepPartListEntry alloc] initWithPartName:[part referenceName]
+																	  displayTitle:[part referenceName]
+																			 color:[part LDrawColor]
+																		  quantity:1
+																	   modelBounds:InvalidBox
+																		 isMissing:NO
+																		isSubmodel:YES];
+
+	return row.groupKey;
+
+}//end rowKeyOfPlacement:
+
+
+//---------- colorOfPart:inheriting: ---------------------------------[static]--
+///
+/// @abstract	A part's color, or the color its submodel is placed in when the
+/// 			part is in the main color.
+///
+//------------------------------------------------------------------------------
++ (nullable LDrawColor *) colorOfPart:(LDrawPart *)part inheriting:(nullable LDrawColor *)inheritedColor
+{
+	LDrawColor *color = [part LDrawColor];
+
+	if (inheritedColor != nil && [color colorCode] == LDrawCurrentColor) {
+		return inheritedColor;
+	}
+	return color;
+
+}//end colorOfPart:inheriting:
 
 
 //---------- addSubstituteOfRange:toGroups:order: --------------------[static]--
@@ -326,18 +640,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	LDrawModel *submodel = [[substitute enclosingFile] modelWithName:name];
 
 	if (submodel != nil) {
-		Box3 bounds = (library != nil) ? [submodel boundingBox3] : InvalidBox;
-
-		NSString				*title = [self titleForSubmodel:submodel named:name];
-		LDrawStepPartListEntry	*entry = [[LDrawStepPartListEntry alloc] initWithPartName:name
-																			 displayTitle:title
-																					color:color
-																				 quantity:1
-																			  modelBounds:bounds
-																				isMissing:NO
-																			   isSubmodel:YES];
-
-		return [entry entryWithOutlinePoints:[self outlinePointsOfModel:submodel]];
+		return [self entryForSubmodel:submodel named:name color:color];
 	}
 
 	if (library != nil
@@ -362,6 +665,36 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	return [self entryForPart:standInPart path:nil];
 
 }//end entryForSubstitute:fallbackColor:
+
+
+//---------- entryForSubmodel:named:color: ---------------------------[static]--
+///
+/// @abstract	A one-instance row that shows a whole submodel as one part.
+///
+/// @discussion	For a substitute and for a callout, which list a submodel
+/// 			whatever the submodel preference says. Measuring needs the
+/// 			catalog.
+///
+//------------------------------------------------------------------------------
++ (LDrawStepPartListEntry *) entryForSubmodel:(LDrawModel *)submodel
+										named:(NSString *)name
+										color:(nullable LDrawColor *)color
+{
+	LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
+	Box3				 bounds		= (library != nil) ? [submodel boundingBox3] : InvalidBox;
+
+	NSString				*title = [self titleForSubmodel:submodel named:name];
+	LDrawStepPartListEntry	*entry = [[LDrawStepPartListEntry alloc] initWithPartName:name
+																		 displayTitle:title
+																				color:color
+																			 quantity:1
+																		  modelBounds:bounds
+																			isMissing:NO
+																		   isSubmodel:YES];
+
+	return [entry entryWithOutlinePoints:[self outlinePointsOfModel:submodel]];
+
+}//end entryForSubmodel:named:color:
 
 
 //---------- entriesForVisibleStepOfModel: ---------------------------[static]--
@@ -501,6 +834,26 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 }//end flattenedDirectives:
 
 
+//---------- isBuiltDirective: ---------------------------------------[static]--
+///
+/// @abstract	Whether a directive is built in this step. NO when a REMOVE GROUP
+/// 			in force drops it.
+///
+/// @discussion	A ghost counts as removed too: it shows something already taken
+/// 			out.
+///
+//------------------------------------------------------------------------------
++ (BOOL) isBuiltDirective:(LDrawDirective *)directive
+{
+	if ([directive conformsToProtocol:@protocol(LDrawGroupable)] == NO) {
+		return YES;
+	}
+
+	return [(id<LDrawGroupable>)directive groupVisibility] == LDrawGroupVisibilityVisible;
+
+}//end isBuiltDirective:
+
+
 //---------- entryForDirective: --------------------------------------[static]--
 ///
 /// @abstract	A one-instance entry for a directive the list should carry, or
@@ -508,16 +861,8 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 ///
 //------------------------------------------------------------------------------
 + (nullable LDrawStepPartListEntry *) entryForDirective:(LDrawDirective *)directive
-													 path:(NSHashTable *)path
+												   path:(NSHashTable *)path
 {
-	if ([directive conformsToProtocol:@protocol(LDrawGroupable)]) {
-		// A REMOVE GROUP in force says this is not built here. A ghost counts
-		// as removed too: it shows something already taken out.
-		if ([(id<LDrawGroupable>)directive groupVisibility] != LDrawGroupVisibilityVisible) {
-			return nil;
-		}
-	}
-
 	if ([directive isKindOfClass:[LDrawPart class]]) {
 		return [self entryForPart:(LDrawPart *)directive path:path];
 	}
@@ -537,7 +882,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 ///
 //------------------------------------------------------------------------------
 + (nullable LDrawStepPartListEntry *) entryForPart:(LDrawPart *)part
-												path:(NSHashTable *)path
+											  path:(NSHashTable *)path
 {
 	LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
 	NSString			*partName	= [part referenceName];
@@ -805,12 +1150,12 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 
 //---------- outlinePointsOfModel: -----------------------------------[static]--
 ///
-/// @abstract	The corners of every part box inside a model, in the model's own
-/// 			coordinates, or nil with no model or no catalog.
+/// @abstract	The points every part inside a model reaches furthest out to,
+/// 			in the model's own coordinates, or nil with no model or no
+/// 			catalog.
 ///
-/// @discussion	The parts' own boxes fit a submodel closer than one box around
-/// 			all of it. Corners rather than boxes, because boxing a turned
-/// 			part again makes it bigger.
+/// @discussion	The parts' own shapes fit a submodel closer than one box around
+/// 			all of it.
 ///
 //------------------------------------------------------------------------------
 + (nullable NSData *) outlinePointsOfModel:(nullable LDrawModel *)submodel
@@ -835,11 +1180,46 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 }//end outlinePointsOfModel:
 
 
+//---------- outlinePointsOfStep: ------------------------------------[static]--
+///
+/// @abstract	The points every part of one step reaches furthest out to, in
+/// 			its model's own coordinates. Empty with no catalog.
+///
+//------------------------------------------------------------------------------
++ (NSData *) outlinePointsOfStep:(LDrawStep *)step
+{
+	NSMutableData		*points		= [NSMutableData data];
+	LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
+	LDrawModel			*model		= [step enclosingModel];
+
+	if (library == nil) {
+		return points;
+	}
+
+	NSHashTable *path = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
+
+	// The step's model counts as open, so a submodel placing it back is not
+	// walked into again.
+	if (model != nil) {
+		[path addObject:model];
+	}
+
+	[self appendOutlinePointsOfStep:step
+						  transform:IdentityMatrix4
+							library:library
+							   path:path
+						   intoData:points];
+
+	return points;
+
+}//end outlinePointsOfStep:
+
+
 //---------- appendOutlinePointsOfModel:transform:library:path:intoData: --[static]-
 ///
-/// @discussion	Counts the steps and parts the model draws. `path` holds the
-/// 			models being walked, so a model that places itself again is not
-/// 			entered twice.
+/// @discussion	Counts the steps the model draws. `path` holds the models being
+/// 			walked, so a model that places itself again is not entered
+/// 			twice.
 ///
 //------------------------------------------------------------------------------
 + (void) appendOutlinePointsOfModel:(LDrawModel *)model
@@ -859,55 +1239,198 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	NSUInteger lastStepIndex = MIN([model maxStepIndexToOutput], steps.count - 1);
 
 	for (NSUInteger index = 0; index <= lastStepIndex; index++) {
-
-		[(LDrawStep *)steps[index] applyToAllParts:^(LDrawPart *part) {
-
-			if ([part isOmitted]) {
-				return;
-			}
-
-			// The part's own placement first, then wherever its parent put
-			// the model it sits in.
-			Matrix4		 placed	= Matrix4Multiply([part transformationMatrix], transform);
-			LDrawModel	*nested	= [self submodelForPart:part library:library];
-
-			if (nested != nil) {
-				[self appendOutlinePointsOfModel:nested
-									   transform:placed
-										 library:library
-											path:path
-										intoData:points];
-				return;
-			}
-
-			// Checked first: asking nil for bounds answers a zeroed box, and
-			// that would add a point at the origin.
-			LDrawModel *piece = [library modelForName:[part referenceName]];
-
-			if (piece == nil) {
-				return;
-			}
-
-			Box3 box = [piece boundingBox3];
-
-			if (V3EqualBoxes(box, InvalidBox)) {
-				return;
-			}
-
-			for (NSUInteger corner = 0; corner < 8; corner++) {
-				Point3 point = V3Make((corner & 1) ? box.max.x : box.min.x,
-									  (corner & 2) ? box.max.y : box.min.y,
-									  (corner & 4) ? box.max.z : box.min.z);
-
-				point = V3MulPointByProjMatrix(point, placed);
-				[points appendBytes:&point length:sizeof(Point3)];
-			}
-		}];
+		[self appendOutlinePointsOfStep:steps[index]
+							  transform:transform
+								library:library
+								   path:path
+							   intoData:points];
 	}
 
 	[path removeObject:model];
 
 }//end appendOutlinePointsOfModel:transform:library:path:intoData:
+
+
+//---------- appendOutlinePointsOfStep:transform:library:path:intoData: --[static]-
+///
+/// @abstract	Adds the points every part of one step reaches furthest out to.
+/// 			A part that places a submodel adds that submodel's instead.
+///
+//------------------------------------------------------------------------------
++ (void) appendOutlinePointsOfStep:(LDrawStep *)step
+						 transform:(Matrix4)transform
+						   library:(LDrawPartLibrary *)library
+							  path:(NSHashTable *)path
+						  intoData:(NSMutableData *)points
+{
+	[step applyToAllParts:^(LDrawPart *part) {
+
+		if ([part isOmitted]) {
+			return;
+		}
+
+		// The part's own placement first, then wherever its parent put
+		// the model it sits in.
+		Matrix4		 placed	= Matrix4Multiply([part transformationMatrix], transform);
+		LDrawModel	*nested	= [self submodelForPart:part library:library];
+
+		if (nested != nil) {
+			[self appendOutlinePointsOfModel:nested
+								   transform:placed
+									 library:library
+										path:path
+									intoData:points];
+			return;
+		}
+
+		// Checked first: a part the catalog does not have has no shape.
+		LDrawModel *piece = [library modelForName:[part referenceName]];
+
+		if (piece == nil) {
+			return;
+		}
+
+		NSData			*shape		= [self shapePointsOfPiece:piece library:library];
+		const Point3	*corners	= shape.bytes;
+		NSUInteger		 count		= shape.length / sizeof(Point3);
+
+		for (NSUInteger index = 0; index < count; index++) {
+			Point3 point = V3MulPointByProjMatrix(corners[index], placed);
+
+			[points appendBytes:&point length:sizeof(Point3)];
+		}
+	}];
+
+}//end appendOutlinePointsOfStep:transform:library:path:intoData:
+
+
+//---------- shapePointsOfPiece:library: -----------------------------[static]--
+///
+/// @abstract	The points of a catalog part that reach furthest out, in the
+/// 			part's own coordinates. Empty for a part with nothing to draw.
+///
+/// @discussion	A box around a round or a sloped part is bigger than the part,
+/// 			so the part's own corners are used: for each of a fixed set of
+/// 			directions, the one furthest along it. Kept for as long as the
+/// 			catalog keeps the part, because walking its geometry is slow.
+///
+//------------------------------------------------------------------------------
++ (NSData *) shapePointsOfPiece:(LDrawModel *)piece library:(LDrawPartLibrary *)library
+{
+	static NSMapTable<LDrawModel *, NSData *> *shapes = nil;
+
+	if (shapes == nil) {
+		shapes = [NSMapTable weakToStrongObjectsMapTable];
+	}
+
+	NSData *shape = [shapes objectForKey:piece];
+
+	if (shape != nil) {
+		return shape;
+	}
+
+	Point3 furthest[SHAPE_DIRECTION_COUNT * 2];
+	double reach[SHAPE_DIRECTION_COUNT * 2];
+
+	for (NSUInteger index = 0; index < SHAPE_DIRECTION_COUNT * 2; index++) {
+		reach[index] = -INFINITY;
+	}
+
+	[self measureModel:piece
+			 transform:IdentityMatrix4
+			   library:library
+				 depth:0
+			  furthest:furthest
+				 reach:reach];
+
+	NSMutableData *found = [NSMutableData data];
+
+	for (NSUInteger index = 0; index < SHAPE_DIRECTION_COUNT * 2; index++) {
+		if (reach[index] > -INFINITY) {
+			[found appendBytes:&furthest[index] length:sizeof(Point3)];
+		}
+	}
+
+	[shapes setObject:found forKey:piece];
+
+	return found;
+
+}//end shapePointsOfPiece:library:
+
+
+//---------- measureModel:transform:library:depth:furthest:reach: ----[static]--
+///
+/// @abstract	Walks a part's lines, triangles and quadrilaterals, and the
+/// 			subparts it places, keeping the corner furthest along each
+/// 			direction and against it.
+///
+/// @discussion	`depth` stops a part file that places itself.
+///
+//------------------------------------------------------------------------------
++ (void) measureModel:(LDrawModel *)model
+			transform:(Matrix4)transform
+			  library:(LDrawPartLibrary *)library
+				depth:(NSUInteger)depth
+			 furthest:(Point3 *)furthest
+				reach:(double *)reach
+{
+	if (depth > MAXIMUM_SHAPE_DEPTH) {
+		return;
+	}
+
+	for (LDrawStep *step in [model steps]) {
+		for (LDrawDirective *directive in [self flattenedDirectives:[step subdirectives]]) {
+
+			Point3		corners[4];
+			NSUInteger	count = 0;
+
+			if ([directive isKindOfClass:[LDrawPart class]]) {
+				LDrawPart	*part	= (LDrawPart *)directive;
+				LDrawModel	*placed	= [library modelForName:[part referenceName]];
+
+				if (placed != nil) {
+					[self measureModel:placed
+							 transform:Matrix4Multiply([part transformationMatrix], transform)
+							   library:library
+								 depth:depth + 1
+							  furthest:furthest
+								 reach:reach];
+				}
+				continue;
+			}
+
+			if ([directive isKindOfClass:[LDrawQuadrilateral class]]) {
+				LDrawQuadrilateral *quadrilateral = (LDrawQuadrilateral *)directive;
+
+				corners[0]	= [quadrilateral vertex1];
+				corners[1]	= [quadrilateral vertex2];
+				corners[2]	= [quadrilateral vertex3];
+				corners[3]	= [quadrilateral vertex4];
+				count		= 4;
+			}
+			else if ([directive isKindOfClass:[LDrawTriangle class]]) {
+				LDrawTriangle *triangle = (LDrawTriangle *)directive;
+
+				corners[0]	= [triangle vertex1];
+				corners[1]	= [triangle vertex2];
+				corners[2]	= [triangle vertex3];
+				count		= 3;
+			}
+			else if ([directive isKindOfClass:[LDrawLine class]]) {
+				LDrawLine *line = (LDrawLine *)directive;
+
+				corners[0]	= [line vertex1];
+				corners[1]	= [line vertex2];
+				count		= 2;
+			}
+
+			for (NSUInteger index = 0; index < count; index++) {
+				NoteShapePoint(V3MulPointByProjMatrix(corners[index], transform), furthest, reach);
+			}
+		}
+	}
+
+}//end measureModel:transform:library:depth:furthest:reach:
 
 
 //---------- entryForLSynth: -----------------------------------------[static]--

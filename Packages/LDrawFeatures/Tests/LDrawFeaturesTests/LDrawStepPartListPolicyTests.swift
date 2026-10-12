@@ -384,6 +384,114 @@ extension StepPartListStaticSettings {
             #expect(pin.assemblyScale(forZoomScale: 3) == 3)
         }
 
+        /// A host that leaves a model and comes back to it would measure the
+        /// ratio again, with the camera somewhere else.
+        @Test("The kept ratio can be read and put back")
+        func drawnScaleRatioCanBePutBack() {
+            let pin = LDrawStepPartListPageAnchor()
+
+            #expect(pin.drawnScaleRatio == 0, "none before one is noted")
+
+            pin.noteDrawnPointsPerLDU(2.5, atZoomScale: 2)
+            let kept = pin.drawnScaleRatio
+            #expect(abs(kept - 1.25) < 0.0001)
+
+            // Another model is measured in between.
+            pin.invalidate()
+            pin.noteDrawnPointsPerLDU(3, atZoomScale: 2)
+            #expect(abs(pin.assemblyScale(forZoomScale: 4) - 6) < 0.0001)
+
+            pin.invalidate()
+            #expect(pin.drawnScaleRatio == 0)
+
+            pin.drawnScaleRatio = kept
+            #expect(pin.needsDrawnScale == false, "so the host does not measure again")
+            #expect(abs(pin.assemblyScale(forZoomScale: 4) - 5) < 0.0001)
+        }
+
+        /// The host centers each step on the page and keeps the model point
+        /// that is drawn at the page's middle.
+        @Test("The page center is the anchor until the host sets one, and is forgotten with the anchor")
+        func pageCenterIsKeptUntilForgotten() {
+            let document = model([[line(from: Point3(x: 0, y: 0, z: 0), to: Point3(x: 10, y: 0, z: 0))]])
+            let other = model([[line(from: Point3(x: 100, y: 0, z: 0), to: Point3(x: 110, y: 0, z: 0))]])
+            let pin = LDrawStepPartListPageAnchor()
+
+            #expect(pin.hasPageCenter(forModel: document) == false)
+            #expect(abs(pin.pageCenter(forModel: document).x - 5.0) < 0.0001)
+
+            pin.setPageCenter(Point3(x: 40, y: 2, z: 3), forModel: document)
+            #expect(pin.hasPageCenter(forModel: document))
+            #expect(pin.pageCenter(forModel: document).x == 40)
+            #expect(abs(pin.anchor(forModel: document).x - 5.0) < 0.0001, "the anchor is still the model's middle")
+
+            // Another model has no center of its own, and takes this one's away.
+            #expect(pin.hasPageCenter(forModel: other) == false)
+            #expect(abs(pin.pageCenter(forModel: other).x - 105.0) < 0.0001)
+            #expect(pin.hasPageCenter(forModel: document) == false)
+
+            pin.setPageCenter(Point3(x: 40, y: 2, z: 3), forModel: document)
+            pin.invalidate()
+            #expect(pin.hasPageCenter(forModel: document) == false)
+            #expect(abs(pin.pageCenter(forModel: document).x - 5.0) < 0.0001)
+        }
+
+        /// While the camera is turned, the callouts are placed against the
+        /// box the assembly had on the page before the turn.
+        @Test("The assembly's box is kept on the page, and follows the page's middle and scale")
+        func assemblyRectIsKeptOnThePage() {
+            let pin = LDrawStepPartListPageAnchor()
+            let measured = Box2(origin: Point2(x: 450, y: 380), size: Size2(width: 60, height: 40))
+
+            #expect(pin.hasAssemblyRect == false)
+            #expect(pin.assemblyRect(aroundPageCenter: Point2(x: 500, y: 400), pointsPerPageInch: 100).size.width == 0)
+
+            pin.noteAssemblyRect(measured, aroundPageCenter: Point2(x: 500, y: 400), pointsPerPageInch: 100)
+            #expect(pin.hasAssemblyRect)
+
+            // The same page gives the same box back.
+            let same = pin.assemblyRect(aroundPageCenter: Point2(x: 500, y: 400), pointsPerPageInch: 100)
+            #expect(abs(same.origin.x - 450) < 0.0001)
+            #expect(abs(same.size.height - 40) < 0.0001)
+
+            // A page moved and drawn half as big takes the box with it.
+            let moved = pin.assemblyRect(aroundPageCenter: Point2(x: 300, y: 200), pointsPerPageInch: 50)
+            #expect(abs(moved.origin.x - 275) < 0.0001)
+            #expect(abs(moved.origin.y - 190) < 0.0001)
+            #expect(abs(moved.size.width - 30) < 0.0001)
+        }
+
+        @Test("The assembly's box is forgotten with the anchor, with another model, and when it has no area")
+        func assemblyRectIsForgotten() {
+            let document = model([[line(from: Point3(x: 0, y: 0, z: 0), to: Point3(x: 10, y: 0, z: 0))]])
+            let other = model([[line(from: Point3(x: 100, y: 0, z: 0), to: Point3(x: 110, y: 0, z: 0))]])
+            let pin = LDrawStepPartListPageAnchor()
+            let measured = Box2(origin: Point2(x: 450, y: 380), size: Size2(width: 60, height: 40))
+            let middle = Point2(x: 500, y: 400)
+
+            _ = pin.anchor(forModel: document)
+            pin.noteAssemblyRect(measured, aroundPageCenter: middle, pointsPerPageInch: 100)
+            pin.forgetAssemblyRect()
+            #expect(pin.hasAssemblyRect == false)
+
+            pin.noteAssemblyRect(measured, aroundPageCenter: middle, pointsPerPageInch: 100)
+            pin.invalidate()
+            #expect(pin.hasAssemblyRect == false)
+
+            _ = pin.anchor(forModel: document)
+            pin.noteAssemblyRect(measured, aroundPageCenter: middle, pointsPerPageInch: 100)
+            _ = pin.anchor(forModel: other)
+            #expect(pin.hasAssemblyRect == false)
+
+            pin.noteAssemblyRect(measured, aroundPageCenter: middle, pointsPerPageInch: 100)
+            pin.noteAssemblyRect(Box2(origin: middle, size: Size2(width: 0, height: 0)),
+                                 aroundPageCenter: middle, pointsPerPageInch: 100)
+            #expect(pin.hasAssemblyRect == false)
+
+            pin.noteAssemblyRect(measured, aroundPageCenter: middle, pointsPerPageInch: 0)
+            #expect(pin.hasAssemblyRect == false)
+        }
+
         @Test("A scaled-down part's badge takes the marker color, with the fill as its text")
         func scaledDownBadgesTakeTheMarkerColor() {
             let chrome = LDrawStepPartListPolicy.defaultChrome()
@@ -990,6 +1098,73 @@ extension StepPartListStaticSettings {
             let grown = LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: larger, inModel: document) / target
             #expect(fitter.fitPage(of: document, in: view, viewSize: larger, keepingMagnification: true))
             #expect(abs(Double(view.zoom) - Double(before) * grown) < 0.0001)
+        }
+
+        /// At ASSEM 2.0 an LDU is 2/64 inch of the page, so one point per LDU is
+        /// 32 points to the inch.
+        @Test("The page's scale in a view is read from its zoom and the scale kept with the anchor")
+        func thePageScaleIsReadFromTheView() {
+            let document = model([[modelScale(.assembly, 2.0)]])
+            let fitter = LDrawStepPartListPageFitter(pageAnchor: LDrawStepPartListPageAnchor())
+            let view = FakePageView()
+
+            // The view draws 1.25 times as big as its zoom says, and nothing
+            // has measured that yet.
+            #expect(fitter.pageAnchor.needsDrawnScale)
+            #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 40) < 0.0001)
+            #expect(abs(fitter.pageAnchor.drawnScaleRatio - 1.25) < 0.0001, "measured on the way")
+
+            view.zoom = 300
+            #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 120) < 0.0001)
+
+            // Once kept, the ratio is not measured again.
+            view.foreshortening = 2
+            #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 120) < 0.0001)
+        }
+
+        @Test("Zooming to a page scale gives that scale in one go")
+        func thePageIsZoomedToAScale() {
+            let document = model([[modelScale(.assembly, 2.0)]])
+            let fitter = LDrawStepPartListPageFitter(pageAnchor: LDrawStepPartListPageAnchor())
+            let view = FakePageView()
+
+            #expect(fitter.showPage(of: document, in: view, atPointsPerPageInch: 100))
+            #expect(abs(Double(view.zoom) - 250) < 0.0001)
+            #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 100) < 0.0001)
+            #expect(view.scrolledTo == nil, "the host scrolls")
+
+            // A scale that is not above 0 leaves the zoom alone.
+            #expect(fitter.showPage(of: document, in: view, atPointsPerPageInch: 0) == false)
+            #expect(abs(Double(view.zoom) - 250) < 0.0001)
+        }
+
+        /// What the host does when another model goes on display: the anchor is
+        /// measured again, and the zoom makes up for the new model's scale.
+        @Test("Another model's page is shown at the size the last one had")
+        func anotherModelKeepsThePageSize() {
+            let parent = model([[modelScale(.assembly, 2.0)]])
+            let submodel = model([[modelScale(.assembly, 0.5)]])
+            let fitter = LDrawStepPartListPageFitter(pageAnchor: LDrawStepPartListPageAnchor())
+            let view = FakePageView()
+
+            view.zoom = 180
+            let held = fitter.pointsPerPageInch(of: parent, in: view)
+            let parentRatio = fitter.pageAnchor.drawnScaleRatio
+
+            // The submodel is nearer the camera.
+            fitter.pageAnchor.invalidate()
+            view.foreshortening = 1.6
+
+            #expect(abs(fitter.pointsPerPageInch(of: submodel, in: view) - held) > 1, "a different size at first")
+            #expect(fitter.showPage(of: submodel, in: view, atPointsPerPageInch: held))
+            #expect(abs(fitter.pointsPerPageInch(of: submodel, in: view) - held) < 0.0001)
+
+            // Back again, with the ratio the parent had: the zoom it had too.
+            fitter.pageAnchor.invalidate()
+            fitter.pageAnchor.drawnScaleRatio = parentRatio
+
+            #expect(fitter.showPage(of: parent, in: view, atPointsPerPageInch: held))
+            #expect(abs(Double(view.zoom) - 180) < 0.0001)
         }
 
         @Test("A document that does not measure its page is not fitted")

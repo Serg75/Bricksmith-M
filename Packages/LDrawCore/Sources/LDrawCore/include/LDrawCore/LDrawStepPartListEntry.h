@@ -58,8 +58,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// The reference is to a submodel or a peer file rather than a catalog part.
 @property (nonatomic, readonly) BOOL isSubmodel;
 
-/// Corners of each part's box, tighter than `modelBounds`, packed as `Point3`
-/// values. Nil when there are none.
+/// The points each part inside reaches furthest out to, tighter than
+/// `modelBounds`, packed as `Point3` values. Nil when there are none.
 @property (nonatomic, readonly, copy, nullable) NSData *outlinePoints;
 
 /// The turn this part gets before it is drawn in the list: the part's line in
@@ -79,6 +79,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// A copy of this entry outlined by these points. See `outlinePoints`.
 - (LDrawStepPartListEntry *) entryWithOutlinePoints:(nullable NSData *)outlinePoints;
+
+/// A copy of this entry in another color. For a part in the main color, which
+/// takes the color its submodel is placed in.
+- (LDrawStepPartListEntry *) entryWithColor:(nullable LDrawColor *)color;
 
 /// A copy of this entry turned by this matrix. See `listOrientation`.
 - (LDrawStepPartListEntry *) entryWithListOrientation:(Matrix4)listOrientation;

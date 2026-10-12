@@ -594,6 +594,217 @@ extension StepPartListStaticSettings {
             #expect(submodelEntry.quantity == 1)
         }
 
+        // MARK: - Callouts
+
+        private func lpub<Command: LPubCommand>(_ text: String) -> Command {
+            let command = Command()
+            command.lPubCommandString = text
+            return command
+        }
+
+        private func calloutBegin(_ mode: String? = nil) -> LPubCallout {
+            lpub("CALLOUT BEGIN" + (mode.map { " \($0)" } ?? ""))
+        }
+
+        private func calloutEnd() -> LPubCallout {
+            lpub("CALLOUT END")
+        }
+
+        private func perStep(_ value: String) -> LPubCalloutPliPerStep {
+            lpub("CALLOUT PLI PER_STEP \(value)")
+        }
+
+        /// Builds main.ldr and sub.ldr. The main model's only step holds the given
+        /// directives, and sub.ldr builds two 3003.dat, then one 3004.dat.
+        private func calloutFixture(_ directives: [LDrawDirective]) -> (file: LDrawFile, step: LDrawStep) {
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let sub = submodel("sub.ldr", in: file)
+
+            addStep(to: sub, [part("3003.dat"), part("3003.dat")])
+            addStep(to: sub, [part("3004.dat")])
+
+            return (file, addStep(to: main, directives))
+        }
+
+        private func quantities(_ entries: [LDrawStepPartListEntry]) -> [String: UInt] {
+            Dictionary(uniqueKeysWithValues: entries.map { ($0.partName, $0.quantity) })
+        }
+
+        /// LPub3D gives each step in a callout's box its own list, so the step
+        /// that holds the callout lists none of them.
+        @Test("A callout keeps its parts to itself unless the file says otherwise")
+        func calloutPartsStayInTheBoxByDefault() {
+            let fixture = calloutFixture([calloutBegin(), part("sub.ldr"), calloutEnd(), part("3001.dat")])
+
+            #expect(names(LDrawStepPartList.entries(forStep: fixture.step)) == ["3001.dat"])
+        }
+
+        @Test("With PER_STEP FALSE a callout's parts are listed in the step that holds it")
+        func calloutPartsJoinTheStepsList() {
+            let fixture = calloutFixture([perStep("FALSE"),
+                                          calloutBegin(), part("sub.ldr"), calloutEnd(),
+                                          part("3001.dat")])
+
+            let result = LDrawStepPartList.entries(forStep: fixture.step)
+
+            #expect(quantities(result) == ["3001.dat": 1, "3003.dat": 2, "3004.dat": 1])
+        }
+
+        @Test("Each instance in the callout adds the submodel's parts again")
+        func calloutInstancesMultiply() {
+            let fixture = calloutFixture([perStep("FALSE"),
+                                          calloutBegin(), part("sub.ldr"), part("sub.ldr"), calloutEnd()])
+
+            let result = LDrawStepPartList.entries(forStep: fixture.step)
+
+            #expect(quantities(result) == ["3003.dat": 4, "3004.dat": 2])
+        }
+
+        /// The box builds the submodel from loose parts, so the step takes the
+        /// parts and not the submodel. LPub3D's pages list it this way.
+        @Test("A submodel built in a callout's box is no row of the step's list")
+        func calledOutSubmodelIsNoRow() {
+            LDrawStepPartList.setIncludesSubmodels(true)
+
+            let handedOver = calloutFixture([perStep("FALSE"), calloutBegin(), part("sub.ldr"), calloutEnd()])
+            #expect(quantities(LDrawStepPartList.entries(forStep: handedOver.step)) == ["3003.dat": 2, "3004.dat": 1])
+
+            let kept = calloutFixture([calloutBegin(), part("sub.ldr"), calloutEnd()])
+            #expect(LDrawStepPartList.entries(forStep: kept.step).isEmpty)
+
+            let beside = calloutFixture([calloutBegin(), part("sub.ldr"), calloutEnd(), part("sub.ldr")])
+            #expect(quantities(LDrawStepPartList.entries(forStep: beside.step)) == ["sub.ldr": 1])
+        }
+
+        /// It is built on pages of its own, so here it is something to pick up,
+        /// like any other placed submodel.
+        @Test("A submodel a callout shows finished is still a row")
+        func finishedCalloutSubmodelIsARow() {
+            LDrawStepPartList.setIncludesSubmodels(true)
+
+            for mode in ["ASSEMBLED", "ROTATED"] {
+                let fixture = calloutFixture([perStep("FALSE"), calloutBegin(mode), part("sub.ldr"), calloutEnd()])
+
+                #expect(quantities(LDrawStepPartList.entries(forStep: fixture.step)) == ["sub.ldr": 1], "\(mode)")
+            }
+        }
+
+        @Test("A submodel placed outside the callout is not opened")
+        func onlyTheCalloutIsOpened() {
+            let fixture = calloutFixture([perStep("FALSE"),
+                                          calloutBegin(), part("3001.dat"), calloutEnd(),
+                                          part("sub.ldr")])
+
+            #expect(names(LDrawStepPartList.entries(forStep: fixture.step)) == ["3001.dat"])
+        }
+
+        /// An assembled or rotated callout shows the finished submodel, and
+        /// LPub3D never lists its parts in the parent.
+        @Test("Only a callout that shows its steps hands over its parts")
+        func assembledCalloutsKeepTheirParts() {
+            for mode in ["ASSEMBLED", "ROTATED"] {
+                let fixture = calloutFixture([perStep("FALSE"), calloutBegin(mode), part("sub.ldr"), calloutEnd()])
+
+                #expect(LDrawStepPartList.entries(forStep: fixture.step).isEmpty, "\(mode)")
+            }
+        }
+
+        @Test("A part in the main color takes the color the callout's submodel is placed in")
+        func calloutPartsInheritThePlacedColor() throws {
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let sub = submodel("sub.ldr", in: file)
+
+            addStep(to: sub, [part("3003.dat", 16), part("3004.dat", Self.green)])
+            let step = addStep(to: main, [perStep("FALSE"),
+                                          calloutBegin(), part("sub.ldr", Self.blue), calloutEnd()])
+
+            let result = LDrawStepPartList.entries(forStep: step)
+            let inherited = try #require(result.first { $0.partName == "3003.dat" })
+            let own = try #require(result.first { $0.partName == "3004.dat" })
+
+            #expect(inherited.color?.colorCode().rawValue == Self.blue)
+            #expect(own.color?.colorCode().rawValue == Self.green)
+        }
+
+        @Test("An ignored callout hands over nothing, and its submodel's own ranges still apply")
+        func ignoreRangesApplyToCallouts() {
+            let ignored = calloutFixture([perStep("FALSE"),
+                                          ignoreBegin(.part),
+                                          calloutBegin(), part("sub.ldr"), calloutEnd(),
+                                          ignoreEnd(.part)])
+            #expect(LDrawStepPartList.entries(forStep: ignored.step).isEmpty)
+
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let sub = submodel("sub.ldr", in: file)
+            addStep(to: sub, [part("3003.dat"), ignoreBegin(), part("3004.dat"), ignoreEnd()])
+            let step = addStep(to: main, [perStep("FALSE"), calloutBegin(), part("sub.ldr"), calloutEnd()])
+
+            #expect(names(LDrawStepPartList.entries(forStep: step)) == ["3003.dat"])
+        }
+
+        @Test("A callout inside the called-out submodel hands its parts up too")
+        func nestedCalloutsFlowUp() {
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let sub = submodel("sub.ldr", in: file)
+            let inner = submodel("inner.ldr", in: file)
+
+            addStep(to: inner, [part("3005.dat")])
+            addStep(to: sub, [part("3003.dat"), calloutBegin(), part("inner.ldr"), calloutEnd()])
+            let step = addStep(to: main, [perStep("GLOBAL FALSE"), calloutBegin(), part("sub.ldr"), calloutEnd()])
+
+            #expect(quantities(LDrawStepPartList.entries(forStep: step)) == ["3003.dat": 1, "3005.dat": 1])
+        }
+
+        @Test("A LOCAL PER_STEP holds for its own step only")
+        func localPerStepEndsWithItsStep() {
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let sub = submodel("sub.ldr", in: file)
+
+            addStep(to: sub, [part("3003.dat")])
+            let first = addStep(to: main, [perStep("LOCAL FALSE"), calloutBegin(), part("sub.ldr"), calloutEnd()])
+            let second = addStep(to: main, [calloutBegin(), part("sub.ldr"), calloutEnd()])
+
+            #expect(names(LDrawStepPartList.entries(forStep: first)) == ["3003.dat"])
+            #expect(LDrawStepPartList.entries(forStep: second).isEmpty)
+        }
+
+        @Test("Two callouts of one step each say who lists their parts")
+        func perStepIsReadForEachCallout() {
+            let fixture = calloutFixture([calloutBegin(), part("sub.ldr"), perStep("FALSE"), calloutEnd(),
+                                          calloutBegin(), part("sub.ldr"), calloutEnd()])
+
+            // The first callout's parts, once. The second keeps its own.
+            #expect(quantities(LDrawStepPartList.entries(forStep: fixture.step)) == ["3003.dat": 2, "3004.dat": 1])
+            #expect(LDrawStepCallout.callouts(forStep: fixture.step).map(\.listsOwnParts) == [false, true])
+        }
+
+        @Test("A PER_STEP line after a callout's END does not reach back into it")
+        func perStepAfterTheCallout() {
+            let fixture = calloutFixture([calloutBegin(), part("sub.ldr"), calloutEnd(), perStep("FALSE")])
+
+            #expect(LDrawStepPartList.entries(forStep: fixture.step).isEmpty)
+            #expect(LDrawStepCallout.callouts(forStep: fixture.step).first?.listsOwnParts == true)
+        }
+
+        @Test("Submodels that call each other out end the walk")
+        func calloutLoopEnds() {
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let sub = submodel("sub.ldr", in: file)
+
+            addStep(to: sub, [part("3003.dat"), calloutBegin(), part("main.ldr"), calloutEnd()])
+            let step = addStep(to: main, [perStep("FALSE"),
+                                          part("3001.dat"),
+                                          calloutBegin(), part("sub.ldr"), calloutEnd()])
+
+            #expect(quantities(LDrawStepPartList.entries(forStep: step)) == ["3001.dat": 1, "3003.dat": 1])
+        }
+
         // MARK: - Scope
 
         @Test("Only the visible step is listed, not the ones before it")

@@ -4,9 +4,10 @@
 //
 // Purpose:		The framed parts list that hovers over the main 3D viewport.
 //
-// Notes:		Three layers, bottom to top: this view draws the frame, a nested
-//				3D view draws the part icons, and a chrome view draws the labels
-//				over them.
+// Notes:		Four layers, bottom to top: this view draws the frame, a nested
+//				3D view draws the part icons, a chrome view draws the labels
+//				over them, and a top view draws the callouts. What they draw
+//				is worked out in LDrawStepRendering.
 //
 // Created by Sergey Slobodenyuk on 2026-09-10.
 //
@@ -18,6 +19,12 @@
 #import <LDrawFeatures/LDrawStepPartListLayout.h>
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
 #import <LDrawFeatures/LDrawStepPartListResizeTracker.h>
+#import <LDrawStepRendering/LDrawStepCalloutPictureStore.h>
+#import <LDrawStepRendering/LDrawStepOverlayRenderer.h>
+
+#ifdef METAL
+#import <LDrawRenderMetal/LDrawRendererMTL.h>
+#endif
 
 #import "LDrawView.h"
 #import "LDrawViewerContainer.h"
@@ -46,19 +53,68 @@ static void ClipViewToBounds(NSView *view)
 }//end ClipViewToBounds
 
 
-@interface StepPartListView ()
+@class StepPartListTopView;
+
+@interface StepPartListView () <LDrawStepCalloutPictureSource, LDrawStepCalloutPictureStoreDelegate>
 
 @property (nonatomic, strong, nullable) LDrawViewerContainer			*iconContainer;
 @property (nonatomic, strong, nullable) StepPartListChromeView			*chromeView;
+/// Covers the overlay above the list's two views. The callouts are drawn in
+/// it, so a box that reaches over the list is not cut off by the list.
+@property (nonatomic, strong) StepPartListTopView						*topView;
 /// What is on show. Nil when there is nothing.
 @property (nonatomic, strong, nullable) LDrawStepPartListPresentation	*presentation;
 /// The tint, worked out once from the viewport's color preference. Nil until
 /// asked for, and cleared when that preference changes.
 @property (nonatomic, strong, nullable) NSColor							*cachedListBackgroundColor;
+/// Draws the frame and the callouts, and keeps the callouts' pictures.
+@property (nonatomic, strong) LDrawStepOverlayRenderer					*renderer;
+@property (nonatomic, strong) LDrawStepCalloutPictureStore				*pictureStore;
 
 // Resize tracking
 /// The press in progress on the frame's controls.
 @property (nonatomic, strong) LDrawStepPartListResizeTracker			*resizeTracker;
+
+- (void) drawTopContent;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
+/// @class		StepPartListTopView
+///
+/// @abstract	The view on top of everything else in the overlay. The overlay
+///				draws in it what must not be covered by the parts list.
+///
+//------------------------------------------------------------------------------
+@interface StepPartListTopView : NSView
+
+@property (nonatomic, weak, nullable) StepPartListView *overlay;
+
+@end
+
+
+@implementation StepPartListTopView
+
+//========== isFlipped =========================================================
+///
+/// @abstract	Flipped like the overlay, so the two share coordinates.
+///
+//==============================================================================
+- (BOOL) isFlipped
+{
+	return YES;
+
+}//end isFlipped
+
+
+//========== drawRect: =========================================================
+- (void) drawRect:(NSRect)dirtyRect
+{
+	[self.overlay drawTopContent];
+
+}//end drawRect:
 
 @end
 
@@ -81,7 +137,21 @@ static void ClipViewToBounds(NSView *view)
 	if (self) {
 		self->_resizeTracker = [[LDrawStepPartListResizeTracker alloc] init];
 
+		self->_pictureStore = [[LDrawStepCalloutPictureStore alloc] init];
+		[self->_pictureStore setSource:self];
+		[self->_pictureStore setDelegate:self];
+
+		self->_renderer = [[LDrawStepOverlayRenderer alloc] init];
+		[self->_renderer setPictureStore:self->_pictureStore];
+		[self->_renderer setOverflowFormat:NSLocalizedString(@"StepPartListOverflow", nil)];
+		[self->_renderer setStepCountFormat:NSLocalizedString(@"StepCalloutSteps", nil)];
+
 		ClipViewToBounds(self);
+
+		self->_topView = [[StepPartListTopView alloc] initWithFrame:[self bounds]];
+		[self->_topView setOverlay:self];
+		[self->_topView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+		[self addSubview:self->_topView];
 
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(backgroundColorDidChange:)
@@ -158,6 +228,12 @@ static void ClipViewToBounds(NSView *view)
 - (void) showPresentation:(nullable LDrawStepPartListPresentation *)presentation
 {
 	self.presentation = presentation;
+	self.renderer.presentation = presentation;
+
+	// Before the list, which returns early when the step has none. While a
+	// zoom runs, the pictures on show are stretched.
+	[self.pictureStore setScale:[self pictureScale]];
+	[self.pictureStore makePicturesForBoxes:presentation.calloutBoxes ?: @[] waitingForZoom:YES];
 
 	[self.chromeView setChrome:[self chrome]];
 	[self setNeedsDisplay:YES];
@@ -226,7 +302,7 @@ static void ClipViewToBounds(NSView *view)
 	// No clip here: the 3D view always fills the container exactly, and a layer
 	// on the container can leave its surface blank. The overlay clips instead.
 	[container setShowsScrollbars:NO];
-	[self addSubview:container];
+	[self addSubview:container positioned:NSWindowBelow relativeTo:self.topView];
 	self.iconContainer = container;
 
 	LDrawView *iconView = [container glView];
@@ -245,8 +321,9 @@ static void ClipViewToBounds(NSView *view)
 
 	StepPartListChromeView *chromeView = [[StepPartListChromeView alloc] initWithFrame:contentRect];
 
+	// Over the icons, under the top view.
 	[chromeView setChrome:[self chrome]];
-	[self addSubview:chromeView];
+	[self addSubview:chromeView positioned:NSWindowBelow relativeTo:self.topView];
 	self.chromeView = chromeView;
 
 }//end buildContentLayersWithFrame:
@@ -279,102 +356,59 @@ static void ClipViewToBounds(NSView *view)
 
 //========== drawRect: =========================================================
 ///
-/// @abstract	Draws the frame's background, border and pins.
-///
-/// @discussion	The nested 3D view covers the icon area and clears to the same
-///				color, so this fill only shows in the padding.
+/// @abstract	Draws the page, and the frame's background, border and pins.
 ///
 //==============================================================================
 - (void) drawRect:(NSRect)dirtyRect
 {
-	NSRect frameRect = StepPartListRectFromBox(self.presentation.frameRect);
-
-	[self drawPageOutline];
-
-	if (NSIsEmptyRect(frameRect)) {
-		return;
-	}
-
-	// Inset by half the line, so the border is drawn inside the frame.
-	LDrawStepPartListChrome	chrome	= [self chrome];
-	CGFloat					inset	= chrome.borderWidth / 2.0;
-	NSBezierPath			*path	= [NSBezierPath bezierPathWithRoundedRect:NSInsetRect(frameRect, inset, inset)
-																	  xRadius:chrome.cornerRadius
-																	  yRadius:chrome.cornerRadius];
-
-	[[self listBackgroundColor] set];
-	[path fill];
-
-	[StepPartListColorFromRGBA(chrome.borderRGBA) set];
-	[path setLineWidth:chrome.borderWidth];
-	[path stroke];
-
-	[self drawPinForAxis:LPubPliAxisWidth];
-	[self drawPinForAxis:LPubPliAxisHeight];
+	[[self rendererForDrawing] drawPageAndFrameInContext:[[NSGraphicsContext currentContext] CGContext]
+												viewSize:[self viewSize]];
 
 }//end drawRect:
 
 
-//========== drawPageOutline ===================================================
+//========== drawTopContent ====================================================
 ///
-/// @abstract	Draws the page LPub3D would print this step on, and dims what
-///				falls outside it.
-///
-/// @discussion	Dashed and pale, so it reads as a margin mark and not as part
-///				of the model. Dimming the outside shows which side is the paper.
+/// @abstract	Draws what goes on top of the parts list: the callouts, and the
+///				button that leads back. The top view asks for it.
 ///
 //==============================================================================
-- (void) drawPageOutline
+- (void) drawTopContent
 {
-	NSRect					pageRect	= StepPartListRectFromBox(self.presentation.pageRect);
-	LDrawStepPartListChrome	chrome		= [self chrome];
+	[[self rendererForDrawing] drawCalloutsInContext:[[NSGraphicsContext currentContext] CGContext]
+											viewSize:[self viewSize]];
 
-	if (NSIsEmptyRect(pageRect)) {
-		return;
-	}
-
-	// The whole view with the page cut out of it, which is what the even-odd
-	// rule does with two nested rectangles.
-	NSBezierPath *surround = [NSBezierPath bezierPathWithRect:self.bounds];
-
-	[surround appendBezierPathWithRect:pageRect];
-	[surround setWindingRule:NSWindingRuleEvenOdd];
-
-	[StepPartListColorFromRGBA(chrome.pageSurroundRGBA) set];
-	[surround fill];
-
-	CGFloat			inset	= chrome.pageLineWidth / 2.0;
-	CGFloat			dashes[]= { chrome.pageDashLength, chrome.pageDashLength };
-	NSBezierPath	*path	= [NSBezierPath bezierPathWithRect:NSInsetRect(pageRect, inset, inset)];
-
-	[path setLineWidth:chrome.pageLineWidth];
-	[path setLineDash:dashes count:2 phase:0.0];
-
-	[StepPartListColorFromRGBA(chrome.pageRGBA) set];
-	[path stroke];
-
-}//end drawPageOutline
+}//end drawTopContent
 
 
-//========== drawPinForAxis: ===================================================
+//========== rendererForDrawing ================================================
 ///
-/// @abstract	Draws the pin on an axis this step sets the size of itself.
+/// @abstract	The renderer, with the colors only AppKit knows. They are read
+///				for each draw, because they follow the system's appearance.
 ///
 //==============================================================================
-- (void) drawPinForAxis:(LPubPliAxis)axis
+- (LDrawStepOverlayRenderer *) rendererForDrawing
 {
-	if ([self isAxisPinned:axis] == NO) {
-		return;
-	}
+	self.renderer.listBackgroundColor	= [[self listBackgroundColor] CGColor];
+	self.renderer.pinColor				= [[NSColor controlAccentColor] CGColor];
 
-	NSRect			rect	= StepPartListRectFromBox([LDrawStepPartListPolicy pinRectForAxis:axis
-																					  inFrame:[self frameBox]]);
-	NSBezierPath	*path	= [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(rect, 1.0, 1.0)];
+	return self.renderer;
 
-	[[NSColor controlAccentColor] set];
-	[path fill];
+}//end rendererForDrawing
 
-}//end drawPinForAxis:
+
+//========== setNeedsDisplay: ==================================================
+///
+/// @abstract	Marks the top view as well. It is drawn apart from the overlay,
+///				so marking the overlay alone leaves it as it was.
+///
+//==============================================================================
+- (void) setNeedsDisplay:(BOOL)needsDisplay
+{
+	[super setNeedsDisplay:needsDisplay];
+	[self.topView setNeedsDisplay:needsDisplay];
+
+}//end setNeedsDisplay:
 
 
 //========== listBackgroundColor ===============================================
@@ -428,6 +462,122 @@ static void ClipViewToBounds(NSView *view)
 	[self setNeedsDisplay:YES];
 
 }//end applyListBackgroundColor
+
+
+// MARK: - CALLOUTS -
+
+
+//========== calloutArrows =====================================================
+- (NSArray<NSData *> *) calloutArrows
+{
+	return self.renderer.calloutArrows;
+
+}//end calloutArrows
+
+
+//========== setCalloutArrows: =================================================
+- (void) setCalloutArrows:(NSArray<NSData *> *)arrows
+{
+	self.renderer.calloutArrows = arrows;
+	[self setNeedsDisplay:YES];
+
+}//end setCalloutArrows:
+
+
+//========== discardCalloutPictures ============================================
+- (void) discardCalloutPictures
+{
+	[self.pictureStore discardPictures];
+
+}//end discardCalloutPictures
+
+
+//========== pictureScale ======================================================
+///
+/// @abstract	Pixels per point of the screen the overlay is on.
+///
+//==============================================================================
+- (CGFloat) pictureScale
+{
+	CGFloat scale = [[self window] backingScaleFactor];
+
+	return (scale > 0.0) ? scale : 2.0;
+
+}//end pictureScale
+
+
+//========== newImageOfModel:center:zoomPercentage:size:scale: =================
+///
+/// @abstract	Draws a callout's picture off screen. The OpenGL renderer has no
+///				way to, so there a box names its submodel instead.
+///
+//==============================================================================
+- (nullable CGImageRef) newImageOfModel:(LDrawModel *)model
+								 center:(Point3)center
+						 zoomPercentage:(double)zoomPercentage
+								   size:(Size2)size
+								  scale:(double)scale
+{
+#ifdef METAL
+	return [LDrawRenderer newImageOfDirective:model
+									   center:center
+							   zoomPercentage:zoomPercentage
+										 size:CGSizeMake(size.width, size.height)
+										scale:scale];
+#else
+	return NULL;
+#endif
+
+}//end newImageOfModel:center:zoomPercentage:size:scale:
+
+
+//========== calloutPictureStoreDidUpdatePictures: =============================
+- (void) calloutPictureStoreDidUpdatePictures:(LDrawStepCalloutPictureStore *)store
+{
+	[self setNeedsDisplay:YES];
+
+}//end calloutPictureStoreDidUpdatePictures:
+
+
+//========== calloutPictureStoreShouldUpdatePictures: ==========================
+///
+/// @abstract	NO while the overlay is in no window, where no picture can be
+///				shown.
+///
+//==============================================================================
+- (BOOL) calloutPictureStoreShouldUpdatePictures:(LDrawStepCalloutPictureStore *)store
+{
+	return [self window] != nil;
+
+}//end calloutPictureStoreShouldUpdatePictures:
+
+
+// MARK: - THE WAY BACK -
+
+
+//========== returnTitle =======================================================
+- (NSString *) returnTitle
+{
+	return self.renderer.returnTitle;
+
+}//end returnTitle
+
+
+//========== setReturnTitle: ===================================================
+- (void) setReturnTitle:(NSString *)title
+{
+	self.renderer.returnTitle = title;
+	[self setNeedsDisplay:YES];
+
+}//end setReturnTitle:
+
+
+//========== returnButtonRect ==================================================
+- (NSRect) returnButtonRect
+{
+	return StepPartListRectFromBox([self.renderer returnButtonRectForViewSize:[self viewSize]]);
+
+}//end returnButtonRect
 
 
 // MARK: - INTERACTION -
@@ -545,12 +695,12 @@ static void ClipViewToBounds(NSView *view)
 }//end chrome
 
 
-//========== isAxisPinned: =====================================================
-- (BOOL) isAxisPinned:(LPubPliAxis)axis
+//========== viewSize ==========================================================
+- (Size2) viewSize
 {
-	return (axis == LPubPliAxisWidth) ? self.presentation.widthPinned : self.presentation.heightPinned;
+	return V2MakeSize(NSWidth(self.bounds), NSHeight(self.bounds));
 
-}//end isAxisPinned:
+}//end viewSize
 
 
 //========== controlAtPoint: ===================================================

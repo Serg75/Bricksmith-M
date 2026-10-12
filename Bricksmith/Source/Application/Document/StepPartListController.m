@@ -4,30 +4,44 @@
 //
 // Purpose:		Owns the step parts list overlay for one document.
 //
-// Notes:		The decisions are made in LDrawFeatures. What is left here is
-//				the AppKit part: attaching a view, watching notifications and
-//				coalescing reloads.
+// Notes:		The decisions are made in the packages: the layout in
+//				LDrawFeatures and LDrawStepRendering, the edits and the
+//				gestures in LDrawStepEditing. What is left here is the AppKit
+//				part: attaching a view, watching notifications and events,
+//				menus, cursors and coalescing reloads.
 //
 // Created by Sergey Slobodenyuk on 2026-09-10.
 //
 //==============================================================================
 #import "StepPartListController.h"
 
-#import <LDrawCore/LDrawDirective.h>
-#import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LPubPliConstrain.h>
+
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
-#import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
+
+#import <LDrawStepEditing/LDrawStepCalloutEdit.h>
+#import <LDrawStepEditing/LDrawStepCalloutMenuItem.h>
+#import <LDrawStepEditing/LDrawStepCalloutTracker.h>
+
+#import <LDrawStepRendering/LDrawStepOverlayPresenter.h>
 
 #import "LDrawView.h"
 #import "OverlayViewCategory.h"
 #import "StepPartListView.h"
+
+
+// LDrawView already has the camera calls the overlay's layout needs.
+@interface LDrawView (StepOverlayCamera) <LDrawStepOverlayCamera>
+@end
+
+@implementation LDrawView (StepOverlayCamera)
+@end
 
 
 @interface StepPartListController () <StepPartListViewDelegate>
@@ -36,15 +50,12 @@
 @property (nonatomic, weak, nullable) LDrawView				*hostView;
 @property (nonatomic, strong, nullable) StepPartListView	*overlayView;
 
-/// During a drag the frame is packed from this instead of the document, so
-/// nothing is written until the drag is let go.
-@property (nonatomic) BOOL				hasPreview;
-@property (nonatomic) LPubPliAxis		previewAxis;
-@property (nonatomic) double			previewInches;
+/// Lays the step out against the viewport's camera, and keeps a drag as a
+/// preview until it is let go.
+@property (nonatomic, strong) LDrawStepOverlayPresenter		*presenter;
 
-/// What the last reload showed. Its page state gates the mouse and the
-/// camera, so they need no lookup of their own.
-@property (nonatomic, strong, nullable) LDrawStepPartListPresentation	*presentation;
+/// Follows a press on a callout's box or on the button that leads back.
+@property (nonatomic, strong) LDrawStepCalloutTracker		*calloutTracker;
 
 /// The document window's events, watched while the overlay is attached.
 @property (nonatomic, strong, nullable) id	eventMonitor;
@@ -73,7 +84,8 @@
 {
 	self = [super init];
 	if (self) {
-		self->_pageAnchor = [[LDrawStepPartListPageAnchor alloc] init];
+		self->_presenter		= [[LDrawStepOverlayPresenter alloc] init];
+		self->_calloutTracker	= [[LDrawStepCalloutTracker alloc] init];
 		[self subscribeToChanges];
 	}
 	return self;
@@ -81,10 +93,37 @@
 }//end init
 
 
+//========== dealloc ===========================================================
+///
+/// @abstract	Takes the overlay down with the controller.
+///
+/// @discussion	A document can be released on another thread, and its controller
+///				with it. A window and an event monitor are for the main thread
+///				alone, so there they are handed to it. The block holds what it
+///				needs and not the controller, which is going away.
+///
+//==============================================================================
 - (void) dealloc
 {
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	[self detach];
+
+	if ([NSThread isMainThread]) {
+		[self detach];
+		return;
+	}
+
+	LDrawView			*hostView	= self.hostView;
+	StepPartListView	*overlay	= self.overlayView;
+	id					 monitor	= self.eventMonitor;
+
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (monitor != nil) {
+			[NSEvent removeMonitor:monitor];
+		}
+		if (overlay != nil) {
+			[hostView removeOverlayView:overlay];
+		}
+	});
 
 }//end dealloc
 
@@ -115,8 +154,10 @@
 	}
 
 	self.hostView = view;
+	self.presenter.camera = view;
 	self.overlayView = [[StepPartListView alloc] initWithFrame:[view bounds]];
 	self.overlayView.delegate = self;
+	self.overlayView.returnTitle = self.returnTitle;
 
 	// The overlay is 1x1 until its window starts following the viewport, and
 	// the layout depends on that size, so repack whenever it changes.
@@ -169,9 +210,11 @@
 		}
 	}
 
-	self.overlayView	= nil;
-	self.hostView		= nil;
-	self.presentation	= nil;
+	self.overlayView		= nil;
+	self.hostView			= nil;
+	self.presenter.camera	= nil;
+	[self.presenter reset];
+	[self showLayoutInTracker];
 
 }//end detach
 
@@ -183,10 +226,44 @@
 {
 	if (self->_model != model) {
 		self->_model = model;
+		self.presenter.model = model;
+
+		// The pictures were kept through changes to the old model alone.
+		[self.overlayView discardCalloutPictures];
 		[self setNeedsReload];
 	}
 
 }//end setModel:
+
+
+- (void) setReturnTitle:(NSString *)title
+{
+	self->_returnTitle = [title copy];
+	self.overlayView.returnTitle = title;
+	[self showLayoutInTracker];
+
+}//end setReturnTitle:
+
+
+- (LDrawStepPartListPageAnchor *) pageAnchor
+{
+	return self.presenter.pageAnchor;
+
+}//end pageAnchor
+
+
+- (void) setPageAnchor:(LDrawStepPartListPageAnchor *)pageAnchor
+{
+	self.presenter.pageAnchor = pageAnchor;
+
+}//end setPageAnchor:
+
+
+- (LDrawStepPartListPresentation *) presentation
+{
+	return self.presenter.presentation;
+
+}//end presentation
 
 
 // MARK: - RELOADING -
@@ -202,21 +279,48 @@
 	// This reload covers any coalesced one still queued.
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reload) object:nil];
 
-	StepPartListView *overlay = self.overlayView;
+	StepPartListView			*overlay	= self.overlayView;
+	LDrawStepOverlayPresenter	*presenter	= self.presenter;
+	LDrawStepCalloutTracker		*tracker	= self.calloutTracker;
 
 	if (overlay == nil) {
 		return;
 	}
 
-	// One walk of the file for all the lookups of this redraw.
-	[LDrawStepPartListPolicy performWithCachedLookups:^{
-		self.presentation = [LDrawStepPartListPresentation presentationForModel:self.model
-																		   host:[self hostState]];
-	}];
+	presenter.viewSize = [self overlaySize];
 
-	[overlay showPresentation:self.presentation];
+	// A box that is being dragged is laid out where it is held.
+	presenter.hasCalloutPreview		= tracker.isDragging;
+	presenter.calloutPreviewBox		= tracker.draggedBoxIndex;
+	presenter.calloutPreviewPoint	= tracker.dragOrigin;
+
+	[presenter reload];
+
+	// The arrows first, so the first draw already has them.
+	[overlay setCalloutArrows:presenter.calloutArrows];
+	[overlay showPresentation:presenter.presentation];
+
+	[self showLayoutInTracker];
 
 }//end reload
+
+
+//========== overlaySize =======================================================
+- (Size2) overlaySize
+{
+	NSSize size = self.overlayView.bounds.size;
+
+	return V2MakeSize(size.width, size.height);
+
+}//end overlaySize
+
+
+//========== centerPageOnStep ==================================================
+- (void) centerPageOnStep
+{
+	[self.presenter centerPageOnStep];
+
+}//end centerPageOnStep
 
 
 // MARK: - RESIZING -
@@ -232,9 +336,9 @@
 	   previewingAxis:(LPubPliAxis)axis
 			 atInches:(double)inches
 {
-	self.hasPreview		= YES;
-	self.previewAxis	= axis;
-	self.previewInches	= inches;
+	self.presenter.hasSizePreview	= YES;
+	self.presenter.previewAxis		= axis;
+	self.presenter.previewInches	= inches;
 
 	// At once, not coalesced: the frame has to keep up with the pointer.
 	[self reload];
@@ -250,14 +354,14 @@
 //==============================================================================
 - (void) partListViewDidFinishResizing:(StepPartListView *)view
 {
-	if (self.hasPreview == NO) {
+	if (self.presenter.hasSizePreview == NO) {
 		return;
 	}
 
 	LDrawStep				*step	= [self.model visibleStep];
 	LDrawStepPartListEdit	*edit	= [self previewEdit];
 
-	self.hasPreview = NO;
+	self.presenter.hasSizePreview = NO;
 
 	[self.delegate stepPartListController:self applyEdit:edit toStep:step];
 	[self reload];
@@ -273,7 +377,7 @@
 //==============================================================================
 - (void) partListViewDidCancelResizing:(StepPartListView *)view
 {
-	self.hasPreview = NO;
+	self.presenter.hasSizePreview = NO;
 	[self reload];
 
 }//end partListViewDidCancelResizing:
@@ -303,8 +407,8 @@
 //==============================================================================
 - (LDrawStepPartListEdit *) previewEdit
 {
-	return [LDrawStepPartListEdit editForDraggingAxis:self.previewAxis
-											 toInches:self.previewInches
+	return [LDrawStepPartListEdit editForDraggingAxis:self.presenter.previewAxis
+											 toInches:self.presenter.previewInches
 											  inModel:self.model];
 
 }//end previewEdit
@@ -330,6 +434,159 @@
 }//end setNeedsReload
 
 
+// MARK: - CALLOUTS -
+
+
+//========== menuItemsAtPoint: =================================================
+///
+/// @abstract	Makes the menu items for a right click at a point of the
+///				overlay. Empty when there is nothing to offer there.
+///
+/// @discussion	LDrawStepEditing decides what to offer. Here each of its items
+///				becomes an NSMenuItem with a localized title, and keeps the
+///				edit to apply if it is chosen.
+///
+//==============================================================================
+- (NSArray<NSMenuItem *> *) menuItemsAtPoint:(NSPoint)point
+{
+	NSMutableArray<NSMenuItem *>		*menuItems	= [NSMutableArray array];
+	NSArray<LDrawStepCalloutMenuItem *>	*items		= nil;
+
+	items = [LDrawStepCalloutMenuItem itemsAtPoint:V2Make(point.x, point.y)
+									  presentation:self.presentation
+											 model:self.model];
+
+	for (LDrawStepCalloutMenuItem *item in items) {
+		if (item.isSeparator) {
+			[menuItems addObject:[NSMenuItem separatorItem]];
+			continue;
+		}
+
+		NSString	*title		= [item titleFromLocalizedText:NSLocalizedString(item.titleKey, nil)];
+		NSMenuItem	*menuItem	= [[NSMenuItem alloc] initWithTitle:title
+															 action:@selector(applyEditOfMenuItem:)
+													  keyEquivalent:@""];
+
+		menuItem.target				= self;
+		menuItem.representedObject	= item.edit;
+
+		[menuItems addObject:menuItem];
+	}
+
+	return menuItems;
+
+}//end menuItemsAtPoint:
+
+
+//========== applyEditOfMenuItem: ==============================================
+///
+/// @abstract	Runs when one of those menu items is chosen. Applies the item's
+///				edit, then lays the step out again to show the change.
+///
+//==============================================================================
+- (void) applyEditOfMenuItem:(NSMenuItem *)item
+{
+	[self applyCalloutEdit:item.representedObject];
+	[self reload];
+
+}//end applyEditOfMenuItem:
+
+
+//========== applyCalloutEdit: =================================================
+///
+/// @abstract	Hands an edit to the document, which writes it into the step on
+///				display so that it can be undone. Does nothing for nil.
+///
+//==============================================================================
+- (void) applyCalloutEdit:(nullable LDrawStepCalloutEdit *)edit
+{
+	if (edit != nil) {
+		[self.delegate stepPartListController:self applyCalloutEdit:edit toStep:[self.model visibleStep]];
+	}
+
+}//end applyCalloutEdit:
+
+
+//========== showLayoutInTracker ===============================================
+///
+/// @abstract	Gives the tracker the callout boxes and the button that leads
+///				back, as they are laid out now. Runs after every layout, and
+///				when the button's title changes.
+///
+/// @discussion	The tracker follows clicks and drags on callouts. It needs the
+///				current layout to know what the next press is on.
+///
+//==============================================================================
+- (void) showLayoutInTracker
+{
+	NSRect	button		= [self.overlayView returnButtonRect];
+	Box2	buttonBox	= V2MakeBox(NSMinX(button), NSMinY(button), NSWidth(button), NSHeight(button));
+
+	[self.calloutTracker showBoxes:self.presentation.calloutBoxes ?: @[]
+							onPage:self.presentation.isOnPage
+						  viewSize:[self overlaySize]
+				  returnButtonRect:buttonBox];
+
+}//end showLayoutInTracker
+
+
+//========== actOnCalloutResult: ===============================================
+///
+/// @abstract	Carries out what the tracker decided about a mouse event on a
+///				callout.
+///
+/// @discussion	A box being dragged is laid out again under the pointer. A
+///				dropped box has its edit applied. A click is passed to the
+///				document, which shows the called-out submodel or goes back.
+///
+/// @return		YES when the event was used, so the viewport does not get it.
+///
+//==============================================================================
+- (BOOL) actOnCalloutResult:(LDrawStepCalloutTrackerResult)result
+{
+	LDrawStepCalloutTracker *tracker = self.calloutTracker;
+
+	switch (result) {
+
+		case LDrawStepCalloutTrackerResultNone:
+			return NO;
+
+		case LDrawStepCalloutTrackerResultUsed:
+			return YES;
+
+		case LDrawStepCalloutTrackerResultMoved:
+			[[NSCursor closedHandCursor] set];
+			self.showsControlCursor = YES;
+
+			// Reload now, not on the next pass of the run loop, so the box
+			// keeps up with the pointer.
+			[self reload];
+			return YES;
+
+		case LDrawStepCalloutTrackerResultDropped:
+			[self applyCalloutEdit:tracker.edit];
+			[self restoreHostCursor];
+			[self reload];
+			return YES;
+
+		case LDrawStepCalloutTrackerResultChoseCallout:
+			[self restoreHostCursor];
+			[self.delegate stepPartListController:self
+								 didChooseCallout:tracker.chosenCallout
+										 submodel:tracker.chosenSubmodel];
+			return YES;
+
+		case LDrawStepCalloutTrackerResultChoseReturn:
+			[self restoreHostCursor];
+			[self.delegate stepPartListControllerDidChooseReturn:self];
+			return YES;
+	}
+
+	return NO;
+
+}//end actOnCalloutResult:
+
+
 // MARK: - EVENTS -
 
 
@@ -352,6 +609,7 @@
 	NSEventMask mask = NSEventMaskLeftMouseDown
 					 | NSEventMaskLeftMouseDragged
 					 | NSEventMaskLeftMouseUp
+					 | NSEventMaskRightMouseDown
 					 | NSEventMaskMouseMoved
 					 | NSEventMaskKeyDown;
 
@@ -382,8 +640,9 @@
 		self.eventMonitor = nil;
 	}
 
-	self.ownsGesture	= NO;
-	self.hasPreview		= NO;
+	self.ownsGesture				= NO;
+	self.presenter.hasSizePreview	= NO;
+	[self.calloutTracker reset];
 
 	[self restoreHostCursor];
 
@@ -408,8 +667,20 @@
 		return event;
 	}
 
-	// Off the page the frame is not editable, so every event belongs to the
-	// model. Any cursor this controller set is given back.
+	// A right click on a submodel in the list or on a callout's box opens a
+	// menu, on the page and off it.
+	if ([self handleMenuEvent:event]) {
+		return nil;
+	}
+
+	// A callout's box and the button that leads back answer a click on the
+	// page and off it, so they come before the frame's own controls.
+	if ([self handleLinkEvent:event]) {
+		return nil;
+	}
+
+	// Off the page the frame is not editable, so every other event belongs to
+	// the model. Any cursor this controller set is given back.
 	if (self.presentation.isOnPage == NO) {
 		[self restoreHostCursor];
 		return event;
@@ -473,6 +744,124 @@
 	}
 
 }//end handleEvent:
+
+
+//========== handleMenuEvent: ==================================================
+///
+/// @abstract	Opens a menu for a right click on a submodel's row of the parts
+///				list, or on a callout's box or one of the steps in it.
+///
+/// @return		YES when a menu is opened, so nothing else sees the click.
+///
+/// @discussion	A click with Control and nothing else counts too, as it does
+///				in the viewport. Caps Lock is no part of a click.
+///
+//==============================================================================
+- (BOOL) handleMenuEvent:(NSEvent *)event
+{
+	NSEventModifierFlags	modifiers	= event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask
+										  & ~NSEventModifierFlagCapsLock;
+	BOOL					isMenuClick	= (event.type == NSEventTypeRightMouseDown)
+									   || (event.type == NSEventTypeLeftMouseDown
+										   && modifiers == NSEventModifierFlagControl);
+	LDrawView				*hostView	= self.hostView;
+
+	if (isMenuClick == NO || event.window != [hostView window]) {
+		return NO;
+	}
+
+	NSPoint point = [self overlayPointForEvent:event];
+
+	if (NSPointInRect(point, self.overlayView.bounds) == NO) {
+		return NO;
+	}
+
+	NSArray<NSMenuItem *> *items = [self menuItemsAtPoint:point];
+
+	if (items.count == 0) {
+		return NO;
+	}
+
+	NSMenu	*menu		= [[NSMenu alloc] initWithTitle:@""];
+	NSPoint	 location	= [hostView convertPoint:event.locationInWindow fromView:nil];
+
+	for (NSMenuItem *item in items) {
+		[menu addItem:item];
+	}
+
+	// Once this event is done with: a menu runs an event loop of its own.
+	dispatch_async(dispatch_get_main_queue(), ^{
+		[menu popUpMenuPositioningItem:nil atLocation:location inView:hostView];
+	});
+
+	return YES;
+
+}//end handleMenuEvent:
+
+
+//========== handleLinkEvent: ==================================================
+///
+/// @abstract	Follows a click on a callout's box or on the button that leads
+///				back, and moves a callout's box that is dragged.
+///
+/// @return		YES when the event was used, so neither the frame nor the
+///				viewport should see it.
+///
+/// @discussion	The tracker decides what each event means. The drag between a
+///				press and its release is kept from the viewport, or it would
+///				start a selection.
+///
+//==============================================================================
+- (BOOL) handleLinkEvent:(NSEvent *)event
+{
+	LDrawStepCalloutTracker	*tracker	= self.calloutTracker;
+	NSPoint					 viewPoint	= [self overlayPointForEvent:event];
+	Point2					 point		= V2Make(viewPoint.x, viewPoint.y);
+	BOOL					 isInWindow	= (event.window == [self.hostView window]);
+
+	switch (event.type) {
+
+		case NSEventTypeMouseMoved:
+			if (isInWindow == NO || [tracker isLinkAtPoint:point] == NO) {
+				return NO;
+			}
+			[[NSCursor pointingHandCursor] set];
+			self.showsControlCursor = YES;
+			return YES;
+
+		case NSEventTypeLeftMouseDown:
+			if (isInWindow == NO) {
+				[tracker reset];
+				return NO;
+			}
+			if ([tracker beginAtPoint:point] == NO) {
+				return NO;
+			}
+
+			// The viewport never sees this click, so give it the focus here.
+			[[self.hostView window] makeFirstResponder:self.hostView];
+			return YES;
+
+		case NSEventTypeLeftMouseDragged:
+			return [self actOnCalloutResult:[tracker dragToPoint:point]];
+
+		case NSEventTypeLeftMouseUp:
+			return [self actOnCalloutResult:[tracker endAtPoint:point inStep:[self.model visibleStep]]];
+
+		case NSEventTypeKeyDown:
+			// Escape abandons the drag. The rest of the gesture is still
+			// swallowed, until the mouse comes up.
+			if (event.keyCode == 53 && [tracker abandonDrag]) {
+				[self reload];
+				return YES;
+			}
+			return NO;
+
+		default:
+			return NO;
+	}
+
+}//end handleLinkEvent:
 
 
 //========== overlayPointForEvent: =============================================
@@ -549,63 +938,6 @@
 // MARK: - UTILITIES -
 
 
-//========== assemblyScale =====================================================
-///
-/// @abstract	Points per LDU the viewport is drawing the model at.
-///
-/// @discussion	A perspective view draws a near part larger than the zoom alone
-///				says, so the page is sized from the scale the model is drawn at
-///				beside the anchor. The ratio between the two is measured once
-///				and kept, or every step's rotation would resize the page.
-///
-//==============================================================================
-- (double) assemblyScale
-{
-	LDrawStepPartListPageAnchor	*pageAnchor	= self.pageAnchor;
-	double						 zoomScale	= [self.hostView zoomPercentage] / 100.0;
-
-	if (pageAnchor.needsDrawnScale) {
-		Point3 anchor = [pageAnchor anchorForModel:self.model];
-
-		[pageAnchor noteDrawnPointsPerLDU:[self.hostView pointsPerLDUAtModelPoint:anchor]
-							  atZoomScale:zoomScale];
-	}
-
-	return [pageAnchor assemblyScaleForZoomScale:zoomScale];
-
-}//end assemblyScale
-
-
-//========== hostState =========================================================
-///
-/// @abstract	What only the view can tell the package: its size, the scale the
-///				model is drawn at, where the page anchor lands, and any drag.
-///
-//==============================================================================
-- (LDrawStepPartListHostState) hostState
-{
-	LDrawStepPartListHostState	host	= {0};
-	NSSize						size	= self.overlayView.bounds.size;
-
-	host.viewSize		= V2MakeSize(size.width, size.height);
-	host.hasPreview		= self.hasPreview;
-	host.previewAxis	= self.previewAxis;
-	host.previewInches	= self.previewInches;
-
-	// Measuring projects through the camera, so only when there is a page.
-	if ([LDrawStepPartListPolicy drawsPageInModel:self.model] && self.hostView != nil) {
-		Point3	anchor			= [self.pageAnchor anchorForModel:self.model];
-		NSPoint	anchorViewPoint	= [self.hostView viewPointForModelPoint:anchor];
-
-		host.assemblyScale	= [self assemblyScale];
-		host.anchorInView	= V2Make(anchorViewPoint.x, anchorViewPoint.y);
-	}
-
-	return host;
-
-}//end hostState
-
-
 //========== subscribeToChanges ================================================
 ///
 /// @abstract	Everything that can change what the list should say.
@@ -640,14 +972,16 @@
 //==============================================================================
 - (void) setNeedsReloadForNotification:(NSNotification *)notification
 {
-	id object = notification.object;
+	// A resize of the overlay changes the layout and nothing else.
+	if (notification.object != self.overlayView) {
+		LDrawStepOverlayChange change = [self.presenter changeForChangedObject:notification.object];
 
-	if ([object isKindOfClass:[LDrawDirective class]]) {
-
-		LDrawFile *file = [(LDrawDirective *)object enclosingFile];
-
-		if (file != nil && file != [self.model enclosingFile]) {
+		if (change == LDrawStepOverlayChangeNone) {
 			return;
+		}
+
+		if (change & LDrawStepOverlayChangePictures) {
+			[self.overlayView discardCalloutPictures];
 		}
 	}
 
@@ -660,17 +994,20 @@
 ///
 /// @abstract	The viewport zoomed, scrolled or turned.
 ///
-/// @discussion	Only the page and the frame on it follow the camera, so off the
-///				page there is nothing to redo.
+/// @discussion	The page and the frame on it follow the camera. Off the page
+///				only the callouts' arrows do, since they point into the model.
 ///
 //==============================================================================
 - (void) cameraDidChange:(NSNotification *)notification
 {
-	if (self.presentation.isOnPage == NO) {
-		return;
-	}
+	LDrawStepOverlayChange change = [self.presenter changeForCameraMove];
 
-	[self setNeedsReload];
+	if (change & LDrawStepOverlayChangeLayout) {
+		[self setNeedsReload];
+	}
+	else if (change & LDrawStepOverlayChangeArrows) {
+		[self.overlayView setCalloutArrows:self.presenter.calloutArrows];
+	}
 
 }//end cameraDidChange:
 

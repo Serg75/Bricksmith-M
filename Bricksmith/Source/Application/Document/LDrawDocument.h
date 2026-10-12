@@ -38,6 +38,7 @@
 @class LDrawMPDModel;
 @class LDrawPart;
 @class LDrawStep;
+@class LDrawStepCalloutPath;
 @class LDrawStepPartListPageAnchor;
 @class LDrawStepPartListPageFitter;
 @class PartBrowserDataSource;
@@ -85,6 +86,9 @@
 		StepPartListController *stepPartListController;	// owns the parts list overlay, or nil until one is wanted
 		LDrawStepPartListPageAnchor *pageAnchor;	// the model point the page is pinned to
 		LDrawStepPartListPageFitter *pageFitter;	// fits the page to pageFitViewport, and keeps the size it fitted
+		LDrawStepCalloutPath *calloutPath;			// the steps left through callouts, to lead back to
+		BOOL				isFollowingCallout;		// the active model is being changed along that path
+		BOOL				isHoldingPageForModel;	// a change of model is under way that will put the page back
 		LDrawFile			*documentContents;
 		LDrawPart			*lastSelectedPart; 		//the part in the file which was most recently selected in the contents. (retained)
 		NSArray				*selectedDirectives; 	//mirrors the selection of the file contents outline.

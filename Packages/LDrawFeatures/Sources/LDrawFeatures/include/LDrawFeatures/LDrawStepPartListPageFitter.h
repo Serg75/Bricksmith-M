@@ -58,16 +58,33 @@ NS_ASSUME_NONNULL_BEGIN
 /// scales the zoom by how much the fit changed since then.
 @property (nonatomic) Size2 fittedViewSize;
 
-/// Fits the whole page in a view of this size, with the anchor in the middle.
+/// Fits the whole page in a view of this size, with the page center in the
+/// middle.
 ///
-/// A fit measures the anchor again. Keeping the magnification is for a resize:
-/// the zoom is scaled by how much the fit changed, so everything stays where it
-/// was on the page. Returns NO when the document does not measure its page.
+/// A fit measures the anchor again and forgets the page center, so the host
+/// centers the page on its step afterwards. Keeping the magnification is for a
+/// resize: the zoom is scaled by how much the fit changed, so everything stays
+/// where it was on the page. Returns NO when the document does not measure its
+/// page.
 - (BOOL) fitPageOfModel:(nullable LDrawModel *)model
 				 inView:(id<LDrawStepPartListPageView>)view
 			   viewSize:(Size2)viewSize
    keepingMagnification:(BOOL)keepsMagnification
 	NS_SWIFT_NAME(fitPage(of:in:viewSize:keepingMagnification:));
+
+/// How many points one inch of the model's page covers in the view, at the
+/// view's zoom.
+- (double) pointsPerPageInchOfModel:(nullable LDrawModel *)model inView:(id<LDrawStepPartListPageView>)view
+	NS_SWIFT_NAME(pointsPerPageInch(of:in:));
+
+/// Zooms the view so one inch of the model's page covers this many points. A
+/// host that puts another model on display uses it to keep the page the size
+/// the last one had. Returns NO, and leaves the zoom alone, when either scale
+/// is not above 0.
+- (BOOL) showPageOfModel:(nullable LDrawModel *)model
+				  inView:(id<LDrawStepPartListPageView>)view
+	 atPointsPerPageInch:(double)pointsPerPageInch
+	NS_SWIFT_NAME(showPage(of:in:atPointsPerPageInch:));
 
 @end
 

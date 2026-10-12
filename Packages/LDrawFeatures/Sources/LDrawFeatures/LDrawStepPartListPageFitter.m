@@ -37,7 +37,7 @@ static const NSUInteger FIT_PASSES = 2;
 
 //========== fitPageOfModel:inView:viewSize:keepingMagnification: ==============
 ///
-/// @abstract	Fits the whole page in the view, with the anchor in the middle.
+/// @abstract	Fits the whole page in the view, with its middle in the middle.
 ///
 /// @discussion	The page is sized from the scale the model is drawn at beside
 /// 			the anchor, which perspective makes differ from the zoom, so a
@@ -95,10 +95,63 @@ static const NSUInteger FIT_PASSES = 2;
 	[view setZoomPercentage:zoom];
 
 	// Zoom first: the scroll is in points, and those have just changed size.
-	[view scrollCenterToModelPoint:anchor];
+	[view scrollCenterToModelPoint:[pageAnchor pageCenterForModel:model]];
 
 	return YES;
 
 }//end fitPageOfModel:inView:viewSize:keepingMagnification:
+
+
+//========== pointsPerPageInchOfModel:inView: ==================================
+///
+/// @abstract	How many points one inch of the model's page covers in the
+/// 			view.
+///
+/// @discussion	The page is sized from the scale the model is drawn at beside
+/// 			the anchor, so that is measured first when the anchor has none.
+///
+//==============================================================================
+- (double) pointsPerPageInchOfModel:(nullable LDrawModel *)model inView:(id<LDrawStepPartListPageView>)view
+{
+	LDrawStepPartListPageAnchor	*pageAnchor	= self->_pageAnchor;
+	double						 zoomScale	= [view zoomPercentage] / 100.0;
+
+	if (pageAnchor.needsDrawnScale) {
+		Point3 anchor = [pageAnchor anchorForModel:model];
+
+		[pageAnchor noteDrawnPointsPerLDU:[view pointsPerLDUAtModelPoint:anchor] atZoomScale:zoomScale];
+	}
+
+	double assemblyScale = [pageAnchor assemblyScaleForZoomScale:zoomScale];
+
+	return [LDrawStepPartListPolicy pointsPerPageInchForAssemblyScale:assemblyScale inModel:model];
+
+}//end pointsPerPageInchOfModel:inView:
+
+
+//========== showPageOfModel:inView:atPointsPerPageInch: =======================
+///
+/// @abstract	Zooms the view so one inch of the model's page covers this many
+/// 			points.
+///
+/// @discussion	The page's size is the zoom times a ratio the anchor keeps, so
+/// 			one change of zoom gives the size wanted.
+///
+//==============================================================================
+- (BOOL) showPageOfModel:(nullable LDrawModel *)model
+				  inView:(id<LDrawStepPartListPageView>)view
+	 atPointsPerPageInch:(double)pointsPerPageInch
+{
+	double current = [self pointsPerPageInchOfModel:model inView:view];
+
+	if (current <= 0.0 || pointsPerPageInch <= 0.0) {
+		return NO;
+	}
+
+	[view setZoomPercentage:[view zoomPercentage] * pointsPerPageInch / current];
+
+	return YES;
+
+}//end showPageOfModel:inView:atPointsPerPageInch:
 
 @end

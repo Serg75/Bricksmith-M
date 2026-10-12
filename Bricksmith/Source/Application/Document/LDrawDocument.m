@@ -69,6 +69,9 @@
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
+#import <LDrawStepEditing/LDrawStepCalloutEdit.h>
+#import <LDrawStepRendering/LDrawStepCalloutPath.h>
+
 #import "DimensionsPanel.h"
 #import "DocumentToolbarController.h"
 #import "ExtendedSplitView.h"
@@ -143,9 +146,12 @@ void AppendChoicesToNewItem(
 @end
 
 
-@interface LDrawDocument () <StepPartListControllerDelegate>
+// The document already has the three changes a callout's edit is made of.
+@interface LDrawDocument () <StepPartListControllerDelegate, LDrawStepCalloutEditHost>
 - (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change;
 - (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageWasDrawn:(BOOL)pageWasDrawn;
+- (void) holdLPubPageDuringModelChange:(void (NS_NOESCAPE ^)(void))change;
+- (void) centerLPubPageOnStepOfModel:(LDrawModel *)model;
 @end
 
 
@@ -164,6 +170,7 @@ void AppendChoicesToNewItem(
 	{
 		self->pageAnchor = [[LDrawStepPartListPageAnchor alloc] init];
 		self->pageFitter = [[LDrawStepPartListPageFitter alloc] initWithPageAnchor:self->pageAnchor];
+		self->calloutPath = [[LDrawStepCalloutPath alloc] init];
 		[self setDocumentContents:[LDrawFile file]];
 		[self setGridSpacingMode:LDrawGridModeMedium];
     }
@@ -649,14 +656,17 @@ void AppendChoicesToNewItem(
 	
 	if(newActiveModel != oldActiveModel)
 	{
-		// Allow the old model to draw in its entirety if it is referenced by the 
-		// new model. 
-		[oldActiveModel setStepDisplay:NO];
-		
-		// Set the new model and make sure its step display state matches the 
-		// previous step display state. 
-		[[self documentContents] setActiveModel:newActiveModel];
-		[self setStepDisplay:stepDisplayMode];;
+		// The new model's page goes where the old one's was.
+		[self holdLPubPageDuringModelChange:^{
+			// Allow the old model to draw in its entirety if it is referenced by the 
+			// new model. 
+			[oldActiveModel setStepDisplay:NO];
+			
+			// Set the new model and make sure its step display state matches the 
+			// previous step display state. 
+			[[self documentContents] setActiveModel:newActiveModel];
+			[self setStepDisplay:stepDisplayMode];;
+		}];
 		
 		//A notification will be generated that updates the models menu.
 	}
@@ -699,7 +709,10 @@ void AppendChoicesToNewItem(
 
 			if([activeModel stepDisplay] == YES)
 			{
-				if([requestedStep stepRotationType] != LDrawStepRotationNone)
+				// On the page every step is laid out at its own angle. A
+				// camera left turned would be taken for that angle.
+				if(		[requestedStep stepRotationType] != LDrawStepRotationNone
+				   ||	[LDrawStepPartListPolicy drawsPageInModel:activeModel] )
 				{
 					[self updateViewingAngleToMatchStep];
 				}
@@ -2198,8 +2211,8 @@ void AppendChoicesToNewItem(
 
 //========== fitLPubPageInViewport:keepingMagnification: =======================
 //
-// Purpose:		Fits the whole page in the viewport, with the step in the
-//				middle.
+// Purpose:		Fits the whole page in the viewport, with the page's middle in
+//				the viewport's.
 //
 // Notes:		Keeping the magnification is for a resize: everything stays
 //				where it was on the page.
@@ -2210,12 +2223,37 @@ void AppendChoicesToNewItem(
 	if(viewport == nil)
 		return;
 
-	[self->pageFitter fitPageOfModel:[[self documentContents] activeModel]
-							  inView:viewport
-							viewSize:[self visibleSizeOfViewport:viewport]
-				keepingMagnification:keepsMagnification];
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	BOOL			isFitted		= [self->pageFitter fitPageOfModel:activeModel
+																inView:viewport
+															  viewSize:[self visibleSizeOfViewport:viewport]
+												  keepingMagnification:keepsMagnification];
+
+	// A fit measures the model again, so the step is put in its place on the
+	// page again before the page goes in the middle.
+	if(isFitted && keepsMagnification == NO)
+	{
+		[self centerLPubPageOnStepOfModel:activeModel];
+		[viewport scrollCenterToModelPoint:[self->pageAnchor pageCenterForModel:activeModel]];
+	}
 
 }//end fitLPubPageInViewport:keepingMagnification:
+
+
+//========== centerLPubPageOnStepOfModel: ======================================
+//
+// Purpose:		Puts the model's visible step in its place on the page again.
+//
+// Notes:		The overlay measures the step, so nothing happens while it is
+//				showing another model.
+//
+//==============================================================================
+- (void) centerLPubPageOnStepOfModel:(LDrawModel *)model
+{
+	if([self->stepPartListController model] == model)
+		[self->stepPartListController centerPageOnStep];
+
+}//end centerLPubPageOnStepOfModel:
 
 
 //========== visibleSizeOfViewport: ============================================
@@ -4280,6 +4318,11 @@ void AppendChoicesToNewItem(
 	
 	[self setLastSelectedPart:nil];
 
+	// Choosing a model any other way leaves the path the callouts were
+	// followed along, so there is no way back along it.
+	if(self->isFollowingCallout == NO)
+		[self->calloutPath removeAll];
+
 	// A different submodel has its own steps, and may not be in Steps mode
 	// at all.
 	[self updateStepPartList];
@@ -4555,6 +4598,11 @@ void AppendChoicesToNewItem(
 	}
 	
 	[self->bindingsController setContent:nil];
+
+	// The overlay is a window of its own. It is taken down here, on the main
+	// thread: the document may be released on another one.
+	[self->stepPartListController detach];
+	[self watchViewportForPageFit:nil];
 	
 }//end windowWillClose:
 
@@ -5127,6 +5175,7 @@ void AppendChoicesToNewItem(
 	[self watchViewportForPageFit:[self main3DViewport]];
 
 	[self->stepPartListController setModel:activeModel];
+	[self->stepPartListController setReturnTitle:[self calloutReturnTitle]];
 	[self->stepPartListController attachToView:[self main3DViewport]];
 
 }//end updateStepPartList
@@ -5134,13 +5183,19 @@ void AppendChoicesToNewItem(
 
 //========== wantsStepPartList =================================================
 //
-// Purpose:		Whether the overlay is needed: for the step's list, its page, or
-//				both.
+// Purpose:		Whether the overlay is needed: for the step's list, its page or
+//				its callouts, or for the button that leads back from a
+//				called-out submodel.
 //
 //==============================================================================
 - (BOOL) wantsStepPartList
 {
-	return [LDrawStepPartListPolicy showsListOrPageInModel:[[self documentContents] activeModel]];
+	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
+
+	if([LDrawStepPartListPolicy showsAnythingInModel:activeModel])
+		return YES;
+
+	return [activeModel stepDisplay] && [LDrawStepPartList isEnabled] && [self->calloutPath isEmpty] == NO;
 
 }//end wantsStepPartList
 
@@ -5271,6 +5326,158 @@ void AppendChoicesToNewItem(
 	[[self documentContents] noteNeedsDisplay];
 
 }//end stepPartListController:applyEdit:toStep:
+
+
+//========== stepPartListController:applyCalloutEdit:toStep: ===================
+//
+// Purpose:		Performs the document change a dragged, added or removed
+//				callout asks for, through the undoable path.
+//
+//==============================================================================
+- (void) stepPartListController:(StepPartListController *)controller
+			   applyCalloutEdit:(LDrawStepCalloutEdit *)edit
+						 toStep:(LDrawStep *)step
+{
+	// First, as for Delete: a line that goes may be selected.
+	if([edit kind] == LDrawStepCalloutEditKindRewrite)
+		[fileContentsOutline deselectAll:self];
+
+	if([edit applyToStep:step host:self] == NO)
+		return;
+
+	[[self undoManager] setActionName:NSLocalizedString([edit undoActionKey], nil)];
+
+	[[self documentContents] noteNeedsDisplay];
+
+}//end stepPartListController:applyCalloutEdit:toStep:
+
+
+//========== stepPartListController:didChooseCallout:submodel: =================
+//
+// Purpose:		Shows the steps of a submodel a callout holds, and remembers
+//				the step it was called out in.
+//
+// Notes:		Only a submodel of this file can be put on display. It is the
+//				one that was clicked, when that can be shown.
+//
+//==============================================================================
+- (void) stepPartListController:(StepPartListController *)controller
+			   didChooseCallout:(LDrawStepCallout *)callout
+					   submodel:(LDrawModel *)clicked
+{
+	LDrawMPDModel	*parent		= [[self documentContents] activeModel];
+	NSArray			*submodels	= [[self documentContents] submodels];
+	LDrawModel		*submodel	= [LDrawStepCalloutPath submodelOfCallout:callout
+															   preferring:clicked
+															  amongModels:submodels
+																otherThan:parent];
+
+	if(submodel == nil)
+		return;
+
+	// The ratio is kept too, so the parent is as big on its page when it is
+	// shown again.
+	[self->calloutPath leaveModel:parent
+					  atStepIndex:[parent maximumStepIndexForStepDisplay]
+				  drawnScaleRatio:[self->pageAnchor drawnScaleRatio]];
+
+	[self showModel:(LDrawMPDModel *)submodel atStepIndexOnCalloutPath:0 drawnScaleRatio:0.0];
+
+}//end stepPartListController:didChooseCallout:submodel:
+
+
+//========== stepPartListControllerDidChooseReturn: ============================
+//
+// Purpose:		Goes back to the step the model on display was called out in.
+//
+//==============================================================================
+- (void) stepPartListControllerDidChooseReturn:(StepPartListController *)controller
+{
+	LDrawModel	*model		= nil;
+	NSInteger	 stepIndex	= 0;
+	double		 ratio		= 0.0;
+	BOOL		 isFound	= [self->calloutPath takeReturnModel:&model
+													   stepIndex:&stepIndex
+												 drawnScaleRatio:&ratio
+													 amongModels:[[self documentContents] submodels]];
+
+	// The way back is gone, and its button goes with it.
+	if(isFound == NO)
+	{
+		[self updateStepPartList];
+		return;
+	}
+
+	[self showModel:(LDrawMPDModel *)model atStepIndexOnCalloutPath:stepIndex drawnScaleRatio:ratio];
+
+}//end stepPartListControllerDidChooseReturn:
+
+
+//========== showModel:atStepIndexOnCalloutPath:drawnScaleRatio: ===============
+//
+// Purpose:		Puts a model on display at one of its steps, as a move along the
+//				path of callouts followed.
+//
+// Notes:		The flag is up while the model changes, so the change is not
+//				taken for the user choosing another model, which clears the
+//				path.
+//
+//				A ratio above 0 is the one the model's page had when the model
+//				was left. It is put back, or the model would be measured again
+//				and come back a little bigger or smaller on its page.
+//
+//==============================================================================
+- (void)			showModel:(LDrawMPDModel *)model
+	 atStepIndexOnCalloutPath:(NSInteger)stepIndex
+			  drawnScaleRatio:(double)ratio
+{
+	// One hold for the model and the step, so the page ends where it began.
+	[self holdLPubPageDuringModelChange:^{
+		self->isFollowingCallout = YES;
+		[self setActiveModel:model];
+		self->isFollowingCallout = NO;
+
+		[self setStepDisplay:YES];
+		[self setCurrentStep:stepIndex];
+
+		// The step is selected in the outline here: its model may be closed
+		// there, and a step that did not change is not selected again.
+		[self->fileContentsOutline expandItem:model];
+		[self selectStep:stepIndex];
+
+		// Off the page a step with no rotation of its own leaves the camera
+		// where it is, which here is at the first step's angle.
+		[self updateViewingAngleToMatchStep];
+
+		if(ratio > 0.0)
+			[self->pageAnchor setDrawnScaleRatio:ratio];
+
+		// The step may not have changed, and then nothing else refreshes the
+		// button.
+		[self updateStepPartList];
+	}];
+
+}//end showModel:atStepIndexOnCalloutPath:drawnScaleRatio:
+
+
+//========== calloutReturnTitle ================================================
+//
+// Purpose:		What the button that leads back says: the step and the model the
+//				one on display was called out in. Nil when it was not reached
+//				through a callout.
+//
+//==============================================================================
+- (NSString *) calloutReturnTitle
+{
+	LDrawModel *model = [self->calloutPath returnModel];
+
+	if(model == nil)
+		return nil;
+
+	return [NSString stringWithFormat:NSLocalizedString(@"StepCalloutReturn", nil),
+			(long)[self->calloutPath returnStepNumber], [model browsingDescription]];
+
+}//end calloutReturnTitle
 
 
 //========== main3DViewport ====================================================
@@ -5964,8 +6171,9 @@ void AppendChoicesToNewItem(
 
 //========== holdLPubPageDuringChange: =========================================
 //
-// Purpose:		Runs a change that moves the camera, then scrolls the page back
-//				to where it was on screen.
+// Purpose:		Runs a change that moves the camera or changes what the step
+//				shows, then puts the step in its place on the page again and
+//				scrolls the page back to where it was on screen.
 //
 // Notes:		Decided by the page rules, not by whether the overlay is on, so
 //				a step that hides its list is held too.
@@ -6001,16 +6209,71 @@ void AppendChoicesToNewItem(
 		return;
 	}
 
-	Point3	anchor			= [self->pageAnchor anchorForModel:activeModel];
-	NSPoint	anchorViewPoint	= [viewport viewPointForModelPoint:anchor];
+	Point3	pageCenter		= [self->pageAnchor pageCenterForModel:activeModel];
+	NSPoint	heldViewPoint	= [viewport viewPointForModelPoint:pageCenter];
 
 	change();
 
-	// The paper does not move when the model turns or changes size on it.
+	// The paper does not move. The step is centered on it as LPub3D prints it,
+	// so the model moves instead.
 	if(pageWasDrawn || [LDrawStepPartListPolicy drawsPageInModel:activeModel])
-		[viewport scrollModelPoint:anchor toViewPoint:anchorViewPoint];
+	{
+		[self centerLPubPageOnStepOfModel:activeModel];
+
+		pageCenter = [self->pageAnchor pageCenterForModel:activeModel];
+		[viewport scrollModelPoint:pageCenter toViewPoint:heldViewPoint];
+	}
 
 }//end holdLPubPageDuringChange:pageWasDrawn:
+
+
+//========== holdLPubPageDuringModelChange: ====================================
+//
+// Purpose:		Runs a change that puts another model on display, then zooms
+//				and scrolls so the new model's page is drawn where the old
+//				one's was, at the same size.
+//
+// Notes:		Only when both models are drawn on a page. A change made inside
+//				another one is left to the outer one, which sees the end of
+//				both.
+//
+//==============================================================================
+- (void) holdLPubPageDuringModelChange:(void (NS_NOESCAPE ^)(void))change
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	LDrawView		*viewport		= [self main3DViewport];
+
+	if(self->isHoldingPageForModel || [self drawsLPubPageInViewport:viewport] == NO)
+	{
+		change();
+		return;
+	}
+
+	Point3	pageCenter	= [self->pageAnchor pageCenterForModel:activeModel];
+	NSPoint	heldMiddle	= [viewport viewPointForModelPoint:pageCenter];
+	double	heldScale	= [self->pageFitter pointsPerPageInchOfModel:activeModel inView:viewport];
+
+	self->isHoldingPageForModel = YES;
+	change();
+	self->isHoldingPageForModel = NO;
+
+	activeModel = [[self documentContents] activeModel];
+
+	if([self drawsLPubPageInViewport:viewport] == NO)
+		return;
+
+	// Zoom first: the step is put in its place on the page at the size the
+	// page will have.
+	[self->pageFitter showPageOfModel:activeModel inView:viewport atPointsPerPageInch:heldScale];
+	[self centerLPubPageOnStepOfModel:activeModel];
+
+	pageCenter = [self->pageAnchor pageCenterForModel:activeModel];
+	[viewport scrollModelPoint:pageCenter toViewPoint:heldMiddle];
+
+	// The overlay was laid out before the camera moved.
+	[self updateStepPartList];
+
+}//end holdLPubPageDuringModelChange:
 
 
 //========== updateViewingAngleToMatchStep =====================================

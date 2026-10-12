@@ -36,6 +36,9 @@
 #import <LDrawFeatures/LDrawPartListOrientations.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawRelatedParts.h>
+#import <LDrawFeatures/LDrawStepCallout.h>
+#import <LDrawFeatures/LDrawStepCalloutBox.h>
+#import <LDrawFeatures/LDrawStepCalloutStyle.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListLayout.h>

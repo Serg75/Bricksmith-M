@@ -11,6 +11,7 @@
 
 #import <LDrawCore/MatrixMath.h>
 
+@class LDrawColor;
 @class LDrawFile;
 @class LDrawModel;
 @class LDrawStepPartListLayout;
@@ -48,6 +49,15 @@ NS_ASSUME_NONNULL_BEGIN
 				  viewTransform:(Matrix4)viewTransform
 			  submodelsFromFile:(nullable LDrawFile *)file
 	NS_SWIFT_NAME(model(forLayout:viewTransform:submodelsFrom:));
+
+/// A model of what `model` has built up to and including one of its steps,
+/// turned by `viewTransform` for a camera that is not rotated. Its parts in the
+/// main color take `color`. `model` itself is not changed.
++ (LDrawModel *) modelForModel:(LDrawModel *)model
+				   throughStep:(NSUInteger)lastStepIndex
+				 viewTransform:(Matrix4)viewTransform
+						 color:(nullable LDrawColor *)color
+	NS_SWIFT_NAME(model(for:throughStep:viewTransform:color:));
 
 /// Whether this placement gets a part in the model: everything but a broken
 /// reference. The chrome draws a placeholder in the other cells.

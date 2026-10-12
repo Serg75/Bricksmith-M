@@ -104,6 +104,76 @@
 }//end modelForLayout:viewTransform:submodelsFromFile:
 
 
+//---------- modelForModel:throughStep:viewTransform:color: ----------[static]--
+///
+/// @abstract	A model of what `model` has built up to and including a step,
+/// 			turned by `viewTransform`.
+///
+/// @discussion	Each part is drawn by a copy, because a part belongs to one
+/// 			model. A copy that places a submodel is handed that submodel,
+/// 			since the new model has no file to look a name up in.
+///
+//------------------------------------------------------------------------------
++ (LDrawModel *) modelForModel:(LDrawModel *)model
+				   throughStep:(NSUInteger)lastStepIndex
+				 viewTransform:(Matrix4)viewTransform
+						 color:(nullable LDrawColor *)color
+{
+	LDrawModel	*built	= [LDrawModel new];
+	LDrawStep	*step	= [built addStep];
+	NSArray		*steps	= [model steps];
+
+	if (steps.count == 0) {
+		return built;
+	}
+
+	lastStepIndex = MIN(lastStepIndex, steps.count - 1);
+
+	for (NSUInteger index = 0; index <= lastStepIndex; index++) {
+
+		[(LDrawStep *)steps[index] applyToAllParts:^(LDrawPart *part) {
+
+			if ([part isOmitted]) {
+				return;
+			}
+
+			LDrawModel	*placed	= [part referencedMPDSubmodel];
+			LDrawPart	*copy	= nil;
+
+			if (placed != nil) {
+				LDrawStepPartListSubmodelReference *reference = [LDrawStepPartListSubmodelReference new];
+
+				reference.submodel	= placed;
+				copy				= reference;
+			}
+			else {
+				copy = [LDrawPart new];
+			}
+
+			// parse:NO, because the draw path resolves the name on demand.
+			[copy setDisplayName:[part referenceName] parse:NO inGroup:NULL];
+
+			LDrawColor *partColor = [part LDrawColor];
+
+			if (color != nil && [partColor colorCode] == LDrawCurrentColor) {
+				partColor = color;
+			}
+			if (partColor != nil) {
+				[copy setLDrawColor:partColor];
+			}
+
+			Matrix4 transformation = Matrix4Multiply([part transformationMatrix], viewTransform);
+
+			[copy setTransformationMatrix:&transformation];
+			[step addDirective:copy];
+		}];
+	}
+
+	return built;
+
+}//end modelForModel:throughStep:viewTransform:color:
+
+
 //---------- partForEntry:submodelsFromFile: -------------------------[static]--
 ///
 /// @abstract	A fresh part for one entry. A submodel reference when the entry

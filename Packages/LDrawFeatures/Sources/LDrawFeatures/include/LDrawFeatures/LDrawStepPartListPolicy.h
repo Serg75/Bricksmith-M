@@ -15,6 +15,7 @@
 
 @class LDrawDirective;
 @class LDrawStep;
+@class LPubPlacement;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -138,6 +139,11 @@ typedef struct LDrawStepPartListBadgeStyle
 // from the corner, and the whole page less that margin. Otherwise a 12 point
 // margin, and at most four tenths of the view's width and six tenths of its
 // height.
+
+/// How far the frame sits in from the host's corner: LPub3D's margin on the
+/// page, a fixed one in the view. `pointsPerPageInch` is 0 off the page.
++ (double) frameInsetForPointsPerPageInch:(double)pointsPerPageInch
+	NS_SWIFT_NAME(frameInset(forPointsPerPageInch:));
 
 /// Where a frame of this size sits in a host view: the top-left corner, inset
 /// by the margin.
@@ -317,6 +323,24 @@ typedef struct LDrawStepPartListBadgeStyle
 /// centimeters.
 + (Size2) pageSizeInInchesInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(pageSizeInInches(inModel:));
 
+/// The `ASSEM PLACEMENT` line in force for the visible step, or nil. It says
+/// where on the page LPub3D puts the step's assembly.
++ (nullable LPubPlacement *) assemblyPlacementForVisibleStepOfModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(assemblyPlacement(forVisibleStepOf:));
+
+/// How many inches one of the file's measuring units is: 1, or 1/2.54 for a
+/// file whose `RESOLUTION` is in dots per centimeter.
++ (double) inchesPerUnitInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(inchesPerUnit(inModel:));
+
+/// How many inches one dot is at the file's `RESOLUTION`. LPub3D prints 150
+/// dots to the inch when a file says nothing.
++ (double) inchesPerDotInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(inchesPerDot(inModel:));
+
+/// How many models deep a model sits under the file's first one, by the
+/// placement LPub3D comes to first. 0 for the first model, and for a model
+/// placed nowhere.
++ (NSUInteger) submodelDepthOfModel:(nullable LDrawModel *)model NS_SWIFT_NAME(submodelDepth(of:));
+
 // MARK: - Page space
 //
 // Sizes on LPub3D's page, all taken from the zoom the assembly is drawn at.
@@ -339,14 +363,21 @@ typedef struct LDrawStepPartListBadgeStyle
 /// time.
 + (Point3) pageAnchorInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(pageAnchor(inModel:));
 
+/// The points the parts the model has on display reach furthest out to, as
+/// Point3 values in the model's coordinates. The host projects them to find
+/// where the assembly is drawn. Nil with nothing to measure, or no part
+/// catalog.
++ (nullable NSData *) assemblyOutlinePointsInModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(assemblyOutlinePoints(inModel:));
+
 /// Whether the step on display is drawn on LPub3D's page: Steps mode, the list
 /// and the page preference are on, and the file measures its page. A step that
 /// hides its list still has its page.
 + (BOOL) drawsPageInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(drawsPage(inModel:));
 
 /// Whether the host shows anything for the step on display: its list, its
-/// page, or both.
-+ (BOOL) showsListOrPageInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(showsListOrPage(inModel:));
+/// page or its callouts.
++ (BOOL) showsAnythingInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(showsAnything(inModel:));
 
 /// The page, centered on `center`, at the size it takes when the assembly is
 /// drawn at `pointsPerLDU`. `ZeroBox2` when the document does not measure its
