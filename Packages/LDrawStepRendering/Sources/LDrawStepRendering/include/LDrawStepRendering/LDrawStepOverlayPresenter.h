@@ -15,6 +15,7 @@
 #import <LDrawFeatures/LDrawStepPartListPageFitter.h>
 
 @class LDrawModel;
+@class LDrawStepLayoutCache;
 @class LDrawStepPartListPageAnchor;
 @class LDrawStepPartListPresentation;
 
@@ -106,6 +107,10 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 
 /// The size of the view the overlay covers, in points.
 @property (nonatomic) Size2 viewSize;
+
+/// Keeps what centering each step measured, for this presenter and any other
+/// that shares it. Nil measures a step each time it is centered.
+@property (nonatomic, strong, nullable) LDrawStepLayoutCache *layoutCache;
 
 /// A resize drag in progress. The list is packed at this size instead of the
 /// file's, so nothing is written until the drag is let go.

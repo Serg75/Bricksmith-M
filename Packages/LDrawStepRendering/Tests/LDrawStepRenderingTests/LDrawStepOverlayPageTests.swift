@@ -26,6 +26,7 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
     var origin = CGPoint(x: 500, y: 400)
     var angle = Tuple3(x: 0, y: 0, z: 0)
     var scrollCount = 0
+    var measureCount = 0
 
     /// The box it gives for the assembly, around where the origin is drawn.
     /// The fixtures' models place nothing a camera could measure.
@@ -75,6 +76,8 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
     }
 
     func viewRect(forModelPoints points: Data) -> CGRect {
+        measureCount += 1
+
         guard assemblySize != .zero else { return .zero }
 
         return CGRect(x: origin.x - assemblySize.width / 2, y: origin.y - assemblySize.height / 2,
@@ -250,6 +253,22 @@ extension StepOverlayTests {
             presenter.reload()
 
             return (fixture, camera, presenter)
+        }
+
+        /// Another presenter on the same model and camera, with a layout cache.
+        private func presenter(on shown: (fixture: CalloutFixture, camera: FlatCamera,
+                                          presenter: LDrawStepOverlayPresenter),
+                               sharing cache: LDrawStepLayoutCache) -> LDrawStepOverlayPresenter {
+            let presenter = LDrawStepOverlayPresenter()
+            presenter.model = shown.fixture.main
+            presenter.camera = shown.camera
+            presenter.viewSize = shown.presenter.viewSize
+            presenter.layoutCache = cache
+            return presenter
+        }
+
+        private func isSame(_ a: Point3, _ b: Point3) -> Bool {
+            abs(a.x - b.x) < 0.001 && abs(a.y - b.y) < 0.001 && abs(a.z - b.z) < 0.001
         }
 
         private func middle(_ box: Box2) -> Point2 {
@@ -647,6 +666,66 @@ extension StepOverlayTests {
             shown.presenter.reload()
 
             #expect(shown.camera.scrollCount == scrolls + 1)
+        }
+
+        @Test("A step centered again in the same view takes its place from the layout cache")
+        func centeringFromTheCache() throws {
+            let shown = shownWithPlacedCallout()
+            let cache = LDrawStepLayoutCache()
+
+            shown.presenter.layoutCache = cache
+            shown.presenter.centerPageOnStep()
+            shown.presenter.reload()
+
+            let other = presenter(on: shown, sharing: cache)
+            let measures = shown.camera.measureCount
+
+            other.centerPageOnStep()
+
+            #expect(shown.camera.measureCount == measures)
+            #expect(isSame(other.pageAnchor.pageCenter(forModel: shown.fixture.main),
+                           shown.presenter.pageAnchor.pageCenter(forModel: shown.fixture.main)))
+
+            let scrolls = shown.camera.scrollCount
+
+            other.reload()
+
+            #expect(shown.camera.scrollCount == scrolls)
+            let page = try #require(shown.presenter.presentation).pageRect
+
+            #expect(isClose(middle(try #require(other.presentation).pageRect), middle(page)))
+        }
+
+        @Test("In another view the step is measured again")
+        func centeringInAnotherView() throws {
+            let shown = shownWithPlacedCallout()
+            let cache = LDrawStepLayoutCache()
+
+            shown.presenter.layoutCache = cache
+            shown.presenter.centerPageOnStep()
+
+            let other = presenter(on: shown, sharing: cache)
+            let measures = shown.camera.measureCount
+
+            shown.camera.zoom = 150
+            other.centerPageOnStep()
+
+            #expect(shown.camera.measureCount > measures)
+        }
+
+        @Test("A change to the file forgets what the cache kept")
+        func changeEmptiesTheCache() throws {
+            let shown = shownWithPlacedCallout()
+
+            shown.presenter.layoutCache = LDrawStepLayoutCache()
+            shown.presenter.centerPageOnStep()
+            _ = shown.presenter.change(forChangedObject: nil)
+
+            let measures = shown.camera.measureCount
+
+            shown.presenter.centerPageOnStep()
+
+            #expect(shown.camera.measureCount > measures)
         }
 
         @Test("Off the page only the arrows follow the camera")

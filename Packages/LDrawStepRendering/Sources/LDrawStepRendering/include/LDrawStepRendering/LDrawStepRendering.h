@@ -17,5 +17,6 @@
 
 #import <LDrawStepRendering/LDrawStepCalloutPath.h>
 #import <LDrawStepRendering/LDrawStepCalloutPictureStore.h>
+#import <LDrawStepRendering/LDrawStepLayoutCache.h>
 #import <LDrawStepRendering/LDrawStepOverlayPresenter.h>
 #import <LDrawStepRendering/LDrawStepOverlayRenderer.h>

@@ -15,6 +15,27 @@
 #import <LDrawCore/MatrixMath.h>
 
 
+//========== ViewPointForModelPoint() ==========================================
+//
+// Purpose:		Where a model point lands on screen, in view coordinates, for
+//				the camera's matrices already multiplied together.
+//
+// Notes:		The same steps as V3Project and -convertPointFromViewport:, so
+//				the result is the same as -viewPointForModelPoint:.
+//
+//==============================================================================
+static inline Point2 ViewPointForModelPoint(Point3 modelPoint, Matrix4 modelViewProjection, Box2 viewport)
+{
+	Point3	transformed	= V3MulPointByProjMatrix(modelPoint, modelViewProjection);
+	double	x			= viewport.origin.x + (V2BoxWidth(viewport)  * (transformed.x + 1)) / 2;
+	double	y			= viewport.origin.y + (V2BoxHeight(viewport) * (transformed.y + 1)) / 2;
+
+	// The view is flipped: its origin is at the top left.
+	return V2Make(x, V2BoxHeight(viewport) - y);
+
+} // end ViewPointForModelPoint
+
+
 @implementation LDrawRenderer (Geometry)
 
 //========== convertPointFromViewport: =========================================
@@ -152,7 +173,7 @@
 //				coordinates.
 //
 // Notes:		The same projection as -viewPointForModelPoint:, with the
-//				camera's matrices read once for all the points.
+//				camera's matrices read and multiplied once for all the points.
 //
 //==============================================================================
 - (Box2)viewBoxForModelPoints:(const Point3 *)points count:(NSUInteger)count
@@ -162,14 +183,14 @@
 
 	Matrix4	modelView	= Matrix4CreateFromFloats([camera modelView]);
 	Matrix4	projection	= Matrix4CreateFromFloats([camera projection]);
+	Matrix4	combined	= Matrix4Multiply(modelView, projection);
 	Box2	viewport	= [self viewport];
 	Point2	minimum		= V2Make(INFINITY, INFINITY);
 	Point2	maximum		= V2Make(-INFINITY, -INFINITY);
 
 	for (NSUInteger index = 0; index < count; index++)
 	{
-		Point3	projected	= V3Project(points[index], modelView, projection, viewport);
-		Point2	viewPoint	= [self convertPointFromViewport:V2Make(projected.x, projected.y)];
+		Point2 viewPoint = ViewPointForModelPoint(points[index], combined, viewport);
 
 		minimum = V2Make(MIN(minimum.x, viewPoint.x), MIN(minimum.y, viewPoint.y));
 		maximum = V2Make(MAX(maximum.x, viewPoint.x), MAX(maximum.y, viewPoint.y));
@@ -186,20 +207,19 @@
 //				coordinates.
 //
 // Notes:		The same projection as -viewPointForModelPoint:, with the
-//				camera's matrices read once for all the points.
+//				camera's matrices read and multiplied once for all the points.
 //
 //==============================================================================
 - (void)getViewPoints:(Point2 *)outPoints forModelPoints:(const Point3 *)points count:(NSUInteger)count
 {
 	Matrix4	modelView	= Matrix4CreateFromFloats([camera modelView]);
 	Matrix4	projection	= Matrix4CreateFromFloats([camera projection]);
+	Matrix4	combined	= Matrix4Multiply(modelView, projection);
 	Box2	viewport	= [self viewport];
 
 	for (NSUInteger index = 0; index < count; index++)
 	{
-		Point3 projected = V3Project(points[index], modelView, projection, viewport);
-
-		outPoints[index] = [self convertPointFromViewport:V2Make(projected.x, projected.y)];
+		outPoints[index] = ViewPointForModelPoint(points[index], combined, viewport);
 	}
 
 } // end getViewPoints:forModelPoints:count:

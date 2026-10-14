@@ -15,6 +15,7 @@
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LPubCallout.h>
@@ -25,6 +26,8 @@
 #import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
+
+#import "LDrawStepLayoutCacheEntries.h"
 
 
 /// How far two viewing angles may differ, in degrees, and still be one view.
@@ -235,6 +238,7 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 
 	// The parts the assembly is measured by may have changed.
 	self->assemblyOutline = nil;
+	[self.layoutCache removeAll];
 
 	BOOL isInModel = directive != nil
 				  && [directive isKindOfClass:[LDrawColor class]] == NO
@@ -368,7 +372,9 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 /// @abstract	Puts the visible step in its place on the page again, and keeps
 ///				the model point that is drawn at the middle of the page.
 ///
-/// @discussion	The step is laid out once just to measure it.
+/// @discussion	The step is laid out once just to measure it. Where the page
+///				went is kept in the layout cache, and used instead the next
+///				time the step is centered in the same view.
 ///
 //==============================================================================
 - (void) centerPageOnStep
@@ -384,12 +390,33 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 
 	[self startLayout];
 
+	LDrawStepLayoutCache	*cache	= self.layoutCache;
+	NSString				*key	= [self centerKey];
+	LDrawStepKeptCenter		*kept	= (key != nil) ? [cache centerForKey:key] : nil;
+
+	if (kept != nil) {
+		[self.pageAnchor setPageCenter:kept.pageCenter forModel:model];
+		[self noteCenteredStepWithPlacementKey:kept.placementKey isMeasured:kept.hasStepCenter];
+		return;
+	}
+
 	[LDrawStepPartListPolicy performWithCachedLookups:^{
 		LDrawStepPartListPresentation *measured = nil;
 
 		measured = [LDrawStepPartListPresentation presentationForModel:model host:[self hostState]];
 
 		[self centerPageOnPresentation:measured keepingItOnScreen:NO];
+
+		if (key != nil) {
+			Point3				 center	= [self.pageAnchor pageCenterForModel:model];
+			LDrawStepKeptCenter	*made	= nil;
+
+			made = [[LDrawStepKeptCenter alloc] initWithPageCenter:center
+			                                         hasStepCenter:measured.hasStepCenter
+			                                          placementKey:measured.placementKey ?: @""];
+
+			[cache setCenter:made forKey:key];
+		}
 	}];
 
 }//end centerPageOnStep
@@ -439,18 +466,91 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 		[pageAnchor noteAssemblyRect:rect aroundPageCenter:presentation.stepCenterInView pointsPerPageInch:scale];
 	}
 
-	self->centeredStep			= [model visibleStep];
-	self->centeredPlacementKey	= [presentation.placementKey copy];
-	self->hasMeasuredCenter		= presentation.hasStepCenter;
-
-	// Where the page is drawn is noted again once the camera has settled.
-	self->hasPageMiddle = NO;
+	[self noteCenteredStepWithPlacementKey:presentation.placementKey isMeasured:presentation.hasStepCenter];
 
 	if (isHeld) {
 		[camera scrollModelPoint:center toViewPoint:heldPoint];
 	}
 
 }//end centerPageOnPresentation:keepingItOnScreen:
+
+
+//========== noteCenteredStepWithPlacementKey:isMeasured: ======================
+///
+/// @abstract	Notes that the page was just centered on the visible step, and
+///				what that centering went by.
+///
+//==============================================================================
+- (void) noteCenteredStepWithPlacementKey:(nullable NSString *)placementKey isMeasured:(BOOL)isMeasured
+{
+	self->centeredStep			= [self.model visibleStep];
+	self->centeredPlacementKey	= [placementKey copy];
+	self->hasMeasuredCenter		= isMeasured;
+
+	// Where the page is drawn is noted again once the camera has settled.
+	self->hasPageMiddle = NO;
+
+}//end noteCenteredStepWithPlacementKey:isMeasured:
+
+
+//========== stepKey ===========================================================
+///
+/// @abstract	What the layout cache knows the visible step by: its model's
+///				name and its place in the model. Nil for a model with no name,
+///				or with no layout cache.
+///
+//==============================================================================
+- (nullable NSString *) stepKey
+{
+	LDrawModel	*model	= self.model;
+	NSString	*name	= nil;
+
+	if (self.layoutCache == nil || [model isKindOfClass:[LDrawMPDModel class]] == NO) {
+		return nil;
+	}
+
+	name = [(LDrawMPDModel *)model modelName];
+
+	if (name.length == 0) {
+		return nil;
+	}
+
+	NSUInteger index = [[model steps] indexOfObjectIdenticalTo:[model visibleStep]];
+
+	return [NSString stringWithFormat:@"%@\n%lu", name, (unsigned long)index];
+
+}//end stepKey
+
+
+//========== centerKey =========================================================
+///
+/// @abstract	What the layout cache keeps the page's place by: the step, and
+///				the view as the camera draws it now. Nil when nothing is kept.
+///
+/// @discussion	The scroll is told by where the anchor is drawn. A drag in
+///				progress is not kept, since it moves the page.
+///
+//==============================================================================
+- (nullable NSString *) centerKey
+{
+	LDrawModel					*model		= self.model;
+	id<LDrawStepOverlayCamera>	 camera		= self.camera;
+	NSString					*stepKey	= [self stepKey];
+
+	if (stepKey == nil || self.hasSizePreview || self.hasCalloutPreview) {
+		return nil;
+	}
+
+	Tuple3	angle	= [camera viewingAngle];
+	Size2	size	= self.viewSize;
+	CGPoint	anchor	= [camera viewPointForModelPoint:[self.pageAnchor anchorForModel:model]];
+
+	double	zoom	= [camera zoomPercentage];
+
+	return [NSString stringWithFormat:@"%@\n%.4f %.4f %.4f %.4f %.1f %.1f %.1f %.1f", stepKey,
+			angle.x, angle.y, angle.z, zoom, size.width, size.height, anchor.x, anchor.y];
+
+}//end centerKey
 
 
 // MARK: - FOLLOWING THE SUBMODELS -
@@ -679,6 +779,7 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 ///
 /// @discussion	The points it is measured by are kept until the file or the
 ///				step changes, so a pan or a zoom only projects them again.
+///				The layout cache keeps them for each step.
 ///
 //==============================================================================
 - (Box2) assemblyRect
@@ -687,7 +788,18 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	LDrawStep	*step	= [model visibleStep];
 
 	if (self->assemblyOutline == nil || self->assemblyOutlineStep != step) {
-		self->assemblyOutline		= [LDrawStepPartListPolicy assemblyOutlinePointsInModel:model] ?: [NSData data];
+		NSString	*key		= [self stepKey];
+		NSData		*outline	= (key != nil) ? [self.layoutCache outlineForKey:key] : nil;
+
+		if (outline == nil) {
+			outline = [LDrawStepPartListPolicy assemblyOutlinePointsInModel:model] ?: [NSData data];
+
+			if (key != nil) {
+				[self.layoutCache setOutline:outline forKey:key];
+			}
+		}
+
+		self->assemblyOutline		= outline;
 		self->assemblyOutlineStep	= step;
 	}
 
