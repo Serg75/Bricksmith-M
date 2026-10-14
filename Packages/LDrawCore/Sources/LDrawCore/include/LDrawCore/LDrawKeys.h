@@ -38,6 +38,9 @@
 // document like LPub3D does.
 #define STEP_PART_LIST_FOLLOWS_STEP_KEY				@"Step Part List Follows Step Rotation"
 #define STEP_PART_LIST_LPUB_SCALE_KEY				@"Step Part List Uses LPub Scale"
+// On LPub3D's page, puts the callouts' boxes by itself and does not read where
+// the file puts them. Off by default.
+#define STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY		@"Step Callouts Placed Automatically"
 /// Path to LPub3D's PLI control file. Absent means LPub3D's own file, if it is
 /// installed.
 #define STEP_PART_LIST_ORIENTATIONS_FILE_KEY		@"Step Part List Orientations File"

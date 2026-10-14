@@ -83,6 +83,14 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) usesLPubScale;
 + (void) setUsesLPubScale:(BOOL)flag;
 
+/// Whether the callouts' boxes are put on LPub3D's page by themselves. Default
+/// NO. When on, a callout's PLACEMENT line and its offset are not read: each
+/// box goes beside the step's assembly, on the side nearest what it calls
+/// out, where there is room. A box then cannot be dragged, since the line a
+/// drag writes would not be read.
++ (BOOL) placesCalloutsAutomatically;
++ (void) setPlacesCalloutsAutomatically:(BOOL)flag;
+
 /// The base orientation of each part, from LPub3D's PLI control file, or nil.
 /// Default nil. Used only when the icons do not follow the step's rotation.
 + (nullable LDrawPartListOrientations *) partOrientations;

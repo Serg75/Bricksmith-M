@@ -268,16 +268,30 @@ typedef struct LDrawStepCalloutArrow
 - (NSData *) arrowsToMiddles:(NSData *)middles outlines:(NSArray<NSData *> *)outlines
 	NS_SWIFT_NAME(arrows(toMiddles:outlines:));
 
+/// The middle of what the callout places, in the step's model: the mean of
+/// its placements' middles. On the page the box follows this point while the
+/// camera is turned.
+@property (nonatomic, readonly) Point3				placementsMiddle;
+
 /// YES when the box sits where its PLACEMENT line says, or where LPub3D puts
 /// a box with no such line. Only then can it be dragged. NO for a box placed
-/// against something that is not drawn here, where the assembly stands in.
+/// against something that is not drawn here, where the assembly stands in,
+/// and while the boxes are placed automatically.
 @property (nonatomic, readonly) BOOL				isPlacedByFile;
 
 /// The offset a PLACEMENT line needs for the box's corner to land at `origin`.
 /// On the page the step is centered again once the line is written, which
 /// moves the assembly when the box was centered with it. The offset allows
-/// for that, so the box is at `origin` afterwards. NO when the box is not
-/// placed by the file, or what it is placed against has no size.
+/// for that, so the box is at `origin` afterwards.
+///
+/// A box that follows its submodel through a turn is drawn away from where
+/// its line puts it. The line is written for the file's side of the submodel:
+/// as far from `origin` as the submodel has moved, so that beside its
+/// submodel the box is at `origin`. A box dropped on the page stays on the
+/// page for the file too, which may leave it short of `origin`.
+///
+/// NO when the box is not placed by the file, or what it is placed against
+/// has no size.
 - (BOOL) getPlacementOffset:(Point2 *)outOffset forOrigin:(Point2)origin
 	NS_SWIFT_NAME(getPlacementOffset(_:forOrigin:));
 

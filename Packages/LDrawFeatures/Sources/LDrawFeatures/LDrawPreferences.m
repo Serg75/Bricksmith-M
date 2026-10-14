@@ -62,6 +62,7 @@
 	[initialDefaults setObject:@NO								forKey:STEP_PART_LIST_SUBMODELS_KEY]; // matches LPub3D's PLI INCLUDE_SUBMODELS FALSE
 	[initialDefaults setObject:@YES								forKey:STEP_PART_LIST_FOLLOWS_STEP_KEY]; // agree with the assembly beside it
 	[initialDefaults setObject:@NO								forKey:STEP_PART_LIST_LPUB_SCALE_KEY]; // an overlay is not a printed page
+	[initialDefaults setObject:@NO								forKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
 
 	//
 	// Grid Spacing

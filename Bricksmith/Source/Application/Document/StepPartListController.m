@@ -36,6 +36,10 @@
 #import "StepPartListView.h"
 
 
+/// How long until a callout's box that is on its way is drawn again.
+static const NSTimeInterval CALLOUT_MOVE_FRAME_SECONDS = 1.0 / 60.0;
+
+
 // LDrawView already has the camera calls the overlay's layout needs.
 @interface LDrawView (StepOverlayCamera) <LDrawStepOverlayCamera>
 @end
@@ -194,6 +198,8 @@
 {
 	[self stopWatchingEvents];
 
+	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reload) object:nil];
+
 	if (self.hostView != nil) {
 		[[NSNotificationCenter defaultCenter] removeObserver:self
 														name:LDrawViewCameraDidChangeNotification
@@ -301,6 +307,16 @@
 	[overlay showPresentation:presenter.presentation];
 
 	[self showLayoutInTracker];
+
+	// A callout's box that is changing places is drawn further along next
+	// time. In every run loop mode, so it keeps moving while the mouse is
+	// held down.
+	if (presenter.isMovingCallouts) {
+		[self performSelector:@selector(reload)
+				   withObject:nil
+				   afterDelay:CALLOUT_MOVE_FRAME_SECONDS
+					  inModes:@[NSRunLoopCommonModes]];
+	}
 
 }//end reload
 
@@ -421,6 +437,10 @@
 /// @discussion	Stepping through a model, or one edit touching several
 ///				directives, sends a run of notifications.
 ///
+///				The reload is due in every run loop mode. A drag or a gesture
+///				that turns the camera keeps the run loop in its tracking mode,
+///				and the overlay has to keep up with it.
+///
 //==============================================================================
 - (void) setNeedsReload
 {
@@ -429,7 +449,7 @@
 	}
 
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reload) object:nil];
-	[self performSelector:@selector(reload) withObject:nil afterDelay:0.0];
+	[self performSelector:@selector(reload) withObject:nil afterDelay:0.0 inModes:@[NSRunLoopCommonModes]];
 
 }//end setNeedsReload
 

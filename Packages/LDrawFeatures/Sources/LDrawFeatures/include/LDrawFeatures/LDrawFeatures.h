@@ -37,6 +37,7 @@
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawRelatedParts.h>
 #import <LDrawFeatures/LDrawStepCallout.h>
+#import <LDrawFeatures/LDrawStepCalloutArrangement.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
 #import <LDrawFeatures/LDrawStepCalloutStyle.h>
 #import <LDrawFeatures/LDrawStepPartList.h>

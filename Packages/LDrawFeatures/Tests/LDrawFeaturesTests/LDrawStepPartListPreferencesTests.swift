@@ -12,8 +12,8 @@ import Foundation
 import LDrawCore
 import LDrawFeatures
 
-/// Holds every suite that changes the LDrawStepPartList settings, so those
-/// suites run one at a time. The settings are process-wide.
+/// Holds every suite that changes the LDrawStepPartList settings or lays out
+/// by them, so those suites run one at a time. The settings are process-wide.
 @Suite(.serialized) struct StepPartListStaticSettings {}
 
 extension StepPartListStaticSettings {

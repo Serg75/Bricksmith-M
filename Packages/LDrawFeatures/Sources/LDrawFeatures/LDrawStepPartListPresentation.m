@@ -18,12 +18,14 @@
 
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
+#import <LDrawFeatures/LDrawStepCalloutStyle.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListLayout.h>
 #import <LDrawFeatures/LDrawStepPartListModelBuilder.h>
 
 #import "LDrawStepCalloutContent.h"
+#import "LDrawStepCalloutFollower.h"
 
 
 /// Below this size there is nothing worth drawing, and a camera cannot make a
@@ -105,6 +107,7 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	// After the callouts, which are part of what is centered, and before a
 	// drag is shown, which is not.
 	[self findStepCenterForModel:model host:host];
+	[self findFileObstaclesOfBoxes];
 
 	if (host.hasCalloutPreview && host.calloutPreviewBox < self->_calloutBoxes.count) {
 		[self->_calloutBoxes[host.calloutPreviewBox] previewOrigin:host.calloutPreviewPoint];
@@ -239,10 +242,13 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	NSMutableString	*key		= [NSMutableString stringWithString:placement.lPubCommandString ?: @""];
 	Box2			 assembly	= host.assemblyRect;
 
+	BOOL readsLines = ([LDrawStepPartList placesCalloutsAutomatically] == NO);
+
 	for (LDrawStepCalloutBox *box in self->_calloutBoxes) {
 		Box2 frame = box.frameRect;
 
-		[key appendFormat:@"\n%@", box.callout.placement.lPubCommandString ?: @""];
+		// A line that is not read does not say where the step goes either.
+		[key appendFormat:@"\n%@", readsLines ? (box.callout.placement.lPubCommandString ?: @"") : @""];
 
 		// The way the steps run and where they are divided change the size
 		// of the box, as a PLACEMENT line changes its place.
@@ -282,6 +288,60 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	}
 
 }//end findStepCenterForModel:host:
+
+
+//========== findFileObstaclesOfBoxes ==========================================
+///
+/// @abstract	Tells each box what it keeps clear of where the file puts it,
+/// 			when it is dropped in a turned view: the parts list, and the
+/// 			other boxes as the file has them.
+///
+/// @discussion	Each is made bigger by the room the two keep, the larger of
+/// 			their margins. A box's first drop moves the assembly, and the
+/// 			other boxes placed against the assembly with it, so those are
+/// 			counted where they will be then.
+///
+//==============================================================================
+- (void) findFileObstaclesOfBoxes
+{
+	if (self->_isOnPage == NO) {
+		return;
+	}
+
+	double	scale		= self->_pointsPerPageInch;
+	double	listMargin	= [LDrawStepPartListPolicy frameInsetForPointsPerPageInch:scale];
+	BOOL	hasList		= (V2BoxWidth(self->_frameRect) > 0.0 && V2BoxHeight(self->_frameRect) > 0.0);
+
+	for (LDrawStepCalloutBox *box in self->_calloutBoxes) {
+		NSMutableData	*obstacles	= [NSMutableData data];
+		Size2			 margins	= box.style.margins;
+
+		if (hasList) {
+			Box2 list = V2BoxInset(self->_frameRect,
+								   -MAX(margins.width * scale, listMargin),
+								   -MAX(margins.height * scale, listMargin));
+
+			[obstacles appendBytes:&list length:sizeof(Box2)];
+		}
+
+		for (LDrawStepCalloutBox *other in self->_calloutBoxes) {
+			if (other == box) {
+				continue;
+			}
+
+			Size2	theirs	= other.style.margins;
+			Point2	move	= other.isPlacedAgainstAssembly ? box.assemblyShiftAfterDrag : ZeroPoint2;
+			Box2	rect	= V2BoxInset(LDrawStepCalloutMovedBox(other.placedRect, move),
+										 -MAX(margins.width, theirs.width) * scale,
+										 -MAX(margins.height, theirs.height) * scale);
+
+			[obstacles appendBytes:&rect length:sizeof(Box2)];
+		}
+
+		box.fileObstacles = obstacles;
+	}
+
+}//end findFileObstaclesOfBoxes
 
 
 //========== stepCenterForAssembly:placement:leavingOut: =======================
@@ -505,6 +565,61 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	return [LDrawStepCalloutBox boxAtPoint:point amongBoxes:self->_calloutBoxes];
 
 }//end calloutBoxAtPoint:
+
+
+//========== moveCalloutBoxesFrom:to:arrangement: ==============================
+- (void) moveCalloutBoxesFrom:(NSArray<NSData *> *)laidOutPlaces
+						   to:(NSArray<NSData *> *)places
+				  arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
+{
+	if (self->_isOnPage == NO) {
+		return;
+	}
+
+	[LDrawStepCalloutFollower moveBoxes:self->_calloutBoxes
+								   from:laidOutPlaces
+									 to:places
+								 onPage:self->_pageRect
+							  listFrame:self->_frameRect
+					  pointsPerPageInch:self->_pointsPerPageInch
+							arrangement:arrangement];
+
+}//end moveCalloutBoxesFrom:to:arrangement:
+
+
+//========== placeCalloutBoxesAroundAssembly:places:arrangement: ===============
+- (void) placeCalloutBoxesAroundAssembly:(Box2)assemblyRect
+								  places:(NSArray<NSData *> *)places
+							 arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
+{
+	if (self->_isOnPage == NO) {
+		return;
+	}
+
+	[LDrawStepCalloutFollower placeBoxes:self->_calloutBoxes
+						  aroundAssembly:assemblyRect
+								  places:places
+								  onPage:self->_pageRect
+							   listFrame:self->_frameRect
+					   pointsPerPageInch:self->_pointsPerPageInch
+							 arrangement:arrangement];
+
+}//end placeCalloutBoxesAroundAssembly:places:arrangement:
+
+
+//========== restCalloutBoxesWithArrangement: ==================================
+- (void) restCalloutBoxesWithArrangement:(LDrawStepCalloutArrangement *)arrangement
+{
+	if (self->_isOnPage == NO) {
+		return;
+	}
+
+	[LDrawStepCalloutFollower restBoxes:self->_calloutBoxes
+								 onPage:self->_pageRect
+					  pointsPerPageInch:self->_pointsPerPageInch
+							arrangement:arrangement];
+
+}//end restCalloutBoxesWithArrangement:
 
 
 //========== inheritedInchesForAxis: ===========================================

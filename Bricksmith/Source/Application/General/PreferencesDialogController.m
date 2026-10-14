@@ -266,6 +266,7 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 	NSSwitch		*stepPartListSubmodelsSwitch;
 	NSSwitch		*stepPartListFollowsStepSwitch;
 	NSSwitch		*stepPartListLPubScaleSwitch;
+	NSSwitch		*stepCalloutsAutomaticSwitch;
 	NSTextField		*stepPartListOrientationsField;
 
 	// Colors Pane
@@ -633,6 +634,9 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSString	*partListNote		= NSLocalizedString(@"A framed list of the parts the current step adds. With "
 														@"Draw on LPub3D's page on, it is packed like LPub3D, and "
 														@"dragging its edge sizes it for each step.", nil);
+	NSString	*calloutsNote		= NSLocalizedString(@"Puts each callout in a free spot near its submodel on "
+														@"LPub3D's page. Positions saved in the file are ignored, "
+														@"and callouts cannot be dragged.", nil);
 	NSString	*showListTitle		= NSLocalizedString(@"Show the step's parts list in Steps view mode", nil);
 	NSTextField	*percentLabel		= [PreferencesForm unitLabelWithString:@"%"];
 	NSTextField	*orientationsNote	= nil;
@@ -649,12 +653,14 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSView		*submodelsRow		= nil;
 	NSView		*followsStepRow		= nil;
 	NSView		*lpubScaleRow		= nil;
+	NSView		*calloutsRow		= nil;
 	NSView		*orientationsRow	= nil;
 	NSView		*selectionSection	= nil;
 	NSView		*groupsSection		= nil;
 	NSView		*previousSection	= nil;
 	NSView		*ghostsSection		= nil;
 	NSView		*partListSection	= nil;
+	NSView		*calloutsSection	= nil;
 
 	stepSelectionGoesBackSwitch = [PreferencesForm switchWithTarget:self
 															 action:@selector(stepSelectionGoesBackChanged:)];
@@ -683,6 +689,8 @@ PreferencesDialogController *preferencesDialog = nil;
 															  action:@selector(stepPartListFollowsStepChanged:)];
 	stepPartListLPubScaleSwitch = [PreferencesForm switchWithTarget:self
 															action:@selector(stepPartListLPubScaleChanged:)];
+	stepCalloutsAutomaticSwitch = [PreferencesForm switchWithTarget:self
+															 action:@selector(stepCalloutsAutomaticChanged:)];
 
 	chooseButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Choose…", nil)
 											 target:self
@@ -713,6 +721,8 @@ PreferencesDialogController *preferencesDialog = nil;
 											control:stepPartListFollowsStepSwitch];
 	lpubScaleRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Draw on LPub3D's page", nil)
 											control:stepPartListLPubScaleSwitch];
+	calloutsRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Place callouts automatically", nil)
+											control:stepCalloutsAutomaticSwitch];
 
 	selectionSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Step Selection", nil)
 													rows:@[goesBackRow]
@@ -730,9 +740,12 @@ PreferencesDialogController *preferencesDialog = nil;
 												   rows:@[showListRow, submodelsRow, followsStepRow,
 														  lpubScaleRow, orientationsRow]
 												 footer:partListNote];
+	calloutsSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Callouts", nil)
+												   rows:@[calloutsRow]
+												 footer:calloutsNote];
 
 	return [PreferencesForm paneWithSections:@[selectionSection, groupsSection, previousSection, ghostsSection,
-											   partListSection]];
+											   partListSection, calloutsSection]];
 
 }//end makeStepsPane
 
@@ -1035,6 +1048,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self setStepPartListSwitch:stepPartListSubmodelsSwitch		fromKey:STEP_PART_LIST_SUBMODELS_KEY];
 	[self setStepPartListSwitch:stepPartListFollowsStepSwitch	fromKey:STEP_PART_LIST_FOLLOWS_STEP_KEY];
 	[self setStepPartListSwitch:stepPartListLPubScaleSwitch		fromKey:STEP_PART_LIST_LPUB_SCALE_KEY];
+	[self setStepPartListSwitch:stepCalloutsAutomaticSwitch		fromKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
 
 	[self showStepPartListOrientations];
 
@@ -1450,6 +1464,20 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self storeStepPartListFlagFromSwitch:stepPartListLPubScaleSwitch forKey:STEP_PART_LIST_LPUB_SCALE_KEY];
 
 }//end stepPartListLPubScaleChanged:
+
+
+//========== stepCalloutsAutomaticChanged: =====================================
+//
+// Purpose:		The user chose whether the callouts are put on the page by
+//				themselves, with the file's placement of them left unread.
+//
+//==============================================================================
+- (IBAction) stepCalloutsAutomaticChanged:(id)sender
+{
+	[self storeStepPartListFlagFromSwitch:stepCalloutsAutomaticSwitch
+								   forKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
+
+}//end stepCalloutsAutomaticChanged:
 
 
 //========== chooseStepPartListOrientations: ===================================
@@ -2238,6 +2266,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[LDrawStepPartList setIncludesSubmodels:[userDefaults boolForKey:STEP_PART_LIST_SUBMODELS_KEY]];
 	[LDrawStepPartList setFollowsStepRotation:[userDefaults boolForKey:STEP_PART_LIST_FOLLOWS_STEP_KEY]];
 	[LDrawStepPartList setUsesLPubScale:[userDefaults boolForKey:STEP_PART_LIST_LPUB_SCALE_KEY]];
+	[LDrawStepPartList setPlacesCalloutsAutomatically:[userDefaults boolForKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY]];
 
 }//end pushStepPartListDefaults
 

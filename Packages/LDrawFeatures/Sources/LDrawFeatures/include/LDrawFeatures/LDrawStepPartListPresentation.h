@@ -15,6 +15,7 @@
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
 @class LDrawModel;
+@class LDrawStepCalloutArrangement;
 @class LDrawStepCalloutBox;
 @class LDrawStepPartListEntry;
 @class LDrawStepPartListLayout;
@@ -132,6 +133,53 @@ typedef struct LDrawStepPartListHostState {
 /// The callout's box under a point of the view, or nil. Where two overlap it
 /// is the one drawn last, which is the one on top.
 - (nullable LDrawStepCalloutBox *) calloutBoxAtPoint:(Point2)point NS_SWIFT_NAME(calloutBox(at:));
+
+/// Moves the callouts' boxes with what they call out, for a camera that has
+/// been turned since the step was laid out. A box goes as far as the middle of
+/// what it places has moved in the view, where there is room. It stays on the
+/// page, and clear of the parts list and of the other boxes, by the larger of
+/// the two things' margins. It also keeps off the arrows where it can. A box
+/// the file puts off the page stays where it is: one that reaches more than a
+/// tenth of an inch over an edge.
+///
+/// `places` has, for each box, where the camera draws what it places now, as
+/// Box2 values: a box with no size at the middle of its placements, then the
+/// box around each placement one of its arrows goes to. A placement that
+/// cannot be measured is a box with no size at its middle. `laidOutPlaces`
+/// has the same as it was drawn when the step was laid out.
+///
+/// With no arrangement each box keeps to the side of the others and of the
+/// arrows that the file's layout puts it on. With one, the boxes may go to
+/// another side of their submodels and change places where that is better,
+/// and they move there over a short time.
+///
+/// Does nothing off the page.
+- (void) moveCalloutBoxesFrom:(NSArray<NSData *> *)laidOutPlaces
+						   to:(NSArray<NSData *> *)places
+				  arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
+	NS_SWIFT_NAME(moveCalloutBoxes(from:to:arrangement:));
+
+/// Puts the callouts' boxes by itself, for when their PLACEMENT lines are not
+/// read. Each box goes beside the step's assembly, past the side nearest what
+/// it calls out and level with that, where there is room. It stays on the
+/// page, clear of the parts list and of the other boxes, and off the arrows.
+///
+/// `assemblyRect` is the box around the step's assembly as the camera draws it
+/// now. `places` is as for moving the boxes. With an arrangement the boxes
+/// keep their sides from one layout to the next, change them only for a gain
+/// that is worth a move, and move over a short time when they do.
+///
+/// Does nothing off the page.
+- (void) placeCalloutBoxesAroundAssembly:(Box2)assemblyRect
+								  places:(NSArray<NSData *> *)places
+							 arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
+	NS_SWIFT_NAME(placeCalloutBoxes(aroundAssembly:places:arrangement:));
+
+/// Puts the callouts' boxes where the file puts them, for a camera at the
+/// angle the step was laid out at. A box that had gone to another side moves
+/// back over a short time. Does nothing off the page.
+- (void) restCalloutBoxesWithArrangement:(LDrawStepCalloutArrangement *)arrangement
+	NS_SWIFT_NAME(restCalloutBoxes(arrangement:));
 
 /// Whether each axis shows a pin: set by the step's own line, or by where a
 /// drag would leave it.

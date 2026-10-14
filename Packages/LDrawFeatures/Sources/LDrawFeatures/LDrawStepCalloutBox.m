@@ -335,6 +335,81 @@ static void PlaceStarts(EdgeArrow *arrows, NSUInteger count, double low, double 
 }//end PlaceStarts
 
 
+/// How many times a dropped box is moved off what is in its way in the file.
+/// Clearing one thing may put it over another.
+static const NSUInteger CLEARING_PASSES = 8;
+
+/// How far two rectangles may reach over each other, in points, and still be
+/// clear of each other.
+static const double CLEARING_SLACK = 0.001;
+
+
+//========== OriginClearOf() ===================================================
+///
+/// @abstract	The corner nearest `origin` that has a box of `size` clear of
+/// 			every one of `obstacles`, between the corners `least` and
+/// 			`most`.
+///
+/// @discussion	A box over an obstacle goes the shortest way off it that keeps
+/// 			it between the two corners. One that has no such way stays over
+/// 			it.
+///
+//==============================================================================
+static Point2 OriginClearOf(Point2 origin, Size2 size, NSData *obstacles, Point2 least, Point2 most)
+{
+	const Box2	*rects	= obstacles.bytes;
+	NSUInteger	 count	= obstacles.length / sizeof(Box2);
+
+	origin = V2Make(MAX(least.x, MIN(most.x, origin.x)), MAX(least.y, MIN(most.y, origin.y)));
+
+	for (NSUInteger pass = 0; pass < CLEARING_PASSES; pass++) {
+		BOOL isSettled = YES;
+
+		for (NSUInteger index = 0; index < count; index++) {
+			Box2	rect		= rects[index];
+			Point2	ways[4]		= {
+				V2Make(V2BoxMinX(rect) - (origin.x + size.width), 0.0),
+				V2Make(V2BoxMaxX(rect) - origin.x, 0.0),
+				V2Make(0.0, V2BoxMinY(rect) - (origin.y + size.height)),
+				V2Make(0.0, V2BoxMaxY(rect) - origin.y)
+			};
+			double	shortest	= DBL_MAX;
+			Point2	way			= ZeroPoint2;
+
+			// Past one of its sides already.
+			if (ways[0].x > -CLEARING_SLACK || ways[1].x < CLEARING_SLACK
+				|| ways[2].y > -CLEARING_SLACK || ways[3].y < CLEARING_SLACK) {
+				continue;
+			}
+
+			for (NSUInteger side = 0; side < 4; side++) {
+				Point2	moved	= V2Add(origin, ways[side]);
+				double	length	= fabs(ways[side].x) + fabs(ways[side].y);
+				BOOL	fits	= moved.x >= least.x - CLEARING_SLACK && moved.x <= most.x + CLEARING_SLACK
+							   && moved.y >= least.y - CLEARING_SLACK && moved.y <= most.y + CLEARING_SLACK;
+
+				if (fits && length < shortest) {
+					shortest	= length;
+					way			= ways[side];
+				}
+			}
+
+			if (shortest < DBL_MAX) {
+				origin		= V2Add(origin, way);
+				isSettled	= NO;
+			}
+		}
+
+		if (isSettled) {
+			break;
+		}
+	}
+
+	return origin;
+
+}//end OriginClearOf
+
+
 //========== BoxHasArea() ======================================================
 static BOOL BoxHasArea(Box2 box)
 {
@@ -584,6 +659,17 @@ static BOOL BoxHasArea(Box2 box)
 	/// offset. Both are read when a drag is turned back into an offset.
 	Box2					 _anchorRect;
 	Point2					 _unoffsetOrigin;
+
+	/// Where the box's corner goes before it follows its submodel or a drag.
+	Point2					 _placedOrigin;
+
+	/// How far the box's submodel has moved in the view since the step was
+	/// laid out. A box beside its submodel on the file's side is drawn that
+	/// far from where the file puts it.
+	Point2					 _submodelShift;
+
+	/// The page the box is on, or an empty box off the page.
+	Box2					 _pageRect;
 }
 
 
@@ -655,6 +741,10 @@ static BOOL BoxHasArea(Box2 box)
 		[boxes addObject:box];
 	}
 
+	for (LDrawStepCalloutBox *box in boxes) {
+		box->_placedOrigin = box.frameRect.origin;
+	}
+
 	return boxes;
 
 }//end boxesForCallouts:inModel:options:
@@ -686,7 +776,10 @@ static BOOL BoxHasArea(Box2 box)
 //==============================================================================
 - (void) placeWithOptions:(LDrawStepCalloutBoxOptions)options
 {
-	LPubPlacement			*placement		= self.callout.placement;
+	// A box that is put by itself starts where one with no line goes. Its
+	// line is not read.
+	BOOL					 isAutomatic	= [LDrawStepPartList placesCalloutsAutomatically];
+	LPubPlacement			*placement		= isAutomatic ? nil : self.callout.placement;
 	LPubPlacementPosition	 position		= LPubPlacementPositionRight;
 	LPubPlacementPosition	 justification	= LPubPlacementPositionCenter;
 	BOOL					 isInside		= NO;
@@ -694,7 +787,7 @@ static BOOL BoxHasArea(Box2 box)
 	Point2					 offset			= ZeroPoint2;
 	Box2					 anchor			= options.assemblyRect;
 
-	self->_isCenteredWithAssembly	= YES;
+	self->_isCenteredWithAssembly	= (isAutomatic == NO);
 	self->_isPlacedAgainstAssembly	= YES;
 
 	if (placement != nil) {
@@ -734,11 +827,13 @@ static BOOL BoxHasArea(Box2 box)
 												  margin:V2MakeSize(margins.width * scale, margins.height * scale)];
 
 	self->_anchorRect		= anchor;
+	self->_pageRect			= options.hostRect;
 	self->_unoffsetOrigin	= origin;
 
 	// A drag is written as a share of the size of what the line names. The
 	// assembly is another size, so a box it stands in for is not dragged.
-	self->_isPlacedByFile	= (isStandIn == NO);
+	// Neither is one whose line is not read.
+	self->_isPlacedByFile	= (isStandIn == NO && isAutomatic == NO);
 
 	// The offset is a share of the size of what the box is placed against.
 	origin.x += V2BoxWidth(anchor) * offset.x;
@@ -1054,6 +1149,16 @@ static BOOL BoxHasArea(Box2 box)
 /// 			measured from where the box will go with no offset then, and
 /// 			the box ends up at `origin`.
 ///
+/// 			A box that follows its submodel is drawn away from where the
+/// 			line puts it. The line is written for the file's side of the
+/// 			submodel: it puts the box as far from `origin` as the submodel
+/// 			has moved, so that beside its submodel the box is at `origin`.
+///
+/// 			Where the file then puts the box cannot be seen in a turned
+/// 			view. So a box dropped on the page gets a place in the file
+/// 			that is on the page too, and clear of the parts list and of the
+/// 			other boxes. Off the page it would stop following.
+///
 //==============================================================================
 - (BOOL) getPlacementOffset:(Point2 *)outOffset forOrigin:(Point2)origin
 {
@@ -1061,10 +1166,28 @@ static BOOL BoxHasArea(Box2 box)
 		return NO;
 	}
 
-	Point2 unoffset = V2Add(self->_unoffsetOrigin, self->_assemblyShiftAfterDrag);
+	Point2	unoffset	= V2Add(self->_unoffsetOrigin, self->_assemblyShiftAfterDrag);
+	Point2	wanted		= V2Sub(origin, self->_submodelShift);
+	Size2	size		= self->_frameRect.size;
+	Box2	page		= self->_pageRect;
+	Box2	dropped		= V2MakeBox(origin.x, origin.y, size.width, size.height);
+	BOOL	isFollowing	= (self->_submodelShift.x != 0.0 || self->_submodelShift.y != 0.0);
+	BOOL	isOnPage	= BoxHasArea(page)
+					   && V2BoxMinX(dropped) >= V2BoxMinX(page) && V2BoxMaxX(dropped) <= V2BoxMaxX(page)
+					   && V2BoxMinY(dropped) >= V2BoxMinY(page) && V2BoxMaxY(dropped) <= V2BoxMaxY(page);
 
-	*outOffset = V2Make((origin.x - unoffset.x) / V2BoxWidth(self->_anchorRect),
-						(origin.y - unoffset.y) / V2BoxHeight(self->_anchorRect));
+	// On the page, or as far off it as the file has the box now.
+	if (isFollowing && isOnPage) {
+		Point2 placed	= self->_placedOrigin;
+		Point2 least	= V2Make(MIN(V2BoxMinX(page), placed.x), MIN(V2BoxMinY(page), placed.y));
+		Point2 most		= V2Make(MAX(V2BoxMaxX(page) - size.width, placed.x),
+								 MAX(V2BoxMaxY(page) - size.height, placed.y));
+
+		wanted = OriginClearOf(wanted, size, self.fileObstacles, least, most);
+	}
+
+	*outOffset = V2Make((wanted.x - unoffset.x) / V2BoxWidth(self->_anchorRect),
+						(wanted.y - unoffset.y) / V2BoxHeight(self->_anchorRect));
 	return YES;
 
 }//end getPlacementOffset:forOrigin:
@@ -1073,9 +1196,53 @@ static BOOL BoxHasArea(Box2 box)
 //========== previewOrigin: ====================================================
 - (void) previewOrigin:(Point2)origin
 {
+	self->_isHeld = YES;
+
 	[self moveTo:origin];
 
 }//end previewOrigin:
+
+
+//========== placedRect ========================================================
+- (Box2) placedRect
+{
+	Size2 size = self->_frameRect.size;
+
+	return V2MakeBox(self->_placedOrigin.x, self->_placedOrigin.y, size.width, size.height);
+
+}//end placedRect
+
+
+//========== followTo:submodelShift: ===========================================
+- (void) followTo:(Point2)origin submodelShift:(Point2)submodelShift
+{
+	self->_submodelShift = submodelShift;
+
+	// A box held by a drag stays under the pointer.
+	if (self->_isHeld == NO) {
+		[self moveTo:origin];
+	}
+
+}//end followTo:submodelShift:
+
+
+//========== placementsMiddle ==================================================
+- (Point3) placementsMiddle
+{
+	NSArray<LDrawPart *>	*placements	= self.callout.placements;
+	Point3					 sum		= ZeroPoint3;
+
+	if (placements.count == 0) {
+		return ZeroPoint3;
+	}
+
+	for (LDrawPart *part in placements) {
+		sum = V3Add(sum, [LDrawStepCalloutBox middleOfPlacement:part]);
+	}
+
+	return V3MulScalar(sum, 1.0 / placements.count);
+
+}//end placementsMiddle
 
 
 //========== tipModelPointAtIndex: =============================================

@@ -17,7 +17,11 @@
 #import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LPubCallout.h>
+#import <LDrawFeatures/LDrawStepCallout.h>
+#import <LDrawFeatures/LDrawStepCalloutArrangement.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
+#import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
@@ -25,6 +29,30 @@
 
 /// How far two viewing angles may differ, in degrees, and still be one view.
 static const double VIEWING_ANGLE_TOLERANCE = 0.0001;
+
+
+//========== MovedPlaces() =====================================================
+///
+/// @abstract	Box2 values measured from `origin` and made `scale` times as
+///				big.
+///
+//==============================================================================
+static NSData * MovedPlaces(NSData *places, Point2 origin, double scale)
+{
+	NSMutableData	*moved	= [places mutableCopy];
+	Box2			*boxes	= moved.mutableBytes;
+	NSUInteger		 count	= moved.length / sizeof(Box2);
+
+	for (NSUInteger index = 0; index < count; index++) {
+		Box2 box = boxes[index];
+
+		boxes[index] = V2MakeBox((box.origin.x - origin.x) * scale, (box.origin.y - origin.y) * scale,
+								 box.size.width * scale, box.size.height * scale);
+	}
+
+	return moved;
+
+}//end MovedPlaces
 
 
 //========== IsSameViewingAngle() ==============================================
@@ -62,8 +90,19 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	BOOL				 hasMeasuredCenter;
 
 	/// The viewing angle the step was laid out at. While the camera is turned
-	/// away from it, the callouts keep their place on the page.
+	/// away from it, the assembly's box keeps its place on the page, and each
+	/// callout moves with its submodel from where the file puts it.
 	Tuple3				 layoutViewingAngle;
+
+	/// Where what each callout places was drawn at that angle, as Box2
+	/// values from the middle of the assembly's box, in page inches: a box
+	/// with no size at the middle of its placements, then the box around each
+	/// placement an arrow goes to. Kept by the callout's BEGIN line.
+	NSMapTable<LPubCallout *, NSData *>	*submodelPlaces;
+
+	/// The sides the callouts' boxes have taken in a turn, and the moves
+	/// under way.
+	LDrawStepCalloutArrangement			*calloutArrangement;
 
 	/// Where the middle of the page was last drawn, and the viewing angle
 	/// then. A turn keeps the page there.
@@ -81,8 +120,15 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 {
 	self = [super init];
 	if (self) {
+		NSPointerFunctionsOptions weakObjects = NSPointerFunctionsWeakMemory
+											  | NSPointerFunctionsObjectPointerPersonality;
+
 		self->_pageAnchor		= [[LDrawStepPartListPageAnchor alloc] init];
 		self->_calloutArrows	= @[];
+		self->submodelPlaces	= [NSMapTable mapTableWithKeyOptions:weakObjects
+														valueOptions:NSPointerFunctionsStrongMemory];
+
+		self->calloutArrangement = [[LDrawStepCalloutArrangement alloc] init];
 	}
 	return self;
 
@@ -96,7 +142,18 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	self.calloutArrows		= @[];
 	self->hasPageMiddle		= NO;
 
+	[self->submodelPlaces removeAllObjects];
+	[self->calloutArrangement reset];
+
 }//end reset
+
+
+//========== isMovingCallouts ==================================================
+- (BOOL) isMovingCallouts
+{
+	return self->calloutArrangement.isMoving;
+
+}//end isMovingCallouts
 
 
 // MARK: - LAYING OUT -
@@ -108,6 +165,7 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	// One walk of the file for all the lookups of this layout.
 	[LDrawStepPartListPolicy performWithCachedLookups:^{
 		LDrawModel						*model			= self.model;
+		LDrawStepPartListHostState		 host			= {0};
 		LDrawStepPartListPresentation	*presentation	= nil;
 
 		[self keepPageInPlaceThroughTurn];
@@ -117,14 +175,18 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 			[self startLayout];
 		}
 
-		presentation = [LDrawStepPartListPresentation presentationForModel:model host:[self hostState]];
+		host			= [self hostState];
+		presentation	= [LDrawStepPartListPresentation presentationForModel:model host:host];
 
 		// Centering moves the camera, so the step is laid out again for it.
 		if ([self needsPageCenterForPresentation:presentation]) {
 			[self centerPageOnPresentation:presentation keepingItOnScreen:YES];
 
-			presentation = [LDrawStepPartListPresentation presentationForModel:model host:[self hostState]];
+			host			= [self hostState];
+			presentation	= [LDrawStepPartListPresentation presentationForModel:model host:host];
 		}
+
+		[self moveCalloutsWithSubmodelsInPresentation:presentation aroundAssembly:host.assemblyRect];
 
 		self.presentation = presentation;
 	}];
@@ -242,10 +304,20 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 - (void) startLayout
 {
 	[self.pageAnchor forgetAssemblyRect];
+	[self->submodelPlaces removeAllObjects];
+	[self->calloutArrangement reset];
 
 	self->layoutViewingAngle = [self.camera viewingAngle];
 
 }//end startLayout
+
+
+//========== isTurnedSinceLayout ===============================================
+- (BOOL) isTurnedSinceLayout
+{
+	return IsSameViewingAngle([self.camera viewingAngle], self->layoutViewingAngle) == NO;
+
+}//end isTurnedSinceLayout
 
 
 //========== keepPageInPlaceThroughTurn ========================================
@@ -378,6 +450,127 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	}
 
 }//end centerPageOnPresentation:keepingItOnScreen:
+
+
+// MARK: - FOLLOWING THE SUBMODELS -
+
+
+//========== moveCalloutsWithSubmodelsInPresentation:aroundAssembly: ===========
+///
+/// @abstract	While the camera is turned away from the angle the step was
+///				laid out at, moves each callout's box as far as its submodel
+///				has moved on the page since, and off the arrows.
+///
+/// @discussion	At the angle of the layout the boxes are where the file puts
+///				them, and where what each callout places is drawn is kept. A
+///				callout that is new while the camera is turned, or has another
+///				number of arrows, is kept as it is drawn then.
+///
+///				Boxes that are placed automatically are put beside the
+///				assembly by themselves instead, at every angle.
+///
+///				A place is kept from the middle of the assembly's box. That
+///				box stays on the page through a turn, and moves with the step
+///				when the page is centered again.
+///
+//==============================================================================
+- (void) moveCalloutsWithSubmodelsInPresentation:(LDrawStepPartListPresentation *)presentation
+								  aroundAssembly:(Box2)assemblyRect
+{
+	NSArray<LDrawStepCalloutBox *>	*boxes	= presentation.calloutBoxes;
+	double							 scale	= presentation.pointsPerPageInch;
+
+	// With nothing to move, no move is under way either.
+	if (self.camera == nil || presentation.isOnPage == NO || boxes.count == 0
+		|| V2BoxWidth(assemblyRect) <= 0.0 || V2BoxHeight(assemblyRect) <= 0.0) {
+		[self->calloutArrangement reset];
+		return;
+	}
+
+	self->calloutArrangement.time = (self.clock != nil) ? self.clock() : [NSProcessInfo processInfo].systemUptime;
+
+	BOOL						 isTurned		= [self isTurnedSinceLayout];
+	Point2						 middle			= V2BoxMid(assemblyRect);
+	NSMutableArray<NSData *>	*places			= [NSMutableArray array];
+	NSMutableArray<NSData *>	*laidOutPlaces	= [NSMutableArray array];
+
+	// Where the view's corner is as the kept places are measured: from the
+	// assembly's middle, in page inches.
+	Point2 inViewOrigin = V2Make(-middle.x / scale, -middle.y / scale);
+
+	// Kept for boxes that are placed automatically too, so they are there
+	// when the file places the boxes again in a turned view.
+	for (LDrawStepCalloutBox *box in boxes) {
+		LPubCallout	*key	= box.callout.beginDirective;
+		NSData		*drawn	= [self drawnPlacesOfBox:box];
+		NSData		*kept	= isTurned ? [self->submodelPlaces objectForKey:key] : nil;
+
+		if (kept.length != drawn.length) {
+			kept = MovedPlaces(drawn, middle, 1.0 / scale);
+
+			[self->submodelPlaces setObject:kept forKey:key];
+		}
+
+		[places addObject:drawn];
+		[laidOutPlaces addObject:MovedPlaces(kept, inViewOrigin, scale)];
+	}
+
+	// Where the file puts the boxes is not read: they go beside the assembly
+	// as the camera draws it now, at every angle.
+	if ([LDrawStepPartList placesCalloutsAutomatically]) {
+		[presentation placeCalloutBoxesAroundAssembly:[self assemblyRect]
+											   places:places
+										  arrangement:self->calloutArrangement];
+	}
+	else if (isTurned) {
+		[presentation moveCalloutBoxesFrom:laidOutPlaces to:places arrangement:self->calloutArrangement];
+	}
+	else {
+		[presentation restCalloutBoxesWithArrangement:self->calloutArrangement];
+	}
+
+}//end moveCalloutsWithSubmodelsInPresentation:aroundAssembly:
+
+
+//========== drawnPlacesOfBox: =================================================
+///
+/// @abstract	Where the camera draws what a callout places, as Box2 values:
+///				a box with no size at the middle of its placements, then the
+///				box around each placement an arrow goes to.
+///
+/// @discussion	A placement that cannot be measured is a box with no size at
+///				its middle.
+///
+//==============================================================================
+- (NSData *) drawnPlacesOfBox:(LDrawStepCalloutBox *)box
+{
+	id<LDrawStepOverlayCamera>	 camera	= self.camera;
+	NSMutableData				*places	= [NSMutableData data];
+	CGPoint						 middle	= [camera viewPointForModelPoint:box.placementsMiddle];
+	Box2						 place	= V2MakeBox(middle.x, middle.y, 0.0, 0.0);
+
+	[places appendBytes:&place length:sizeof(Box2)];
+
+	for (NSUInteger index = 0; index < box.tipCount; index++) {
+		NSData *outline = [box tipOutlinePointsAtIndex:index];
+
+		if (outline.length > 0) {
+			CGRect rect = [camera viewRectForModelPoints:outline];
+
+			place = V2MakeBox(CGRectGetMinX(rect), CGRectGetMinY(rect), CGRectGetWidth(rect), CGRectGetHeight(rect));
+		}
+		else {
+			CGPoint tip = [camera viewPointForModelPoint:[box tipModelPointAtIndex:index]];
+
+			place = V2MakeBox(tip.x, tip.y, 0.0, 0.0);
+		}
+
+		[places appendBytes:&place length:sizeof(Box2)];
+	}
+
+	return places;
+
+}//end drawnPlacesOfBox:
 
 
 // MARK: - ARROWS -
@@ -519,20 +712,19 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 /// @discussion	While the camera is at the angle the step was laid out at, the
 ///				box is measured as the camera draws it, and its place on the
 ///				page is kept. Once the camera is turned the kept box is used,
-///				so the callouts stay where they are while the model turns.
+///				so what the file places against the assembly has the same
+///				place to start from while the model turns.
 ///
 //==============================================================================
 - (Box2) assemblyRectForHost:(LDrawStepPartListHostState)host
 {
 	LDrawStepPartListPageAnchor	*pageAnchor	= self.pageAnchor;
 	Point2						 middle		= host.pageCenterInView;
-	Tuple3						 angle		= [self.camera viewingAngle];
-	BOOL						 isTurned	= (IsSameViewingAngle(angle, self->layoutViewingAngle) == NO);
 	double						 scale		= 0.0;
 
 	scale = [LDrawStepPartListPolicy pointsPerPageInchForAssemblyScale:host.assemblyScale inModel:self.model];
 
-	if (isTurned && pageAnchor.hasAssemblyRect) {
+	if ([self isTurnedSinceLayout] && pageAnchor.hasAssemblyRect) {
 		return [pageAnchor assemblyRectAroundPageCenter:middle pointsPerPageInch:scale];
 	}
 

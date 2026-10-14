@@ -84,7 +84,12 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 /// @discussion The host tells it when something changed, and draws what it
 ///             lays out. On LPub3D's page it also puts each step in its place
 ///             on the page, and keeps the page still while the camera is
-///             turned.
+///             turned. A callout's box then moves with its submodel, from
+///             where the file puts it.
+///
+///             In a turn the boxes may change places, and go to another side
+///             of their submodels. They move there over a short time, so the
+///             host lays the step out again soon while `isMovingCallouts`.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawStepOverlayPresenter : NSObject
@@ -116,6 +121,14 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 
 /// Collects, packs and places the visible step again.
 - (void) reload;
+
+/// Whether a callout's box was still on its way to its place in the last
+/// layout. The host then reloads again in a moment, to draw it further along.
+@property (nonatomic, readonly) BOOL isMovingCallouts;
+
+/// The time a box's move is measured by, in seconds. Nil for the time the
+/// system has been up. A test gives its own.
+@property (nonatomic, copy, nullable) NSTimeInterval (^clock)(void);
 
 /// What the last reload laid out. Nil before the first, and after -reset.
 @property (nonatomic, readonly, nullable) LDrawStepPartListPresentation *presentation;

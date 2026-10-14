@@ -95,8 +95,24 @@ extern void LDrawStepCalloutAppendRotation(NSMutableString *key, Matrix4 matrix)
 /// sets it for a box placed against the assembly.
 @property (nonatomic) Point2 assemblyShiftAfterDrag;
 
+/// What the box keeps clear of where the file puts it, when it is dropped in
+/// a turned view: the parts list and the other boxes as the file has them,
+/// each made bigger by the room the box keeps to it, as Box2 values.
+@property (nonatomic, copy, nullable) NSData *fileObstacles;
+
 /// Shows a drag in progress: the box with its corner at `origin`.
 - (void) previewOrigin:(Point2)origin;
+
+/// The box where the file puts it, before it follows its submodel or a drag.
+@property (nonatomic, readonly) Box2 placedRect;
+
+/// YES while a drag holds the box.
+@property (nonatomic, readonly) BOOL isHeld;
+
+/// Draws the box with its corner at `origin`, unless a drag holds it.
+/// `submodelShift` is how far its submodel has moved in the view since the
+/// step was laid out. A drop is measured with it.
+- (void) followTo:(Point2)origin submodelShift:(Point2)submodelShift;
 
 /// The corner of a box of `size` put at a side or corner of `anchor`, as
 /// LPub3D places one thing against another, `margin` away from it.
