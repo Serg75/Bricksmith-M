@@ -13,6 +13,7 @@
 
 #import <LDrawCore/LDrawModel.h>
 
+#import <LDrawFeatures/LDrawStepPartListPageFitter.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
 
@@ -46,11 +47,12 @@
 		return ZeroPoint3;
 	}
 
-	// A page center and an assembly's box belong to the model they were kept
-	// for.
+	// A page center, an assembly's box and a ratio belong to the model they
+	// were kept for.
 	if (model != self->measuredModel) {
 		self->anchor			= [LDrawStepPartListPolicy pageAnchorInModel:model];
 		self->measuredModel		= model;
+		self->drawnScaleRatio	= 0.0;
 		self->hasPageCenter		= NO;
 		self->hasAssemblyBox	= NO;
 	}
@@ -174,58 +176,31 @@
 }//end invalidate
 
 
-//========== needsDrawnScale ===================================================
-- (BOOL) needsDrawnScale
+//========== drawnScaleRatioOfModel:inView: ====================================
+- (double) drawnScaleRatioOfModel:(nullable LDrawModel *)model inView:(id<LDrawStepPartListPageView>)view
 {
-	return self->drawnScaleRatio <= 0.0;
+	// First, as it forgets the ratio of another model.
+	Point3	point		= [self anchorForModel:model];
+	double	zoomScale	= [view zoomPercentage] / 100.0;
 
-}//end needsDrawnScale
+	// A measure that cannot be read keeps the zoom alone, so it is not taken
+	// again on every redraw.
+	if (self->drawnScaleRatio <= 0.0) {
+		double drawn = [view pointsPerLDUAtModelPoint:point];
 
+		self->drawnScaleRatio = (drawn > 0.0 && zoomScale > 0.0) ? (drawn / zoomScale) : 1.0;
+	}
 
-//========== drawnScaleRatio ===================================================
-- (double) drawnScaleRatio
-{
 	return self->drawnScaleRatio;
 
-}//end drawnScaleRatio
+}//end drawnScaleRatioOfModel:inView:
 
 
-//========== setDrawnScaleRatio: ===============================================
-- (void) setDrawnScaleRatio:(double)ratio
+//========== forgetDrawnScale ==================================================
+- (void) forgetDrawnScale
 {
-	self->drawnScaleRatio = ratio;
+	self->drawnScaleRatio = 0.0;
 
-}//end setDrawnScaleRatio:
-
-
-//========== noteDrawnPointsPerLDU:atZoomScale: ================================
-///
-/// @abstract	Keeps the drawn scale as a ratio against the zoom.
-///
-/// @discussion	A measure that cannot be read keeps the zoom alone, so it is
-/// 			not taken again on every redraw.
-///
-//==============================================================================
-- (void) noteDrawnPointsPerLDU:(double)drawnPointsPerLDU atZoomScale:(double)zoomScale
-{
-	self->drawnScaleRatio = (drawnPointsPerLDU > 0.0 && zoomScale > 0.0)
-						  ? (drawnPointsPerLDU / zoomScale)
-						  : 1.0;
-
-}//end noteDrawnPointsPerLDU:atZoomScale:
-
-
-//========== assemblyScaleForZoomScale: ========================================
-///
-/// @abstract	Points per LDU the page is sized from at this zoom.
-///
-//==============================================================================
-- (double) assemblyScaleForZoomScale:(double)zoomScale
-{
-	double ratio = (self->drawnScaleRatio > 0.0) ? self->drawnScaleRatio : 1.0;
-
-	return zoomScale * ratio;
-
-}//end assemblyScaleForZoomScale:
+}//end forgetDrawnScale
 
 @end

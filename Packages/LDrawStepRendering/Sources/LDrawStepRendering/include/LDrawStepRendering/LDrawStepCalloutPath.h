@@ -47,10 +47,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly, nullable) LDrawModel *returnModel;
 @property (nonatomic, readonly) NSInteger returnStepNumber;
 
-/// Notes the step being left: its model, its index, and how much bigger the
-/// model is drawn than the zoom alone says, which the page anchor keeps.
-- (void) leaveModel:(LDrawModel *)model atStepIndex:(NSInteger)stepIndex drawnScaleRatio:(double)ratio
-	NS_SWIFT_NAME(leave(_:atStepIndex:drawnScaleRatio:));
+/// Notes the step being left: its model and its index.
+- (void) leaveModel:(LDrawModel *)model atStepIndex:(NSInteger)stepIndex
+	NS_SWIFT_NAME(leave(_:atStepIndex:));
 
 /// Takes the last step left off the path, for the host to show again. The
 /// index is cut down to the steps the model has now. Returns NO, and empties
@@ -58,9 +57,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// more or has no steps.
 - (BOOL) takeReturnModel:(LDrawModel * _Nullable * _Nonnull)outModel
 			   stepIndex:(NSInteger *)outStepIndex
-		 drawnScaleRatio:(double *)outRatio
 			 amongModels:(NSArray *)models
-	NS_SWIFT_NAME(takeReturn(model:stepIndex:drawnScaleRatio:among:));
+	NS_SWIFT_NAME(takeReturn(model:stepIndex:among:));
 
 /// Forgets every step left. Call it when a model is chosen any other way, so
 /// that no way back is offered along a path that was left.

@@ -210,23 +210,22 @@
 // Purpose:		How many points one LDU covers on screen beside this model
 //				point.
 //
-// Notes:		In a perspective view the scale depends on how deep the point
-//				is, so drawing sized against the model has to measure it rather
-//				than read the zoom.
+// Notes:		Measured along the screen's x axis as the model sees it, not
+//				the model axis nearest to it, which is foreshortened in a turned
+//				view. Both ends are as deep, so perspective scales them alike.
 //
 //==============================================================================
 - (double)pointsPerLDUAtModelPoint:(Point3)modelPoint
 {
-	Vector3	modelX	= ZeroPoint3;
+	Vector4	screenX	= {1, 0, 0, 0};
+	Vector3	across	= V3Normalize(V3FromV4(V4MulPointByMatrix(screenX, [self getInverseMatrix])));
 	double	span	= 100.0;	// LDU, short enough to stay beside the point
 
-	[self getModelAxesForViewX:&modelX Y:NULL Z:NULL];
-
 	Point2	from	= [self viewPointForModelPoint:modelPoint];
-	Point2	to		= [self viewPointForModelPoint:V3Add(modelPoint, V3MulScalar(modelX, span))];
-	Vector2	across	= V2Sub(to, from);
+	Point2	to		= [self viewPointForModelPoint:V3Add(modelPoint, V3MulScalar(across, span))];
+	Vector2	drawn	= V2Sub(to, from);
 
-	return sqrt(across.x * across.x + across.y * across.y) / span;
+	return sqrt(drawn.x * drawn.x + drawn.y * drawn.y) / span;
 
 } // end pointsPerLDUAtModelPoint:
 

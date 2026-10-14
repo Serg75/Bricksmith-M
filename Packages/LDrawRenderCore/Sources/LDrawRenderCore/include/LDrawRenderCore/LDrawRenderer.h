@@ -110,6 +110,12 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (void)setViewOrientation:(LDrawViewOrientation) newAngle;
 - (void)setZoomPercentage:(CGFloat) newPercentage;
 
+/// The box the camera stands back from, in place of the bounds of what is
+/// drawn. InvalidBox goes back to those. A host that shows one step at a time
+/// gives the whole model, so every step is seen from the same distance.
+- (Box3)cameraBounds;
+- (void)setCameraBounds:(Box3)bounds;
+
 @end
 
 
@@ -202,6 +208,8 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (Point2)convertPointFromViewport:(Point2)viewportPoint;
 - (Point2)convertPointToViewport:(Point2)point_view;
 - (void)getModelAxesForViewX:(Vector3 * _Nullable)outModelX Y:(Vector3 * _Nullable)outModelY Z:(Vector3 * _Nullable)outModelZ;
+/// How many points one LDU covers on screen beside this model point, measured
+/// across the screen. In perspective it depends on how deep the point is.
 - (double)pointsPerLDUAtModelPoint:(Point3)modelPoint;
 /// Where a model point lands on screen, in view coordinates (y down). The
 /// inverse of -modelPointForPoint:. Use it to draw something that must stay

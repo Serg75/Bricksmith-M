@@ -363,6 +363,10 @@ typedef struct LDrawStepPartListBadgeStyle
 /// time.
 + (Point3) pageAnchorInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(pageAnchor(inModel:));
 
+/// The box around every step of the model, whichever are on display.
+/// InvalidBox for a model with nothing to measure.
++ (Box3) boundsOfAllStepsInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(boundsOfAllSteps(inModel:));
+
 /// The points the parts the model has on display reach furthest out to, as
 /// Point3 values in the model's coordinates. The host projects them to find
 /// where the assembly is drawn. Nil with nothing to measure, or no part

@@ -1212,6 +1212,25 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 //------------------------------------------------------------------------------
 + (Point3) pageAnchorInModel:(nullable LDrawModel *)model
 {
+	Box3 bounds = [self boundsOfAllStepsInModel:model];
+
+	if (V3EqualBoxes(bounds, InvalidBox)) {
+		return ZeroPoint3;
+	}
+
+	return V3Midpoint(bounds.min, bounds.max);
+
+}//end pageAnchorInModel:
+
+
+//---------- boundsOfAllStepsInModel: --------------------------------[static]--
+///
+/// @abstract	The box around every step of the model, whichever are on
+/// 			display. InvalidBox for a model with nothing to measure.
+///
+//------------------------------------------------------------------------------
++ (Box3) boundsOfAllStepsInModel:(nullable LDrawModel *)model
+{
 	Box3 bounds = InvalidBox;
 
 	// Removed groups report no bounds, so bring them up to date first.
@@ -1221,13 +1240,9 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 		bounds = V3UnionBox(bounds, [step boundingBox3]);
 	}
 
-	if (V3EqualBoxes(bounds, InvalidBox)) {
-		return ZeroPoint3;
-	}
+	return bounds;
 
-	return V3Midpoint(bounds.min, bounds.max);
-
-}//end pageAnchorInModel:
+}//end boundsOfAllStepsInModel:
 
 
 //---------- assemblyOutlinePointsInModel: ---------------------------[static]--

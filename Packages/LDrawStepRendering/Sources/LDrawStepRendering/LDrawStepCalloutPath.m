@@ -26,7 +26,6 @@
 
 @property (nonatomic, strong) LDrawModel	*model;
 @property (nonatomic) NSInteger				 stepIndex;
-@property (nonatomic) double				 drawnScaleRatio;
 
 @end
 
@@ -105,21 +104,20 @@
 }//end returnStepNumber
 
 
-//========== leaveModel:atStepIndex:drawnScaleRatio: ===========================
-- (void) leaveModel:(LDrawModel *)model atStepIndex:(NSInteger)stepIndex drawnScaleRatio:(double)ratio
+//========== leaveModel:atStepIndex: ===========================================
+- (void) leaveModel:(LDrawModel *)model atStepIndex:(NSInteger)stepIndex
 {
 	LDrawStepCalloutPathPoint *point = [[LDrawStepCalloutPathPoint alloc] init];
 
-	point.model				= model;
-	point.stepIndex			= stepIndex;
-	point.drawnScaleRatio	= ratio;
+	point.model		= model;
+	point.stepIndex	= stepIndex;
 
 	[self->points addObject:point];
 
-}//end leaveModel:atStepIndex:drawnScaleRatio:
+}//end leaveModel:atStepIndex:
 
 
-//========== takeReturnModel:stepIndex:drawnScaleRatio:amongModels: ============
+//========== takeReturnModel:stepIndex:amongModels: ============================
 ///
 /// @abstract	Takes the last step left off the path.
 ///
@@ -129,7 +127,6 @@
 //==============================================================================
 - (BOOL) takeReturnModel:(LDrawModel * _Nullable * _Nonnull)outModel
 			   stepIndex:(NSInteger *)outStepIndex
-		 drawnScaleRatio:(double *)outRatio
 			 amongModels:(NSArray *)models
 {
 	LDrawStepCalloutPathPoint	*point		= self->points.lastObject;
@@ -148,11 +145,10 @@
 
 	*outModel		= point.model;
 	*outStepIndex	= MIN(point.stepIndex, stepCount - 1);
-	*outRatio		= point.drawnScaleRatio;
 
 	return YES;
 
-}//end takeReturnModel:stepIndex:drawnScaleRatio:amongModels:
+}//end takeReturnModel:stepIndex:amongModels:
 
 
 //========== removeAll =========================================================

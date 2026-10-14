@@ -36,9 +36,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 	BOOL					isStartingDrag;			// this is the first event in a drag
 	Point3                  initialDragLocation;	// pan-drag anchor in model space
+
+	// The box the camera stands back from in place of what is drawn, or
+	// InvalidBox.
+	Box3					cameraBounds;
 }
 
 - (Matrix4)getInverseMatrix;
+
+/// The box the camera stands back from: the one the host set, or else the
+/// bounds of what is drawn.
+- (Box3)boundsForCamera;
 
 @end
 

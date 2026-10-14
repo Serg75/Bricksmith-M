@@ -31,6 +31,10 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
     /// The fixtures' models place nothing a camera could measure.
     var assemblySize = CGSize.zero
 
+    /// How much bigger than the zoom it draws the model, as perspective draws
+    /// a model that is nearer the camera.
+    var nearness = 1.0
+
     private var turn = 0.0
 
     private var scale: CGFloat { zoom / 100 }
@@ -44,7 +48,7 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
 
     func setZoomPercentage(_ newPercentage: CGFloat) { zoom = newPercentage }
 
-    func pointsPerLDU(atModelPoint modelPoint: Point3) -> Double { Double(scale) }
+    func pointsPerLDU(atModelPoint modelPoint: Point3) -> Double { Double(scale) * nearness }
 
     func scrollCenter(toModelPoint modelPoint: Point3) {
         scrollModelPoint(modelPoint, toViewPoint: CGPoint(x: 500, y: 400))
@@ -296,8 +300,28 @@ extension StepOverlayTests {
             #expect(isClose(after, Point2(x: before.x + 50, y: before.y)))
         }
 
+        /// Perspective draws the model nearer or further as it turns. The page
+        /// is sized from how it is drawn at the angle of the layout.
+        @Test("The page is sized at the angle of the layout, and keeps that size through a turn")
+        func turnKeepsThePageSize() throws {
+            let shown = shown()
+            let before = try #require(shown.presenter.presentation).pointsPerPageInch
+
+            // Turned so the model comes nearer: the page keeps its size.
+            shown.camera.nearness = 1.1
+            shown.camera.turn(toDegrees: 30)
+            shown.presenter.reload()
+            #expect(abs(try #require(shown.presenter.presentation).pointsPerPageInch - before) < 0.0001)
+
+            // Laid out again at this angle, the step is measured afresh.
+            shown.presenter.centerPageOnStep()
+            shown.presenter.reload()
+            #expect(abs(try #require(shown.presenter.presentation).pointsPerPageInch - before * 1.1) < 0.0001)
+        }
+
         @Test("A turn leaves the page where it was drawn, and the model turns on it")
         func turnKeepsThePage() throws {
+
             let shown = shown()
 
             // A second layout notes where the page is drawn.

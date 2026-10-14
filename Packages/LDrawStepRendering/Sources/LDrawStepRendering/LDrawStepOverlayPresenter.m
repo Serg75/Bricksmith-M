@@ -304,6 +304,7 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 - (void) startLayout
 {
 	[self.pageAnchor forgetAssemblyRect];
+	[self.pageAnchor forgetDrawnScale];
 	[self->submodelPlaces removeAllObjects];
 	[self->calloutArrangement reset];
 
@@ -618,8 +619,8 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 //========== hostState =========================================================
 ///
 /// @abstract	What only the view can tell the layout: its size, the scale the
-///				model is drawn at, where the page's middle and the assembly
-///				land, and any drag.
+///				model is drawn at beside the anchor, where the page's middle
+///				and the assembly land, and any drag.
 ///
 //==============================================================================
 - (LDrawStepPartListHostState) hostState
@@ -654,27 +655,20 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 
 //========== assemblyScale =====================================================
 ///
-/// @abstract	Points per LDU the camera is drawing the model at.
+/// @abstract	Points per LDU the page is sized from: the scale the model is
+///				drawn at beside the anchor.
 ///
-/// @discussion	A perspective view draws a near part larger than the zoom alone
-///				says, so the page is sized from the scale the model is drawn at
-///				beside the anchor. The ratio between the two is measured once
-///				and kept, or every step's rotation would resize the page.
+/// @discussion	In perspective that differs from the zoom by how deep the
+///				anchor is. It is measured at the angle each step is laid out at
+///				and kept as a ratio, so a turn does not resize the page.
 ///
 //==============================================================================
 - (double) assemblyScale
 {
-	LDrawStepPartListPageAnchor	*pageAnchor	= self.pageAnchor;
-	id<LDrawStepOverlayCamera>	 camera		= self.camera;
-	double						 zoomScale	= [camera zoomPercentage] / 100.0;
+	id<LDrawStepOverlayCamera>	camera	= self.camera;
+	double						ratio	= [self.pageAnchor drawnScaleRatioOfModel:self.model inView:camera];
 
-	if (pageAnchor.needsDrawnScale) {
-		Point3 anchor = [pageAnchor anchorForModel:self.model];
-
-		[pageAnchor noteDrawnPointsPerLDU:[camera pointsPerLDUAtModelPoint:anchor] atZoomScale:zoomScale];
-	}
-
-	return [pageAnchor assemblyScaleForZoomScale:zoomScale];
+	return [camera zoomPercentage] / 100.0 * ratio;
 
 }//end assemblyScale
 

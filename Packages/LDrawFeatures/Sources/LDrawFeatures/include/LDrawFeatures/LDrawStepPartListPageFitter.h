@@ -72,8 +72,9 @@ NS_ASSUME_NONNULL_BEGIN
    keepingMagnification:(BOOL)keepsMagnification
 	NS_SWIFT_NAME(fitPage(of:in:viewSize:keepingMagnification:));
 
-/// How many points one inch of the model's page covers in the view, at the
-/// view's zoom.
+/// How many points one inch of the model's page covers in the view: the scale
+/// the model is drawn at beside the anchor, read as LPub3D's 1/64 inch per LDU
+/// times ASSEM MODEL_SCALE.
 - (double) pointsPerPageInchOfModel:(nullable LDrawModel *)model inView:(id<LDrawStepPartListPageView>)view
 	NS_SWIFT_NAME(pointsPerPageInch(of:in:));
 

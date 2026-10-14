@@ -336,7 +336,7 @@
 {
 	[self updateRotationCenter];
 	if (fileBeingDrawn != nil)
-		[camera setModelSize:[fileBeingDrawn boundingBox3]];
+		[camera setModelSize:[self boundsForCamera]];
 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
@@ -354,7 +354,7 @@
 //==============================================================================
 - (void)displayNeedsUpdating:(NSNotification *)notification
 {
-	[camera setModelSize:[fileBeingDrawn boundingBox3]];
+	[camera setModelSize:[self boundsForCamera]];
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 	
 } // end displayNeedsUpdating

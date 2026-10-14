@@ -362,51 +362,48 @@ extension StepPartListStaticSettings {
         }
 
         /// The host measures how much bigger perspective draws the model beside
-        /// the anchor. Kept with the anchor, so a step's rotation cannot resize
-        /// the page.
-        @Test("The drawn scale is kept as a ratio until the anchor is forgotten")
+        /// the anchor, at the angle each step is laid out at.
+        @Test("The drawn scale is measured once and kept until it is forgotten")
         func drawnScaleRatioIsKeptUntilForgotten() {
             let pin = LDrawStepPartListPageAnchor()
+            let view = FakePageView()
+            let document = model([[line(from: Point3(x: 0, y: 0, z: 0), to: Point3(x: 100, y: 0, z: 0))]])
 
-            #expect(pin.needsDrawnScale, "unmeasured, so the host measures it")
-            #expect(pin.assemblyScale(forZoomScale: 2) == 2, "the zoom alone until then")
+            #expect(abs(pin.drawnScaleRatio(of: document, in: view) - 1.25) < 0.0001)
 
-            pin.noteDrawnPointsPerLDU(2.5, atZoomScale: 2)
-            #expect(pin.needsDrawnScale == false)
-            #expect(abs(pin.assemblyScale(forZoomScale: 4) - 5) < 0.0001, "the ratio follows the zoom")
+            // Kept while the camera is turned.
+            view.foreshortening = 2
+            #expect(abs(pin.drawnScaleRatio(of: document, in: view) - 1.25) < 0.0001)
 
+            // Measured again for another step, or after the anchor is.
+            pin.forgetDrawnScale()
+            #expect(abs(pin.drawnScaleRatio(of: document, in: view) - 2) < 0.0001)
+
+            view.foreshortening = 1.5
             pin.invalidate()
-            #expect(pin.needsDrawnScale)
+            #expect(abs(pin.drawnScaleRatio(of: document, in: view) - 1.5) < 0.0001)
 
-            // A measure that cannot be read keeps the zoom, and is not asked again.
-            pin.noteDrawnPointsPerLDU(0, atZoomScale: 2)
-            #expect(pin.needsDrawnScale == false)
-            #expect(pin.assemblyScale(forZoomScale: 3) == 3)
+            // A measure that cannot be read keeps the zoom, and is not taken again.
+            pin.forgetDrawnScale()
+            view.foreshortening = 0
+            #expect(pin.drawnScaleRatio(of: document, in: view) == 1)
+
+            view.foreshortening = 3
+            #expect(pin.drawnScaleRatio(of: document, in: view) == 1)
         }
 
-        /// A host that leaves a model and comes back to it would measure the
-        /// ratio again, with the camera somewhere else.
-        @Test("The kept ratio can be read and put back")
-        func drawnScaleRatioCanBePutBack() {
+        @Test("A ratio belongs to the model it was measured in")
+        func drawnScaleRatioIsForgottenForAnotherModel() {
             let pin = LDrawStepPartListPageAnchor()
+            let view = FakePageView()
+            let first = model([[line(from: Point3(x: 0, y: 0, z: 0), to: Point3(x: 100, y: 0, z: 0))]])
+            let second = model([[line(from: Point3(x: 0, y: 0, z: 0), to: Point3(x: 0, y: 100, z: 0))]])
 
-            #expect(pin.drawnScaleRatio == 0, "none before one is noted")
+            #expect(abs(pin.drawnScaleRatio(of: first, in: view) - 1.25) < 0.0001)
 
-            pin.noteDrawnPointsPerLDU(2.5, atZoomScale: 2)
-            let kept = pin.drawnScaleRatio
-            #expect(abs(kept - 1.25) < 0.0001)
-
-            // Another model is measured in between.
-            pin.invalidate()
-            pin.noteDrawnPointsPerLDU(3, atZoomScale: 2)
-            #expect(abs(pin.assemblyScale(forZoomScale: 4) - 6) < 0.0001)
-
-            pin.invalidate()
-            #expect(pin.drawnScaleRatio == 0)
-
-            pin.drawnScaleRatio = kept
-            #expect(pin.needsDrawnScale == false, "so the host does not measure again")
-            #expect(abs(pin.assemblyScale(forZoomScale: 4) - 5) < 0.0001)
+            view.foreshortening = 2
+            #expect(abs(pin.drawnScaleRatio(of: first, in: view) - 1.25) < 0.0001)
+            #expect(abs(pin.drawnScaleRatio(of: second, in: view) - 2) < 0.0001)
         }
 
         /// The host centers each step on the page and keeps the model point
@@ -1088,10 +1085,6 @@ extension StepPartListStaticSettings {
             #expect(abs((view.scrolledTo?.x ?? -1) - 50) < 0.0001, "centered on the anchor")
             #expect(fitter.fittedViewSize.width == 1000)
 
-            // The page is sized from the drawn scale, kept as a ratio.
-            let kept = fitter.pageAnchor.assemblyScale(forZoomScale: Double(view.zoom) / 100)
-            #expect(abs(kept - target) < 0.0001)
-
             // A resize scales the zoom by how much the fit changed.
             let before = view.zoom
             let larger = Size2(width: 2000, height: 1600)
@@ -1102,24 +1095,43 @@ extension StepPartListStaticSettings {
 
         /// At ASSEM 2.0 an LDU is 2/64 inch of the page, so one point per LDU is
         /// 32 points to the inch.
-        @Test("The page's scale in a view is read from its zoom and the scale kept with the anchor")
+        @Test("The page's scale in a view is read from its zoom and the ratio kept with the anchor")
         func thePageScaleIsReadFromTheView() {
             let document = model([[modelScale(.assembly, 2.0)]])
             let fitter = LDrawStepPartListPageFitter(pageAnchor: LDrawStepPartListPageAnchor())
             let view = FakePageView()
 
-            // The view draws 1.25 times as big as its zoom says, and nothing
-            // has measured that yet.
-            #expect(fitter.pageAnchor.needsDrawnScale)
+            // The view draws 1.25 times as big as its zoom says.
             #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 40) < 0.0001)
-            #expect(abs(fitter.pageAnchor.drawnScaleRatio - 1.25) < 0.0001, "measured on the way")
 
             view.zoom = 300
             #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 120) < 0.0001)
 
-            // Once kept, the ratio is not measured again.
+            // Kept while the camera is turned, and measured again for a step.
             view.foreshortening = 2
             #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 120) < 0.0001)
+
+            fitter.pageAnchor.forgetDrawnScale()
+            #expect(abs(fitter.pointsPerPageInch(of: document, in: view) - 192) < 0.0001)
+        }
+
+        /// A fit changes how big the page is drawn, and never how big the model
+        /// is on it: the model is drawn at the fitted scale, whatever the zoom
+        /// was.
+        @Test("A fit draws the model at the fitted scale from any zoom")
+        func aFitSetsTheFittedZoom() throws {
+            let document = model([[pageSize(8.5, 11), modelScale(.assembly, 0.75)]])
+            let fitter = LDrawStepPartListPageFitter(pageAnchor: LDrawStepPartListPageAnchor())
+            let view = FakePageView()
+            let size = Size2(width: 1000, height: 800)
+            let target = LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: size, inModel: document)
+
+            for zoom: CGFloat in [40, 140, 900] {
+                view.zoom = zoom
+                try #require(fitter.fitPage(of: document, in: view, viewSize: size, keepingMagnification: false))
+
+                #expect(abs(Double(view.zoom) / 100 * view.foreshortening - target) < 0.000001, "from \(zoom)")
+            }
         }
 
         @Test("Zooming to a page scale gives that scale in one go")
@@ -1138,8 +1150,9 @@ extension StepPartListStaticSettings {
             #expect(abs(Double(view.zoom) - 250) < 0.0001)
         }
 
-        /// What the host does when another model goes on display: the anchor is
-        /// measured again, and the zoom makes up for the new model's scale.
+        /// What the host does when another model or step goes on display: the
+        /// ratio is measured again, and the zoom makes up for it and for the
+        /// new scale.
         @Test("Another model's page is shown at the size the last one had")
         func anotherModelKeepsThePageSize() {
             let parent = model([[modelScale(.assembly, 2.0)]])
@@ -1149,20 +1162,16 @@ extension StepPartListStaticSettings {
 
             view.zoom = 180
             let held = fitter.pointsPerPageInch(of: parent, in: view)
-            let parentRatio = fitter.pageAnchor.drawnScaleRatio
 
             // The submodel is nearer the camera.
-            fitter.pageAnchor.invalidate()
             view.foreshortening = 1.6
 
             #expect(abs(fitter.pointsPerPageInch(of: submodel, in: view) - held) > 1, "a different size at first")
             #expect(fitter.showPage(of: submodel, in: view, atPointsPerPageInch: held))
             #expect(abs(fitter.pointsPerPageInch(of: submodel, in: view) - held) < 0.0001)
 
-            // Back again, with the ratio the parent had: the zoom it had too.
-            fitter.pageAnchor.invalidate()
-            fitter.pageAnchor.drawnScaleRatio = parentRatio
-
+            // Back again, as far from the camera as before: the zoom it had too.
+            view.foreshortening = 1.25
             #expect(fitter.showPage(of: parent, in: view, atPointsPerPageInch: held))
             #expect(abs(Double(view.zoom) - 180) < 0.0001)
         }

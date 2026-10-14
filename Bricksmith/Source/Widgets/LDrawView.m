@@ -2481,9 +2481,6 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 // Purpose:		How many points one LDU covers on screen beside this model
 //				point.
 //
-// Notes:		Perspective makes a near part bigger than a far one, so drawing
-//				sized against the model measures it here.
-//
 //==============================================================================
 - (double) pointsPerLDUAtModelPoint:(Point3)modelPoint
 {
@@ -2492,6 +2489,33 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 	return [self->renderer pointsPerLDUAtModelPoint:modelPoint];
 
 }//end pointsPerLDUAtModelPoint:
+
+
+//========== cameraBounds ======================================================
+//
+// Purpose:		The box the camera stands back from in place of what is drawn,
+//				or InvalidBox.
+//
+//==============================================================================
+- (Box3) cameraBounds
+{
+	return [self->renderer cameraBounds];
+
+}//end cameraBounds
+
+
+//========== setCameraBounds: ==================================================
+//
+// Purpose:		Has the camera stand back from this box instead of from what is
+//				drawn. InvalidBox goes back to what is drawn.
+//
+//==============================================================================
+- (void) setCameraBounds:(Box3)bounds
+{
+	[self makeCurrentContext];
+	[self->renderer setCameraBounds:bounds];
+
+}//end setCameraBounds:
 
 
 //========== scrollModelPoint:toViewPoint: =====================================

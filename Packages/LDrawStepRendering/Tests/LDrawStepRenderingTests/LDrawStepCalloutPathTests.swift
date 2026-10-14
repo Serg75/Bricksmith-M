@@ -19,16 +19,14 @@ extension StepOverlayTests {
     struct LDrawStepCalloutPathTests {
 
         private func take(_ path: LDrawStepCalloutPath,
-                          among models: [LDrawModel]) -> (model: LDrawModel, stepIndex: Int, ratio: Double)? {
+                          among models: [LDrawModel]) -> (model: LDrawModel, stepIndex: Int)? {
             var model: LDrawModel?
             var stepIndex = 0
-            var ratio = 0.0
 
-            guard path.takeReturn(model: &model, stepIndex: &stepIndex, drawnScaleRatio: &ratio, among: models),
-                  let model else {
+            guard path.takeReturn(model: &model, stepIndex: &stepIndex, among: models), let model else {
                 return nil
             }
-            return (model, stepIndex, ratio)
+            return (model, stepIndex)
         }
 
         @Test("A callout leads to its submodel, when that is one the host can show")
@@ -109,7 +107,7 @@ extension StepOverlayTests {
             let fixture = CalloutFixture()
             let path = LDrawStepCalloutPath()
 
-            path.leave(fixture.main, atStepIndex: 1, drawnScaleRatio: 1.25)
+            path.leave(fixture.main, atStepIndex: 1)
 
             #expect(path.isEmpty == false)
             #expect(path.returnModel === fixture.main)
@@ -119,7 +117,6 @@ extension StepOverlayTests {
 
             #expect(back.model === fixture.main)
             #expect(back.stepIndex == 1)
-            #expect(back.ratio == 1.25)
             #expect(path.isEmpty)
         }
 
@@ -129,8 +126,8 @@ extension StepOverlayTests {
             let path = LDrawStepCalloutPath()
             let models: [LDrawModel] = [fixture.main, fixture.sub]
 
-            path.leave(fixture.main, atStepIndex: 1, drawnScaleRatio: 1)
-            path.leave(fixture.sub, atStepIndex: 2, drawnScaleRatio: 2)
+            path.leave(fixture.main, atStepIndex: 1)
+            path.leave(fixture.sub, atStepIndex: 2)
 
             #expect(try #require(take(path, among: models)).model === fixture.sub)
             #expect(path.returnModel === fixture.main)
@@ -144,7 +141,7 @@ extension StepOverlayTests {
             let path = LDrawStepCalloutPath()
             let stepCount = fixture.main.steps().count
 
-            path.leave(fixture.main, atStepIndex: stepCount + 5, drawnScaleRatio: 1)
+            path.leave(fixture.main, atStepIndex: stepCount + 5)
 
             #expect(try #require(take(path, among: [fixture.main])).stepIndex == stepCount - 1)
         }
@@ -154,8 +151,8 @@ extension StepOverlayTests {
             let fixture = CalloutFixture()
             let path = LDrawStepCalloutPath()
 
-            path.leave(fixture.main, atStepIndex: 1, drawnScaleRatio: 1)
-            path.leave(fixture.sub, atStepIndex: 1, drawnScaleRatio: 1)
+            path.leave(fixture.main, atStepIndex: 1)
+            path.leave(fixture.sub, atStepIndex: 1)
 
             #expect(take(path, among: [fixture.main]) == nil)
             #expect(path.isEmpty)
@@ -166,7 +163,7 @@ extension StepOverlayTests {
             let fixture = CalloutFixture()
             let path = LDrawStepCalloutPath()
 
-            path.leave(fixture.main, atStepIndex: 1, drawnScaleRatio: 1)
+            path.leave(fixture.main, atStepIndex: 1)
             path.removeAll()
 
             #expect(path.isEmpty)

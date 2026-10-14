@@ -57,6 +57,7 @@
 	selectionMarquee			= ZeroBox2;
 	detailMode					= LDrawDetailNormal;
 	gridSpacing 				= 20.0;
+	cameraBounds				= InvalidBox;
 		
 	[self setViewOrientation:LDrawViewOrientation3D];
 	
@@ -451,15 +452,13 @@
 - (void)setLDrawDirective:(LDrawDirective *)newFile
 {
 	BOOL    virginView  = (self->fileBeingDrawn == nil);
-	Box3	bounds		= InvalidBox;
 	
 	// Update our variable.
 	self->fileBeingDrawn = newFile;
 	
 	if (newFile)
 	{
-		bounds = [newFile boundingBox3];
-		[camera setModelSize:bounds];
+		[camera setModelSize:[self boundsForCamera]];
 	}
 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
@@ -511,6 +510,53 @@
 	[camera setGraphicsSurfaceSize:size];
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 }
+
+
+//========== cameraBounds ======================================================
+- (Box3)cameraBounds
+{
+	return self->cameraBounds;
+
+} //end cameraBounds
+
+
+//========== setCameraBounds: ==================================================
+//
+// Purpose:		Has the camera stand back from this box instead of from what is
+//				drawn. InvalidBox goes back to what is drawn.
+//
+//==============================================================================
+- (void)setCameraBounds:(Box3)bounds
+{
+	// Placing the camera again scrolls the view.
+	if (V3EqualBoxes(bounds, self->cameraBounds))
+	{
+		return;
+	}
+
+	self->cameraBounds = bounds;
+
+	if (self->fileBeingDrawn != nil)
+	{
+		[camera setModelSize:[self boundsForCamera]];
+	}
+
+	[self->delegate LDrawRendererNeedsRedisplay:self];
+
+} //end setCameraBounds:
+
+
+//========== boundsForCamera ===================================================
+- (Box3)boundsForCamera
+{
+	if (V3EqualBoxes(self->cameraBounds, InvalidBox) == NO)
+	{
+		return self->cameraBounds;
+	}
+
+	return [self->fileBeingDrawn boundingBox3];
+
+} //end boundsForCamera
 
 
 //========== setProjectionMode: ================================================

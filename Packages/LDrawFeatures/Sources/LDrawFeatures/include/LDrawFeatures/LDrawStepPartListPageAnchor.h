@@ -12,6 +12,7 @@
 #import <LDrawCore/MatrixMath.h>
 
 @class LDrawModel;
+@protocol LDrawStepPartListPageView;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -23,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///             not move when the parts or the removed groups change.
 ///
 /// @discussion There are two. The anchor is the middle of the whole model, and
-///             the page is sized by how the model is drawn beside it. The page
+///             the page is sized by how the model is drawn there. The page
 ///             center is where the middle of the page is drawn, and the host
 ///             sets it for each step.
 ///
@@ -31,9 +32,10 @@ NS_ASSUME_NONNULL_BEGIN
 ///             what is placed against the assembly stays put while the camera
 ///             is turned.
 ///
-///             The host measures once per Steps session, submodel switch or
-///             Zoom to Fit, and shares one instance between everything that
-///             places the page.
+///             The anchor is measured once per Steps session, submodel switch
+///             or Zoom to Fit, and the ratio once for each step laid out. The
+///             host shares one instance between everything that places the
+///             page.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawStepPartListPageAnchor : NSObject
@@ -42,25 +44,16 @@ NS_ASSUME_NONNULL_BEGIN
 /// -invalidate. Zero for nil.
 - (Point3) anchorForModel:(nullable LDrawModel *)model NS_SWIFT_NAME(anchor(forModel:));
 
-/// Whether the host still has to measure the scale the model is drawn at
-/// beside the anchor.
-@property (nonatomic, readonly) BOOL needsDrawnScale;
+/// How much bigger the model is drawn beside the anchor than the view's zoom
+/// says. Measured in the view the first time it is asked for, and kept until
+/// -forgetDrawnScale or another model. In perspective it depends on how deep
+/// the anchor is, so the host forgets it for each step it lays out and keeps
+/// it while the camera is turned. 1 when the view cannot measure it.
+- (double) drawnScaleRatioOfModel:(nullable LDrawModel *)model inView:(id<LDrawStepPartListPageView>)view
+	NS_SWIFT_NAME(drawnScaleRatio(of:in:));
 
-/// Keeps how much bigger the model is drawn beside the anchor than the zoom
-/// alone says. Kept with the anchor, so the page keeps one scale while the
-/// steps turn the model.
-- (void) noteDrawnPointsPerLDU:(double)drawnPointsPerLDU atZoomScale:(double)zoomScale
-	NS_SWIFT_NAME(noteDrawnPointsPerLDU(_:atZoomScale:));
-
-/// Points per LDU the page is sized from at this zoom (zoom percentage / 100):
-/// the zoom times the kept ratio, or the zoom alone before one is noted.
-- (double) assemblyScaleForZoomScale:(double)zoomScale
-	NS_SWIFT_NAME(assemblyScale(forZoomScale:));
-
-/// The kept ratio, or 0 before one is noted. A host that leaves a model and
-/// comes back to it puts the ratio back, so the model is as big on its page
-/// as it was.
-@property (nonatomic) double drawnScaleRatio;
+/// Forgets the kept ratio, for another step or another angle.
+- (void) forgetDrawnScale;
 
 /// The model point the middle of the page is drawn at. The anchor, until the
 /// host sets one for this model.

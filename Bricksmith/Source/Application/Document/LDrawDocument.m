@@ -149,7 +149,7 @@ void AppendChoicesToNewItem(
 // The document already has the three changes a callout's edit is made of.
 @interface LDrawDocument () <StepPartListControllerDelegate, LDrawStepCalloutEditHost>
 - (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change;
-- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageWasDrawn:(BOOL)pageWasDrawn;
+- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageScale:(double)pageScale;
 - (void) holdLPubPageDuringModelChange:(void (NS_NOESCAPE ^)(void))change;
 - (void) centerLPubPageOnStepOfModel:(LDrawModel *)model;
 @end
@@ -694,7 +694,7 @@ void AppendChoicesToNewItem(
 	if(currentStepIndex != requestedStepIndex)
 	{
 		// Read on the old step, so leaving a step with a page holds too.
-		BOOL pageWasDrawn = [LDrawStepPartListPolicy drawsPageInModel:activeModel];
+		double pageScale = [self drawnLPubPageScale];
 
 		[activeModel setMaximumStepIndexForStepDisplay:requestedStepIndex];
 
@@ -719,7 +719,7 @@ void AppendChoicesToNewItem(
 
 				[[self documentContents] noteNeedsDisplay];
 			}
-		} pageWasDrawn:pageWasDrawn];
+		} pageScale:pageScale];
 
 		// After the hold, so the new step's list is laid out for the final
 		// camera.
@@ -2222,6 +2222,9 @@ void AppendChoicesToNewItem(
 {
 	if(viewport == nil)
 		return;
+
+	// The camera's distance decides how big perspective draws the anchor.
+	[self updateLPubPageCamera];
 
 	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
 	BOOL			isFitted		= [self->pageFitter fitPageOfModel:activeModel
@@ -4409,6 +4412,10 @@ void AppendChoicesToNewItem(
 	// MPD parts to a file without going completely insane.
 	[self addModelsToMenus];
 
+	// On the page the camera stands back from the whole model, which an edit
+	// may grow or shrink.
+	[self updateLPubPageCamera];
+
 	// A PLI SHOW or PAGE SIZE added or removed can add or remove the overlay.
 	// Other edits reach the list through its own observers.
 	if([self wantsStepPartList] != ([self->stepPartListController hostView] != nil))
@@ -5156,6 +5163,8 @@ void AppendChoicesToNewItem(
 {
 	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
 
+	[self updateLPubPageCamera];
+
 	if([self wantsStepPartList] == NO)
 	{
 		[self->stepPartListController detach];
@@ -5375,13 +5384,9 @@ void AppendChoicesToNewItem(
 	if(submodel == nil)
 		return;
 
-	// The ratio is kept too, so the parent is as big on its page when it is
-	// shown again.
-	[self->calloutPath leaveModel:parent
-					  atStepIndex:[parent maximumStepIndexForStepDisplay]
-				  drawnScaleRatio:[self->pageAnchor drawnScaleRatio]];
+	[self->calloutPath leaveModel:parent atStepIndex:[parent maximumStepIndexForStepDisplay]];
 
-	[self showModel:(LDrawMPDModel *)submodel atStepIndexOnCalloutPath:0 drawnScaleRatio:0.0];
+	[self showModel:(LDrawMPDModel *)submodel atStepIndexOnCalloutPath:0];
 
 }//end stepPartListController:didChooseCallout:submodel:
 
@@ -5395,10 +5400,8 @@ void AppendChoicesToNewItem(
 {
 	LDrawModel	*model		= nil;
 	NSInteger	 stepIndex	= 0;
-	double		 ratio		= 0.0;
 	BOOL		 isFound	= [self->calloutPath takeReturnModel:&model
 													   stepIndex:&stepIndex
-												 drawnScaleRatio:&ratio
 													 amongModels:[[self documentContents] submodels]];
 
 	// The way back is gone, and its button goes with it.
@@ -5408,12 +5411,12 @@ void AppendChoicesToNewItem(
 		return;
 	}
 
-	[self showModel:(LDrawMPDModel *)model atStepIndexOnCalloutPath:stepIndex drawnScaleRatio:ratio];
+	[self showModel:(LDrawMPDModel *)model atStepIndexOnCalloutPath:stepIndex];
 
 }//end stepPartListControllerDidChooseReturn:
 
 
-//========== showModel:atStepIndexOnCalloutPath:drawnScaleRatio: ===============
+//========== showModel:atStepIndexOnCalloutPath: ===============================
 //
 // Purpose:		Puts a model on display at one of its steps, as a move along the
 //				path of callouts followed.
@@ -5422,14 +5425,8 @@ void AppendChoicesToNewItem(
 //				taken for the user choosing another model, which clears the
 //				path.
 //
-//				A ratio above 0 is the one the model's page had when the model
-//				was left. It is put back, or the model would be measured again
-//				and come back a little bigger or smaller on its page.
-//
 //==============================================================================
-- (void)			showModel:(LDrawMPDModel *)model
-	 atStepIndexOnCalloutPath:(NSInteger)stepIndex
-			  drawnScaleRatio:(double)ratio
+- (void) showModel:(LDrawMPDModel *)model atStepIndexOnCalloutPath:(NSInteger)stepIndex
 {
 	// One hold for the model and the step, so the page ends where it began.
 	[self holdLPubPageDuringModelChange:^{
@@ -5449,15 +5446,12 @@ void AppendChoicesToNewItem(
 		// where it is, which here is at the first step's angle.
 		[self updateViewingAngleToMatchStep];
 
-		if(ratio > 0.0)
-			[self->pageAnchor setDrawnScaleRatio:ratio];
-
 		// The step may not have changed, and then nothing else refreshes the
 		// button.
 		[self updateStepPartList];
 	}];
 
-}//end showModel:atStepIndexOnCalloutPath:drawnScaleRatio:
+}//end showModel:atStepIndexOnCalloutPath:
 
 
 //========== calloutReturnTitle ================================================
@@ -6173,7 +6167,7 @@ void AppendChoicesToNewItem(
 //
 // Purpose:		Runs a change that moves the camera or changes what the step
 //				shows, then puts the step in its place on the page again and
-//				scrolls the page back to where it was on screen.
+//				shows the page where it was on screen, at the same size.
 //
 // Notes:		Decided by the page rules, not by whether the overlay is on, so
 //				a step that hides its list is held too.
@@ -6181,24 +6175,23 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change
 {
-	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
-
-	[self holdLPubPageDuringChange:change
-					  pageWasDrawn:[LDrawStepPartListPolicy drawsPageInModel:activeModel]];
+	[self holdLPubPageDuringChange:change pageScale:[self drawnLPubPageScale]];
 
 }//end holdLPubPageDuringChange:
 
 
-//========== holdLPubPageDuringChange:pageWasDrawn: ============================
+//========== holdLPubPageDuringChange:pageScale: ===============================
 //
 // Purpose:		The same, for a change that has already moved to another step.
-//				`pageWasDrawn` says whether the step before it had a page.
+//				`pageScale` is how many points an inch of the page covered
+//				before the change, or 0 when the step before had no page.
 //
 // Notes:		Held when the page is drawn before or after the change, so
 //				stepping into or out of a step without a page does not move it.
+//				Its size is held when it is drawn both times.
 //
 //==============================================================================
-- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageWasDrawn:(BOOL)pageWasDrawn
+- (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageScale:(double)pageScale
 {
 	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
 	LDrawView		*viewport		= [self main3DViewport];
@@ -6214,17 +6207,110 @@ void AppendChoicesToNewItem(
 
 	change();
 
-	// The paper does not move. The step is centered on it as LPub3D prints it,
-	// so the model moves instead.
-	if(pageWasDrawn || [LDrawStepPartListPolicy drawsPageInModel:activeModel])
+	// The paper does not move or change size. The step is centered on it as
+	// LPub3D prints it, so the model moves instead, and the zoom makes up for
+	// how big the step's angle and scale draw it.
+	if(pageScale > 0.0 || [LDrawStepPartListPolicy drawsPageInModel:activeModel])
 	{
+		// Zoom first: the step is put in its place on the page at the size
+		// the page will have.
+		[self showLPubPageAtScale:pageScale];
 		[self centerLPubPageOnStepOfModel:activeModel];
 
 		pageCenter = [self->pageAnchor pageCenterForModel:activeModel];
 		[viewport scrollModelPoint:pageCenter toViewPoint:heldViewPoint];
 	}
 
-}//end holdLPubPageDuringChange:pageWasDrawn:
+}//end holdLPubPageDuringChange:pageScale:
+
+
+//========== drawnLPubPageScale ================================================
+//
+// Purpose:		How many points an inch of the page covers in the main viewport,
+//				or 0 when the step on display has no page.
+//
+//==============================================================================
+- (double) drawnLPubPageScale
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	LDrawView		*viewport		= [self main3DViewport];
+
+	if(viewport == nil || [LDrawStepPartListPolicy drawsPageInModel:activeModel] == NO)
+		return 0.0;
+
+	return [self->pageFitter pointsPerPageInchOfModel:activeModel inView:viewport];
+
+}//end drawnLPubPageScale
+
+
+//========== lpubPageCameraBounds ==============================================
+//
+// Purpose:		The box the camera stands back from: on LPub3D's page the whole
+//				model, so each step is drawn with the perspective of the
+//				finished model. InvalidBox elsewhere, for what is on display.
+//
+//==============================================================================
+- (Box3) lpubPageCameraBounds
+{
+	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
+
+	if([LDrawStepPartListPolicy drawsPageInModel:activeModel] == NO)
+		return InvalidBox;
+
+	return [LDrawStepPartListPolicy boundsOfAllStepsInModel:activeModel];
+
+}//end lpubPageCameraBounds
+
+
+//========== updateLPubPageCamera ==============================================
+//
+// Purpose:		Puts the camera as far back as the page asks, after anything
+//				that may have changed the box it stands back from.
+//
+// Notes:		Another distance draws the model at another scale beside the
+//				anchor, so that scale is measured again, and the zoom keeps the
+//				paper where it was and at its size.
+//
+//==============================================================================
+- (void) updateLPubPageCamera
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	LDrawView		*viewport		= [self main3DViewport];
+
+	if(viewport == nil || V3EqualBoxes([self lpubPageCameraBounds], [viewport cameraBounds]))
+		return;
+
+	double	pageScale		= [self drawnLPubPageScale];
+	Point3	pageCenter		= [self->pageAnchor pageCenterForModel:activeModel];
+	NSPoint	heldViewPoint	= [viewport viewPointForModelPoint:pageCenter];
+
+	[self showLPubPageAtScale:pageScale];
+	[viewport scrollModelPoint:pageCenter toViewPoint:heldViewPoint];
+
+}//end updateLPubPageCamera
+
+
+//========== showLPubPageAtScale: ==============================================
+//
+// Purpose:		Puts the camera as far back as the page asks, measures the
+//				scale beside the anchor again, and zooms so an inch of the page
+//				covers `pageScale` points.
+//
+// Notes:		0, or a step with no page, leaves the zoom alone.
+//
+//==============================================================================
+- (void) showLPubPageAtScale:(double)pageScale
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	LDrawView		*viewport		= [self main3DViewport];
+
+	[viewport setCameraBounds:[self lpubPageCameraBounds]];
+	[self->pageAnchor forgetDrawnScale];
+
+	if(pageScale > 0.0 && [LDrawStepPartListPolicy drawsPageInModel:activeModel])
+		[self->pageFitter showPageOfModel:activeModel inView:viewport atPointsPerPageInch:pageScale];
+
+}//end showLPubPageAtScale:
 
 
 //========== holdLPubPageDuringModelChange: ====================================
@@ -6264,7 +6350,7 @@ void AppendChoicesToNewItem(
 
 	// Zoom first: the step is put in its place on the page at the size the
 	// page will have.
-	[self->pageFitter showPageOfModel:activeModel inView:viewport atPointsPerPageInch:heldScale];
+	[self showLPubPageAtScale:heldScale];
 	[self centerLPubPageOnStepOfModel:activeModel];
 
 	pageCenter = [self->pageAnchor pageCenterForModel:activeModel];
