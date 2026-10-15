@@ -13,6 +13,7 @@ import Foundation
 import LDrawCore
 import LDrawFeatures
 import LDrawStepEditing
+import LDrawTestSupport
 
 /// Does what a document does, without the undo, and notes what it was asked.
 private final class RecordingHost: NSObject, LDrawStepCalloutEditHost {
@@ -38,7 +39,7 @@ private final class RecordingHost: NSObject, LDrawStepCalloutEditHost {
     }
 }
 
-@Suite("Making a callout's edit through a host")
+@Suite("Making a callout's edit through a host", .usesStepSettings)
 struct LDrawStepCalloutApplyTests {
 
     @Test("A moved box has its PLACEMENT line kept for undo, then changed")

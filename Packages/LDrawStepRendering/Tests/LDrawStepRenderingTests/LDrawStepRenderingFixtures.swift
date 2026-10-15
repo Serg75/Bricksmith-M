@@ -15,11 +15,13 @@ import Foundation
 import CoreGraphics
 import LDrawCore
 import LDrawFeatures
+import LDrawTestSupport
 
 /// Holds every suite of this target, so they run one test at a time. A layout
 /// keeps its lookups in one place for the whole process while it runs, and the
-/// parts list's settings are process-wide too.
-@Suite(.serialized) struct StepOverlayTests {}
+/// parts list's settings are process-wide too, so this also waits for the other
+/// test targets' suites that use them.
+@Suite(.serialized, .usesStepSettings) struct StepOverlayTests {}
 
 /// A file whose main model calls out sub.ldr in its one step. The caller keeps
 /// the file, which owns the models.

@@ -95,6 +95,11 @@ let package = Package(
             path: "Packages/LDrawConnectivity/Sources/LDrawConnectivity",
             publicHeadersPath: "include"
         ),
+        // Helpers for the test targets. No product uses it.
+        .target(
+            name: "LDrawTestSupport",
+            path: "Packages/LDrawTestSupport/Sources/LDrawTestSupport"
+        ),
         .testTarget(
             name: "LDrawCoreTests",
             dependencies: ["LDrawCore"],
@@ -102,17 +107,17 @@ let package = Package(
         ),
         .testTarget(
             name: "LDrawFeaturesTests",
-            dependencies: ["LDrawFeatures", "LDrawCore"],
+            dependencies: ["LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
             path: "Packages/LDrawFeatures/Tests/LDrawFeaturesTests"
         ),
         .testTarget(
             name: "LDrawStepRenderingTests",
-            dependencies: ["LDrawStepRendering", "LDrawFeatures", "LDrawCore"],
+            dependencies: ["LDrawStepRendering", "LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
             path: "Packages/LDrawStepRendering/Tests/LDrawStepRenderingTests"
         ),
         .testTarget(
             name: "LDrawStepEditingTests",
-            dependencies: ["LDrawStepEditing", "LDrawFeatures", "LDrawCore"],
+            dependencies: ["LDrawStepEditing", "LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
             path: "Packages/LDrawStepEditing/Tests/LDrawStepEditingTests"
         ),
         .testTarget(

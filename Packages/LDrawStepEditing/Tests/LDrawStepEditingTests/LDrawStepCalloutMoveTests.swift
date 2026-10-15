@@ -15,8 +15,9 @@ import Foundation
 import LDrawCore
 import LDrawFeatures
 import LDrawStepEditing
+import LDrawTestSupport
 
-@Suite("Moving a callout's box")
+@Suite("Moving a callout's box", .usesStepSettings)
 struct LDrawStepCalloutMoveTests {
 
     // MARK: - Fixtures

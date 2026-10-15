@@ -11,8 +11,9 @@ import Testing
 import Foundation
 import LDrawCore
 import LDrawFeatures
+import LDrawTestSupport
 
-@Suite("Committing a parts list resize")
+@Suite("Committing a parts list resize", .usesStepSettings)
 struct LDrawStepPartListEditTests {
 
     // MARK: - Fixtures

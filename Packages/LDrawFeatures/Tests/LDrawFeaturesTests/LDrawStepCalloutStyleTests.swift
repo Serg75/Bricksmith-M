@@ -15,8 +15,9 @@ import Testing
 import Foundation
 import LDrawCore
 import LDrawFeatures
+import LDrawTestSupport
 
-@Suite("A callout's style")
+@Suite("A callout's style", .usesStepSettings)
 struct LDrawStepCalloutStyleTests {
 
     // MARK: - Fixtures

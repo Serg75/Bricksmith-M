@@ -12,8 +12,9 @@ import Foundation
 import LDrawCore
 import LDrawFeatures
 import LDrawStepEditing
+import LDrawTestSupport
 
-@Suite("The menu on a callout")
+@Suite("The menu on a callout", .usesStepSettings)
 struct LDrawStepCalloutMenuItemTests {
 
     private func keys(_ items: [LDrawStepCalloutMenuItem]) -> [String] {

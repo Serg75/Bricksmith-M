@@ -12,8 +12,9 @@ import Foundation
 import LDrawCore
 import LDrawFeatures
 import LDrawStepEditing
+import LDrawTestSupport
 
-@Suite("A press on a callout's box")
+@Suite("A press on a callout's box", .usesStepSettings)
 struct LDrawStepCalloutTrackerTests {
 
     // MARK: - Fixtures

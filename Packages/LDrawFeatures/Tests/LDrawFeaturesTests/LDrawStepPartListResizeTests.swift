@@ -15,8 +15,9 @@ import Testing
 import Foundation
 import LDrawCore
 import LDrawFeatures
+import LDrawTestSupport
 
-@Suite("Resizing the parts list frame", .serialized)
+@Suite("Resizing the parts list frame", .serialized, .usesStepSettings)
 final class LDrawStepPartListResizeTests {
 
     /// A 300x150 frame at the usual margin.

@@ -11,10 +11,12 @@ import Testing
 import Foundation
 import LDrawCore
 import LDrawFeatures
+import LDrawTestSupport
 
 /// Holds every suite that changes the LDrawStepPartList settings or lays out
-/// by them, so those suites run one at a time. The settings are process-wide.
-@Suite(.serialized) struct StepPartListStaticSettings {}
+/// by them, so those suites run one at a time. The settings are process-wide,
+/// so this also waits for the other test targets' suites that use them.
+@Suite(.serialized, .usesStepSettings) struct StepPartListStaticSettings {}
 
 extension StepPartListStaticSettings {
 
