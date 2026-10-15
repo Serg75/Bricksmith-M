@@ -687,6 +687,30 @@ extension StepPartListStaticSettings {
             #expect(abs(presentation.stepCenterInView.y - (220 + 0.05 * page.height)) < 0.001)
         }
 
+        /// The host is wider than an 8.5 by 11 page, so the page grows wider,
+        /// with the file's page in its middle.
+        @Test("On a page that follows the host's shape the step keeps its place on the file's page")
+        func stepCenterOnAGrownPage() {
+            LDrawStepPartList.setEnabled(true)
+            LDrawStepPartList.setUsesLPubScale(true)
+            let line = lpub("ASSEM PLACEMENT LOCAL LEFT PAGE INSIDE 0.1 -0.05")
+            let model = steppedModel(firstStep: [pageSize(8.5, 11)], secondStep: [line])
+            var measured = host(assemblyScale: 2)
+            measured.assemblyRect = Box2(origin: Point2(x: 100, y: 200), size: Size2(width: 60, height: 40))
+
+            let onFilePage = LDrawStepPartListPresentation(model: model, host: measured)
+
+            LDrawStepPartList.setPageFollowsHostShape(true)
+            defer { LDrawStepPartList.setPageFollowsHostShape(false) }
+
+            let onGrownPage = LDrawStepPartListPresentation(model: model, host: measured)
+
+            #expect(onGrownPage.pageRect.size.width > onFilePage.pageRect.size.width + 1)
+            #expect(abs(onGrownPage.pageRect.size.height - onFilePage.pageRect.size.height) < 0.001)
+            #expect(abs(onGrownPage.stepCenterInView.x - onFilePage.stepCenterInView.x) < 0.001)
+            #expect(abs(onGrownPage.stepCenterInView.y - onFilePage.stepCenterInView.y) < 0.001)
+        }
+
         @Test("A callout placed against the page does not count toward the step's place")
         func pageCalloutsDoNotCount() throws {
             LDrawStepPartList.setEnabled(true)

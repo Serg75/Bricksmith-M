@@ -91,6 +91,14 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) placesCalloutsAutomatically;
 + (void) setPlacesCalloutsAutomatically:(BOOL)flag;
 
+/// Whether LPub3D's page takes the shape of the view it is shown in. Default
+/// NO. When on, the page keeps the file's measurements and grows on one side
+/// until it has the view's shape: taller in a tall view, wider in a wide one.
+/// It fits the view at the same scale, and what is placed on it has the room
+/// the view has.
++ (BOOL) pageFollowsHostShape;
++ (void) setPageFollowsHostShape:(BOOL)flag;
+
 /// The base orientation of each part, from LPub3D's PLI control file, or nil.
 /// Default nil. Used only when the icons do not follow the step's rotation.
 + (nullable LDrawPartListOrientations *) partOrientations;

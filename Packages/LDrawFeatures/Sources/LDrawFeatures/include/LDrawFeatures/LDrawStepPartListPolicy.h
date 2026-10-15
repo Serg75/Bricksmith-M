@@ -323,6 +323,13 @@ typedef struct LDrawStepPartListBadgeStyle
 /// centimeters.
 + (Size2) pageSizeInInchesInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(pageSizeInInches(inModel:));
 
+/// The page as a host of this size shows it, in inches. The document's page,
+/// grown to the host's shape when the page follows it (see
+/// +[LDrawStepPartList pageFollowsHostShape]). Zero when the document does not
+/// measure its page.
++ (Size2) pageSizeInInchesInModel:(nullable LDrawModel *)model forHostSize:(Size2)hostSize
+	NS_SWIFT_NAME(pageSizeInInches(inModel:forHostSize:));
+
 /// The `ASSEM PLACEMENT` line in force for the visible step, or nil. It says
 /// where on the page LPub3D puts the step's assembly.
 + (nullable LPubPlacement *) assemblyPlacementForVisibleStepOfModel:(nullable LDrawModel *)model
@@ -384,15 +391,16 @@ typedef struct LDrawStepPartListBadgeStyle
 + (BOOL) showsAnythingInModel:(nullable LDrawModel *)model NS_SWIFT_NAME(showsAnything(inModel:));
 
 /// The page, centered on `center`, at the size it takes when the assembly is
-/// drawn at `pointsPerLDU`. `ZeroBox2` when the document does not measure its
-/// page.
+/// drawn at `pointsPerLDU`, in a host of `hostSize`. `ZeroBox2` when the
+/// document does not measure its page.
 ///
 /// The center is a point in the host view. Get it by projecting a model point,
 /// so the page moves with the step when the user pans.
 + (Box2) pageRectCenteredOn:(Point2)center
 			  assemblyScale:(double)pointsPerLDU
+				   hostSize:(Size2)hostSize
 					inModel:(nullable LDrawModel *)model
-	NS_SWIFT_NAME(pageRect(centeredOn:assemblyScale:inModel:));
+	NS_SWIFT_NAME(pageRect(centeredOn:assemblyScale:hostSize:inModel:));
 
 /// The same metrics with their lengths restated in page inches, and
 /// `pointsPerInch` set to `pointsPerPageInch`. `framePadding` is LPub3D's parts

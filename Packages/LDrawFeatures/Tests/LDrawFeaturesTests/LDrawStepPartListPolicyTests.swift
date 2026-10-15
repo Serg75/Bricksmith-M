@@ -325,6 +325,43 @@ extension StepPartListStaticSettings {
             #expect(abs(LDrawStepPartListPolicy.pageSizeInInches(inModel: metric).height - 29.7 / 2.54) < 0.0001)
         }
 
+        /// The hosts are 600 by 1000 and 1600 by 600 points inside the fit's
+        /// 6 point margin.
+        @Test("A page that follows the host's shape grows on one side, and fits at the same scale")
+        func pageFollowsTheHostShape() {
+            let document = model([[pageSize(12.048, 8.0)]])
+            let tall = Size2(width: 612, height: 1012)
+            let wide = Size2(width: 1612, height: 612)
+            let tallFit = LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: tall, inModel: document)
+            let wideFit = LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: wide, inModel: document)
+
+            // Off, the page is the file's.
+            let asWritten = LDrawStepPartListPolicy.pageSizeInInches(inModel: document, forHostSize: tall)
+            #expect(abs(asWritten.width - 12.048) < 0.0001)
+            #expect(asWritten.height == 8.0)
+
+            LDrawStepPartList.setPageFollowsHostShape(true)
+            defer { LDrawStepPartList.setPageFollowsHostShape(false) }
+
+            let taller = LDrawStepPartListPolicy.pageSizeInInches(inModel: document, forHostSize: tall)
+            #expect(abs(taller.width - 12.048) < 0.0001)
+            #expect(abs(taller.height - 12.048 * 1000 / 600) < 0.0001)
+
+            let wider = LDrawStepPartListPolicy.pageSizeInInches(inModel: document, forHostSize: wide)
+            #expect(abs(wider.width - 8.0 * 1600 / 600) < 0.0001)
+            #expect(wider.height == 8.0)
+
+            #expect(abs(LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: tall, inModel: document)
+                        - tallFit) < 0.0001)
+            #expect(abs(LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: wide, inModel: document)
+                        - wideFit) < 0.0001)
+
+            let page = LDrawStepPartListPolicy.pageRect(centeredOn: Point2(x: 306, y: 506), assemblyScale: tallFit,
+                                                        hostSize: tall, inModel: document)
+            #expect(abs(page.size.width - 600) < 0.01)
+            #expect(abs(page.size.height - 1000) < 0.01)
+        }
+
         /// The page must not move as the reader steps through, so it is anchored to
         /// the whole model and not to the steps on display.
         @Test("The page anchor ignores step display")
@@ -1199,7 +1236,8 @@ extension StepPartListStaticSettings {
                                       (Size2(width: 1200, height: 2000), true)] {
                 let scale = LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: host, inModel: document)
                 let center = Point2(x: host.width / 2.0, y: host.height / 2.0)
-                let rect = LDrawStepPartListPolicy.pageRect(centeredOn: center, assemblyScale: scale, inModel: document)
+                let rect = LDrawStepPartListPolicy.pageRect(centeredOn: center, assemblyScale: scale, hostSize: host,
+                                                            inModel: document)
 
                 if fitsWidth {
                     #expect(abs(rect.size.width - (host.width - 12)) < 0.0001)
@@ -1220,10 +1258,11 @@ extension StepPartListStaticSettings {
         func thePageFollowsItsCenter() {
             let document = model([[pageSize(12.0, 8.0), orientation(landscape: true)]])
 
+            let host = Size2(width: 1000, height: 800)
             let first = LDrawStepPartListPolicy.pageRect(centeredOn: Point2(x: 100, y: 100),
-                                                         assemblyScale: 1.0, inModel: document)
+                                                         assemblyScale: 1.0, hostSize: host, inModel: document)
             let panned = LDrawStepPartListPolicy.pageRect(centeredOn: Point2(x: 160, y: 90),
-                                                          assemblyScale: 1.0, inModel: document)
+                                                          assemblyScale: 1.0, hostSize: host, inModel: document)
 
             #expect(abs(panned.origin.x - first.origin.x - 60.0) < 0.0001)
             #expect(abs(panned.origin.y - first.origin.y + 10.0) < 0.0001)
@@ -1243,8 +1282,8 @@ extension StepPartListStaticSettings {
 
             #expect(LDrawStepPartListPolicy.assemblyScaleFittingPage(inHostSize: Size2(width: 800, height: 600), inModel: silent) == 0.0)
 
-            let rect = LDrawStepPartListPolicy.pageRect(centeredOn: Point2(x: 400, y: 300),
-                                                        assemblyScale: 1.0, inModel: silent)
+            let rect = LDrawStepPartListPolicy.pageRect(centeredOn: Point2(x: 400, y: 300), assemblyScale: 1.0,
+                                                        hostSize: Size2(width: 1000, height: 800), inModel: silent)
             #expect(rect.size.width == 0.0)
             #expect(rect.size.height == 0.0)
         }

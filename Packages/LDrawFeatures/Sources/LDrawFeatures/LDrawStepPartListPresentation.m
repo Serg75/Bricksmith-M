@@ -37,6 +37,10 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 {
 	/// The sizes each axis inherits, indexed by LPubPliAxis.
 	double	inheritedInches[2];
+
+	/// The document's own page, in points. The page is bigger when it follows
+	/// the host's shape, with this one in its middle.
+	Size2	filePageSize;
 }
 
 //---------- presentationForModel:host: ------------------------------[static]--
@@ -354,6 +358,10 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 /// 			share of the page. A line that places the assembly against
 /// 			anything but the page is read as none.
 ///
+/// 			Both are read on the document's own page. A page grown to the
+/// 			host's shape keeps that one in its middle, so the step is not
+/// 			pushed to the far edge of a tall window.
+///
 //==============================================================================
 - (Point2) stepCenterForAssembly:(Box2)assembly
 					   placement:(nullable LPubPlacement *)placement
@@ -380,17 +388,20 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	}
 
 	Size2	pageSize	= self->_pageRect.size;
+	Size2	filePage	= self->filePageSize;
+	Box2	placedOn	= V2MakeBox((pageSize.width - filePage.width) / 2.0, (pageSize.height - filePage.height) / 2.0,
+								filePage.width, filePage.height);
 	double	margin		= [LDrawStepPartListPolicy frameInsetForPointsPerPageInch:self->_pointsPerPageInch];
 	Size2	together	= V2MakeSize(maximum.x - minimum.x, maximum.y - minimum.y);
 	Point2	onPage		= [LDrawStepCalloutBox originForSize:together
 													position:position
 											   justification:LPubPlacementPositionCenter
 													isInside:YES
-													  anchor:V2MakeBox(0.0, 0.0, pageSize.width, pageSize.height)
+													  anchor:placedOn
 													  margin:V2MakeSize(margin, margin)];
 
-	onPage.x += pageSize.width * offset.x;
-	onPage.y += pageSize.height * offset.y;
+	onPage.x += filePage.width * offset.x;
+	onPage.y += filePage.height * offset.y;
 
 	// The page's corner is that far up and left of the box's corner.
 	return V2Make(minimum.x - onPage.x + pageSize.width / 2.0,
@@ -413,6 +424,7 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 
 	Box2	page					= [LDrawStepPartListPolicy pageRectCenteredOn:host.pageCenterInView
 																	assemblyScale:host.assemblyScale
+																		 hostSize:host.viewSize
 																		  inModel:model];
 	double	pointsPerPageInch	=
 		[LDrawStepPartListPolicy pointsPerPageInchForAssemblyScale:host.assemblyScale inModel:model];
@@ -421,9 +433,12 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 		return;
 	}
 
+	Size2 filePage = [LDrawStepPartListPolicy pageSizeInInchesInModel:model];
+
 	self->_isOnPage	= YES;
 	self->_pageRect	= page;
 	self->_pointsPerPageInch	= pointsPerPageInch;
+	self->filePageSize			= V2MakeSize(filePage.width * pointsPerPageInch, filePage.height * pointsPerPageInch);
 
 }//end placePageForModel:host:
 

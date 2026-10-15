@@ -74,6 +74,7 @@ static BOOL		StepPartList_includesSubmodels		= NO;
 static BOOL		StepPartList_followsStepRotation	= YES;
 static BOOL		StepPartList_usesLPubScale			= NO;
 static BOOL		StepPartList_placesCallouts			= NO;
+static BOOL		StepPartList_pageFollowsHostShape	= NO;
 static LDrawPartListOrientations *StepPartList_partOrientations = nil;
 
 
@@ -790,6 +791,17 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 + (void) setPlacesCalloutsAutomatically:(BOOL)flag
 {
 	StepPartList_placesCallouts = flag;
+}
+
+
++ (BOOL) pageFollowsHostShape
+{
+	return StepPartList_pageFollowsHostShape;
+}
+
++ (void) setPageFollowsHostShape:(BOOL)flag
+{
+	StepPartList_pageFollowsHostShape = flag;
 }
 
 

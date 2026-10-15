@@ -1011,6 +1011,38 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 }//end pageSizeInInchesInModel:
 
 
+//---------- pageSizeInInchesInModel:forHostSize: --------------------[static]--
+///
+/// @abstract	The page as a host of this size shows it.
+///
+/// @discussion	The page grows on the side the host has more room for, so it
+/// 			fits the host at the scale the document's page fits it. The
+/// 			host's shape is taken inside the fit's margin.
+///
+//------------------------------------------------------------------------------
++ (Size2) pageSizeInInchesInModel:(nullable LDrawModel *)model forHostSize:(Size2)hostSize
+{
+	Size2	page	= [self pageSizeInInchesInModel:model];
+	double	width	= hostSize.width - 2.0 * PAGE_FIT_MARGIN;
+	double	height	= hostSize.height - 2.0 * PAGE_FIT_MARGIN;
+
+	if ([LDrawStepPartList pageFollowsHostShape] == NO
+		|| page.width <= 0.0 || page.height <= 0.0 || width <= 0.0 || height <= 0.0) {
+		return page;
+	}
+
+	if (height / width > page.height / page.width) {
+		page.height = page.width * height / width;
+	}
+	else {
+		page.width = page.height * width / height;
+	}
+
+	return page;
+
+}//end pageSizeInInchesInModel:forHostSize:
+
+
 //---------- assemblyPlacementForVisibleStepOfModel: -----------------[static]--
 + (nullable LPubPlacement *) assemblyPlacementForVisibleStepOfModel:(nullable LDrawModel *)model
 {
@@ -1188,7 +1220,7 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 //------------------------------------------------------------------------------
 + (double) assemblyScaleFittingPageInHostSize:(Size2)hostSize inModel:(nullable LDrawModel *)model
 {
-	Size2	page	= [self pageSizeInInchesInModel:model];
+	Size2	page	= [self pageSizeInInchesInModel:model forHostSize:hostSize];
 	double	width	= hostSize.width - 2.0 * PAGE_FIT_MARGIN;
 	double	height	= hostSize.height - 2.0 * PAGE_FIT_MARGIN;
 
@@ -1305,7 +1337,7 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 }//end showsAnythingInModel:
 
 
-//---------- pageRectCenteredOn:assemblyScale:inModel: ---------------[static]--
+//---------- pageRectCenteredOn:assemblyScale:hostSize:inModel: ------[static]--
 ///
 /// @abstract	The page at the size the zoom gives it, centered on `center`.
 ///
@@ -1316,9 +1348,10 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 //------------------------------------------------------------------------------
 + (Box2) pageRectCenteredOn:(Point2)center
 			  assemblyScale:(double)pointsPerLDU
+				   hostSize:(Size2)hostSize
 					inModel:(nullable LDrawModel *)model
 {
-	Size2	page		= [self pageSizeInInchesInModel:model];
+	Size2	page		= [self pageSizeInInchesInModel:model forHostSize:hostSize];
 	double	pointsPerPageInch	= [self pointsPerPageInchForAssemblyScale:pointsPerLDU inModel:model];
 
 	if (page.width <= 0.0 || page.height <= 0.0 || pointsPerPageInch <= 0.0) {
@@ -1329,7 +1362,7 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 											page.height * pointsPerPageInch),
 								 center);
 
-}//end pageRectCenteredOn:assemblyScale:inModel:
+}//end pageRectCenteredOn:assemblyScale:hostSize:inModel:
 
 
 //---------- metrics:scaledToPointsPerPageInch: ----------------------[static]--
