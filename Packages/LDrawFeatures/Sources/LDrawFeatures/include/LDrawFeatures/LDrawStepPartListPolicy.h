@@ -92,23 +92,14 @@ typedef struct LDrawStepPartListChrome
 	double	annotationBorderRGBA[4];
 	double	annotationTextRGBA[4];
 
-	/// Dashed outline of the page LPub3D would print on. Kept faint, since it
-	/// sits behind the model and is not part of it.
-	double	pageRGBA[4];
-
-	/// Laid over everything outside that page, to show what will not print.
+	/// Laid over everything outside the page LPub3D would print on, to show
+	/// what will not print.
 	double	pageSurroundRGBA[4];
 
 	double	borderWidth;
 	double	cornerRadius;
 	double	labelPointSize;
 	double	annotationPointSize;
-
-	/// Length of one dash, and of the gap after it, in the page outline.
-	double	pageDashLength;
-
-	/// Line width of the page outline, kept apart from the frame border.
-	double	pageLineWidth;
 
 	/// Dash and gap of the box drawn where a missing part would be.
 	double	placeholderDashLength;
@@ -443,8 +434,8 @@ typedef struct LDrawStepPartListBadgeStyle
 	NS_SWIFT_NAME(metrics(_:scaledToPointsPerPageInch:));
 
 /// The same chrome with its point sizes restated in page inches, so the text
-/// matches the room the packer kept for it. The lines are LPub3D's: a square
-/// 1/32 in border and a 1/48 in page outline.
+/// matches the room the packer kept for it. The border is LPub3D's square
+/// 1/32 in line.
 + (LDrawStepPartListChrome) chrome:(LDrawStepPartListChrome)chrome
 		 scaledToPointsPerPageInch:(double)pointsPerPageInch
 	NS_SWIFT_NAME(chrome(_:scaledToPointsPerPageInch:));

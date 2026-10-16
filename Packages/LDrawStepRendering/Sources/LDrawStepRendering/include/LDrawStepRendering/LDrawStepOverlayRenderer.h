@@ -64,8 +64,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// What the button that leads back says. Nil or empty shows no button.
 @property (nonatomic, copy, nullable) NSString *returnTitle;
 
-/// The bottom layer: the page, the dimming around it, and the list's frame
-/// with its pins.
+/// The bottom layer: the dimming around the page, and the list's frame with
+/// its pins.
 - (void) drawPageAndFrameInContext:(CGContextRef)context viewSize:(Size2)viewSize
 	NS_SWIFT_NAME(drawPageAndFrame(in:viewSize:));
 

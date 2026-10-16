@@ -289,7 +289,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGContextSaveGState(context);
 	CGContextSetFlatness(context, CURVE_FLATNESS);
 
-	[self drawPageOutlineInContext:context viewSize:viewSize];
+	[self drawPageSurroundInContext:context viewSize:viewSize];
 	[self drawListFrameInContext:context];
 
 	CGContextRestoreGState(context);
@@ -297,16 +297,13 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 }//end drawPageAndFrameInContext:viewSize:
 
 
-//========== drawPageOutlineInContext:viewSize: ================================
+//========== drawPageSurroundInContext:viewSize: ===============================
 ///
-/// @abstract	Draws the page LPub3D would print this step on, and dims what
-///				falls outside it.
-///
-/// @discussion	Dashed and pale, so it reads as a margin mark and not as part
-///				of the model. Dimming the outside shows which side is the paper.
+/// @abstract	Dims what falls outside the page LPub3D would print this step
+///				on, which shows where the paper ends.
 ///
 //==============================================================================
-- (void) drawPageOutlineInContext:(CGContextRef)context viewSize:(Size2)viewSize
+- (void) drawPageSurroundInContext:(CGContextRef)context viewSize:(Size2)viewSize
 {
 	CGRect					pageRect	= LDrawStepRectFromBox(self.presentation.pageRect);
 	LDrawStepPartListChrome	chrome		= [self chrome];
@@ -322,20 +319,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGContextAddRect(context, pageRect);
 	CGContextEOFillPath(context);
 
-	CGFloat	inset		= chrome.pageLineWidth / 2.0;
-	CGFloat	dashes[]	= { chrome.pageDashLength, chrome.pageDashLength };
-
-	CGContextSaveGState(context);
-
-	LDrawStepSetRGBA(context, chrome.pageRGBA);
-	CGContextAddRect(context, CGRectInset(pageRect, inset, inset));
-	CGContextSetLineWidth(context, chrome.pageLineWidth);
-	CGContextSetLineDash(context, 0.0, dashes, 2);
-	CGContextStrokePath(context);
-
-	CGContextRestoreGState(context);
-
-}//end drawPageOutlineInContext:viewSize:
+}//end drawPageSurroundInContext:viewSize:
 
 
 //========== drawListFrameInContext: ===========================================

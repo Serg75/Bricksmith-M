@@ -1336,8 +1336,7 @@ extension StepPartListStaticSettings {
             }
         }
 
-        /// LPub3D's default parts list border is square, and its editor draws a
-        /// transparent page with a thinner line.
+        /// LPub3D's default parts list border is square.
         @Test("On the page the frame uses LPub3D's border")
         func onThePageTheFrameUsesLPubsBorder() {
             let base = LDrawStepPartListPolicy.defaultChrome()
@@ -1347,10 +1346,7 @@ extension StepPartListStaticSettings {
 
                 #expect(abs(chrome.borderWidth - pointsPerPageInch / 32) < 0.0001, "at \(pointsPerPageInch)")
                 #expect(chrome.cornerRadius == 0, "at \(pointsPerPageInch)")
-                #expect(abs(chrome.pageLineWidth - pointsPerPageInch / 48) < 0.0001, "at \(pointsPerPageInch)")
             }
-
-            #expect(LDrawStepPartListPolicy.defaultChrome().pageLineWidth == 1)
         }
     }
 }

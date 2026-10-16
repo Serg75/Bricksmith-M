@@ -61,9 +61,6 @@ static const double PAGE_FIT_MARGIN						= 6.0;
 /// LPub3D's default parts list border line, in inches.
 static const double LPUB_BORDER_INCHES					= 1.0 / 32.0;
 
-/// LPub3D's line around a transparent page in its editor, in inches.
-static const double LPUB_PAGE_GUIDE_INCHES				= 1.0 / 48.0;
-
 
 /// CONSTRAIN is written with four decimals.
 static const double WRITTEN_INCHES_STEP					= 0.0001;
@@ -86,8 +83,6 @@ static const LDrawStepPartListChrome DEFAULT_CHROME = {
 	.annotationBorderRGBA	= {0.50, 0.55, 0.62, 1.0},
 	.annotationTextRGBA		= {0.20, 0.24, 0.30, 1.0},
 
-	.pageRGBA				= {0.45, 0.45, 0.45, 0.55},
-
 	// Dark and faint, so what is off the paper still shows.
 	.pageSurroundRGBA		= {0.0, 0.0, 0.0, 0.28},
 
@@ -95,8 +90,6 @@ static const LDrawStepPartListChrome DEFAULT_CHROME = {
 	.cornerRadius			= 4.0,
 	.labelPointSize			= 10.0,
 	.annotationPointSize	= 8.0,
-	.pageDashLength			= 5.0,
-	.pageLineWidth			= 1.0,
 	.placeholderDashLength	= 3.0,
 	.placeholderGapLength	= 2.0,
 	.fill					= LDrawStepPartListFillHost,
@@ -1416,12 +1409,10 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 
 	chrome.labelPointSize		*= ratio;
 	chrome.annotationPointSize	*= ratio;
-	chrome.pageDashLength		*= ratio;
 
 	// LPub3D's default border is square.
 	chrome.borderWidth			= LPUB_BORDER_INCHES * pointsPerPageInch;
 	chrome.cornerRadius			= 0.0;
-	chrome.pageLineWidth		= LPUB_PAGE_GUIDE_INCHES * pointsPerPageInch;
 
 	return chrome;
 

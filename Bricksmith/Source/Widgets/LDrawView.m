@@ -2403,7 +2403,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 // Purpose:		Where a model point lands in this view, in its own coordinates.
 //
 // Notes:		Used by overlays that have to stay put against the model rather
-//				than the window, like the LPub3D page outline.
+//				than the window, like the LPub3D page.
 //
 //==============================================================================
 - (NSPoint) viewPointForModelPoint:(Point3)modelPoint
@@ -2524,7 +2524,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 //				of this view.
 //
 // Notes:		For drawing that has to stay where it is while the camera turns
-//				under it, like the LPub3D page outline.
+//				under it, like the LPub3D page.
 //
 //==============================================================================
 - (void) scrollModelPoint:(Point3)modelPoint toViewPoint:(NSPoint)viewPoint
