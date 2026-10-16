@@ -78,6 +78,10 @@
 	Box2					lastReportedVisibleRect;	// last camera rect a change notification was posted for
 }
 
+/// The color the view is cleared to behind the model instead of the user's,
+/// such as the color of a printed page. Nil for the user's.
+@property (nonatomic, copy, nullable) NSColor *pageBackgroundColor;
+
 // Accessors
 - (LDrawDirective *) LDrawDirective;
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix;

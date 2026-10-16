@@ -9,6 +9,7 @@
 
 #import <Foundation/Foundation.h>
 
+#import <LDrawCore/LPubColor.h>
 #import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/MatrixMath.h>
 
@@ -120,6 +121,11 @@ typedef struct LDrawStepPartListHostState {
 /// The same values without the file's PLI lines, for what is drawn in the
 /// callouts' boxes. Their parts are packed with the list's own sizes.
 @property (nonatomic, readonly) LDrawStepPartListChrome calloutChrome;
+
+/// The page's color from the file, which the host clears the view to behind
+/// the model. NO off the page, and for a file that gives no color.
+@property (nonatomic, readonly) BOOL hasPageColor;
+@property (nonatomic, readonly) LPubColorComponents pageColor;
 
 /// The font the counts are written in on the page, from the file. Nil off the
 /// page. Their size and color are the chrome's.

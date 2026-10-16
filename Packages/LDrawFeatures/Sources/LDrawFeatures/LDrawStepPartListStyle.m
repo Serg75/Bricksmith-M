@@ -71,6 +71,12 @@ static const double					DEFAULT_COUNT_SIZE	= 36.0;
 	self->_hasFill		= (fill.kind != LPubCalloutBackgroundKindTransparent);
 	self->_fillColor	= (fill.kind == LPubCalloutBackgroundKindColor) ? fill.color : DEFAULT_FILL;
 
+	// Only a color is drawn on the page. Anything else leaves the host's.
+	LPubCalloutBackground *page = LDrawStepReadBackground(lookup, LPubStyleBranchPage);
+
+	self->_hasPageColor	= (page.kind == LPubCalloutBackgroundKindColor);
+	self->_pageColor	= self->_hasPageColor ? page.color : DEFAULT_FILL;
+
 	self->_margins		= LDrawStepReadMargins(lookup, LPubStyleBranchPartsList, LPubCalloutPartBox, unit);
 	self->_pageMargins	= LDrawStepReadMargins(lookup, LPubStyleBranchPage, LPubCalloutPartBox, unit);
 	self->_countText	= LDrawStepReadText(lookup, LPubStyleBranchPartsList, LPubCalloutPartInstanceCount,

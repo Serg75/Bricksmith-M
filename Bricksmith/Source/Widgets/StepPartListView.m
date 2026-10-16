@@ -119,6 +119,23 @@ static void ClipViewToBounds(NSView *view)
 @end
 
 
+//========== StepPartListPageColor =============================================
+NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
+{
+	if (presentation.hasPageColor == NO) {
+		return nil;
+	}
+
+	double rgba[4];
+
+	LPubColorComponentsGetRGBA(presentation.pageColor, rgba);
+	rgba[3] = 1.0;
+
+	return StepPartListColorFromRGBA(rgba);
+
+}//end StepPartListPageColor
+
+
 @implementation StepPartListView
 
 
@@ -468,7 +485,8 @@ static void ClipViewToBounds(NSView *view)
 //========== iconBackgroundColor ===============================================
 ///
 /// @abstract	What the icons are drawn on: the frame's fill, which on the page
-///				is the file's. Under a see-through list, the viewport's color.
+///				is the file's. Under a see-through list, what the viewport is
+///				cleared to.
 ///
 //==============================================================================
 - (NSColor *) iconBackgroundColor
@@ -480,7 +498,7 @@ static void ClipViewToBounds(NSView *view)
 			return StepPartListColorFromRGBA(chrome.fillRGBA);
 
 		case LDrawStepPartListFillClear:
-			return [LDrawView backgroundColorFromUserDefaults];
+			return StepPartListPageColor(self.presentation) ?: [LDrawView backgroundColorFromUserDefaults];
 
 		default:
 			return [self listBackgroundColor];

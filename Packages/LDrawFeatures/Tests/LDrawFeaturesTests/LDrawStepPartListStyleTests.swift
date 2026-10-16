@@ -422,6 +422,54 @@ extension StepPartListStaticSettings {
             tracker.end()
         }
 
+        // MARK: - The page's color
+
+        @Test("A PAGE BACKGROUND COLOR line gives the page its color")
+        func pageColor() {
+            let style = LDrawStepPartListStyle(visibleStepOf: model(first: [
+                "PAGE BACKGROUND GLOBAL COLOR \"#66ccff\"",
+                "PLI BACKGROUND GLOBAL COLOR #ff0000",
+                "CALLOUT BACKGROUND GLOBAL COLOR #00ff00",
+            ]))
+
+            #expect(style.hasPageColor)
+            expectColor(style.pageColor, 0.4, 0.8, 1)
+            expectColor(style.fillColor, 1, 0, 0)
+        }
+
+        @Test("With no color line, or another kind of background, the host keeps its own color")
+        func noPageColor() {
+            #expect(LDrawStepPartListStyle(visibleStepOf: model()).hasPageColor == false)
+            #expect(LDrawStepPartListStyle(visibleStepOf: model(first: ["PAGE BACKGROUND GLOBAL TRANSPARENT"]))
+                        .hasPageColor == false)
+            #expect(LDrawStepPartListStyle(visibleStepOf: model(first: ["PAGE BACKGROUND GLOBAL PICTURE cover.png"]))
+                        .hasPageColor == false)
+        }
+
+        @Test("A LOCAL page color holds for its own step")
+        func localPageColor() {
+            let local = LDrawStepPartListStyle(visibleStepOf: model(first: ["PAGE BACKGROUND GLOBAL COLOR #ffffff"],
+                                                                    second: ["PAGE BACKGROUND LOCAL COLOR #000000"]))
+            expectColor(local.pageColor, 0, 0, 0)
+
+            let carried = model(first: ["PAGE BACKGROUND LOCAL COLOR #000000"])
+            #expect(LDrawStepPartListStyle(visibleStepOf: carried).hasPageColor == false)
+        }
+
+        @Test("The presentation gives the page's color on the page only")
+        func pageColorInThePresentation() {
+            let presentation = onPage(["PAGE BACKGROUND GLOBAL COLOR #66ccff"])
+
+            #expect(presentation.hasPageColor)
+            expectColor(presentation.pageColor, 0.4, 0.8, 1)
+
+            LDrawStepPartList.setUsesLPubScale(false)
+
+            let offPage = LDrawStepPartListPresentation(model: model(first: ["PAGE BACKGROUND GLOBAL COLOR #66ccff"]),
+                                                        host: host())
+            #expect(offPage.hasPageColor == false)
+        }
+
         @Test("Off the page the list keeps Bricksmith's own look")
         func presentationOffThePage() {
             LDrawStepPartList.setEnabled(true)

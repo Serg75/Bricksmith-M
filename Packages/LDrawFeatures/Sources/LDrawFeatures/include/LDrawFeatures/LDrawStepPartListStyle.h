@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype) init NS_UNAVAILABLE;
 
 /// From PLI BORDER, BACKGROUND, MARGINS, PLACEMENT and INSTANCE_COUNT FONT
-/// and FONT_COLOR, and PAGE MARGINS.
+/// and FONT_COLOR, and PAGE MARGINS and BACKGROUND.
 + (instancetype) styleForVisibleStepOfModel:(nullable LDrawModel *)model NS_SWIFT_NAME(init(visibleStepOf:));
 
 // The outline
@@ -63,6 +63,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// The room the page keeps inside its edges, from PAGE MARGINS.
 @property (nonatomic, readonly) Size2				pageMargins;
+
+/// The page's color, from a PAGE BACKGROUND COLOR line. NO for a file that
+/// gives none, or gives something else, which leaves the host's own color.
+@property (nonatomic, readonly) BOOL				hasPageColor;
+@property (nonatomic, readonly) LPubColorComponents	pageColor;
 
 /// The PLI PLACEMENT line in force, or nil for none.
 @property (nonatomic, readonly, nullable) LPubPlacement	*placement;

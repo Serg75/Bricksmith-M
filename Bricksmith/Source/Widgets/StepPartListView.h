@@ -17,6 +17,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// The color the file gives the page, opaque, or nil for none. The viewport is
+/// cleared to it behind the model.
+extern NSColor * _Nullable StepPartListPageColor(LDrawStepPartListPresentation * _Nullable presentation);
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // protocol StepPartListViewDelegate

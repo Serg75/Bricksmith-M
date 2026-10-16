@@ -2593,14 +2593,32 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 //========== takeBackgroundColorFromUserDefaults ===============================
 //
 // Purpose:		The user gets to choose a background color used throughout the 
-//				application. Read and use it here.
+//				application. Read and use it here, unless a page color is set.
 //
 //==============================================================================
 - (void) takeBackgroundColorFromUserDefaults
 {
-	[self setBackgroundColor:[LDrawView backgroundColorFromUserDefaults]];
+	[self setBackgroundColor:self.pageBackgroundColor ?: [LDrawView backgroundColorFromUserDefaults]];
 	
 }//end takeBackgroundColorFromUserDefaults
+
+
+//========== setPageBackgroundColor: ===========================================
+///
+/// @abstract	Clears the view to this color instead of the user's, or to the
+///				user's again for nil.
+///
+//==============================================================================
+- (void) setPageBackgroundColor:(nullable NSColor *)color
+{
+	if (color == self->_pageBackgroundColor || [color isEqual:self->_pageBackgroundColor]) {
+		return;
+	}
+
+	self->_pageBackgroundColor = [color copy];
+	[self takeBackgroundColorFromUserDefaults];
+
+}//end setPageBackgroundColor:
 
 
 //========== postCameraDidChange ===============================================

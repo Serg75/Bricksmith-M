@@ -187,6 +187,21 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end countText
 
 
+//========== hasPageColor ======================================================
+- (BOOL) hasPageColor
+{
+	return self->listStyle.hasPageColor;
+
+}//end hasPageColor
+
+
+//========== pageColor =========================================================
+- (LPubColorComponents) pageColor
+{
+	return self->listStyle.pageColor;
+
+}//end pageColor
+
 
 //========== listGapOnPage =====================================================
 ///

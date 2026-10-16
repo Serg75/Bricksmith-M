@@ -204,6 +204,7 @@ static const NSTimeInterval CALLOUT_MOVE_FRAME_SECONDS = 1.0 / 60.0;
 		[[NSNotificationCenter defaultCenter] removeObserver:self
 														name:LDrawViewCameraDidChangeNotification
 													  object:self.hostView];
+		self.hostView.pageBackgroundColor = nil;
 	}
 
 	if (self.overlayView != nil) {
@@ -305,6 +306,10 @@ static const NSTimeInterval CALLOUT_MOVE_FRAME_SECONDS = 1.0 / 60.0;
 	// The arrows first, so the first draw already has them.
 	[overlay setCalloutArrows:presenter.calloutArrows];
 	[overlay showPresentation:presenter.presentation];
+
+	// The overlay is drawn over the model, so the page's color goes behind it.
+	// The overlay dims what lies outside the page.
+	self.hostView.pageBackgroundColor = StepPartListPageColor(presenter.presentation);
 
 	[self showLayoutInTracker];
 
