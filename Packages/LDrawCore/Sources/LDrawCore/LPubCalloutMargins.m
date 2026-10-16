@@ -3,11 +3,14 @@
 //  File:       LPubCalloutMargins.m
 //  Package:    LDrawCore
 //
-//  Purpose:    The room kept around a callout or something in it.
+//  Purpose:    The room kept around a callout or something in it, or around
+//              a parts list or its counts.
 //
 //              Line format:
 //              0 !LPUB CALLOUT [ASSEM | PLI | STEP_NUMBER | INSTANCE_COUNT]
 //                  MARGINS [GLOBAL|LOCAL] <x> <y>
+//              0 !LPUB PLI [INSTANCE_COUNT] MARGINS [GLOBAL|LOCAL] <x> <y>
+//              0 !LPUB PAGE MARGINS [GLOBAL|LOCAL] <x> <y>
 //
 //              A parsed line is written back as it was read.
 //
@@ -67,7 +70,9 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 //------------------------------------------------------------------------------
 + (LPubCommand *) lpubCommandInstance:(NSArray<NSString *> *)parameters
 {
-	if (parameters.count < 4 || [parameters[0] isEqualToString:LPUB_CALLOUT] == NO) {
+	LPubStyleBranch branch = LPubStyleBranchCallout;
+
+	if (parameters.count < 4 || [LPubCommand getStyleBranch:&branch fromToken:parameters[0]] == NO) {
 		return nil;
 	}
 
@@ -75,6 +80,12 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 	LPubCalloutPart	part	= LPubCalloutPartBox;
 
 	if ([self getPart:&part fromToken:parameters[index]]) {
+		// A parts list has only its count inside it, and a page has none of
+		// these.
+		if ((branch == LPubStyleBranchPartsList && part != LPubCalloutPartInstanceCount)
+			|| branch == LPubStyleBranchPage) {
+			return nil;
+		}
 		index += 1;
 	}
 
@@ -96,6 +107,7 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 
 	LPubCalloutMargins *command = [LPubCalloutMargins new];
 
+	command->_branch	= branch;
 	command->_scope		= scope;
 	command->_part		= part;
 	command->_margins	= V2MakeSize(x, y);
@@ -139,8 +151,9 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 //==============================================================================
 - (NSString *) browsingDescription
 {
+	NSString *branch	= [LPubCommand keywordForStyleBranch:self.branch];
 	NSString *name		= [LPubCalloutMargins nameForPart:self.part];
-	NSString *subject	= (name != nil) ? [NSString stringWithFormat:@"%@ %@", LPUB_CALLOUT, name] : LPUB_CALLOUT;
+	NSString *subject	= (name != nil) ? [NSString stringWithFormat:@"%@ %@", branch, name] : branch;
 
 	return [NSString stringWithFormat:@"%@ %@ [%g %g]", subject, LPUB_CALLOUT_MARGINS,
 			self.margins.width, self.margins.height];
@@ -160,6 +173,7 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 {
 	LPubCalloutMargins *other = (LPubCalloutMargins *)command;
 
+	self->_branch	= other->_branch;
 	self->_scope	= other->_scope;
 	self->_part		= other->_part;
 	self->_margins	= other->_margins;

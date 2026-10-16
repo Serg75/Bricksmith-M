@@ -14,6 +14,7 @@
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
+@class LDrawStepCalloutText;
 @class LDrawStepPartListLayout;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -36,6 +37,9 @@ extern NSRect StepPartListRectFromBox(Box2 box);
 
 @property (nonatomic, strong, nullable) LDrawStepPartListLayout *layout;
 @property (nonatomic) LDrawStepPartListChrome chrome;
+
+/// The font the counts are written in on LPub3D's page. Nil off the page.
+@property (nonatomic, strong, nullable) LDrawStepCalloutText *countText;
 
 @end
 

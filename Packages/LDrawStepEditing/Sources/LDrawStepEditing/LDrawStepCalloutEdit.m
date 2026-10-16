@@ -424,6 +424,12 @@ static const double NEW_POINTER_LOCATION = 0.5;
 		return ((LPubPlacement *)line).branch == LPubPlacementBranchCallout;
 	}
 
+	// A PLI or PAGE line in the bracket is not the callout's.
+	if ([line conformsToProtocol:@protocol(LPubStyleLine)]
+		&& ((id<LPubStyleLine>)line).branch != LPubStyleBranchCallout) {
+		return NO;
+	}
+
 	for (Class styleClass in @[[LPubCalloutAlloc class], [LPubCalloutPliPerStep class], [LPubCalloutBorder class],
 							   [LPubCalloutBackground class], [LPubCalloutSubmodelColor class],
 							   [LPubCalloutMargins class], [LPubCalloutSeparator class], [LPubCalloutFont class]]) {

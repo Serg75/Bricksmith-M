@@ -17,6 +17,11 @@ import LDrawCore
 import LDrawFeatures
 import LDrawTestSupport
 
+/// The most room a frame may take in a host, as the policy works it out.
+private func room(in host: Size2, pointsPerPageInch: Double) -> Size2 {
+    LDrawStepPartListPolicy.allowedFrameSize(inHostSize: host, pointsPerPageInch: pointsPerPageInch)
+}
+
 @Suite("Resizing the parts list frame", .serialized, .usesStepSettings)
 final class LDrawStepPartListResizeTests {
 
@@ -156,7 +161,7 @@ final class LDrawStepPartListResizeTests {
                                        toPoint: Point2(x: x, y: y),
                                        fromOrigin: origin ?? frame.origin,
                                        layout: packed,
-                                       hostSize: host ?? hugeHost,
+                                       allowedSize: room(in: host ?? hugeHost, pointsPerPageInch: pointsPerPageInch),
                                        pointsPerPageInch: pointsPerPageInch,
                                        inheritedInches: inherited)
     }
@@ -325,10 +330,8 @@ final class LDrawStepPartListResizeTests {
         constraint.mode = .width
         constraint.inches = Float(width)
 
-        let clamped = LDrawStepPartListPolicy.constraint(constraint,
-                                                         clampedToHostSize: narrow,
-                                                         pointsPerInch: 150,
-                                                         pointsPerPageInch: 0)
+        let allowed = room(in: narrow, pointsPerPageInch: 0).width
+        let clamped = LDrawStepPartListPolicy.constraint(constraint, clampedToAllowedWidth: allowed, pointsPerInch: 150)
         #expect(clamped.inches == Float(width))
     }
 
@@ -357,10 +360,8 @@ final class LDrawStepPartListResizeTests {
         constraint.mode = .width
         constraint.inches = Float(width)
 
-        let clamped = LDrawStepPartListPolicy.constraint(constraint,
-                                                         clampedToHostSize: page,
-                                                         pointsPerInch: 150,
-                                                         pointsPerPageInch: 150)
+        let allowed = room(in: page, pointsPerPageInch: 150).width
+        let clamped = LDrawStepPartListPolicy.constraint(constraint, clampedToAllowedWidth: allowed, pointsPerInch: 150)
         #expect(clamped.inches == Float(width))
     }
 

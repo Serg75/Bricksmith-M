@@ -3,9 +3,10 @@
 //  File:       LPubCalloutBackground.m
 //  Package:    LDrawCore
 //
-//  Purpose:    What a callout's box is filled with.
+//  Purpose:    What a callout's box, a parts list or the page is filled with.
 //
-//              Line format, after 0 !LPUB CALLOUT BACKGROUND [GLOBAL|LOCAL]:
+//              Line format, after 0 !LPUB (CALLOUT|PLI|PAGE) BACKGROUND
+//              [GLOBAL|LOCAL]:
 //              TRANSPARENT | TRANS
 //              SUBMODEL_BACKGROUND_COLOR
 //              COLOR <color>
@@ -63,8 +64,10 @@ static const NSUInteger GRADIENT_VALUE_COUNT = 8;
 //------------------------------------------------------------------------------
 + (LPubCommand *) lpubCommandInstance:(NSArray<NSString *> *)parameters
 {
+	LPubStyleBranch branch = LPubStyleBranchCallout;
+
 	if (parameters.count < 3
-		|| [parameters[0] isEqualToString:LPUB_CALLOUT] == NO
+		|| [LPubCommand getStyleBranch:&branch fromToken:parameters[0]] == NO
 		|| [parameters[1] isEqualToString:LPUB_CALLOUT_BACKGROUND] == NO) {
 		return nil;
 	}
@@ -114,9 +117,10 @@ static const NSUInteger GRADIENT_VALUE_COUNT = 8;
 
 	LPubCalloutBackground *command = [LPubCalloutBackground new];
 
-	command->_scope	= scope;
-	command->_kind	= kind;
-	command->_color	= color;
+	command->_branch	= branch;
+	command->_scope		= scope;
+	command->_kind		= kind;
+	command->_color		= color;
 	[command adoptCommandString:[parameters componentsJoinedByString:@" "]];
 
 	return command;
@@ -137,7 +141,8 @@ static const NSUInteger GRADIENT_VALUE_COUNT = 8;
 	NSArray<NSString *> *kinds = @[LPUB_CALLOUT_SUBMODEL_COLOR, LPUB_BACKGROUND_TRANSPARENT, LPUB_BACKGROUND_COLOR,
 								   LPUB_BACKGROUND_PICTURE, LPUB_BACKGROUND_GRADIENT];
 
-	return [NSString stringWithFormat:@"%@ %@ [%@]", LPUB_CALLOUT, LPUB_CALLOUT_BACKGROUND, kinds[self.kind]];
+	return [NSString stringWithFormat:@"%@ %@ [%@]", [LPubCommand keywordForStyleBranch:self.branch],
+			LPUB_CALLOUT_BACKGROUND, kinds[self.kind]];
 
 }//end browsingDescription
 
@@ -154,6 +159,7 @@ static const NSUInteger GRADIENT_VALUE_COUNT = 8;
 {
 	LPubCalloutBackground *other = (LPubCalloutBackground *)command;
 
+	self->_branch	= other->_branch;
 	self->_scope	= other->_scope;
 	self->_kind		= other->_kind;
 	self->_color	= other->_color;

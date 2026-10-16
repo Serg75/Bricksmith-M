@@ -33,6 +33,39 @@ typedef NS_ENUM(NSInteger, LPubMetaScope) {
 
 //------------------------------------------------------------------------------
 ///
+/// @enum       LPubStyleBranch
+///
+/// @abstract   The box a styling line is for: the first word of the line.
+///
+//------------------------------------------------------------------------------
+typedef NS_ENUM(NSInteger, LPubStyleBranch) {
+	/// 0 !LPUB CALLOUT ...
+	LPubStyleBranchCallout		= 0,
+	/// 0 !LPUB PLI ..., a step's parts list.
+	LPubStyleBranchPartsList	= 1,
+	/// 0 !LPUB PAGE ...
+	LPubStyleBranchPage			= 2
+};
+
+
+//------------------------------------------------------------------------------
+///
+/// @protocol   LPubStyleLine
+///
+/// @abstract   A styling line, which can be for a callout, a parts list or the
+///             page.
+///
+//------------------------------------------------------------------------------
+@protocol LPubStyleLine <NSObject>
+
+@property (nonatomic, readonly) LPubStyleBranch	branch;
+@property (nonatomic, readonly) LPubMetaScope	scope;
+
+@end
+
+
+//------------------------------------------------------------------------------
+///
 /// @class      LPubCommand
 ///
 /// @abstract   A generic LPub command.
@@ -50,6 +83,12 @@ typedef NS_ENUM(NSInteger, LPubMetaScope) {
 /// Reads the scope keyword at *index, if there is one, and moves *index past
 /// it. Returns Unspecified when there is none.
 + (LPubMetaScope) scopeInParameters:(NSArray<NSString *> *)parameters index:(NSUInteger *)index;
+
+/// Reads the first word of a styling line. NO for a word that names no branch.
++ (BOOL) getStyleBranch:(LPubStyleBranch *)outBranch fromToken:(NSString *)token;
+
+/// The first word of a styling line of this branch.
++ (NSString *) keywordForStyleBranch:(LPubStyleBranch)branch;
 
 /// Reads a token as a finite number. A token with anything left over is
 /// rejected. Locale-free, like the file.

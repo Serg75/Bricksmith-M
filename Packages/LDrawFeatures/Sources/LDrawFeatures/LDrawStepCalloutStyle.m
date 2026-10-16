@@ -24,6 +24,8 @@
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
+#import "LDrawStepStyleInternal.h"
+
 
 /// LPub3D's fonts for a file that names none, and its margin, in inches.
 static NSString * const	DEFAULT_FONT_FAMILY			= @"Arial";
@@ -38,17 +40,64 @@ static const double		LINE_HEIGHT_FRACTION		= 1.15;
 static const double		TEXT_PADDING_DOTS			= 4.0;
 
 
-//========== MarginsOfPart() ===================================================
-///
-/// @abstract	The MARGINS in force for one thing in a callout, in inches, or
-/// 			LPub3D's margin. `unit` is how many inches the file's unit is.
-///
-//==============================================================================
-static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, double unit)
+@interface LDrawStepCalloutText ()
+
+- (instancetype) initWithFont:(nullable LPubCalloutFont *)font
+						color:(nullable LPubCalloutFont *)color
+				  defaultSize:(double)defaultSize
+					dotInches:(double)dotInches;
+
+@end
+
+
+// MARK: - READING THE LINES -
+
+
+//========== LDrawStepReadBorder() =============================================
+LDrawStepBorderStyle LDrawStepReadBorder(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
+										 double unit, double dotInches)
 {
-	LPubCalloutMargins *margins = [callout directiveInForceMatching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutMargins class]] && ((LPubCalloutMargins *)directive).part == part;
-	}];
+	LPubCalloutBorder *border = lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutBorder class]]
+			&& ((LPubCalloutBorder *)directive).branch == branch;
+	});
+	LPubCalloutBorder *spaced = lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutBorder class]]
+			&& ((LPubCalloutBorder *)directive).branch == branch
+			&& ((LPubCalloutBorder *)directive).hasMargins;
+	});
+
+	// A border with no line behind it is LPub3D's own, which is in inches
+	// whatever unit the file is in.
+	double lineUnit		= (border != nil) ? unit : 1.0;
+	double marginUnit	= (spaced != nil) ? unit : 1.0;
+
+	border = border ?: [LPubCalloutBorder new];
+	spaced = spaced ?: [LPubCalloutBorder new];
+
+	LDrawStepBorderStyle style;
+
+	style.shape				= border.shape;
+	style.lineStyle			= border.lineStyle;
+	style.color				= border.color;
+	style.thickness			= (border.shape == LPubBorderShapeNone) ? 0.0 : border.thickness * lineUnit;
+	style.cornerRadius		= (border.shape == LPubBorderShapeRound) ? border.radius * dotInches : 0.0;
+	style.margins			= V2MakeSize(spaced.margins.width * marginUnit, spaced.margins.height * marginUnit);
+	style.hidesArrowTips	= border.hidesArrowTips;
+
+	return style;
+
+}//end LDrawStepReadBorder
+
+
+//========== LDrawStepReadMargins() ============================================
+Size2 LDrawStepReadMargins(LDrawStepStyleLookup lookup, LPubStyleBranch branch, LPubCalloutPart part, double unit)
+{
+	LPubCalloutMargins *margins = lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutMargins class]]
+			&& ((LPubCalloutMargins *)directive).branch == branch
+			&& ((LPubCalloutMargins *)directive).part == part;
+	});
 
 	if (margins == nil) {
 		return V2MakeSize(DEFAULT_MARGIN, DEFAULT_MARGIN);
@@ -56,7 +105,40 @@ static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, doub
 
 	return V2MakeSize(margins.margins.width * unit, margins.margins.height * unit);
 
-}//end MarginsOfPart
+}//end LDrawStepReadMargins
+
+
+//========== LDrawStepReadBackground() =========================================
+LPubCalloutBackground *LDrawStepReadBackground(LDrawStepStyleLookup lookup, LPubStyleBranch branch)
+{
+	return lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutBackground class]]
+			&& ((LPubCalloutBackground *)directive).branch == branch;
+	});
+
+}//end LDrawStepReadBackground
+
+
+//========== LDrawStepReadText() ===============================================
+LDrawStepCalloutText *LDrawStepReadText(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
+										LPubCalloutPart part, double defaultSize, double dotInches)
+{
+	LPubCalloutFont *font = lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutFont class]]
+			&& ((LPubCalloutFont *)directive).branch == branch
+			&& ((LPubCalloutFont *)directive).part == part
+			&& ((LPubCalloutFont *)directive).isColor == NO;
+	});
+	LPubCalloutFont *color = lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutFont class]]
+			&& ((LPubCalloutFont *)directive).branch == branch
+			&& ((LPubCalloutFont *)directive).part == part
+			&& ((LPubCalloutFont *)directive).isColor;
+	});
+
+	return [[LDrawStepCalloutText alloc] initWithFont:font color:color defaultSize:defaultSize dotInches:dotInches];
+
+}//end LDrawStepReadText
 
 
 // MARK: -
@@ -70,8 +152,7 @@ static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, doub
 //========== initWithFont:color:defaultSize:dotInches: =========================
 ///
 /// @abstract	The text a FONT line and a FONT_COLOR line describe. Either may
-/// 			be nil. `defaultSize` is LPub3D's size for a file with no FONT
-/// 			line, in dots, and such text is bold.
+/// 			be nil.
 ///
 //==============================================================================
 - (instancetype) initWithFont:(nullable LPubCalloutFont *)font
@@ -128,67 +209,41 @@ static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, doub
 	double		 unit		= [LDrawStepPartListPolicy inchesPerUnitInModel:model];
 	double		 dotInches	= [LDrawStepPartListPolicy inchesPerDotInModel:model];
 
-	[self readBorderOfCallout:callout unit:unit dotInches:dotInches];
-	[self readFillOfCallout:callout inModel:model];
+	LDrawStepStyleLookup lookup = ^id (BOOL (NS_NOESCAPE ^matching)(LDrawDirective *)) {
+		return [callout directiveInForceMatching:matching];
+	};
+
+	LDrawStepBorderStyle border = LDrawStepReadBorder(lookup, LPubStyleBranchCallout, unit, dotInches);
+
+	self->_borderShape		= border.shape;
+	self->_borderLineStyle	= border.lineStyle;
+	self->_borderColor		= border.color;
+	self->_borderThickness	= border.thickness;
+	self->_cornerRadius		= border.cornerRadius;
+	self->_hidesArrowTips	= border.hidesArrowTips;
+	self->_borderMargins	= border.margins;
+
+	[self readFillOfCallout:callout background:LDrawStepReadBackground(lookup, LPubStyleBranchCallout) inModel:model];
 	[self readSeparatorOfCallout:callout unit:unit];
 
-	self->_margins				= MarginsOfPart(callout, LPubCalloutPartBox, unit);
-	self->_assemblyMargins		= MarginsOfPart(callout, LPubCalloutPartAssembly, unit);
-	self->_partsListMargins		= MarginsOfPart(callout, LPubCalloutPartPartsList, unit);
-	self->_stepNumberMargins	= MarginsOfPart(callout, LPubCalloutPartStepNumber, unit);
-	self->_countMargins			= MarginsOfPart(callout, LPubCalloutPartInstanceCount, unit);
+	self->_margins				= LDrawStepReadMargins(lookup, LPubStyleBranchCallout, LPubCalloutPartBox, unit);
+	self->_assemblyMargins		= LDrawStepReadMargins(lookup, LPubStyleBranchCallout, LPubCalloutPartAssembly, unit);
+	self->_partsListMargins		= LDrawStepReadMargins(lookup, LPubStyleBranchCallout, LPubCalloutPartPartsList, unit);
+	self->_stepNumberMargins	= LDrawStepReadMargins(lookup, LPubStyleBranchCallout, LPubCalloutPartStepNumber, unit);
+	self->_countMargins			= LDrawStepReadMargins(lookup, LPubStyleBranchCallout, LPubCalloutPartInstanceCount,
+													   unit);
 
-	self->_stepNumberText	= [LDrawStepCalloutStyle textOfPart:LPubCalloutPartStepNumber
-													  inCallout:callout
-													defaultSize:DEFAULT_STEP_NUMBER_SIZE
-													  dotInches:dotInches];
-	self->_countText		= [LDrawStepCalloutStyle textOfPart:LPubCalloutPartInstanceCount
-													  inCallout:callout
-													defaultSize:DEFAULT_COUNT_SIZE
-													  dotInches:dotInches];
+	self->_stepNumberText	= LDrawStepReadText(lookup, LPubStyleBranchCallout, LPubCalloutPartStepNumber,
+												DEFAULT_STEP_NUMBER_SIZE, dotInches);
+	self->_countText		= LDrawStepReadText(lookup, LPubStyleBranchCallout, LPubCalloutPartInstanceCount,
+												DEFAULT_COUNT_SIZE, dotInches);
 
 	return self;
 
 }//end initWithCallout:
 
 
-//========== readBorderOfCallout:unit:dotInches: ===============================
-///
-/// @abstract	Takes the outline from the BORDER line in force.
-///
-/// @discussion	LPub3D keeps the margins it had when a line gives none, so they
-/// 			come from the last line in force that has them.
-///
-//==============================================================================
-- (void) readBorderOfCallout:(LDrawStepCallout *)callout unit:(double)unit dotInches:(double)dotInches
-{
-	LPubCalloutBorder *border = [callout directiveInForceMatching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutBorder class]];
-	}];
-	LPubCalloutBorder *spaced = [callout directiveInForceMatching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutBorder class]] && ((LPubCalloutBorder *)directive).hasMargins;
-	}];
-
-	// A border with no line behind it is LPub3D's own, which is in inches
-	// whatever unit the file is in.
-	double lineUnit		= (border != nil) ? unit : 1.0;
-	double marginUnit	= (spaced != nil) ? unit : 1.0;
-
-	border = border ?: [LPubCalloutBorder new];
-	spaced = spaced ?: [LPubCalloutBorder new];
-
-	self->_borderShape		= border.shape;
-	self->_borderLineStyle	= border.lineStyle;
-	self->_borderColor		= border.color;
-	self->_borderThickness	= (border.shape == LPubBorderShapeNone) ? 0.0 : border.thickness * lineUnit;
-	self->_cornerRadius		= (border.shape == LPubBorderShapeRound) ? border.radius * dotInches : 0.0;
-	self->_hidesArrowTips	= border.hidesArrowTips;
-	self->_borderMargins	= V2MakeSize(spaced.margins.width * marginUnit, spaced.margins.height * marginUnit);
-
-}//end readBorderOfCallout:unit:dotInches:
-
-
-//========== readFillOfCallout:inModel: ========================================
+//========== readFillOfCallout:background:inModel: =============================
 ///
 /// @abstract	Takes the fill from the BACKGROUND line in force.
 ///
@@ -198,12 +253,10 @@ static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, doub
 /// 			too.
 ///
 //==============================================================================
-- (void) readFillOfCallout:(LDrawStepCallout *)callout inModel:(nullable LDrawModel *)model
+- (void) readFillOfCallout:(LDrawStepCallout *)callout
+				background:(nullable LPubCalloutBackground *)background
+				   inModel:(nullable LDrawModel *)model
 {
-	LPubCalloutBackground *background = [callout directiveInForceMatching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutBackground class]];
-	}];
-
 	if (background.kind == LPubCalloutBackgroundKindTransparent) {
 		self->_hasFill = NO;
 		return;
@@ -224,7 +277,7 @@ static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, doub
 	self->_fillColor = (colors != nil) ? [colors colorAtLevel:level]
 									   : [LPubCalloutSubmodelColor defaultColorAtLevel:level];
 
-}//end readFillOfCallout:inModel:
+}//end readFillOfCallout:background:inModel:
 
 
 //========== readSeparatorOfCallout:unit: ======================================
@@ -244,31 +297,5 @@ static Size2 MarginsOfPart(LDrawStepCallout *callout, LPubCalloutPart part, doub
 	self->_separatorMargins		= V2MakeSize(separator.margins.width * lineUnit, separator.margins.height * lineUnit);
 
 }//end readSeparatorOfCallout:unit:
-
-
-//---------- textOfPart:inCallout:defaultSize:dotInches: -------------[static]--
-///
-/// @abstract	The FONT and FONT_COLOR in force for one kind of text.
-///
-//------------------------------------------------------------------------------
-+ (LDrawStepCalloutText *) textOfPart:(LPubCalloutPart)part
-							inCallout:(LDrawStepCallout *)callout
-						  defaultSize:(double)defaultSize
-							dotInches:(double)dotInches
-{
-	LPubCalloutFont *font = [callout directiveInForceMatching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutFont class]]
-			&& ((LPubCalloutFont *)directive).part == part
-			&& ((LPubCalloutFont *)directive).isColor == NO;
-	}];
-	LPubCalloutFont *color = [callout directiveInForceMatching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutFont class]]
-			&& ((LPubCalloutFont *)directive).part == part
-			&& ((LPubCalloutFont *)directive).isColor;
-	}];
-
-	return [[LDrawStepCalloutText alloc] initWithFont:font color:color defaultSize:defaultSize dotInches:dotInches];
-
-}//end textOfPart:inCallout:defaultSize:dotInches:
 
 @end

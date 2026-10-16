@@ -104,6 +104,54 @@ static void StrokeDashedPath(CGContextRef context, LPubLineStyle lineStyle, CGFl
 }//end StrokeDashedPath
 
 
+//========== DrawFrame =========================================================
+///
+/// @abstract	Draws a frame: its fill, then its outline in one of LPub3D's
+///				line styles. A NULL fill or a line of no width draws nothing for
+///				that part.
+///
+/// @discussion	Inset by half the line, so the outline is drawn inside the
+///				frame.
+///
+//==============================================================================
+static void DrawFrame(CGContextRef context, CGRect frameRect, CGColorRef _Nullable fill, const double *borderRGBA,
+					  CGFloat lineWidth, CGFloat radius, LPubLineStyle lineStyle)
+{
+	CGRect inset = CGRectInset(frameRect, lineWidth / 2.0, lineWidth / 2.0);
+
+	if (fill != NULL) {
+		LDrawStepSetColor(context, fill);
+		LDrawStepAddRoundedRect(context, inset, radius);
+		CGContextFillPath(context);
+	}
+
+	if (lineWidth <= 0.0 || lineStyle == LPubLineStyleNone) {
+		return;
+	}
+
+	CGContextSaveGState(context);
+
+	LDrawStepSetRGBA(context, borderRGBA);
+	LDrawStepAddRoundedRect(context, inset, radius);
+	StrokeDashedPath(context, lineStyle, lineWidth);
+
+	CGContextRestoreGState(context);
+
+}//end DrawFrame
+
+
+//========== FontCreateForText =================================================
+///
+/// @abstract	The font a file names for some text, at a size in points.
+///
+//==============================================================================
+static LDrawStepFont FontCreateForText(LDrawStepCalloutText *text, CGFloat size)
+{
+	return LDrawStepFontCreateOfFamily(text.fontFamily, text.isBold, text.isItalic, size);
+
+}//end FontCreateForText
+
+
 //========== DrawPill ==========================================================
 ///
 /// @abstract	Draws an outlined pill with one line of text in its middle. The
@@ -224,6 +272,14 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 }//end chrome
 
 
+//========== calloutChrome =====================================================
+- (LDrawStepPartListChrome) calloutChrome
+{
+	return (self.presentation != nil) ? self.presentation.calloutChrome : [LDrawStepPartListPolicy defaultChrome];
+
+}//end calloutChrome
+
+
 // MARK: - THE PAGE AND THE FRAME -
 
 
@@ -284,7 +340,8 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 
 //========== drawListFrameInContext: ===========================================
 ///
-/// @abstract	Draws the parts list's background, border and pins.
+/// @abstract	Draws the parts list's background, border and pins, as the
+///				chrome says. On the page these are the file's.
 ///
 /// @discussion	The host's icons cover the icon area and are drawn on the same
 ///				color, so this fill only shows in the padding.
@@ -298,7 +355,19 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		return;
 	}
 
-	[self drawPlainFrame:frameRect inContext:context];
+	LDrawStepPartListChrome	chrome	= [self chrome];
+	CGColorRef				fill	= NULL;
+
+	if (chrome.fill == LDrawStepPartListFillHost) {
+		fill = CGColorRetain(self.listBackgroundColor);
+	}
+	else if (chrome.fill == LDrawStepPartListFillColor) {
+		fill = LDrawStepColorCreateRGBA(chrome.fillRGBA);
+	}
+
+	DrawFrame(context, frameRect, fill, chrome.borderRGBA, chrome.borderWidth, chrome.cornerRadius,
+			  chrome.borderLineStyle);
+	CGColorRelease(fill);
 
 	[self drawPinForAxis:LPubPliAxisWidth inContext:context];
 	[self drawPinForAxis:LPubPliAxisHeight inContext:context];
@@ -308,26 +377,16 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 
 //========== drawPlainFrame:inContext: =========================================
 ///
-/// @abstract	Draws a frame the way the parts list's is drawn: the list's
-///				background inside the chrome's border.
+/// @abstract	Draws a callout's box off the page the way the list's frame is
+///				drawn there: the list's background inside the chrome's border.
 ///
 //==============================================================================
 - (void) drawPlainFrame:(CGRect)frameRect inContext:(CGContextRef)context
 {
-	// Inset by half the line, so the border is drawn inside the frame.
-	LDrawStepPartListChrome	chrome	= [self chrome];
-	CGRect					inset	= CGRectInset(frameRect, chrome.borderWidth / 2.0, chrome.borderWidth / 2.0);
+	LDrawStepPartListChrome chrome = [self calloutChrome];
 
-	if (self.listBackgroundColor != NULL) {
-		LDrawStepSetColor(context, self.listBackgroundColor);
-		LDrawStepAddRoundedRect(context, inset, chrome.cornerRadius);
-		CGContextFillPath(context);
-	}
-
-	LDrawStepSetRGBA(context, chrome.borderRGBA);
-	LDrawStepAddRoundedRect(context, inset, chrome.cornerRadius);
-	CGContextSetLineWidth(context, chrome.borderWidth);
-	CGContextStrokePath(context);
+	DrawFrame(context, frameRect, self.listBackgroundColor, chrome.borderRGBA, chrome.borderWidth,
+			  chrome.cornerRadius, LPubLineStyleSolid);
 
 }//end drawPlainFrame:inContext:
 
@@ -348,7 +407,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		return;
 	}
 
-	Box2 pin = [LDrawStepPartListPolicy pinRectForAxis:axis inFrame:presentation.frameRect];
+	Box2 pin = [presentation pinRectForAxis:axis];
 
 	LDrawStepSetColor(context, self.pinColor);
 	LDrawStepAddOval(context, CGRectInset(LDrawStepRectFromBox(pin), 1.0, 1.0));
@@ -367,8 +426,33 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 			 overflowFormat:(NSString *)overflowFormat
 				  inContext:(CGContextRef)context
 {
+	[self drawLabelsOfLayout:layout
+					  chrome:chrome
+				   countText:nil
+				contentWidth:contentWidth
+			  overflowFormat:overflowFormat
+				   inContext:context];
+
+}//end drawLabelsOfLayout:chrome:contentWidth:overflowFormat:inContext:
+
+
+//---------- drawLabelsOfLayout:chrome:countText:... -----------------[static]--
++ (void) drawLabelsOfLayout:(LDrawStepPartListLayout *)layout
+					 chrome:(LDrawStepPartListChrome)chrome
+				  countText:(nullable LDrawStepCalloutText *)countText
+			   contentWidth:(double)contentWidth
+			 overflowFormat:(NSString *)overflowFormat
+				  inContext:(CGContextRef)context
+{
 	CGContextSaveGState(context);
 	CGContextSetFlatness(context, CURVE_FLATNESS);
+
+	// Every count and badge of a list is written the same, so each font is
+	// made once.
+	CGFloat			size		= chrome.labelPointSize;
+	LDrawStepFont	countFont	= (countText != nil) ? FontCreateForText(countText, size)
+												 : LDrawStepFontCreateSystem(size, LDrawStepFontWeightBold);
+	LDrawStepFont	badgeFont	= LDrawStepFontCreateSystem(size, LDrawStepFontWeightMedium);
 
 	for (LDrawStepPartListPlacement *placement in layout.placements) {
 
@@ -376,20 +460,29 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 			[self drawPlaceholderInRect:LDrawStepRectFromBox(placement.iconFrame) chrome:chrome inContext:context];
 		}
 
-		[self drawAnnotationForPlacement:placement chrome:chrome inContext:context];
-		[self drawQuantity:placement.entry.quantity
-					inRect:LDrawStepRectFromBox(placement.labelFrame)
-					chrome:chrome
-				 inContext:context];
+		[self drawAnnotationForPlacement:placement chrome:chrome font:badgeFont inContext:context];
+
+		// The file's font is not cut short, as LPub3D does not cut it.
+		NSString	*text	= [LDrawStepPartListLayout quantityTextForQuantity:placement.entry.quantity];
+		CGRect		 rect	= LDrawStepRectFromBox(placement.labelFrame);
+
+		if (countText != nil) {
+			LDrawStepDrawTextCentered(context, text, rect, countFont, chrome.labelRGBA);
+		}
+		else {
+			LDrawStepDrawTextInRect(context, text, rect, countFont, chrome.labelRGBA);
+		}
 	}
+
+	LDrawStepFontRelease(countFont);
+	LDrawStepFontRelease(badgeFont);
 
 	// The notice goes along the top, where the dropped rows would have been.
 	if (layout.overflowCount > 0) {
 		NSString		*text	= [NSString stringWithFormat:overflowFormat, (unsigned long)layout.overflowCount];
 		LDrawStepFont	 font	= LDrawStepFontCreateSystem(chrome.labelPointSize, LDrawStepFontWeightRegular);
-		Box2			 box	= ZeroBox2;
-
-		box = [LDrawStepPartListPolicy overflowNoticeRectForContentWidth:contentWidth chrome:chrome];
+		Box2			 box	= [LDrawStepPartListPolicy overflowNoticeRectForContentWidth:contentWidth
+																			   chrome:chrome];
 
 		LDrawStepDrawTextInRect(context, text, LDrawStepRectFromBox(box), font, chrome.labelRGBA);
 		LDrawStepFontRelease(font);
@@ -397,26 +490,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 
 	CGContextRestoreGState(context);
 
-}//end drawLabelsOfLayout:chrome:contentWidth:overflowFormat:inContext:
-
-
-//---------- drawQuantity:inRect:chrome:inContext: -------------------[static]--
-///
-/// @abstract	Draws how many of a part there are, centered in a rect.
-///
-//------------------------------------------------------------------------------
-+ (void) drawQuantity:(NSUInteger)quantity
-			   inRect:(CGRect)rect
-			   chrome:(LDrawStepPartListChrome)chrome
-			inContext:(CGContextRef)context
-{
-	NSString		*text	= [LDrawStepPartListLayout quantityTextForQuantity:quantity];
-	LDrawStepFont	 font	= LDrawStepFontCreateSystem(chrome.labelPointSize, LDrawStepFontWeightBold);
-
-	LDrawStepDrawTextInRect(context, text, rect, font, chrome.labelRGBA);
-	LDrawStepFontRelease(font);
-
-}//end drawQuantity:inRect:chrome:inContext:
+}//end drawLabelsOfLayout:chrome:countText:contentWidth:overflowFormat:inContext:
 
 
 //---------- drawPlaceholderInRect:chrome:inContext: -----------------[static]--
@@ -446,9 +520,9 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 }//end drawPlaceholderInRect:chrome:inContext:
 
 
-//---------- drawAnnotationForPlacement:chrome:inContext: ------------[static]--
+//---------- drawAnnotationForPlacement:chrome:font:inContext: -------[static]--
 ///
-/// @abstract	Draws the part's size in studs as a badge.
+/// @abstract	Draws the part's size in studs as a badge, in `font`.
 ///
 /// @discussion	Long thin parts look alike, so the size tells them apart. A
 ///				part drawn at reduced scale gets the marker color.
@@ -456,6 +530,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 //------------------------------------------------------------------------------
 + (void) drawAnnotationForPlacement:(LDrawStepPartListPlacement *)placement
 							 chrome:(LDrawStepPartListChrome)chrome
+							   font:(LDrawStepFont)font
 						  inContext:(CGContextRef)context
 {
 	NSString *text = placement.annotationText;
@@ -467,16 +542,13 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	LDrawStepPartListBadgeStyle	style	= [LDrawStepPartListPolicy badgeStyleForScaledDownPart:placement.isScaledDown
 																						chrome:chrome];
 
-	LDrawStepFont	font		= LDrawStepFontCreateSystem(chrome.annotationPointSize, LDrawStepFontWeightMedium);
-	CGSize			textSize	= LDrawStepTextSize(text, font);
-	Size2			textSize2	= V2MakeSize(textSize.width, textSize.height);
-	Box2			badgeBox	= [LDrawStepPartListLayout badgeRectForTextSize:textSize2
-																		 inSlot:placement.annotationFrame];
+	CGSize	textSize	= LDrawStepTextSize(text, font);
+	Box2	badgeBox	= [LDrawStepPartListLayout badgeRectForTextSize:V2MakeSize(textSize.width, textSize.height)
+															 inSlot:placement.annotationFrame];
 
 	DrawBadge(context, LDrawStepRectFromBox(badgeBox), text, font, style);
-	LDrawStepFontRelease(font);
 
-}//end drawAnnotationForPlacement:chrome:inContext:
+}//end drawAnnotationForPlacement:chrome:font:inContext:
 
 
 // MARK: - CALLOUTS -
@@ -526,7 +598,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 //==============================================================================
 - (void) drawArrow:(LDrawStepCalloutArrow)arrow ofBox:(LDrawStepCalloutBox *)box inContext:(CGContextRef)context
 {
-	LDrawStepPartListChrome	 chrome		= [self chrome];
+	LDrawStepPartListChrome	 chrome		= [self calloutChrome];
 	LDrawStepCalloutStyle	*style		= box.style;
 	CGFloat					 shaftWidth	= MAX(ARROW_MINIMUM_SHAFT_WIDTH, chrome.borderWidth);
 	CGFloat					 headLength	= shaftWidth * ARROW_HEAD_LENGTH_FACTOR;
@@ -602,8 +674,8 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		LDrawStepSetColorComponents(context, style.separatorColor);
 	}
 	else {
-		// The dividers take the border's color, which is left set.
 		[self drawPlainFrame:LDrawStepRectFromBox(box.frameRect) inContext:context];
+		LDrawStepSetRGBA(context, [self calloutChrome].borderRGBA);
 	}
 
 	for (NSUInteger index = 0; index < box.dividerCount; index++) {
@@ -635,30 +707,21 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 						 style:(LDrawStepCalloutStyle *)style
 					 inContext:(CGContextRef)context
 {
-	CGFloat	scale		= self.presentation.pointsPerPageInch;
-	CGFloat	lineWidth	= style.borderThickness * scale;
-	CGFloat	radius		= style.cornerRadius * scale;
+	CGFloat		scale			= self.presentation.pointsPerPageInch;
+	double		fillRGBA[4];
+	double		borderRGBA[4];
+	CGColorRef	fill			= NULL;
 
-	// Inset by half the line, so the outline is drawn inside the frame.
-	CGRect	frame		= CGRectInset(LDrawStepRectFromBox(box.frameRect), lineWidth / 2.0, lineWidth / 2.0);
+	LPubColorComponentsGetRGBA(style.fillColor, fillRGBA);
+	LPubColorComponentsGetRGBA(style.borderColor, borderRGBA);
 
 	if (style.hasFill) {
-		LDrawStepSetColorComponents(context, style.fillColor);
-		LDrawStepAddRoundedRect(context, frame, radius);
-		CGContextFillPath(context);
+		fill = LDrawStepColorCreateRGBA(fillRGBA);
 	}
 
-	if (style.borderShape == LPubBorderShapeNone || style.borderLineStyle == LPubLineStyleNone || lineWidth <= 0.0) {
-		return;
-	}
-
-	CGContextSaveGState(context);
-
-	LDrawStepSetColorComponents(context, style.borderColor);
-	LDrawStepAddRoundedRect(context, frame, radius);
-	StrokeDashedPath(context, style.borderLineStyle, lineWidth);
-
-	CGContextRestoreGState(context);
+	DrawFrame(context, LDrawStepRectFromBox(box.frameRect), fill, borderRGBA, style.borderThickness * scale,
+			  style.cornerRadius * scale, style.borderLineStyle);
+	CGColorRelease(fill);
 
 }//end drawFrameOfCalloutBox:style:inContext:
 
@@ -673,7 +736,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		  withText:(nullable LDrawStepCalloutText *)text
 		 inContext:(CGContextRef)context
 {
-	LDrawStepPartListChrome	chrome	= [self chrome];
+	LDrawStepPartListChrome	chrome	= [self calloutChrome];
 	CGRect					rect	= LDrawStepRectFromBox(label.rect);
 
 	if (text == nil) {
@@ -684,10 +747,10 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		return;
 	}
 
-	CGFloat				size	= text.fontSize * self.presentation.pointsPerPageInch;
-	LDrawStepFont		font	= LDrawStepFontCreateOfFamily(text.fontFamily, text.isBold, text.isItalic, size);
-	LPubColorComponents	color	= text.color;
-	double				rgba[4]	= { color.red, color.green, color.blue, color.alpha };
+	LDrawStepFont	font	= FontCreateForText(text, text.fontSize * self.presentation.pointsPerPageInch);
+	double			rgba[4];
+
+	LPubColorComponentsGetRGBA(text.color, rgba);
 
 	LDrawStepDrawTextCentered(context, label.text, rect, font, rgba);
 	LDrawStepFontRelease(font);
@@ -705,7 +768,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 			   ofBox:(LDrawStepCalloutBox *)box
 		   inContext:(CGContextRef)context
 {
-	LDrawStepPartListChrome	chrome	= [self chrome];
+	LDrawStepPartListChrome	chrome	= [self calloutChrome];
 	CGRect					rect	= LDrawStepRectFromBox(picture.rect);
 	CGImageRef				image	= [self.pictureStore imageForPicture:picture];
 
@@ -744,18 +807,21 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	}
 
 	// One of something needs no count, as in LPub3D.
+	LDrawStepFont font = LDrawStepFontCreateSystem(chrome.labelPointSize, LDrawStepFontWeightBold);
+
 	for (LDrawStepPartListPlacement *placement in layout.placements) {
 		if (placement.entry.quantity < 2) {
 			continue;
 		}
 
-		CGRect labelRect = LDrawStepRectFromBox(placement.labelFrame);
+		NSString	*text		= [LDrawStepPartListLayout quantityTextForQuantity:placement.entry.quantity];
+		CGRect		 labelRect	= LDrawStepRectFromBox(placement.labelFrame);
 
-		[LDrawStepOverlayRenderer drawQuantity:placement.entry.quantity
-										inRect:CGRectOffset(labelRect, CGRectGetMinX(rect), CGRectGetMinY(rect))
-										chrome:chrome
-									 inContext:context];
+		LDrawStepDrawTextInRect(context, text, CGRectOffset(labelRect, CGRectGetMinX(rect), CGRectGetMinY(rect)),
+								font, chrome.labelRGBA);
 	}
+
+	LDrawStepFontRelease(font);
 
 }//end drawPicture:ofBox:inContext:
 
@@ -775,7 +841,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		return;
 	}
 
-	LDrawStepPartListChrome		chrome	= [self chrome];
+	LDrawStepPartListChrome		chrome	= [self calloutChrome];
 	LDrawStepPartListBadgeStyle	style	= [LDrawStepPartListPolicy badgeStyleForScaledDownPart:NO chrome:chrome];
 	NSString					*text	= [NSString stringWithFormat:self.stepCountFormat, (unsigned long)stepCount];
 

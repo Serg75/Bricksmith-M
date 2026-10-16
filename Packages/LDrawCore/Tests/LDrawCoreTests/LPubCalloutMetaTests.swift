@@ -349,8 +349,16 @@ struct LPubCalloutMetaTests {
         let callout = try #require(parse("0 !LPUB CALLOUT PLACEMENT RIGHT CENTER ASSEM OUTSIDE") as? LPubPlacement)
         #expect(callout.branch == .callout)
 
+        let list = try #require(parse("0 !LPUB PLI PLACEMENT LOCAL RIGHT TOP STEP_NUMBER OUTSIDE -1.82442 1.02133")
+                                as? LPubPlacement)
+        #expect(list.branch == .partsList)
+        #expect(list.position == .right)
+        #expect(list.justification == .top)
+        #expect(list.relativeTo == "STEP_NUMBER")
+        #expect(list.isInside == false)
+
         // Another subject's placement is not read.
-        try expectGenericAndVerbatim("0 !LPUB PLI PLACEMENT TOP_LEFT PAGE INSIDE")
+        try expectGenericAndVerbatim("0 !LPUB STEP_NUMBER PLACEMENT TOP_LEFT PAGE INSIDE")
     }
 
     @Test("The new text reads back as the same placement at the new offset")

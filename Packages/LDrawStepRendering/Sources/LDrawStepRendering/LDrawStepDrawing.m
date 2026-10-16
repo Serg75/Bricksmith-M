@@ -69,8 +69,9 @@ void LDrawStepSetRGBA(CGContextRef context, const double *rgba)
 //========== LDrawStepSetColorComponents =======================================
 void LDrawStepSetColorComponents(CGContextRef context, LPubColorComponents color)
 {
-	double rgba[4] = { color.red, color.green, color.blue, color.alpha };
+	double rgba[4];
 
+	LPubColorComponentsGetRGBA(color, rgba);
 	LDrawStepSetRGBA(context, rgba);
 
 }//end LDrawStepSetColorComponents

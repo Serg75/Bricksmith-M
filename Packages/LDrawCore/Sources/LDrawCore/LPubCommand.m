@@ -258,6 +258,38 @@ static LPubMetaScope ScopeForKeyword(NSString *keyword)
 }//end scopeInParameters:index:
 
 
+//---------- getStyleBranch:fromToken: -------------------------------[static]--
++ (BOOL) getStyleBranch:(LPubStyleBranch *)outBranch fromToken:(NSString *)token
+{
+	if ([token isEqualToString:LPUB_CALLOUT]) {
+		*outBranch = LPubStyleBranchCallout;
+		return YES;
+	}
+	if ([token isEqualToString:LPUB_PLI]) {
+		*outBranch = LPubStyleBranchPartsList;
+		return YES;
+	}
+	if ([token isEqualToString:LPUB_PAGE]) {
+		*outBranch = LPubStyleBranchPage;
+		return YES;
+	}
+	return NO;
+
+}//end getStyleBranch:fromToken:
+
+
+//---------- keywordForStyleBranch: ----------------------------------[static]--
++ (NSString *) keywordForStyleBranch:(LPubStyleBranch)branch
+{
+	switch (branch) {
+		case LPubStyleBranchPartsList:	return LPUB_PLI;
+		case LPubStyleBranchPage:		return LPUB_PAGE;
+		default:						return LPUB_CALLOUT;
+	}
+
+}//end keywordForStyleBranch:
+
+
 //---------- subclassNames--------------------------------------------[static]--
 ///
 /// @abstract	Convenient method for debugging and testsing.

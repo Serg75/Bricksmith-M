@@ -23,6 +23,7 @@
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListLayout.h>
 #import <LDrawFeatures/LDrawStepPartListModelBuilder.h>
+#import <LDrawFeatures/LDrawStepPartListStyle.h>
 
 #import "LDrawStepCalloutContent.h"
 #import "LDrawStepCalloutFollower.h"
@@ -33,6 +34,19 @@
 static const double MINIMUM_CONTENT_SIDE = 8.0;
 
 
+//========== GrowBounds() ======================================================
+///
+/// @abstract	Widens the corners `minimum` and `maximum` to take in a box.
+///
+//==============================================================================
+static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
+{
+	*minimum = V2Make(MIN(minimum->x, V2BoxMinX(box)), MIN(minimum->y, V2BoxMinY(box)));
+	*maximum = V2Make(MAX(maximum->x, V2BoxMaxX(box)), MAX(maximum->y, V2BoxMaxY(box)));
+
+}//end GrowBounds
+
+
 @implementation LDrawStepPartListPresentation
 {
 	/// The sizes each axis inherits, indexed by LPubPliAxis.
@@ -41,6 +55,18 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	/// The document's own page, in points. The page is bigger when it follows
 	/// the host's shape, with this one in its middle.
 	Size2	filePageSize;
+
+	/// How the file styles and places the list, and the metrics it is packed
+	/// with then. Only on the page.
+	LDrawStepPartListStyle		*listStyle;
+	LDrawStepPartListMetrics	 styledMetrics;
+
+	/// The step's CONSTRAIN in force, read once whether or not a drag is shown.
+	LDrawStepPartListConstraint	 fileConstraint;
+
+	/// Whether the list is placed against the assembly, which makes it part of
+	/// what is centered on the page.
+	BOOL						 listIsCenteredWithAssembly;
 }
 
 //---------- presentationForModel:host: ------------------------------[static]--
@@ -76,6 +102,8 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	self->_calloutBoxes	= @[];
 	self->_placementKey	= @"";
 
+	self->_calloutChrome = self->_chrome;
+
 	if (model == nil) {
 		return self;
 	}
@@ -92,7 +120,8 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 		return self;
 	}
 
-	LDrawStepPartListMetrics metrics = [LDrawStepPartListLayout defaultMetrics];
+	LDrawStepPartListMetrics metrics		= [LDrawStepPartListLayout defaultMetrics];
+	LDrawStepPartListMetrics listMetrics	= metrics;
 
 	if (self->_isOnPage) {
 		metrics = [LDrawStepPartListPolicy metrics:metrics
@@ -102,10 +131,14 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 		// scaled by the same ratio.
 		self->_chrome = [LDrawStepPartListPolicy chrome:self->_chrome
 							  scaledToPointsPerPageInch:self->_pointsPerPageInch];
+		self->_calloutChrome = self->_chrome;
+
+		listMetrics = [self applyStyleOfModel:model toMetrics:metrics];
 	}
 
-	// The list first: the callouts go under its frame.
-	[self packListForModel:model host:host metrics:metrics];
+	// The list first: the callouts go under its frame. They keep the plain
+	// metrics, since the file's PLI lines are not theirs.
+	[self packListForModel:model host:host metrics:listMetrics];
 	[self placeCalloutsForModel:model host:host metrics:metrics];
 
 	// After the callouts, which are part of what is centered, and before a
@@ -122,6 +155,73 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 }//end initWithModel:host:
 
 
+//========== applyStyleOfModel:toMetrics: ======================================
+///
+/// @abstract	Takes the look of the list from the file's PLI lines: the
+/// 			frame's outline, fill and padding, the counts, the room kept
+/// 			around the list, and where it goes.
+///
+//==============================================================================
+- (LDrawStepPartListMetrics) applyStyleOfModel:(LDrawModel *)model
+									 toMetrics:(LDrawStepPartListMetrics)metrics
+{
+	double scale = self->_pointsPerPageInch;
+
+	self->listStyle		= [LDrawStepPartListStyle styleForVisibleStepOfModel:model];
+	self->styledMetrics	= [self->listStyle metricsFromMetrics:metrics pointsPerPageInch:scale];
+	self->_chrome		= [self->listStyle chromeFromChrome:self->_chrome pointsPerPageInch:scale];
+
+	return self->styledMetrics;
+
+}//end applyStyleOfModel:toMetrics:
+
+
+// MARK: - THE FILE'S STYLE -
+
+
+//========== countText =========================================================
+- (nullable LDrawStepCalloutText *) countText
+{
+	return self->listStyle.countText;
+
+}//end countText
+
+
+
+//========== listGapOnPage =====================================================
+///
+/// @abstract	The room between the page's edges and a list placed inside it,
+/// 			in points.
+///
+/// @discussion	LPub3D keeps the larger of the page's margin and the list's.
+///
+//==============================================================================
+- (Size2) listGapOnPage
+{
+	Size2	page	= self->listStyle.pageMargins;
+	Size2	list	= self->listStyle.margins;
+	double	scale	= self->_pointsPerPageInch;
+
+	return V2MakeSize(MAX(page.width, list.width) * scale, MAX(page.height, list.height) * scale);
+
+}//end listGapOnPage
+
+
+//========== allowedFrameSize ==================================================
+- (Size2) allowedFrameSize
+{
+	if (self->_isOnPage == NO) {
+		return [LDrawStepPartListPolicy allowedFrameSizeInHostSize:self->_hostSize pointsPerPageInch:0.0];
+	}
+
+	Size2 gap = [self listGapOnPage];
+
+	return V2MakeSize(MAX(0.0, V2BoxWidth(self->_pageRect) - 2.0 * gap.width),
+					  MAX(0.0, V2BoxHeight(self->_pageRect) - 2.0 * gap.height));
+
+}//end allowedFrameSize
+
+
 //========== packListForModel:host:metrics: ====================================
 ///
 /// @abstract	Collects the step's parts, packs them and places the frame.
@@ -133,8 +233,6 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 					 host:(LDrawStepPartListHostState)host
 				  metrics:(LDrawStepPartListMetrics)metrics
 {
-	Size2 hostSize = self->_hostSize;
-
 	// A step that hides its list still shows its page.
 	NSArray *entries = [LDrawStepPartList isShownForVisibleStepOfModel:model]
 					 ? [LDrawStepPartList entriesForVisibleStepOfModel:model]
@@ -149,15 +247,15 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 																		   inModel:model];
 	}
 
+	Size2 room = self.allowedFrameSize;
+
 	// After scaling, so the budget allows for the padding the frame is drawn
 	// with.
-	metrics = [LDrawStepPartListPolicy metrics:metrics
-							   fittingHostSize:hostSize
-							 pointsPerPageInch:self->_pointsPerPageInch];
+	metrics = [LDrawStepPartListPolicy metrics:metrics fittingAllowedSize:room];
 
 	LDrawStepPartListConstraint	constraint		= [self constraintForModel:model
 																	  host:host
-																  hostSize:hostSize
+															  allowedWidth:room.width
 															 pointsPerInch:metrics.pointsPerInch];
 	Matrix4						viewTransform	= [LDrawStepPartListPolicy viewTransformForVisibleStepOfModel:model];
 
@@ -165,6 +263,18 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 														 constraint:constraint
 													  viewTransform:viewTransform
 															metrics:metrics];
+
+	// A packing wider than the room on the page is packed again at that width,
+	// so it wraps. The half point allows for rounding.
+	if (self->_isOnPage && self->_layout.frameSize.width > room.width + 0.5) {
+		constraint.mode		= LPubPliConstrainModeWidth;
+		constraint.inches	= (float)(room.width / metrics.pointsPerInch);
+
+		self->_layout		= [LDrawStepPartListLayout layoutForEntries:entries
+															 constraint:constraint
+														  viewTransform:viewTransform
+																metrics:metrics];
+	}
 
 	// The document's file, so a submodel draws its real contents.
 	self->_iconModel	= [LDrawStepPartListModelBuilder modelForLayout:self->_layout
@@ -174,7 +284,7 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	self->_iconZoomPercentage	= [LDrawStepPartListModelBuilder zoomPercentageForLayout:self->_layout];
 	self->_iconCenter			= [LDrawStepPartListModelBuilder centerPointForLayout:self->_layout];
 
-	[self placeFrameWithMetrics:metrics];
+	[self placeFrameWithMetrics:metrics host:host];
 	[self updatePinsForModel:model host:host];
 
 }//end packListForModel:host:metrics:
@@ -270,6 +380,22 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 		}
 	}
 
+	// A list centered with the assembly moves the step when its line, its
+	// CONSTRAIN or its style changes its size. Not its measured size, which a
+	// resize drag changes as it goes. In page inches.
+	if (self->listIsCenteredWithAssembly) {
+		LDrawStepPartListConstraint	constraint	= self->fileConstraint;
+		LDrawStepPartListMetrics	metrics		= self->styledMetrics;
+		LDrawStepPartListStyle		*style		= self->listStyle;
+		double						 scale		= self->_pointsPerPageInch;
+
+		[key appendFormat:@"\n%@ %ld %.4f %ld", style.placement.lPubCommandString,
+		 (long)constraint.mode, constraint.inches, (long)constraint.columns];
+		[key appendFormat:@" %.4f %.4f %.4f %.4f %.4f %.4f %.4f",
+		 metrics.framePadding / scale, metrics.labelHeight / scale, metrics.labelCharacterWidth / scale,
+		 style.margins.width, style.margins.height, style.pageMargins.width, style.pageMargins.height];
+	}
+
 	self->_placementKey = key;
 
 	if (V2BoxWidth(assembly) <= 0.0 || V2BoxHeight(assembly) <= 0.0) {
@@ -313,7 +439,7 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	}
 
 	double	scale		= self->_pointsPerPageInch;
-	double	listMargin	= [LDrawStepPartListPolicy frameInsetForPointsPerPageInch:scale];
+	Size2	listMargin	= V2MakeSize(self->listStyle.margins.width * scale, self->listStyle.margins.height * scale);
 	BOOL	hasList		= (V2BoxWidth(self->_frameRect) > 0.0 && V2BoxHeight(self->_frameRect) > 0.0);
 
 	for (LDrawStepCalloutBox *box in self->_calloutBoxes) {
@@ -322,8 +448,8 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 
 		if (hasList) {
 			Box2 list = V2BoxInset(self->_frameRect,
-								   -MAX(margins.width * scale, listMargin),
-								   -MAX(margins.height * scale, listMargin));
+								   -MAX(margins.width * scale, listMargin.width),
+								   -MAX(margins.height * scale, listMargin.height));
 
 			[obstacles appendBytes:&list length:sizeof(Box2)];
 		}
@@ -374,9 +500,15 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 		Box2 frame = box.frameRect;
 
 		if (box.isCenteredWithAssembly && box != leftOut) {
-			minimum = V2Make(MIN(minimum.x, V2BoxMinX(frame)), MIN(minimum.y, V2BoxMinY(frame)));
-			maximum = V2Make(MAX(maximum.x, V2BoxMaxX(frame)), MAX(maximum.y, V2BoxMaxY(frame)));
+			GrowBounds(&minimum, &maximum, frame);
 		}
+	}
+
+	// LPub3D lays a list placed against the assembly out with the step.
+	Box2 list = self->_frameRect;
+
+	if (self->listIsCenteredWithAssembly && V2BoxWidth(list) > 0.0 && V2BoxHeight(list) > 0.0) {
+		GrowBounds(&minimum, &maximum, list);
 	}
 
 	LPubPlacementPosition	position	= LPubPlacementPositionCenter;
@@ -391,14 +523,16 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	Size2	filePage	= self->filePageSize;
 	Box2	placedOn	= V2MakeBox((pageSize.width - filePage.width) / 2.0, (pageSize.height - filePage.height) / 2.0,
 								filePage.width, filePage.height);
-	double	margin		= [LDrawStepPartListPolicy frameInsetForPointsPerPageInch:self->_pointsPerPageInch];
+	double	scale		= self->_pointsPerPageInch;
+	Size2	margin		= V2MakeSize(self->listStyle.pageMargins.width * scale,
+									 self->listStyle.pageMargins.height * scale);
 	Size2	together	= V2MakeSize(maximum.x - minimum.x, maximum.y - minimum.y);
 	Point2	onPage		= [LDrawStepCalloutBox originForSize:together
 													position:position
 											   justification:LPubPlacementPositionCenter
 													isInside:YES
 													  anchor:placedOn
-													  margin:V2MakeSize(margin, margin)];
+													  margin:margin];
 
 	onPage.x += filePage.width * offset.x;
 	onPage.y += filePage.height * offset.y;
@@ -443,27 +577,30 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 }//end placePageForModel:host:
 
 
-//========== placeFrameWithMetrics: ============================================
+//========== placeFrameWithMetrics:host: =======================================
 ///
-/// @abstract	Puts the frame in the host's corner, and the icon area inside its
-/// 			padding.
+/// @abstract	Places the frame, and the icon area inside its padding.
 ///
-/// @discussion	On the page the frame goes in the page's corner, so it stays put
-/// 			on the paper as the view pans.
+/// @discussion	On the page the frame goes where the file places it on the
+/// 			paper, so it stays put there as the view pans.
 ///
 //==============================================================================
-- (void) placeFrameWithMetrics:(LDrawStepPartListMetrics)metrics
+- (void) placeFrameWithMetrics:(LDrawStepPartListMetrics)metrics host:(LDrawStepPartListHostState)host
 {
 	if (self->_layout.placements.count == 0) {
 		return;
 	}
 
-	Point2	hostOrigin	= self->_isOnPage ? self->_pageRect.origin : ZeroPoint2;
-	Box2	frame		= [LDrawStepPartListPolicy frameRectForFrameSize:self->_layout.frameSize
-															  inHostSize:self->_hostSize
-													   pointsPerPageInch:self->_pointsPerPageInch];
+	Box2 frame = ZeroBox2;
 
-	frame.origin = V2Add(frame.origin, hostOrigin);
+	if (self->_isOnPage) {
+		frame = [self placeFrameOnPageWithHost:host];
+	}
+	else {
+		frame = [LDrawStepPartListPolicy frameRectForFrameSize:self->_layout.frameSize
+													inHostSize:self->_hostSize
+											 pointsPerPageInch:0.0];
+	}
 
 	Box2 content = V2BoxInset(frame, metrics.framePadding, metrics.framePadding);
 
@@ -475,12 +612,156 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 	self->_frameRect	= frame;
 	self->_contentRect	= content;
 
-}//end placeFrameWithMetrics:
+}//end placeFrameWithMetrics:host:
 
 
-//========== constraintForModel:host:hostSize:pointsPerInch: ===================
+//========== placeFrameOnPageWithHost: =========================================
 ///
-/// @abstract	The constraint to pack with, narrowed to fit the host.
+/// @abstract	Puts the frame where the PLI PLACEMENT line says: inside the
+/// 			page, or against the assembly. With no line, or one against
+/// 			anything else, it goes in the page's top left corner.
+///
+/// @discussion	LPub3D's own place for a list is beside the step number, which
+/// 			is not drawn here. Inside the page the frame keeps the larger of
+/// 			the page's margin and the list's. Against the assembly it keeps
+/// 			the list's. The offset is a share of the size of what the list
+/// 			is placed against.
+///
+//==============================================================================
+- (Box2) placeFrameOnPageWithHost:(LDrawStepPartListHostState)host
+{
+	LPubPlacement			*placement		= self->listStyle.placement;
+	Box2					 assembly		= host.assemblyRect;
+	double					 scale			= self->_pointsPerPageInch;
+	LPubPlacementPosition	 position		= LPubPlacementPositionTopLeft;
+	LPubPlacementPosition	 justification	= LPubPlacementPositionCenter;
+	BOOL					 isInside		= YES;
+	Point2					 offset			= ZeroPoint2;
+	Box2					 anchor			= self->_pageRect;
+	Size2					 margin			= [self listGapOnPage];
+
+	if (placement.isInside && [placement.relativeTo isEqualToString:LPUB_PAGE]) {
+		position	= placement.position;
+		offset		= placement.offset;
+	}
+	else if ([placement.relativeTo isEqualToString:LPUB_ASSEM]
+			 && V2BoxWidth(assembly) > 0.0 && V2BoxHeight(assembly) > 0.0) {
+		position		= placement.position;
+		justification	= placement.justification;
+		isInside		= placement.isInside;
+		offset			= placement.offset;
+		anchor			= assembly;
+		margin			= V2MakeSize(self->listStyle.margins.width * scale, self->listStyle.margins.height * scale);
+
+		self->listIsCenteredWithAssembly = YES;
+	}
+
+	// The packer already kept the list within the page less its margins, so
+	// it is drawn at its own size and never cut.
+	Size2 size = self->_layout.frameSize;
+
+	Point2 origin	= [LDrawStepCalloutBox originForSize:size
+											   position:position
+										  justification:justification
+											   isInside:isInside
+												 anchor:anchor
+												 margin:margin];
+	Point2 grown	= [LDrawStepCalloutBox originForSize:V2MakeSize(size.width + 1.0, size.height + 1.0)
+											   position:position
+										  justification:justification
+											   isInside:isInside
+												 anchor:anchor
+												 margin:margin];
+
+	// The edge that stays put as the list grows is the one placed. When that
+	// is the right or bottom edge, the frame grows the other way.
+	self->_growsLeftward	= (grown.x < origin.x - 0.75);
+	self->_growsUpward		= (grown.y < origin.y - 0.75);
+
+	origin.x += V2BoxWidth(anchor) * offset.x;
+	origin.y += V2BoxHeight(anchor) * offset.y;
+
+	return V2MakeBox(origin.x, origin.y, size.width, size.height);
+
+}//end placeFrameOnPageWithHost:
+
+
+// MARK: - RESIZING -
+
+
+//========== resizePointForPoint: ==============================================
+- (Point2) resizePointForPoint:(Point2)point
+{
+	Box2 frame = self->_frameRect;
+
+	if (self->_growsLeftward) {
+		point.x = 2.0 * V2BoxMaxX(frame) - point.x;
+	}
+	if (self->_growsUpward) {
+		point.y = 2.0 * V2BoxMaxY(frame) - point.y;
+	}
+
+	return point;
+
+}//end resizePointForPoint:
+
+
+//========== resizeFrame =======================================================
+///
+/// @abstract	The frame mirrored as `-resizePointForPoint:` mirrors a point:
+/// 			its edge that stays put is on its left and top.
+///
+//==============================================================================
+- (Box2) resizeFrame
+{
+	Box2 frame = self->_frameRect;
+
+	if (self->_growsLeftward) {
+		frame.origin.x = V2BoxMaxX(frame);
+	}
+	if (self->_growsUpward) {
+		frame.origin.y = V2BoxMaxY(frame);
+	}
+
+	return frame;
+
+}//end resizeFrame
+
+
+//========== controlAtPoint: ===================================================
+- (LDrawStepPartListControl) controlAtPoint:(Point2)point
+{
+	return [LDrawStepPartListPolicy controlAtPoint:[self resizePointForPoint:point]
+										   inFrame:[self resizeFrame]
+									   widthPinned:self.widthPinned
+									  heightPinned:self.heightPinned];
+
+}//end controlAtPoint:
+
+
+//========== pinRectForAxis: ===================================================
+- (Box2) pinRectForAxis:(LPubPliAxis)axis
+{
+	Box2 pin	= [LDrawStepPartListPolicy pinRectForAxis:axis inFrame:[self resizeFrame]];
+	Box2 frame	= self->_frameRect;
+
+	// Mirrored back, so the pin is on the edge that moves.
+	if (self->_growsLeftward) {
+		pin.origin.x = 2.0 * V2BoxMaxX(frame) - V2BoxMaxX(pin);
+	}
+	if (self->_growsUpward) {
+		pin.origin.y = 2.0 * V2BoxMaxY(frame) - V2BoxMaxY(pin);
+	}
+
+	return pin;
+
+}//end pinRectForAxis:
+
+
+//========== constraintForModel:host:allowedWidth:pointsPerInch: ===============
+///
+/// @abstract	The constraint to pack with, a WIDTH narrowed to `allowedWidth`
+/// 			points.
 ///
 /// @discussion	On the page a drag wins, then the CONSTRAIN in force for the
 /// 			step. Off the page the document's lines are ignored: they are
@@ -489,31 +770,31 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 //==============================================================================
 - (LDrawStepPartListConstraint) constraintForModel:(LDrawModel *)model
 											  host:(LDrawStepPartListHostState)host
-										  hostSize:(Size2)hostSize
+									  allowedWidth:(double)allowedWidth
 									 pointsPerInch:(double)pointsPerInch
 {
 	LDrawStepPartListConstraint constraint;
 
 	if (self->_isOnPage == NO) {
-		constraint = [LDrawStepPartListPolicy viewportConstraintForHostSize:hostSize
+		constraint = [LDrawStepPartListPolicy viewportConstraintForHostSize:self->_hostSize
 															  pointsPerInch:pointsPerInch];
 	}
-	else if (host.hasPreview) {
-		// Already clamped to what can be drawn.
-		constraint			= [LDrawStepPartListLayout defaultConstraint];
-		constraint.mode		= LPubPliConstrainModeForAxis(host.previewAxis);
-		constraint.inches	= (float)host.previewInches;
-	}
 	else {
-		constraint = [LDrawStepPartListPolicy constraintForVisibleStepOfModel:model];
+		self->fileConstraint	= [LDrawStepPartListPolicy constraintForVisibleStepOfModel:model];
+		constraint				= self->fileConstraint;
+
+		if (host.hasPreview) {
+			constraint			= [LDrawStepPartListLayout defaultConstraint];
+			constraint.mode		= LPubPliConstrainModeForAxis(host.previewAxis);
+			constraint.inches	= (float)host.previewInches;
+		}
 	}
 
 	return [LDrawStepPartListPolicy constraint:constraint
-							 clampedToHostSize:hostSize
-								 pointsPerInch:pointsPerInch
-							 pointsPerPageInch:self->_pointsPerPageInch];
+						  clampedToAllowedWidth:allowedWidth
+								  pointsPerInch:pointsPerInch];
 
-}//end constraintForModel:host:hostSize:pointsPerInch:
+}//end constraintForModel:host:allowedWidth:pointsPerInch:
 
 
 //========== updatePinsForModel:host: ==========================================

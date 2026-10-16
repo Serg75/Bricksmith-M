@@ -3,7 +3,8 @@
 //  File:       LPubCalloutFont.m
 //  Package:    LDrawCore
 //
-//  Purpose:    The font or the color of the text in a callout's box.
+//  Purpose:    The font or the color of the text in a callout's box, or of
+//              the counts in a parts list.
 //
 //              Line format:
 //              0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT
@@ -11,6 +12,8 @@
 //                  <style hint>,<weight>,<slant>,..."
 //              0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT_COLOR
 //                  [GLOBAL|LOCAL] <color>
+//              0 !LPUB PLI INSTANCE_COUNT FONT ... and FONT_COLOR ..., the
+//                  same way.
 //
 //              A parsed line is written back as it was read.
 //
@@ -64,15 +67,20 @@ static const double		QT6_BOLD_WEIGHT			= 600.0;
 //------------------------------------------------------------------------------
 + (LPubCommand *) lpubCommandInstance:(NSArray<NSString *> *)parameters
 {
-	if (parameters.count < 4 || [parameters[0] isEqualToString:LPUB_CALLOUT] == NO) {
+	LPubStyleBranch branch = LPubStyleBranchCallout;
+
+	if (parameters.count < 4 || [LPubCommand getStyleBranch:&branch fromToken:parameters[0]] == NO) {
 		return nil;
 	}
 
 	LPubCalloutPart	part	= LPubCalloutPartStepNumber;
 	BOOL			isColor	= [parameters[2] isEqualToString:LPUB_CALLOUT_FONT_COLOR];
 
+	// A parts list has no step number, and a page's text is another kind.
 	if ([LPubCalloutMargins getPart:&part fromToken:parameters[1]] == NO
 		|| (part != LPubCalloutPartStepNumber && part != LPubCalloutPartInstanceCount)
+		|| (branch == LPubStyleBranchPartsList && part != LPubCalloutPartInstanceCount)
+		|| branch == LPubStyleBranchPage
 		|| (isColor == NO && [parameters[2] isEqualToString:LPUB_CALLOUT_FONT] == NO)) {
 		return nil;
 	}
@@ -87,6 +95,7 @@ static const double		QT6_BOLD_WEIGHT			= 600.0;
 
 	LPubCalloutFont *command = [LPubCalloutFont new];
 
+	command->_branch	= branch;
 	command->_scope		= scope;
 	command->_part		= part;
 	command->_isColor	= isColor;
@@ -162,13 +171,14 @@ static const double		QT6_BOLD_WEIGHT			= 600.0;
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	NSString *name = [LPubCalloutMargins nameForPart:self.part];
+	NSString *branch	= [LPubCommand keywordForStyleBranch:self.branch];
+	NSString *name		= [LPubCalloutMargins nameForPart:self.part];
 
 	if (self.isColor) {
-		return [NSString stringWithFormat:@"%@ %@ %@", LPUB_CALLOUT, name, LPUB_CALLOUT_FONT_COLOR];
+		return [NSString stringWithFormat:@"%@ %@ %@", branch, name, LPUB_CALLOUT_FONT_COLOR];
 	}
 
-	return [NSString stringWithFormat:@"%@ %@ %@ [%@ %g]", LPUB_CALLOUT, name, LPUB_CALLOUT_FONT,
+	return [NSString stringWithFormat:@"%@ %@ %@ [%@ %g]", branch, name, LPUB_CALLOUT_FONT,
 			self.family, self.size];
 
 }//end browsingDescription
@@ -186,6 +196,7 @@ static const double		QT6_BOLD_WEIGHT			= 600.0;
 {
 	LPubCalloutFont *other = (LPubCalloutFont *)command;
 
+	self->_branch	= other->_branch;
 	self->_scope	= other->_scope;
 	self->_part		= other->_part;
 	self->_isColor	= other->_isColor;

@@ -3,9 +3,10 @@
 //  File:       LPubCalloutBorder.m
 //  Package:    LDrawCore
 //
-//  Purpose:    The outline of a callout's box.
+//  Purpose:    The outline of a callout's box, a parts list or the page.
 //
-//              Line format, after 0 !LPUB CALLOUT BORDER [GLOBAL|LOCAL]:
+//              Line format, after 0 !LPUB (CALLOUT|PLI|PAGE) BORDER
+//              [GLOBAL|LOCAL]:
 //              NONE [<line>] [MARGINS <x> <y>]
 //              (SQUARE|HIDDEN) [<line>] <color> <thickness> [MARGINS <x> <y>]
 //              ROUND [<line>] <color> <thickness> <radius> [MARGINS <x> <y>]
@@ -27,7 +28,8 @@ static NSString * const LPUB_BORDER_SQUARE	= @"SQUARE";
 static NSString * const LPUB_BORDER_HIDDEN	= @"HIDDEN";
 static NSString * const LPUB_BORDER_ROUND	= @"ROUND";
 
-/// LPub3D's outline for a callout when a file says nothing, in inches.
+/// LPub3D's outline for a callout or a parts list when a file says nothing, in
+/// inches.
 static const double DEFAULT_THICKNESS	= 1.0 / 32.0;
 static const double DEFAULT_RADIUS		= 15.0;
 static const double DEFAULT_MARGIN		= 0.05;
@@ -69,8 +71,10 @@ static const double DEFAULT_MARGIN		= 0.05;
 //------------------------------------------------------------------------------
 + (LPubCommand *) lpubCommandInstance:(NSArray<NSString *> *)parameters
 {
+	LPubStyleBranch branch = LPubStyleBranchCallout;
+
 	if (parameters.count < 3
-		|| [parameters[0] isEqualToString:LPUB_CALLOUT] == NO
+		|| [LPubCommand getStyleBranch:&branch fromToken:parameters[0]] == NO
 		|| [parameters[1] isEqualToString:LPUB_CALLOUT_BORDER] == NO) {
 		return nil;
 	}
@@ -154,7 +158,8 @@ static const double DEFAULT_MARGIN		= 0.05;
 		command->_margins		= V2MakeSize(x, y);
 	}
 
-	command->_scope = scope;
+	command->_branch	= branch;
+	command->_scope		= scope;
 	[command adoptCommandString:[parameters componentsJoinedByString:@" "]];
 
 	return command;
@@ -181,7 +186,8 @@ static const double DEFAULT_MARGIN		= 0.05;
 		shape = self.hidesArrowTips ? LPUB_BORDER_HIDDEN : LPUB_BORDER_SQUARE;
 	}
 
-	return [NSString stringWithFormat:@"%@ %@ [%@]", LPUB_CALLOUT, LPUB_CALLOUT_BORDER, shape];
+	return [NSString stringWithFormat:@"%@ %@ [%@]", [LPubCommand keywordForStyleBranch:self.branch],
+			LPUB_CALLOUT_BORDER, shape];
 
 }//end browsingDescription
 
@@ -198,6 +204,7 @@ static const double DEFAULT_MARGIN		= 0.05;
 {
 	LPubCalloutBorder *other = (LPubCalloutBorder *)command;
 
+	self->_branch			= other->_branch;
 	self->_scope			= other->_scope;
 	self->_shape			= other->_shape;
 	self->_hidesArrowTips	= other->_hidesArrowTips;

@@ -53,6 +53,24 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListControl) {
 
 //------------------------------------------------------------------------------
 ///
+/// @enum       LDrawStepPartListFill
+///
+/// @abstract   What the frame is filled with. The host's icons are drawn on the
+///             same color, so it shows behind the parts as well.
+///
+//------------------------------------------------------------------------------
+typedef NS_ENUM(NSInteger, LDrawStepPartListFill) {
+	/// The host's own list background. Off the page.
+	LDrawStepPartListFillHost	= 0,
+	/// `fillRGBA`, from the file or LPub3D's white.
+	LDrawStepPartListFillColor	= 1,
+	/// Nothing: the file makes the list see-through.
+	LDrawStepPartListFillClear	= 2
+};
+
+
+//------------------------------------------------------------------------------
+///
 /// @struct     LDrawStepPartListChrome
 ///
 /// @abstract   The values the frame is drawn with. Colors are RGBA floats and
@@ -95,6 +113,14 @@ typedef struct LDrawStepPartListChrome
 	/// Dash and gap of the box drawn where a missing part would be.
 	double	placeholderDashLength;
 	double	placeholderGapLength;
+
+	/// The frame's fill, and its color when that is `LDrawStepPartListFillColor`.
+	LDrawStepPartListFill	fill;
+	double					fillRGBA[4];
+
+	/// How the frame's outline is drawn, numbered as LPubLineStyle. A width of
+	/// 0 draws none.
+	NSInteger				borderLineStyle;
 
 } LDrawStepPartListChrome;
 
@@ -154,26 +180,29 @@ typedef struct LDrawStepPartListBadgeStyle
 
 // MARK: - Fitting the host
 
-/// The same metrics, with the height limit taken from the host. Run it after
-/// scaling, so the budget leaves room for the padding the frame is drawn with.
-/// A host with no room left gives a budget of 1 point, not 0, which the packer
-/// reads as no limit.
-+ (LDrawStepPartListMetrics) metrics:(LDrawStepPartListMetrics)metrics
-					 fittingHostSize:(Size2)hostSize
-				   pointsPerPageInch:(double)pointsPerPageInch
-	NS_SWIFT_NAME(metrics(_:fittingHostSize:pointsPerPageInch:));
+/// The most room the frame may take on each axis, in points: the page less
+/// LPub3D's margins, or a share of the view off the page. A host with margins
+/// of its own passes its own room to the calls below instead.
++ (Size2) allowedFrameSizeInHostSize:(Size2)hostSize pointsPerPageInch:(double)pointsPerPageInch
+	NS_SWIFT_NAME(allowedFrameSize(inHostSize:pointsPerPageInch:));
 
-/// The constraint to pack with.
+/// The same metrics, with the height limit taken from the room the frame may
+/// take. Run it after scaling, so the budget leaves room for the padding the
+/// frame is drawn with. No room left gives a budget of 1 point, not 0, which
+/// the packer reads as no limit.
++ (LDrawStepPartListMetrics) metrics:(LDrawStepPartListMetrics)metrics
+				  fittingAllowedSize:(Size2)allowedSize
+	NS_SWIFT_NAME(metrics(_:fittingAllowedSize:));
+
+/// The constraint to pack with, a `WIDTH` narrowed to `allowedWidth` points.
 ///
-/// A `WIDTH` too wide for the host is narrowed here only. The document keeps
-/// the value that was written, so a model does not change because of the size
-/// of the window that opened it. A drag stops at the same width, so it never
-/// writes one wider.
+/// It is narrowed here only. The document keeps the value that was written, so
+/// a model does not change because of the size of the window that opened it. A
+/// drag stops at the same width, so it never writes one wider.
 + (LDrawStepPartListConstraint) constraint:(LDrawStepPartListConstraint)constraint
-						 clampedToHostSize:(Size2)hostSize
+					 clampedToAllowedWidth:(double)allowedWidth
 							 pointsPerInch:(double)pointsPerInch
-						 pointsPerPageInch:(double)pointsPerPageInch
-	NS_SWIFT_NAME(constraint(_:clampedToHostSize:pointsPerInch:pointsPerPageInch:));
+	NS_SWIFT_NAME(constraint(_:clampedToAllowedWidth:pointsPerInch:));
 
 // MARK: - Drawing values
 
@@ -229,8 +258,8 @@ typedef struct LDrawStepPartListBadgeStyle
 /// The frame size, in inches, that dragging a handle to this point asks for.
 /// `origin` is where the size is measured from, and `layout` is the list on
 /// show. Clamped to the band that can be written, whose top applies only off
-/// the page, then to what can be drawn: the room on the host, and the sizes
-/// past which the frame is drawn the same. A width stops at one shelf holding
+/// the page, then to what can be drawn: `allowedSize`, in points, and the
+/// sizes past which the frame is drawn the same. A width stops at one shelf holding
 /// every part. A height stops between that one shelf and the packing as wide as
 /// the widest cell. 0 with no layout.
 ///
@@ -242,10 +271,10 @@ typedef struct LDrawStepPartListBadgeStyle
 						 toPoint:(Point2)point
 					  fromOrigin:(Point2)origin
 						  layout:(nullable LDrawStepPartListLayout *)layout
-						hostSize:(Size2)hostSize
+					 allowedSize:(Size2)allowedSize
 			   pointsPerPageInch:(double)pointsPerPageInch
 				 inheritedInches:(double)inheritedInches
-	NS_SWIFT_NAME(inches(forDraggingAxis:toPoint:fromOrigin:layout:hostSize:pointsPerPageInch:inheritedInches:));
+	NS_SWIFT_NAME(inches(forDraggingAxis:toPoint:fromOrigin:layout:allowedSize:pointsPerPageInch:inheritedInches:));
 
 
 // MARK: - Pins

@@ -37,17 +37,23 @@ typedef NS_ENUM(NSInteger, LPubCalloutPart) {
 ///
 /// @class      LPubCalloutMargins
 ///
-/// @abstract   The room kept around a callout or something in it:
+/// @abstract   The room kept around a callout or something in it, around a
+///             parts list or its counts, or inside the page:
 ///             0 !LPUB CALLOUT [ASSEM | PLI | STEP_NUMBER | INSTANCE_COUNT]
 ///                 MARGINS [GLOBAL|LOCAL] <x> <y>
+///             0 !LPUB PLI [INSTANCE_COUNT] MARGINS [GLOBAL|LOCAL] <x> <y>
+///             0 !LPUB PAGE MARGINS [GLOBAL|LOCAL] <x> <y>
 ///
 /// @discussion The properties are read from the line. Set lPubCommandString
 ///             to change them.
 ///
 //------------------------------------------------------------------------------
-@interface LPubCalloutMargins : LPubCommand
+@interface LPubCalloutMargins : LPubCommand <LPubStyleLine>
 
+@property (nonatomic, readonly) LPubStyleBranch	branch;
 @property (nonatomic, readonly) LPubMetaScope	scope;
+
+/// The box for a line with no part. In a parts list only the count has one.
 @property (nonatomic, readonly) LPubCalloutPart	part;
 
 /// In inches. LPub3D's default is 0.05 each way.

@@ -277,6 +277,7 @@ static void ClipViewToBounds(NSView *view)
 	// step's frame and labels.
 	[iconView draw];
 
+	[self.chromeView setCountText:presentation.countText];
 	[self.chromeView setLayout:presentation.layout];
 
 }//end showPresentation:
@@ -458,10 +459,34 @@ static void ClipViewToBounds(NSView *view)
 //==============================================================================
 - (void) applyListBackgroundColor
 {
-	[[self.iconContainer glView] setBackgroundColor:[self listBackgroundColor]];
+	[[self.iconContainer glView] setBackgroundColor:[self iconBackgroundColor]];
 	[self setNeedsDisplay:YES];
 
 }//end applyListBackgroundColor
+
+
+//========== iconBackgroundColor ===============================================
+///
+/// @abstract	What the icons are drawn on: the frame's fill, which on the page
+///				is the file's. Under a see-through list, the viewport's color.
+///
+//==============================================================================
+- (NSColor *) iconBackgroundColor
+{
+	LDrawStepPartListChrome chrome = [self chrome];
+
+	switch (chrome.fill) {
+		case LDrawStepPartListFillColor:
+			return StepPartListColorFromRGBA(chrome.fillRGBA);
+
+		case LDrawStepPartListFillClear:
+			return [LDrawView backgroundColorFromUserDefaults];
+
+		default:
+			return [self listBackgroundColor];
+	}
+
+}//end iconBackgroundColor
 
 
 // MARK: - CALLOUTS -
@@ -706,20 +731,9 @@ static void ClipViewToBounds(NSView *view)
 //========== controlAtPoint: ===================================================
 - (LDrawStepPartListControl) controlAtPoint:(NSPoint)point
 {
-	return [LDrawStepPartListPolicy controlAtPoint:[self point2ForViewPoint:point]
-										   inFrame:[self frameBox]
-									   widthPinned:self.presentation.widthPinned
-									  heightPinned:self.presentation.heightPinned];
+	return [self.presentation controlAtPoint:[self point2ForViewPoint:point]];
 
 }//end controlAtPoint:
-
-
-//========== frameBox ==========================================================
-- (Box2) frameBox
-{
-	return self.presentation.frameRect;
-
-}//end frameBox
 
 
 //========== point2ForViewPoint: ===============================================

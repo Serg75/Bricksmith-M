@@ -4,7 +4,8 @@
 //
 //  Grammar tests for the LPub CALLOUT metas that say how a callout's box
 //  looks: BORDER, BACKGROUND, SUBMODEL_BACKGROUND_COLOR, MARGINS, SEPARATOR,
-//  and the FONT and FONT_COLOR of its text. Also the colors those lines name.
+//  and the FONT and FONT_COLOR of its text. Also the colors those lines name,
+//  and the same lines under PLI for a parts list.
 //
 //  A line we do not understand stays a generic LPubCommand. Every line is
 //  written back as it was typed.
@@ -265,7 +266,9 @@ struct LPubCalloutStyleMetaTests {
         try expectGenericAndVerbatim("0 !LPUB CALLOUT MARGINS 0.1 0.1 0.1")
         try expectGenericAndVerbatim("0 !LPUB CALLOUT MARGINS wide narrow")
         try expectGenericAndVerbatim("0 !LPUB CALLOUT ROTATE_ICON MARGINS 0.1 0.1")
-        try expectGenericAndVerbatim("0 !LPUB PLI MARGINS GLOBAL 0.1 0.1")
+        try expectGenericAndVerbatim("0 !LPUB PLI PART MARGINS GLOBAL 0.1 0.1")
+        try expectGenericAndVerbatim("0 !LPUB PLI PLI MARGINS 0.1 0.1")
+        try expectGenericAndVerbatim("0 !LPUB PLI STEP_NUMBER MARGINS 0.1 0.1")
     }
 
     // MARK: - SEPARATOR
@@ -367,6 +370,89 @@ struct LPubCalloutStyleMetaTests {
         try expectGenericAndVerbatim("0 !LPUB CALLOUT STEP_NUMBER FONT \"Arial,big,-1,5,50,0,0,0,0,0\"")
         try expectGenericAndVerbatim("0 !LPUB CALLOUT ASSEM FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
         try expectGenericAndVerbatim("0 !LPUB CALLOUT SUBMODEL_FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
-        try expectGenericAndVerbatim("0 !LPUB PLI INSTANCE_COUNT FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+        try expectGenericAndVerbatim("0 !LPUB PLI ANNOTATE FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+        try expectGenericAndVerbatim("0 !LPUB PLI STEP_NUMBER FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+    }
+
+    // MARK: - The parts list's lines
+
+    @Test("BORDER, BACKGROUND, MARGINS and the count's FONT read the same under PLI")
+    func partsListBranch() throws {
+        let borderLine = "0 !LPUB PLI BORDER GLOBAL ROUND 2 #ff0000 0.0417 20 MARGINS 0.1 0.08"
+        let border = try #require(parse(borderLine) as? LPubCalloutBorder)
+
+        #expect(border.branch == .partsList)
+        #expect(border.shape == .round)
+        #expect(border.lineStyle == .dash)
+        expectColor(border.color, 1, 0, 0)
+        #expect(abs(border.thickness - 0.0417) < 1e-9)
+        #expect(abs(border.radius - 20) < 1e-9)
+        #expect(border.hasMargins)
+        #expect(abs(border.margins.height - 0.08) < 1e-9)
+        #expect(border.write() == borderLine)
+
+        let background = try #require(parse("0 !LPUB PLI BACKGROUND LOCAL COLOR #ccccff") as? LPubCalloutBackground)
+
+        #expect(background.branch == .partsList)
+        #expect(background.scope == .local)
+        #expect(background.kind == .color)
+        expectColor(background.color, 0.8, 0.8, 1)
+
+        let margins = try #require(parse("0 !LPUB PLI MARGINS GLOBAL 0.2 0.1") as? LPubCalloutMargins)
+
+        #expect(margins.branch == .partsList)
+        #expect(margins.part == .box)
+        #expect(abs(margins.margins.width - 0.2) < 1e-9)
+
+        let countMargins = try #require(parse("0 !LPUB PLI INSTANCE_COUNT MARGINS 0 0") as? LPubCalloutMargins)
+
+        #expect(countMargins.part == .instanceCount)
+
+        let fontLine = "0 !LPUB PLI INSTANCE_COUNT FONT GLOBAL \"Helvetica,48,-1,5,75,0,0,0,0,0\""
+        let font = try #require(parse(fontLine) as? LPubCalloutFont)
+
+        #expect(font.branch == .partsList)
+        #expect(font.part == .instanceCount)
+        #expect(font.family == "Helvetica")
+        #expect(font.size == 48)
+        #expect(font.isBold)
+        #expect(font.write() == fontLine)
+
+        let color = try #require(parse("0 !LPUB PLI INSTANCE_COUNT FONT_COLOR #0000ff") as? LPubCalloutFont)
+
+        #expect(color.isColor)
+        expectColor(color.color, 0, 0, 1)
+    }
+
+    @Test("The page's MARGINS, BORDER and BACKGROUND read the same under PAGE")
+    func pageBranch() throws {
+        let margins = try #require(parse("0 !LPUB PAGE MARGINS GLOBAL 0.3500 0.1500") as? LPubCalloutMargins)
+
+        #expect(margins.branch == .page)
+        #expect(margins.part == .box)
+        #expect(abs(margins.margins.width - 0.35) < 1e-9)
+        #expect(margins.write() == "0 !LPUB PAGE MARGINS GLOBAL 0.3500 0.1500")
+
+        let border = try #require(parse("0 !LPUB PAGE BORDER GLOBAL NONE MARGINS 0.0499998 0.0499998")
+                                  as? LPubCalloutBorder)
+        #expect(border.branch == .page)
+        #expect(border.shape == .none)
+
+        let background = try #require(parse("0 !LPUB PAGE BACKGROUND GLOBAL COLOR \"#66ccff\"")
+                                      as? LPubCalloutBackground)
+        #expect(background.branch == .page)
+
+        // The page's text and its number are other kinds of line.
+        try expectGenericAndVerbatim("0 !LPUB PAGE NUMBER MARGINS GLOBAL 0.12 0.12")
+        try expectGenericAndVerbatim("0 !LPUB PAGE INSTANCE_COUNT MARGINS 0.1 0.1")
+        try expectGenericAndVerbatim("0 !LPUB PAGE INSTANCE_COUNT FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+    }
+
+    @Test("A CALLOUT line keeps the callout branch")
+    func calloutBranch() throws {
+        let border = try #require(parse("0 !LPUB CALLOUT BORDER SQUARE Black 0.03") as? LPubCalloutBorder)
+
+        #expect(border.branch == .callout)
+        #expect(try #require(parse("0 !LPUB CALLOUT PLI MARGINS 0.1 0.1") as? LPubCalloutMargins).branch == .callout)
     }
 }

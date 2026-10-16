@@ -17,11 +17,14 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @class      LPubCalloutFont
 ///
-/// @abstract   The font or the color of the text in a callout's box:
+/// @abstract   The font or the color of the text in a callout's box, or of
+///             the counts in a parts list:
 ///             0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT
 ///                 [GLOBAL|LOCAL] "<font>"
 ///             0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT_COLOR
 ///                 [GLOBAL|LOCAL] <color>
+///             0 !LPUB PLI INSTANCE_COUNT (FONT "<font>" | FONT_COLOR <color>)
+///                 with the same optional scope.
 ///
 /// @discussion A font is written the way Qt describes one: the family, the
 ///             size, and numbers for the weight and the slant, with commas
@@ -31,8 +34,9 @@ NS_ASSUME_NONNULL_BEGIN
 ///             to change them.
 ///
 //------------------------------------------------------------------------------
-@interface LPubCalloutFont : LPubCommand
+@interface LPubCalloutFont : LPubCommand <LPubStyleLine>
 
+@property (nonatomic, readonly) LPubStyleBranch		branch;
 @property (nonatomic, readonly) LPubMetaScope		scope;
 
 /// The text the line is for: a step's number, or how many times the box is

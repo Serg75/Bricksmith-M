@@ -359,8 +359,7 @@ struct LPubPliMetaTests {
     func unmodeledPliMetasFallThrough() throws {
         try expectGenericAndVerbatim("0 !LPUB PLI SORT TRUE")
         try expectGenericAndVerbatim("0 !LPUB PLI INCLUDE_SUBMODELS FALSE")
-        try expectGenericAndVerbatim("0 !LPUB PLI PLACEMENT TOP_LEFT PAGE INSIDE")
-        try expectGenericAndVerbatim("0 !LPUB PLI INSTANCE_COUNT FONT Arial,24,-1,5,50,0,0,0,0,0")
+        try expectGenericAndVerbatim("0 !LPUB PLI ANNOTATE FONT Arial,24,-1,5,50,0,0,0,0,0")
         try expectGenericAndVerbatim("0 !LPUB BOM CONSTRAIN LOCAL WIDTH 11")
     }
 
@@ -716,10 +715,10 @@ struct LPubPliMetaTests {
         #expect(portrait.isLandscape == false)
     }
 
-    /// PAGE has about a dozen other leaves, and we model two of them.
+    /// PAGE has about a dozen other leaves, and we model a few of them.
     @Test("The other PAGE metas stay generic")
     func otherPageMetasFallThrough() throws {
-        try expectGenericAndVerbatim("0 !LPUB PAGE MARGINS GLOBAL 0.3000 0.1500")
+        try expectGenericAndVerbatim("0 !LPUB PAGE NUMBER MARGINS GLOBAL 0.1200 0.1200")
         try expectGenericAndVerbatim("0 !LPUB PAGE DISPLAY_PAGE_NUMBER GLOBAL TRUE")
         try expectGenericAndVerbatim("0 !LPUB PAGE ORIENTATION SIDEWAYS")
     }

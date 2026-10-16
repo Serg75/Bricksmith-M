@@ -16,6 +16,11 @@ import Foundation
 import LDrawCore
 import LDrawFeatures
 
+/// The most room a frame may take in a host, as the policy works it out.
+private func room(in host: Size2, pointsPerPageInch: Double) -> Size2 {
+    LDrawStepPartListPolicy.allowedFrameSize(inHostSize: host, pointsPerPageInch: pointsPerPageInch)
+}
+
 func constrain(_ mode: LPubPliConstrainMode,
                _ inches: Double = 0,
                scope: LPubMetaScope = .local) -> LPubPliConstrain {
@@ -105,9 +110,9 @@ extension StepPartListStaticSettings {
         @Test("The height budget comes from the viewport")
         func metricsTakeTheirHeightBudgetFromTheViewport() {
             for (height, budget) in [(600.0, 348.0), (400, 228), (1200, 708), (10, 1)] {
+                let allowed = room(in: Size2(width: 800, height: height), pointsPerPageInch: 0)
                 let metrics = LDrawStepPartListPolicy.metrics(LDrawStepPartListLayout.defaultMetrics(),
-                                                              fittingHostSize: Size2(width: 800, height: height),
-                                                              pointsPerPageInch: 0)
+                                                              fittingAllowedSize: allowed)
 
                 #expect(abs(metrics.maximumHeight - budget) < 0.0001, "at \(height)")
             }
@@ -123,7 +128,8 @@ extension StepPartListStaticSettings {
             var metrics = LDrawStepPartListLayout.defaultMetrics()
             metrics.framePadding = 18
 
-            let fitted = LDrawStepPartListPolicy.metrics(metrics, fittingHostSize: viewport, pointsPerPageInch: 0)
+            let allowed = room(in: viewport, pointsPerPageInch: 0)
+            let fitted = LDrawStepPartListPolicy.metrics(metrics, fittingAllowedSize: allowed)
 
             #expect(abs(fitted.maximumHeight - 324) < 0.0001)
         }
@@ -135,10 +141,9 @@ extension StepPartListStaticSettings {
             for pointsPerPageInch in [32.0, 64, 200] {
                 let scaled = LDrawStepPartListPolicy.metrics(LDrawStepPartListLayout.defaultMetrics(),
                                                              scaledToPointsPerPageInch: pointsPerPageInch)
-                let fitted = LDrawStepPartListPolicy.metrics(scaled,
-                                                             fittingHostSize: Size2(width: 8.5 * pointsPerPageInch,
-                                                                                      height: 11 * pointsPerPageInch),
-                                                             pointsPerPageInch: pointsPerPageInch)
+                let page = Size2(width: 8.5 * pointsPerPageInch, height: 11 * pointsPerPageInch)
+                let allowed = room(in: page, pointsPerPageInch: pointsPerPageInch)
+                let fitted = LDrawStepPartListPolicy.metrics(scaled, fittingAllowedSize: allowed)
 
                 #expect(abs(fitted.maximumHeight - (11 - 0.1 - 2 * 0.08125) * pointsPerPageInch) < 0.0001, "at \(pointsPerPageInch)")
             }
@@ -155,10 +160,10 @@ extension StepPartListStaticSettings {
             constraint.mode = .width
             constraint.inches = 11.0
 
+            let allowed = room(in: viewport, pointsPerPageInch: 0).width
             let clamped = LDrawStepPartListPolicy.constraint(constraint,
-                                                             clampedToHostSize: viewport,
-                                                             pointsPerInch: 150,
-                                                             pointsPerPageInch: 0)
+                                                             clampedToAllowedWidth: allowed,
+                                                             pointsPerInch: 150)
 
             // Four tenths of 800 points, at 150 dpi.
             #expect(abs(Double(clamped.inches) - 320.0 / 150.0) < 0.0001)
@@ -176,10 +181,10 @@ extension StepPartListStaticSettings {
                     constraint.mode = .width
                     constraint.inches = Float(asked)
 
+                    let allowed = room(in: page, pointsPerPageInch: pointsPerPageInch).width
                     let clamped = LDrawStepPartListPolicy.constraint(constraint,
-                                                                     clampedToHostSize: page,
-                                                                     pointsPerInch: pointsPerPageInch,
-                                                                     pointsPerPageInch: pointsPerPageInch)
+                                                                     clampedToAllowedWidth: allowed,
+                                                                     pointsPerInch: pointsPerPageInch)
 
                     #expect(abs(Double(clamped.inches) - drawn) < 0.0001, "\(asked) at \(pointsPerPageInch)")
                 }
@@ -202,10 +207,10 @@ extension StepPartListStaticSettings {
                 constraint.inches = value
                 constraint.columns = 4
 
+                let allowed = room(in: viewport, pointsPerPageInch: 0).width
                 let clamped = LDrawStepPartListPolicy.constraint(constraint,
-                                                                 clampedToHostSize: viewport,
-                                                                 pointsPerInch: 150,
-                                                                 pointsPerPageInch: 0)
+                                                                 clampedToAllowedWidth: allowed,
+                                                                 pointsPerInch: 150)
 
                 #expect(clamped.inches == value, "\(mode)")
                 #expect(clamped.columns == 4, "\(mode)")

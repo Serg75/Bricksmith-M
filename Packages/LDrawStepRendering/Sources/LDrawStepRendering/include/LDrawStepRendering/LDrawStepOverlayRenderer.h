@@ -14,6 +14,7 @@
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
 @class LDrawStepCalloutPictureStore;
+@class LDrawStepCalloutText;
 @class LDrawStepPartListLayout;
 @class LDrawStepPartListPresentation;
 
@@ -87,6 +88,17 @@ NS_ASSUME_NONNULL_BEGIN
 			 overflowFormat:(NSString *)overflowFormat
 				  inContext:(CGContextRef)context
 	NS_SWIFT_NAME(drawLabels(of:chrome:contentWidth:overflowFormat:in:));
+
+/// The same, with the counts in the font `countText` names. Their size and
+/// color are the chrome's, and a nil `countText` writes them in the system's
+/// bold font.
++ (void) drawLabelsOfLayout:(LDrawStepPartListLayout *)layout
+					 chrome:(LDrawStepPartListChrome)chrome
+				  countText:(nullable LDrawStepCalloutText *)countText
+			   contentWidth:(double)contentWidth
+			 overflowFormat:(NSString *)overflowFormat
+				  inContext:(CGContextRef)context
+	NS_SWIFT_NAME(drawLabels(of:chrome:countText:contentWidth:overflowFormat:in:));
 
 @end
 

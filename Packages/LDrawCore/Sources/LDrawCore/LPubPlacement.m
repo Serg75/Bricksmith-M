@@ -3,9 +3,10 @@
 //  File:       LPubPlacement.m
 //  Package:    LDrawCore
 //
-//  Purpose:    Where a callout's box or a step's assembly sits.
+//  Purpose:    Where a callout's box, a step's assembly or its parts list
+//              sits.
 //
-//              Line format, after 0 !LPUB (CALLOUT | ASSEM) PLACEMENT
+//              Line format, after 0 !LPUB (CALLOUT | ASSEM | PLI) PLACEMENT
 //              [GLOBAL|LOCAL]:
 //              (TOP|BOTTOM) [LEFT|CENTER|RIGHT] <relative to>
 //                  (INSIDE|OUTSIDE) [[OFFSET] <x> <y>]
@@ -171,6 +172,9 @@ static NSString *OffsetText(double offset)
 	if ([parameters[0] isEqualToString:LPUB_ASSEM]) {
 		branch = LPubPlacementBranchAssembly;
 	}
+	else if ([parameters[0] isEqualToString:LPUB_PLI]) {
+		branch = LPubPlacementBranchPartsList;
+	}
 	else if ([parameters[0] isEqualToString:LPUB_CALLOUT] == NO) {
 		return nil;
 	}
@@ -289,7 +293,14 @@ static NSString *OffsetText(double offset)
 //==============================================================================
 - (NSString *) browsingDescription
 {
-	NSString *subject = (self.branch == LPubPlacementBranchAssembly) ? LPUB_ASSEM : LPUB_CALLOUT;
+	NSString *subject = LPUB_CALLOUT;
+
+	if (self.branch == LPubPlacementBranchAssembly) {
+		subject = LPUB_ASSEM;
+	}
+	else if (self.branch == LPubPlacementBranchPartsList) {
+		subject = LPUB_PLI;
+	}
 
 	return [NSString stringWithFormat:@"%@ %@ [%@ %@ %@]", subject, LPUB_PLACEMENT,
 			PositionNames()[self.position], self.relativeTo,

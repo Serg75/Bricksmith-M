@@ -30,19 +30,18 @@
 - (LDrawStepPartListControl) beginAtPoint:(Point2)point
 							 presentation:(nullable LDrawStepPartListPresentation *)presentation
 {
-	LDrawStepPartListControl control = [LDrawStepPartListPolicy controlAtPoint:point
-																	   inFrame:presentation.frameRect
-																   widthPinned:presentation.widthPinned
-																  heightPinned:presentation.heightPinned];
+	LDrawStepPartListControl control = [presentation controlAtPoint:point];
 
 	self->_isResizing = (control == LDrawStepPartListControlWidthEdge
 						 || control == LDrawStepPartListControlHeightEdge);
 
 	if (self->_isResizing) {
+		Point2 grabbed = [presentation resizePointForPoint:point];
+
 		self->_axis = (control == LDrawStepPartListControlWidthEdge) ? LPubPliAxisWidth : LPubPliAxisHeight;
 
 		self->dragOrigin			= [LDrawStepPartListPolicy dragOriginForAxis:self->_axis
-																  grabbedAtPoint:point
+																  grabbedAtPoint:grabbed
 																		  layout:presentation.layout];
 		self->dragInheritedInches	= [presentation inheritedInchesForAxis:self->_axis];
 	}
@@ -68,10 +67,10 @@
 	}
 
 	return [LDrawStepPartListPolicy inchesForDraggingAxis:self->_axis
-												  toPoint:point
+												  toPoint:[presentation resizePointForPoint:point]
 											   fromOrigin:self->dragOrigin
 												   layout:presentation.layout
-												 hostSize:presentation.hostSize
+											  allowedSize:presentation.allowedFrameSize
 										pointsPerPageInch:presentation.pointsPerPageInch
 										  inheritedInches:self->dragInheritedInches];
 

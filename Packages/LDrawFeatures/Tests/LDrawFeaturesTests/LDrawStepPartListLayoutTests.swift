@@ -1422,15 +1422,15 @@ struct LDrawStepPartListLayoutTests {
         #expect(abs(oneRow.frameSize.width - (718 + 12)) < 0.001)
     }
 
-    /// One shelf is the 3009 with its badge, 43 points, and a 12 point count
-    /// strip. At the widest cell, 126 points, the shelves are 55, 42, 42 and
+    /// One shelf is the 3009 with its badge, 45 points, and a 12 point count
+    /// strip. At the widest cell, 126 points, the shelves are 57, 42, 42 and
     /// 26 points with three gaps.
     @Test("A height packs one shelf below the one-row height, and the same packing above the tallest")
     func heightLimitsBracketWhatAHeightChanges() {
         let packed = layout(mixedEntries, constraint(.area))
 
-        #expect(abs(packed.oneRowFrameHeight - 67) < 0.001)
-        #expect(abs(packed.tallestFrameHeight - 195) < 0.001)
+        #expect(abs(packed.oneRowFrameHeight - 69) < 0.001)
+        #expect(abs(packed.tallestFrameHeight - 197) < 0.001)
 
         for inches in [writtenInches(packed.oneRowFrameHeight), 0.25] {
             let short = layout(mixedEntries, constraint(.height, inches: inches))

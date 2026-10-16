@@ -35,4 +35,7 @@ extern const LPubColorComponents LPubColorBlack;
 /// around it. NO for anything else.
 extern BOOL LPubColorComponentsFromString(NSString *string, LPubColorComponents *outColor);
 
+/// Writes the color as four numbers: red, green, blue and alpha.
+extern void LPubColorComponentsGetRGBA(LPubColorComponents color, double *outRGBA);
+
 NS_ASSUME_NONNULL_END

@@ -17,6 +17,7 @@
 @class LDrawModel;
 @class LDrawStepCalloutArrangement;
 @class LDrawStepCalloutBox;
+@class LDrawStepCalloutText;
 @class LDrawStepPartListEntry;
 @class LDrawStepPartListLayout;
 
@@ -112,7 +113,17 @@ typedef struct LDrawStepPartListHostState {
 @property (nonatomic, readonly) Box2 contentRect;
 
 /// The values the frame is drawn with, scaled to the page when there is one.
+/// On the page its outline, its fill and its counts' size and color are the
+/// file's.
 @property (nonatomic, readonly) LDrawStepPartListChrome chrome;
+
+/// The same values without the file's PLI lines, for what is drawn in the
+/// callouts' boxes. Their parts are packed with the list's own sizes.
+@property (nonatomic, readonly) LDrawStepPartListChrome calloutChrome;
+
+/// The font the counts are written in on the page, from the file. Nil off the
+/// page. Their size and color are the chrome's.
+@property (nonatomic, readonly, nullable) LDrawStepCalloutText *countText;
 
 /// The packed list, or nil when there is nothing to draw.
 @property (nonatomic, readonly, nullable) LDrawStepPartListLayout *layout;
@@ -180,6 +191,27 @@ typedef struct LDrawStepPartListHostState {
 /// back over a short time. Does nothing off the page.
 - (void) restCalloutBoxesWithArrangement:(LDrawStepCalloutArrangement *)arrangement
 	NS_SWIFT_NAME(restCalloutBoxes(arrangement:));
+
+/// Whether the frame grows to the left as it gets wider, and upward as it
+/// gets taller: the file places it by its right or bottom edge. Its resize
+/// edges and pins are then on the left and top. NO off the page.
+@property (nonatomic, readonly) BOOL growsLeftward;
+@property (nonatomic, readonly) BOOL growsUpward;
+
+/// The control under a point of the view: an edge to drag, or a pin to click.
+- (LDrawStepPartListControl) controlAtPoint:(Point2)point NS_SWIFT_NAME(control(at:));
+
+/// Where an axis's pin is drawn, on the edge that moves.
+- (Box2) pinRectForAxis:(LPubPliAxis)axis NS_SWIFT_NAME(pinRect(forAxis:));
+
+/// The most room the frame may take on each axis, in points: the page less
+/// the larger of its margins and the list's, or the policy's share of the view
+/// off the page. Packing and a resize drag both stop here.
+@property (nonatomic, readonly) Size2 allowedFrameSize;
+
+/// A point of the view as the resize arithmetic reads it. Across an edge that
+/// stays put it is mirrored, so a drag away from the frame makes it bigger.
+- (Point2) resizePointForPoint:(Point2)point NS_SWIFT_NAME(resizePoint(for:));
 
 /// Whether each axis shows a pin: set by the step's own line, or by where a
 /// drag would leave it.

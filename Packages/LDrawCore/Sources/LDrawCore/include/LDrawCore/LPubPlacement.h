@@ -41,9 +41,11 @@ typedef NS_ENUM(NSInteger, LPubPlacementPosition) {
 //------------------------------------------------------------------------------
 typedef NS_ENUM(NSInteger, LPubPlacementBranch) {
 	/// A callout's box.
-	LPubPlacementBranchCallout	= 0,
+	LPubPlacementBranchCallout		= 0,
 	/// The step's assembly picture.
-	LPubPlacementBranchAssembly	= 1
+	LPubPlacementBranchAssembly		= 1,
+	/// The step's parts list.
+	LPubPlacementBranchPartsList	= 2
 };
 
 
@@ -51,9 +53,9 @@ typedef NS_ENUM(NSInteger, LPubPlacementBranch) {
 ///
 /// @class      LPubPlacement
 ///
-/// @abstract   Where a callout's box or a step's assembly sits:
-///             0 !LPUB (CALLOUT | ASSEM) PLACEMENT [GLOBAL|LOCAL] <position>
-///                 [<justification>] <relative to> (INSIDE|OUTSIDE)
+/// @abstract   Where a callout's box, a step's assembly or its parts list sits:
+///             0 !LPUB (CALLOUT | ASSEM | PLI) PLACEMENT [GLOBAL|LOCAL]
+///                 <position> [<justification>] <relative to> (INSIDE|OUTSIDE)
 ///                 [[OFFSET] <x> <y>]
 ///
 /// @discussion Outside, a box on a side also says where along that side it

@@ -17,6 +17,18 @@
 
 const LPubColorComponents LPubColorBlack = { 0.0, 0.0, 0.0, 1.0 };
 
+
+//========== LPubColorComponentsGetRGBA() ======================================
+void LPubColorComponentsGetRGBA(LPubColorComponents color, double *outRGBA)
+{
+	outRGBA[0] = color.red;
+	outRGBA[1] = color.green;
+	outRGBA[2] = color.blue;
+	outRGBA[3] = color.alpha;
+
+}//end LPubColorComponentsGetRGBA
+
+
 /// The color names of SVG, each followed by its red, green and blue as hex.
 static NSString * const NAMED_COLORS =
 	@"aliceblue f0f8ff antiquewhite faebd7 aqua 00ffff aquamarine 7fffd4 azure f0ffff "

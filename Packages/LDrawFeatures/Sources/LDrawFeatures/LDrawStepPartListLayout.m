@@ -445,12 +445,13 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	metrics.cellPadding					= 3.0;
 	metrics.labelHeight					= 12.0;
 
-	// Room for the badge: an 8 point label, its border, and a point of gap.
-	metrics.annotationHeight			= 13.0;
+	// Room for the badge: text the size of the count, its border, and a point
+	// of gap.
+	metrics.annotationHeight			= 15.0;
 
 	// A little wider than the widest digit of the text they measure.
 	metrics.labelCharacterWidth			= 6.5;
-	metrics.annotationCharacterWidth	= 5.0;
+	metrics.annotationCharacterWidth	= 6.5;
 	metrics.decorationGap				= 1.0;
 
 	metrics.rowGap						= 6.0;

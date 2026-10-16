@@ -49,5 +49,6 @@
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
 #import <LDrawFeatures/LDrawStepPartListResizeTracker.h>
+#import <LDrawFeatures/LDrawStepPartListStyle.h>
 #import <LDrawFeatures/LDrawToolMode.h>
 #import <LDrawFeatures/LSynthConfiguration.h>

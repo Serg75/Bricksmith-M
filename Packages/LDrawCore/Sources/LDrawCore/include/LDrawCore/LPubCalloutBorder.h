@@ -48,20 +48,21 @@ typedef NS_ENUM(NSInteger, LPubLineStyle) {
 ///
 /// @class      LPubCalloutBorder
 ///
-/// @abstract   The outline of a callout's box:
-///             0 !LPUB CALLOUT BORDER [GLOBAL|LOCAL] NONE [<line>]
-///             0 !LPUB CALLOUT BORDER [GLOBAL|LOCAL] (SQUARE|HIDDEN) [<line>]
-///                 <color> <thickness>
-///             0 !LPUB CALLOUT BORDER [GLOBAL|LOCAL] ROUND [<line>] <color>
-///                 <thickness> <radius>
+/// @abstract   The outline of a callout's box, a parts list or the page:
+///             0 !LPUB (CALLOUT|PLI|PAGE) BORDER [GLOBAL|LOCAL] NONE [<line>]
+///             0 !LPUB (CALLOUT|PLI|PAGE) BORDER [GLOBAL|LOCAL]
+///                 (SQUARE|HIDDEN) [<line>] <color> <thickness>
+///             0 !LPUB (CALLOUT|PLI|PAGE) BORDER [GLOBAL|LOCAL] ROUND [<line>]
+///                 <color> <thickness> <radius>
 ///             each with an optional MARGINS <x> <y> at the end.
 ///
 /// @discussion The properties are read from the line. Set lPubCommandString
 ///             to change them.
 ///
 //------------------------------------------------------------------------------
-@interface LPubCalloutBorder : LPubCommand
+@interface LPubCalloutBorder : LPubCommand <LPubStyleLine>
 
+@property (nonatomic, readonly) LPubStyleBranch		branch;
 @property (nonatomic, readonly) LPubMetaScope		scope;
 @property (nonatomic, readonly) LPubBorderShape		shape;
 

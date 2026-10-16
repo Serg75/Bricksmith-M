@@ -91,6 +91,7 @@ struct LPubPliRoundTripTests {
         var scales = 0
         var substitutes = 0
         var angles = 0
+        var margins = 0
         var generics = 0
 
         for case let step as LDrawStep in model.steps() {
@@ -102,6 +103,7 @@ struct LPubPliRoundTripTests {
                     case is LPubModelScale:		scales += 1
                     case is LPubPliSubstitute:	substitutes += 1
                     case is LPubPliCameraAngles:	angles += 1
+                    case is LPubCalloutMargins:	margins += 1
                     case let command as LPubCommand where command.isMember(of: LPubCommand.self):
                                                 generics += 1
                     default:					break
@@ -118,7 +120,8 @@ struct LPubPliRoundTripTests {
         #expect(scales == 1)
         #expect(substitutes == 1)
         #expect(angles == 1)
-        // INCLUDE_SUBMODELS, SORT, MARGINS.
-        #expect(generics == 3)
+        #expect(margins == 1)
+        // INCLUDE_SUBMODELS, SORT.
+        #expect(generics == 2)
     }
 }

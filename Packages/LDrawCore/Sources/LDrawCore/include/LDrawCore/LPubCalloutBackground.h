@@ -16,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @enum       LPubCalloutBackgroundKind
 ///
-/// @abstract   What a callout's box is filled with.
+/// @abstract   What a callout's box, a parts list or the page is filled with.
 ///
 //------------------------------------------------------------------------------
 typedef NS_ENUM(NSInteger, LPubCalloutBackgroundKind) {
@@ -34,17 +34,18 @@ typedef NS_ENUM(NSInteger, LPubCalloutBackgroundKind) {
 ///
 /// @class      LPubCalloutBackground
 ///
-/// @abstract   What a callout's box is filled with:
-///             0 !LPUB CALLOUT BACKGROUND [GLOBAL|LOCAL] (TRANSPARENT |
-///                 SUBMODEL_BACKGROUND_COLOR | COLOR <color> |
+/// @abstract   What a callout's box, a parts list or the page is filled with:
+///             0 !LPUB (CALLOUT|PLI|PAGE) BACKGROUND [GLOBAL|LOCAL]
+///                 (TRANSPARENT | SUBMODEL_BACKGROUND_COLOR | COLOR <color> |
 ///                 PICTURE <file> [STRETCH] | GRADIENT <8 values>)
 ///
 /// @discussion The properties are read from the line. Set lPubCommandString
 ///             to change them.
 ///
 //------------------------------------------------------------------------------
-@interface LPubCalloutBackground : LPubCommand
+@interface LPubCalloutBackground : LPubCommand <LPubStyleLine>
 
+@property (nonatomic, readonly) LPubStyleBranch				branch;
 @property (nonatomic, readonly) LPubMetaScope				scope;
 @property (nonatomic, readonly) LPubCalloutBackgroundKind	kind;
 

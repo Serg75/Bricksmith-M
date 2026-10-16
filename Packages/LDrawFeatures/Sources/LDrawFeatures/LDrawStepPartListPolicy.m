@@ -19,6 +19,7 @@
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LPubCalloutBorder.h>
 #import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/LPubModelScale.h>
 #import <LDrawCore/LPubPageOrientation.h>
@@ -63,6 +64,7 @@ static const double LPUB_BORDER_INCHES					= 1.0 / 32.0;
 /// LPub3D's line around a transparent page in its editor, in inches.
 static const double LPUB_PAGE_GUIDE_INCHES				= 1.0 / 48.0;
 
+
 /// CONSTRAIN is written with four decimals.
 static const double WRITTEN_INCHES_STEP					= 0.0001;
 
@@ -97,6 +99,9 @@ static const LDrawStepPartListChrome DEFAULT_CHROME = {
 	.pageLineWidth			= 1.0,
 	.placeholderDashLength	= 3.0,
 	.placeholderGapLength	= 2.0,
+	.fill					= LDrawStepPartListFillHost,
+	.fillRGBA				= {1.0, 1.0, 1.0, 1.0},
+	.borderLineStyle		= LPubLineStyleSolid,
 };
 
 
@@ -251,61 +256,54 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 // MARK: - FITTING THE HOST -
 
 
-//---------- metrics:fittingHostSize:pointsPerPageInch: --------------[static]--
+//---------- allowedFrameSizeInHostSize:pointsPerPageInch: -----------[static]--
++ (Size2) allowedFrameSizeInHostSize:(Size2)hostSize pointsPerPageInch:(double)pointsPerPageInch
+{
+	return V2MakeSize(AllowedFramePoints(hostSize.width, MAXIMUM_VIEWPORT_WIDTH_FRACTION, pointsPerPageInch),
+					  AllowedFramePoints(hostSize.height, MAXIMUM_VIEWPORT_HEIGHT_FRACTION, pointsPerPageInch));
+
+}//end allowedFrameSizeInHostSize:pointsPerPageInch:
+
+
+//---------- metrics:fittingAllowedSize: -----------------------------[static]--
 ///
-/// @abstract	The same metrics, with the height budget taken from the host.
+/// @abstract	The same metrics, with the height budget taken from the room the
+/// 			frame may take.
 ///
-/// @discussion	The budget is content height, so it leaves room for the margins
-/// 			and for the padding these metrics carry.
+/// @discussion	The budget is content height, so it leaves room for the padding
+/// 			these metrics carry.
 ///
 //------------------------------------------------------------------------------
 + (LDrawStepPartListMetrics) metrics:(LDrawStepPartListMetrics)metrics
-					 fittingHostSize:(Size2)hostSize
-				   pointsPerPageInch:(double)pointsPerPageInch
+				  fittingAllowedSize:(Size2)allowedSize
 {
-	double available = AllowedFramePoints(hostSize.height, MAXIMUM_VIEWPORT_HEIGHT_FRACTION,
-										  pointsPerPageInch)
-					 - 2.0 * metrics.framePadding;
-
-	// The packer reads 0 as no limit, so a host with no room left gives the
-	// smallest budget instead.
-	metrics.maximumHeight = (hostSize.height > 0.0) ? MAX(1.0, available) : 0.0;
+	// The packer reads 0 as no limit, so no room left gives the smallest
+	// budget instead.
+	metrics.maximumHeight = MAX(1.0, allowedSize.height - 2.0 * metrics.framePadding);
 
 	return metrics;
 
-}//end metrics:fittingHostSize:pointsPerPageInch:
+}//end metrics:fittingAllowedSize:
 
 
-//---------- constraint:clampedToHostSize:pointsPerInch:pointsPerPageInch: --[static]--
+//---------- constraint:clampedToAllowedWidth:pointsPerInch: ---------[static]--
 ///
-/// @abstract	Narrows a pinned width that would cover too much of the host.
+/// @abstract	Narrows a pinned width wider than the room the frame may take.
 ///
 //------------------------------------------------------------------------------
 + (LDrawStepPartListConstraint) constraint:(LDrawStepPartListConstraint)constraint
-						 clampedToHostSize:(Size2)hostSize
+					 clampedToAllowedWidth:(double)allowedWidth
 							 pointsPerInch:(double)pointsPerInch
-						 pointsPerPageInch:(double)pointsPerPageInch
 {
-	if (constraint.mode != LPubPliConstrainModeWidth || pointsPerInch <= 0.0) {
+	if (constraint.mode != LPubPliConstrainModeWidth || pointsPerInch <= 0.0 || allowedWidth <= 0.0) {
 		return constraint;
 	}
 
-	double allowedPoints = AllowedFramePoints(hostSize.width, MAXIMUM_VIEWPORT_WIDTH_FRACTION,
-											  pointsPerPageInch);
-
-	if (allowedPoints <= 0.0) {
-		return constraint;
-	}
-
-	double allowedInches = allowedPoints / pointsPerInch;
-
-	if ((double)constraint.inches > allowedInches) {
-		constraint.inches = (float)allowedInches;
-	}
+	constraint.inches = (float)MIN((double)constraint.inches, allowedWidth / pointsPerInch);
 
 	return constraint;
 
-}//end constraint:clampedToHostSize:pointsPerInch:pointsPerPageInch:
+}//end constraint:clampedToAllowedWidth:pointsPerInch:
 
 
 // MARK: - DRAWING VALUES -
@@ -512,7 +510,7 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 						 toPoint:(Point2)point
 					  fromOrigin:(Point2)origin
 						  layout:(nullable LDrawStepPartListLayout *)layout
-						hostSize:(Size2)hostSize
+					 allowedSize:(Size2)allowedSize
 			   pointsPerPageInch:(double)pointsPerPageInch
 				 inheritedInches:(double)inheritedInches
 {
@@ -530,9 +528,7 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 	double maximum = (pointsPerPageInch > 0.0) ? DBL_MAX : [LDrawStepPartList maximumWidthInInches];
 
 	// Past these sizes the frame is drawn the same, or its icons shrink.
-	double room = AllowedFramePoints(isWidth ? hostSize.width : hostSize.height,
-									 isWidth ? MAXIMUM_VIEWPORT_WIDTH_FRACTION : MAXIMUM_VIEWPORT_HEIGHT_FRACTION,
-									 pointsPerPageInch);
+	double room = isWidth ? allowedSize.width : allowedSize.height;
 	double largestUsefulPoints = isWidth ? layout.oneRowFrameWidth : layout.tallestFrameHeight;
 
 	if (room > 0.0) {
@@ -563,7 +559,7 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 
 	return clampedInches;
 
-}//end inchesForDraggingAxis:toPoint:fromOrigin:layout:hostSize:pointsPerPageInch:inheritedInches:
+}//end inchesForDraggingAxis:toPoint:fromOrigin:layout:allowedSize:pointsPerPageInch:inheritedInches:
 
 
 // MARK: - PINS -

@@ -152,7 +152,8 @@ LPub3D does not center the assembly alone on its page. It centers one box around
 Which callouts are in that box depends on the version. Up to 2.4.2 every callout placed against the assembly is, so a tall callout above the assembly pushes the assembly down, and dragging a callout moves the assembly. From 2.4.3 on a callout that has been dragged, that is one whose `PLACEMENT` has an offset that is not zero, is left out (`Placement::relativeTo`, with a comment that calls it a hack), so dragging a callout moves nothing else. Bricksmith follows 2.4.3 and later:
 
 - a callout placed against `ASSEM` with no offset, or with no `PLACEMENT` line at all, is centered with the assembly;
-- a callout with an offset is not, and neither is one placed against the page, the parts list, or anything Bricksmith does not draw.
+- a callout with an offset is not, and neither is one placed against the page, the parts list, or anything Bricksmith does not draw;
+- a parts list placed against the assembly is, offset or not. See [step_part_list_frame.md](step_part_list_frame.md), *Where the list goes*.
 
 The Porsche was laid out under the older rule, and it shows. Its printed book has a callout half a page tall above the assembly of step 17, with the assembly far below the middle to make room. Under the newer rule the assembly sits in the middle and most of that callout is above the page, until an `ASSEM PLACEMENT` moves the assembly down. 52 of the file's 106 callouts are dragged ones on pages of one step.
 
@@ -416,7 +417,7 @@ Text that does not fit its rectangle is the one difference: it is cut short by C
 | What | Where |
 |------|-------|
 | The metas | `LPubCallout`, `LPubCalloutPointer`, `LPubPlacement` (a callout's and an assembly's), `LPubCalloutAlloc`, `LPubCalloutPliPerStep`, `LPubAssemShowStepNumber` (LDrawCore) |
-| The style metas | `LPubCalloutBorder`, `LPubCalloutBackground`, `LPubCalloutSubmodelColor`, `LPubCalloutMargins`, `LPubCalloutSeparator`, `LPubCalloutFont`, and the color reader in `LPubColor` (LDrawCore) |
+| The style metas | `LPubCalloutBorder`, `LPubCalloutBackground`, `LPubCalloutSubmodelColor`, `LPubCalloutMargins`, `LPubCalloutSeparator`, `LPubCalloutFont`, and the color reader in `LPubColor` (LDrawCore). The border, background, margins and font also read the same lines under `PLI` for the step's parts list; the callout reads only those whose `branch` is `LPubStyleBranchCallout` |
 | What a step calls out, and the lines in force for a callout | `LDrawStepCallout` (LDrawFeatures) |
 | The parts list rule | `+[LDrawStepPartList collectStep:…]` (LDrawFeatures) |
 | How a box looks | `LDrawStepCalloutStyle` (LDrawFeatures) |
@@ -492,7 +493,7 @@ The book also confirms the page scale: a stud in it measures 46.7 pixels of a 20
 - **`CALLOUT DIVIDER STEPS`**, LPub3D's line between two steps of one column, is not read, drawn or offered. Neither are a divider's arrows, `DIVIDER_POINTER`: they are kept as typed, and go when their divider is removed.
 - **Only callouts are counted with the assembly.** LPub3D also counts a parts list, a step number, a rotate icon or a submodel preview placed against the assembly. Bricksmith always draws the parts list in the page's corner and has none of the others.
 - **Steps of a step group.** LPub3D prints the steps of a `MULTI_STEP` together on one page. Bricksmith shows one step at a time and centers each as a page of its own.
-- **`ASSEM MARGINS` and `PAGE MARGINS`** are not read. The room between a box and what it is placed against is the callout's margin alone, where LPub3D takes the larger of the two.
+- **`ASSEM MARGINS`** is not read, and **`PAGE MARGINS`** only for the step and the parts list. The room between a box and what it is placed against is the callout's margin alone, where LPub3D takes the larger of the two.
 - **An assembly placed anywhere but `CENTER PAGE INSIDE`** uses LPub3D's default margin, and a line that places it against anything but the page is read as none.
 - **`CALLOUT ASSEM MODEL_SCALE`** is not read. The callout's assembly is drawn at 1.0.
 - **`PLI INCLUDE_SUBMODELS`** is still Bricksmith's own preference, not read from the file.
