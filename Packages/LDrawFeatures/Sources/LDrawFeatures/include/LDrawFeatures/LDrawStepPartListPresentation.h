@@ -114,8 +114,8 @@ typedef struct LDrawStepPartListHostState {
 @property (nonatomic, readonly) Box2 contentRect;
 
 /// The values the frame is drawn with, scaled to the page when there is one.
-/// On the page its outline, its fill and its counts' size and color are the
-/// file's.
+/// On the page its outline, its fill, its counts' size and color, and its
+/// badges' size and text color when the file gives them, are the file's.
 @property (nonatomic, readonly) LDrawStepPartListChrome chrome;
 
 /// The same values without the file's PLI lines, for what is drawn in the
@@ -130,6 +130,11 @@ typedef struct LDrawStepPartListHostState {
 /// The font the counts are written in on the page, from the file. Nil off the
 /// page. Their size and color are the chrome's.
 @property (nonatomic, readonly, nullable) LDrawStepCalloutText *countText;
+
+/// The font the size badges are written in on the page, from the file. Nil off
+/// the page, and for a file that gives none. Their size and color are the
+/// chrome's.
+@property (nonatomic, readonly, nullable) LDrawStepCalloutText *annotationText;
 
 /// The packed list, or nil when there is nothing to draw.
 @property (nonatomic, readonly, nullable) LDrawStepPartListLayout *layout;

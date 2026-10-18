@@ -119,26 +119,68 @@ LPubCalloutBackground *LDrawStepReadBackground(LDrawStepStyleLookup lookup, LPub
 }//end LDrawStepReadBackground
 
 
+//========== FindFontLine() ====================================================
+///
+/// @abstract	The FONT line of one branch and part in force, or with `isColor`
+/// 			its FONT_COLOR line. Nil for none.
+///
+//==============================================================================
+static LPubCalloutFont *FindFontLine(LDrawStepStyleLookup lookup, LPubStyleBranch branch, LPubCalloutPart part,
+									 BOOL isColor)
+{
+	return lookup(^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubCalloutFont class]]
+			&& ((LPubCalloutFont *)directive).branch == branch
+			&& ((LPubCalloutFont *)directive).part == part
+			&& ((LPubCalloutFont *)directive).isColor == isColor;
+	});
+
+}//end FindFontLine
+
+
 //========== LDrawStepReadText() ===============================================
 LDrawStepCalloutText *LDrawStepReadText(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
 										LPubCalloutPart part, double defaultSize, double dotInches)
 {
-	LPubCalloutFont *font = lookup(^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutFont class]]
-			&& ((LPubCalloutFont *)directive).branch == branch
-			&& ((LPubCalloutFont *)directive).part == part
-			&& ((LPubCalloutFont *)directive).isColor == NO;
-	});
-	LPubCalloutFont *color = lookup(^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubCalloutFont class]]
-			&& ((LPubCalloutFont *)directive).branch == branch
-			&& ((LPubCalloutFont *)directive).part == part
-			&& ((LPubCalloutFont *)directive).isColor;
-	});
+	LPubCalloutFont *font	= FindFontLine(lookup, branch, part, NO);
+	LPubCalloutFont *color	= FindFontLine(lookup, branch, part, YES);
 
 	return [[LDrawStepCalloutText alloc] initWithFont:font color:color defaultSize:defaultSize dotInches:dotInches];
 
 }//end LDrawStepReadText
+
+
+//========== LDrawStepReadGivenText() ==========================================
+LDrawStepCalloutText *LDrawStepReadGivenText(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
+											 LPubCalloutPart part, double dotInches)
+{
+	LPubCalloutFont *font = FindFontLine(lookup, branch, part, NO);
+
+	if (font == nil) {
+		return nil;
+	}
+
+	LPubCalloutFont *color = FindFontLine(lookup, branch, part, YES);
+
+	return [[LDrawStepCalloutText alloc] initWithFont:font color:color defaultSize:font.size dotInches:dotInches];
+
+}//end LDrawStepReadGivenText
+
+
+//========== LDrawStepReadTextColor() ==========================================
+BOOL LDrawStepReadTextColor(LDrawStepStyleLookup lookup, LPubStyleBranch branch, LPubCalloutPart part,
+							LPubColorComponents *outColor)
+{
+	LPubCalloutFont *color = FindFontLine(lookup, branch, part, YES);
+
+	if (color == nil) {
+		return NO;
+	}
+
+	*outColor = color.color;
+	return YES;
+
+}//end LDrawStepReadTextColor
 
 
 // MARK: -

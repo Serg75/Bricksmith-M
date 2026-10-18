@@ -68,4 +68,13 @@ extern LPubCalloutBackground * _Nullable LDrawStepReadBackground(LDrawStepStyleL
 extern LDrawStepCalloutText *LDrawStepReadText(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
 											   LPubCalloutPart part, double defaultSize, double dotInches);
 
+/// The same text, or nil for a file with no FONT line for it.
+extern LDrawStepCalloutText * _Nullable LDrawStepReadGivenText(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
+															   LPubCalloutPart part, double dotInches);
+
+/// The color of the FONT_COLOR line of one branch and part in force. NO for
+/// none.
+extern BOOL LDrawStepReadTextColor(LDrawStepStyleLookup lookup, LPubStyleBranch branch, LPubCalloutPart part,
+								   LPubColorComponents *outColor);
+
 NS_ASSUME_NONNULL_END

@@ -36,8 +36,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype) init NS_UNAVAILABLE;
 
-/// From PLI BORDER, BACKGROUND, MARGINS, PLACEMENT and INSTANCE_COUNT FONT
-/// and FONT_COLOR, and PAGE MARGINS and BACKGROUND.
+/// From PLI BORDER, BACKGROUND, MARGINS, PLACEMENT, and INSTANCE_COUNT and
+/// ANNOTATE FONT and FONT_COLOR, and PAGE MARGINS and BACKGROUND.
 + (instancetype) styleForVisibleStepOfModel:(nullable LDrawModel *)model NS_SWIFT_NAME(init(visibleStepOf:));
 
 // The outline
@@ -75,14 +75,24 @@ NS_ASSUME_NONNULL_BEGIN
 /// How the count under each part is written.
 @property (nonatomic, readonly) LDrawStepCalloutText *countText;
 
+/// The font of the size badges, from PLI ANNOTATE FONT. Nil for a file that
+/// gives none, and the badges are then written as big as the counts in the
+/// host's font.
+@property (nonatomic, readonly, nullable) LDrawStepCalloutText *annotationText;
+
+/// The color of the badges' text, from PLI ANNOTATE FONT_COLOR. NO for a file
+/// that gives none, which leaves the chrome's.
+@property (nonatomic, readonly) BOOL				hasAnnotationColor;
+@property (nonatomic, readonly) LPubColorComponents	annotationColor;
+
 /// The same metrics with the frame's padding and the room for a count and a
 /// size badge taken from this style, in points at this many to the page inch.
 - (LDrawStepPartListMetrics) metricsFromMetrics:(LDrawStepPartListMetrics)metrics
 							  pointsPerPageInch:(double)pointsPerPageInch
 	NS_SWIFT_NAME(metrics(from:pointsPerPageInch:));
 
-/// The same chrome with the frame's outline and fill, and the counts' size
-/// and color, taken from this style.
+/// The same chrome with the frame's outline and fill, the counts' size and
+/// color, and the badges' size and text color, taken from this style.
 - (LDrawStepPartListChrome) chromeFromChrome:(LDrawStepPartListChrome)chrome
 						   pointsPerPageInch:(double)pointsPerPageInch
 	NS_SWIFT_NAME(chrome(from:pointsPerPageInch:));

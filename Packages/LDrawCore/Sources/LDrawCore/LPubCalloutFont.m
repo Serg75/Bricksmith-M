@@ -4,7 +4,7 @@
 //  Package:    LDrawCore
 //
 //  Purpose:    The font or the color of the text in a callout's box, or of
-//              the counts in a parts list.
+//              the counts and annotations in a parts list.
 //
 //              Line format:
 //              0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT
@@ -12,8 +12,8 @@
 //                  <style hint>,<weight>,<slant>,..."
 //              0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT_COLOR
 //                  [GLOBAL|LOCAL] <color>
-//              0 !LPUB PLI INSTANCE_COUNT FONT ... and FONT_COLOR ..., the
-//                  same way.
+//              0 !LPUB PLI (INSTANCE_COUNT | ANNOTATE) FONT ... and
+//                  FONT_COLOR ..., the same way.
 //
 //              A parsed line is written back as it was read.
 //
@@ -76,11 +76,16 @@ static const double		QT6_BOLD_WEIGHT			= 600.0;
 	LPubCalloutPart	part	= LPubCalloutPartStepNumber;
 	BOOL			isColor	= [parameters[2] isEqualToString:LPUB_CALLOUT_FONT_COLOR];
 
-	// A parts list has no step number, and a page's text is another kind.
-	if ([LPubCalloutMargins getPart:&part fromToken:parameters[1]] == NO
-		|| (part != LPubCalloutPartStepNumber && part != LPubCalloutPartInstanceCount)
-		|| (branch == LPubStyleBranchPartsList && part != LPubCalloutPartInstanceCount)
-		|| branch == LPubStyleBranchPage
+	// A callout writes a step number and a count, a parts list a count and
+	// an annotation. A page's text is another kind.
+	BOOL	isPart		= [LPubCalloutMargins getPart:&part fromToken:parameters[1]];
+	BOOL	inCallout	= (branch == LPubStyleBranchCallout
+						   && (part == LPubCalloutPartStepNumber || part == LPubCalloutPartInstanceCount));
+	BOOL	inPartsList	= (branch == LPubStyleBranchPartsList
+						   && (part == LPubCalloutPartInstanceCount || part == LPubCalloutPartAnnotation));
+
+	if (isPart == NO
+		|| (inCallout == NO && inPartsList == NO)
 		|| (isColor == NO && [parameters[2] isEqualToString:LPUB_CALLOUT_FONT] == NO)) {
 		return nil;
 	}

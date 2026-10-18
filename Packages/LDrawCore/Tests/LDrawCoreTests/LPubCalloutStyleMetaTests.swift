@@ -370,13 +370,13 @@ struct LPubCalloutStyleMetaTests {
         try expectGenericAndVerbatim("0 !LPUB CALLOUT STEP_NUMBER FONT \"Arial,big,-1,5,50,0,0,0,0,0\"")
         try expectGenericAndVerbatim("0 !LPUB CALLOUT ASSEM FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
         try expectGenericAndVerbatim("0 !LPUB CALLOUT SUBMODEL_FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
-        try expectGenericAndVerbatim("0 !LPUB PLI ANNOTATE FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+        try expectGenericAndVerbatim("0 !LPUB CALLOUT ANNOTATE FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
         try expectGenericAndVerbatim("0 !LPUB PLI STEP_NUMBER FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
     }
 
     // MARK: - The parts list's lines
 
-    @Test("BORDER, BACKGROUND, MARGINS and the count's FONT read the same under PLI")
+    @Test("BORDER, BACKGROUND, MARGINS and the FONT of counts and annotations read the same under PLI")
     func partsListBranch() throws {
         let borderLine = "0 !LPUB PLI BORDER GLOBAL ROUND 2 #ff0000 0.0417 20 MARGINS 0.1 0.08"
         let border = try #require(parse(borderLine) as? LPubCalloutBorder)
@@ -422,6 +422,26 @@ struct LPubCalloutStyleMetaTests {
 
         #expect(color.isColor)
         expectColor(color.color, 0, 0, 1)
+
+        let annotateLine = "0 !LPUB PLI ANNOTATE FONT GLOBAL \"Arial,30,-1,5,50,1,0,0,0,0\""
+        let annotate = try #require(parse(annotateLine) as? LPubCalloutFont)
+
+        #expect(annotate.branch == .partsList)
+        #expect(annotate.part == .annotation)
+        #expect(annotate.size == 30)
+        #expect(annotate.isBold == false)
+        #expect(annotate.isItalic)
+        #expect(annotate.write() == annotateLine)
+
+        let annotateColor = try #require(parse("0 !LPUB PLI ANNOTATE FONT_COLOR GLOBAL \"#0080ff\"") as? LPubCalloutFont)
+
+        #expect(annotateColor.part == .annotation)
+        #expect(annotateColor.isColor)
+        expectColor(annotateColor.color, 0, 128.0 / 255.0, 1)
+
+        // Only the annotation's font is read, not the room around it.
+        try expectGenericAndVerbatim("0 !LPUB PLI ANNOTATE MARGINS 0.1 0.1")
+        try expectGenericAndVerbatim("0 !LPUB CALLOUT ANNOTATE MARGINS 0.1 0.1")
     }
 
     @Test("The page's MARGINS, BORDER and BACKGROUND read the same under PAGE")

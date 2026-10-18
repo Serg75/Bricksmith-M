@@ -295,6 +295,7 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 	[iconView draw];
 
 	[self.chromeView setCountText:presentation.countText];
+	[self.chromeView setAnnotationText:presentation.annotationText];
 	[self.chromeView setLayout:presentation.layout];
 
 }//end showPresentation:

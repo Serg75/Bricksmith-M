@@ -41,6 +41,10 @@ extern NSRect StepPartListRectFromBox(Box2 box);
 /// The font the counts are written in on LPub3D's page. Nil off the page.
 @property (nonatomic, strong, nullable) LDrawStepCalloutText *countText;
 
+/// The font the size badges are written in on LPub3D's page. Nil off the page,
+/// and for a file that gives none.
+@property (nonatomic, strong, nullable) LDrawStepCalloutText *annotationText;
+
 @end
 
 NS_ASSUME_NONNULL_END

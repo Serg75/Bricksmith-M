@@ -18,12 +18,13 @@ NS_ASSUME_NONNULL_BEGIN
 /// @class      LPubCalloutFont
 ///
 /// @abstract   The font or the color of the text in a callout's box, or of
-///             the counts in a parts list:
+///             the counts and annotations in a parts list:
 ///             0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT
 ///                 [GLOBAL|LOCAL] "<font>"
 ///             0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT_COLOR
 ///                 [GLOBAL|LOCAL] <color>
-///             0 !LPUB PLI INSTANCE_COUNT (FONT "<font>" | FONT_COLOR <color>)
+///             0 !LPUB PLI (INSTANCE_COUNT | ANNOTATE)
+///                 (FONT "<font>" | FONT_COLOR <color>)
 ///                 with the same optional scope.
 ///
 /// @discussion A font is written the way Qt describes one: the family, the
@@ -39,8 +40,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) LPubStyleBranch		branch;
 @property (nonatomic, readonly) LPubMetaScope		scope;
 
-/// The text the line is for: a step's number, or how many times the box is
-/// built.
+/// The text the line is for: a step's number, how many times the box is
+/// built or a part is used, or the text on a part in a parts list.
 @property (nonatomic, readonly) LPubCalloutPart		part;
 
 /// YES for a FONT_COLOR line, which gives `color` and nothing else. NO for a

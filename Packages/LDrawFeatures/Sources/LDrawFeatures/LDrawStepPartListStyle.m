@@ -82,6 +82,12 @@ static const double					DEFAULT_COUNT_SIZE	= 36.0;
 	self->_countText	= LDrawStepReadText(lookup, LPubStyleBranchPartsList, LPubCalloutPartInstanceCount,
 											DEFAULT_COUNT_SIZE, dotInches);
 
+	// A file with neither line keeps Bricksmith's own badge.
+	self->_annotationText		= LDrawStepReadGivenText(lookup, LPubStyleBranchPartsList, LPubCalloutPartAnnotation,
+														 dotInches);
+	self->_hasAnnotationColor	= LDrawStepReadTextColor(lookup, LPubStyleBranchPartsList, LPubCalloutPartAnnotation,
+														 &self->_annotationColor);
+
 	self->_placement = lookup(^BOOL(LDrawDirective *directive) {
 		return [directive isKindOfClass:[LPubPlacement class]]
 			&& ((LPubPlacement *)directive).branch == LPubPlacementBranchPartsList;
@@ -109,14 +115,18 @@ static const double					DEFAULT_COUNT_SIZE	= 36.0;
 	Size2	one		= [self.countText sizeForCharacterCount:1];
 	Size2	two		= [self.countText sizeForCharacterCount:2];
 
-	// A size badge is written as big as a count, in a pill a little taller.
-	double badgeExtra = metrics.annotationHeight - metrics.labelHeight;
+	// A size badge is written in its own font, or as big as a count, in a pill
+	// a little taller.
+	LDrawStepCalloutText	*badgeText	= self.annotationText ?: self.countText;
+	Size2					 badgeOne	= [badgeText sizeForCharacterCount:1];
+	Size2					 badgeTwo	= [badgeText sizeForCharacterCount:2];
+	double					 badgeExtra	= metrics.annotationHeight - metrics.labelHeight;
 
 	metrics.framePadding				= padding * pointsPerPageInch;
 	metrics.labelHeight					= one.height * pointsPerPageInch;
 	metrics.labelCharacterWidth			= (two.width - one.width) * pointsPerPageInch;
-	metrics.annotationHeight			= metrics.labelHeight + badgeExtra;
-	metrics.annotationCharacterWidth	= metrics.labelCharacterWidth;
+	metrics.annotationHeight			= badgeOne.height * pointsPerPageInch + badgeExtra;
+	metrics.annotationCharacterWidth	= (badgeTwo.width - badgeOne.width) * pointsPerPageInch;
 
 	return metrics;
 
@@ -136,6 +146,13 @@ static const double					DEFAULT_COUNT_SIZE	= 36.0;
 	chrome.borderLineStyle	= self.borderLineStyle;
 	chrome.fill				= self.hasFill ? LDrawStepPartListFillColor : LDrawStepPartListFillClear;
 	chrome.labelPointSize	= self.countText.fontSize * pointsPerPageInch;
+
+	if (self.annotationText != nil) {
+		chrome.annotationPointSize = self.annotationText.fontSize * pointsPerPageInch;
+	}
+	if (self.hasAnnotationColor) {
+		LPubColorComponentsGetRGBA(self.annotationColor, chrome.annotationTextRGBA);
+	}
 
 	return chrome;
 

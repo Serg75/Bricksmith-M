@@ -187,6 +187,14 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end countText
 
 
+//========== annotationText ====================================================
+- (nullable LDrawStepCalloutText *) annotationText
+{
+	return self->listStyle.annotationText;
+
+}//end annotationText
+
+
 //========== hasPageColor ======================================================
 - (BOOL) hasPageColor
 {

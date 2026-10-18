@@ -29,7 +29,8 @@ static const double DEFAULT_MARGIN = 0.05;
 
 //========== PartNames() =======================================================
 ///
-/// @abstract	The keyword of each thing inside a callout, by its part.
+/// @abstract	The keyword of each thing inside a callout or a parts list, by
+/// 			its part.
 ///
 //==============================================================================
 static NSDictionary<NSNumber *, NSString *> *PartNames(void)
@@ -39,6 +40,7 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 		@(LPubCalloutPartPartsList):		LPUB_PLI,
 		@(LPubCalloutPartStepNumber):		LPUB_CALLOUT_STEP_NUMBER,
 		@(LPubCalloutPartInstanceCount):	LPUB_CALLOUT_INSTANCE_COUNT,
+		@(LPubCalloutPartAnnotation):		LPUB_PLI_ANNOTATE,
 	};
 
 }//end PartNames
@@ -80,9 +82,10 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 	LPubCalloutPart	part	= LPubCalloutPartBox;
 
 	if ([self getPart:&part fromToken:parameters[index]]) {
-		// A parts list has only its count inside it, and a page has none of
-		// these.
+		// A parts list has only its count inside it, a callout has no
+		// annotation, and a page has none of these.
 		if ((branch == LPubStyleBranchPartsList && part != LPubCalloutPartInstanceCount)
+			|| (branch == LPubStyleBranchCallout && part == LPubCalloutPartAnnotation)
 			|| branch == LPubStyleBranchPage) {
 			return nil;
 		}

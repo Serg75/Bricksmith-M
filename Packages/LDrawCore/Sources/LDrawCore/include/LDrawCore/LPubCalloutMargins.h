@@ -16,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @enum       LPubCalloutPart
 ///
-/// @abstract   The things in a callout that a line can style.
+/// @abstract   The things in a callout or a parts list that a line can style.
 ///
 //------------------------------------------------------------------------------
 typedef NS_ENUM(NSInteger, LPubCalloutPart) {
@@ -28,8 +28,10 @@ typedef NS_ENUM(NSInteger, LPubCalloutPart) {
 	LPubCalloutPartPartsList		= 2,
 	/// A step's number in the box.
 	LPubCalloutPartStepNumber		= 3,
-	/// How many times the box is built.
-	LPubCalloutPartInstanceCount	= 4
+	/// How many times the box is built, or a part is used in a parts list.
+	LPubCalloutPartInstanceCount	= 4,
+	/// The text on a part in a parts list. Only a PLI line has it.
+	LPubCalloutPartAnnotation		= 5
 };
 
 
@@ -59,11 +61,12 @@ typedef NS_ENUM(NSInteger, LPubCalloutPart) {
 /// In inches. LPub3D's default is 0.05 each way.
 @property (nonatomic, readonly) Size2			margins;
 
-/// Reads the keyword of a thing inside a callout: ASSEM, PLI, STEP_NUMBER or
-/// INSTANCE_COUNT. NO for any other word.
+/// Reads the keyword of a thing inside a callout or a parts list: ASSEM, PLI,
+/// STEP_NUMBER, INSTANCE_COUNT or ANNOTATE. NO for any other word.
 + (BOOL) getPart:(LPubCalloutPart *)outPart fromToken:(NSString *)token;
 
-/// The keyword of a thing inside a callout, or nil for the box itself.
+/// The keyword of a thing inside a callout or a parts list, or nil for the
+/// box itself.
 + (nullable NSString *) nameForPart:(LPubCalloutPart)part;
 
 @end

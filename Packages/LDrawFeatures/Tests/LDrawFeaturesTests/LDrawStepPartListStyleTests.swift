@@ -193,6 +193,74 @@ extension StepPartListStaticSettings {
             #expect(abs(chrome.fillRGBA.2 - 1) < 1e-9)
         }
 
+        @Test("The size badges take the font and color of PLI ANNOTATE")
+        func annotationFont() throws {
+            let style = LDrawStepPartListStyle(visibleStepOf: model(first: [
+                "RESOLUTION GLOBAL 300 DPI",
+                "PLI ANNOTATE FONT GLOBAL \"Times,30,-1,5,50,1,0,0,0,0\"",
+                "PLI ANNOTATE FONT_COLOR GLOBAL \"#0080ff\"",
+            ]))
+            let text = try #require(style.annotationText)
+
+            #expect(text.fontFamily == "Times")
+            expectNear(text.fontSize, 30.0 / 300.0)
+            #expect(text.isBold == false)
+            #expect(text.isItalic)
+            #expect(style.hasAnnotationColor)
+            expectColor(style.annotationColor, 0, 128.0 / 255.0, 1)
+
+            // The count keeps its own font.
+            expectNear(style.countText.fontSize, 36.0 / 300.0)
+
+            let scale = 100.0
+            let plainMetrics = LDrawStepPartListLayout.defaultMetrics()
+            let metrics = style.metrics(from: plainMetrics, pointsPerPageInch: scale)
+            let chrome = style.chrome(from: LDrawStepPartListPolicy.defaultChrome(), pointsPerPageInch: scale)
+            let one = text.size(forCharacterCount: 1)
+            let two = text.size(forCharacterCount: 2)
+
+            expectNear(metrics.annotationHeight,
+                       one.height * scale + plainMetrics.annotationHeight - plainMetrics.labelHeight)
+            expectNear(metrics.annotationCharacterWidth, (two.width - one.width) * scale)
+            expectNear(chrome.annotationPointSize, 0.1 * scale)
+            expectNear(chrome.labelPointSize, 36.0 / 300.0 * scale)
+            expectNear(chrome.annotationTextRGBA.1, 128.0 / 255.0)
+            expectNear(chrome.annotationTextRGBA.2, 1)
+        }
+
+        @Test("With no ANNOTATE line a badge is written as big as a count, in the chrome's color")
+        func noAnnotationFont() {
+            let style = LDrawStepPartListStyle(visibleStepOf: model())
+            let plainChrome = LDrawStepPartListPolicy.defaultChrome()
+            let metrics = style.metrics(from: LDrawStepPartListLayout.defaultMetrics(), pointsPerPageInch: 100)
+            let chrome = style.chrome(from: plainChrome, pointsPerPageInch: 100)
+
+            #expect(style.annotationText == nil)
+            #expect(style.hasAnnotationColor == false)
+            expectNear(metrics.annotationCharacterWidth, metrics.labelCharacterWidth)
+            expectNear(chrome.annotationPointSize, plainChrome.annotationPointSize)
+            expectNear(chrome.annotationTextRGBA.0, plainChrome.annotationTextRGBA.0)
+        }
+
+        @Test("A color alone colors the badges and leaves their font")
+        func annotationColorAlone() {
+            let style = LDrawStepPartListStyle(visibleStepOf: model(first: ["PLI ANNOTATE FONT_COLOR GLOBAL #ff0000"]))
+            let chrome = style.chrome(from: LDrawStepPartListPolicy.defaultChrome(), pointsPerPageInch: 100)
+
+            #expect(style.annotationText == nil)
+            #expect(style.hasAnnotationColor)
+            expectNear(chrome.annotationTextRGBA.0, 1)
+            expectNear(chrome.annotationTextRGBA.1, 0)
+        }
+
+        @Test("The callouts keep their own badge size when the list's badges take the file's")
+        func annotationFontStaysInTheList() throws {
+            let presentation = onPage(["PLI ANNOTATE FONT GLOBAL \"Arial,90,-1,5,50,0,0,0,0,0\""])
+
+            #expect(try #require(presentation.annotationText).fontFamily == "Arial")
+            #expect(presentation.chrome.annotationPointSize > presentation.calloutChrome.annotationPointSize)
+        }
+
         @Test("On the page the list is drawn in the file's style, and a wide margin moves it in")
         func presentationOnThePage() throws {
             LDrawStepPartList.setEnabled(true)
@@ -478,12 +546,14 @@ extension StepPartListStaticSettings {
             let presentation = LDrawStepPartListPresentation(model: model(first: [
                 "PLI BORDER GLOBAL SQUARE 1 #ff0000 0.1",
                 "PLI BACKGROUND GLOBAL COLOR #ff0000",
+                "PLI ANNOTATE FONT GLOBAL \"Arial,90,-1,5,50,0,0,0,0,0\"",
             ]), host: host())
 
             #expect(presentation.isOnPage == false)
             #expect(presentation.chrome.fill == .host)
             #expect(presentation.chrome.borderWidth == LDrawStepPartListPolicy.defaultChrome().borderWidth)
             #expect(presentation.countText == nil)
+            #expect(presentation.annotationText == nil)
         }
     }
 }

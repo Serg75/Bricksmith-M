@@ -93,6 +93,7 @@ static NSString * const	LPUB_PLI_SHOW				= @"SHOW";
 static NSString * const	LPUB_PLI_BEGIN				= @"BEGIN";
 static NSString * const	LPUB_PLI_END				= @"END";
 static NSString * const	LPUB_PLI_IGNORE				= @"IGN";
+static NSString * const	LPUB_PLI_ANNOTATE			= @"ANNOTATE";
 /// The branch of `0 !LPUB PART BEGIN IGN` and `0 !LPUB PART END`.
 static NSString * const	LPUB_PART					= @"PART";
 static NSString * const	LPUB_PLI_CONSTRAIN_AREA		= @"AREA";

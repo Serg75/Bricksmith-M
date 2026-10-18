@@ -90,6 +90,7 @@ NSRect StepPartListRectFromBox(Box2 box)
 	[LDrawStepOverlayRenderer drawLabelsOfLayout:self.layout
 										  chrome:self.chrome
 									   countText:self.countText
+								  annotationText:self.annotationText
 									contentWidth:NSWidth(self.bounds)
 								  overflowFormat:NSLocalizedString(@"StepPartListOverflow", nil)
 									   inContext:[[NSGraphicsContext currentContext] CGContext]];

@@ -89,16 +89,20 @@ NS_ASSUME_NONNULL_BEGIN
 				  inContext:(CGContextRef)context
 	NS_SWIFT_NAME(drawLabels(of:chrome:contentWidth:overflowFormat:in:));
 
-/// The same, with the counts in the font `countText` names. Their size and
-/// color are the chrome's, and a nil `countText` writes them in the system's
-/// bold font.
+/// The same, with the counts in the font `countText` names and the size
+/// badges in the font `annotationText` names. Their colors are the chrome's.
+/// The counts' size is the chrome's label size, and a nil `countText` writes
+/// them in the system's bold font. The badges' size is the chrome's annotation
+/// size, and a nil `annotationText` writes them as big as the counts in the
+/// system's font.
 + (void) drawLabelsOfLayout:(LDrawStepPartListLayout *)layout
 					 chrome:(LDrawStepPartListChrome)chrome
 				  countText:(nullable LDrawStepCalloutText *)countText
+			 annotationText:(nullable LDrawStepCalloutText *)annotationText
 			   contentWidth:(double)contentWidth
 			 overflowFormat:(NSString *)overflowFormat
 				  inContext:(CGContextRef)context
-	NS_SWIFT_NAME(drawLabels(of:chrome:countText:contentWidth:overflowFormat:in:));
+	NS_SWIFT_NAME(drawLabels(of:chrome:countText:annotationText:contentWidth:overflowFormat:in:));
 
 @end
 

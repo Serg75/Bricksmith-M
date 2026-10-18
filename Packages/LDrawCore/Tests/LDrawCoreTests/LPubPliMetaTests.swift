@@ -359,7 +359,7 @@ struct LPubPliMetaTests {
     func unmodeledPliMetasFallThrough() throws {
         try expectGenericAndVerbatim("0 !LPUB PLI SORT TRUE")
         try expectGenericAndVerbatim("0 !LPUB PLI INCLUDE_SUBMODELS FALSE")
-        try expectGenericAndVerbatim("0 !LPUB PLI ANNOTATE FONT Arial,24,-1,5,50,0,0,0,0,0")
+        try expectGenericAndVerbatim("0 !LPUB PLI ANNOTATION DISPLAY GLOBAL TRUE")
         try expectGenericAndVerbatim("0 !LPUB BOM CONSTRAIN LOCAL WIDTH 11")
     }
 

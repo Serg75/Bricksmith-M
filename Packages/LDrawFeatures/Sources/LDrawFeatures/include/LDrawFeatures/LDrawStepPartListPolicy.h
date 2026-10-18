@@ -99,6 +99,8 @@ typedef struct LDrawStepPartListChrome
 	double	borderWidth;
 	double	cornerRadius;
 	double	labelPointSize;
+	/// The callouts' titles and step badges. On the page it is also the size
+	/// badges', when the file gives their font.
 	double	annotationPointSize;
 
 	/// Dash and gap of the box drawn where a missing part would be.

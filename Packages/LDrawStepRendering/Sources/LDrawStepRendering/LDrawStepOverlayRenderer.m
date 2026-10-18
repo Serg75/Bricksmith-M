@@ -413,6 +413,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	[self drawLabelsOfLayout:layout
 					  chrome:chrome
 				   countText:nil
+			  annotationText:nil
 				contentWidth:contentWidth
 			  overflowFormat:overflowFormat
 				   inContext:context];
@@ -424,6 +425,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 + (void) drawLabelsOfLayout:(LDrawStepPartListLayout *)layout
 					 chrome:(LDrawStepPartListChrome)chrome
 				  countText:(nullable LDrawStepCalloutText *)countText
+			 annotationText:(nullable LDrawStepCalloutText *)annotationText
 			   contentWidth:(double)contentWidth
 			 overflowFormat:(NSString *)overflowFormat
 				  inContext:(CGContextRef)context
@@ -436,7 +438,9 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGFloat			size		= chrome.labelPointSize;
 	LDrawStepFont	countFont	= (countText != nil) ? FontCreateForText(countText, size)
 												 : LDrawStepFontCreateSystem(size, LDrawStepFontWeightBold);
-	LDrawStepFont	badgeFont	= LDrawStepFontCreateSystem(size, LDrawStepFontWeightMedium);
+	LDrawStepFont	badgeFont	= (annotationText != nil)
+									? FontCreateForText(annotationText, chrome.annotationPointSize)
+									: LDrawStepFontCreateSystem(size, LDrawStepFontWeightMedium);
 
 	for (LDrawStepPartListPlacement *placement in layout.placements) {
 
@@ -478,7 +482,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 
 	CGContextRestoreGState(context);
 
-}//end drawLabelsOfLayout:chrome:countText:contentWidth:overflowFormat:inContext:
+}//end drawLabelsOfLayout:chrome:countText:annotationText:contentWidth:overflowFormat:inContext:
 
 
 //---------- drawPlaceholderInRect:chrome:inContext: -----------------[static]--
