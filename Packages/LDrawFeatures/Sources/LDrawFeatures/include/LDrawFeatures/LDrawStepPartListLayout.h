@@ -127,21 +127,33 @@ typedef struct LDrawStepPartListMetrics
 @property (nonatomic, readonly) LDrawStepPartListEntry *entry;
 
 /// The whole cell: icon, its padding, and any strips kept for labels. Never
-/// narrower than a label in a strip.
+/// narrower than a label in a strip. A cell slid into the one before it
+/// overlaps that cell.
 @property (nonatomic, readonly) Box2 cellFrame;
 
 /// Just the icon, at its own size: inside the cell's padding, below any badge
 /// strip, above any label strip, and centered in a wider cell.
 @property (nonatomic, readonly) Box2 iconFrame;
 
-/// Where the size badge goes, or empty when there is none. Centered across the
-/// icon's box and slid down from the strip above it until just clear of the part.
+/// Where the size badge goes, or empty when there is none. On the top line of
+/// the icon's box next to the part, on the side with more room; without room
+/// there, centered in a strip above the box and let down until just clear of
+/// the part. A badge on the top line that comes too near another part moves
+/// along the top of its own part, and can rise out of `cellFrame`.
 @property (nonatomic, readonly) Box2 annotationFrame;
 
-/// Where the "3×" multiplier goes: beside the part on the bottom line of the
-/// icon's box, or in a strip below it. Decided per shelf, so the counts on a
-/// shelf sit on one line.
+/// Where the "3×" multiplier goes: on the bottom line of the icon's box next to
+/// the part, on the side with more room, or in a strip below it, under the
+/// part's lowest corner. Decided per shelf, so the counts on a shelf sit on one
+/// line. Sized for the text, which is drawn centered in it. A count beside a
+/// part that comes too near another part moves along the bottom of its own
+/// part, and can sink below `cellFrame`; the other counts on the shelf then
+/// move down to its line. Empty when there is no count.
 @property (nonatomic, readonly) Box2 labelFrame;
+
+/// Whether the cell has a "3×" multiplier. A list of nothing but one submodel
+/// placed once has none, and keeps no room for it.
+@property (nonatomic, readonly) BOOL showsCount;
 
 /// Points per LDU for this entry. Same as the layout's scale unless this
 /// entry was too wide and got capped.
@@ -172,9 +184,12 @@ typedef struct LDrawStepPartListMetrics
 ///             cache one.
 ///
 ///             Cells are sorted tallest first and laid on shelves next-fit: a
-///             new shelf starts when the next cell does not fit. Shelves are
-///             stacked heaviest at the bottom, and dropped lightest first when
-///             the list overflows.
+///             new shelf starts when the next cell does not fit. On a shelf
+///             each cell slides left into the empty corners of the cells
+///             before it, so cells can overlap while their parts and labels
+///             do not. Shelves are stacked heaviest at the bottom, and dropped
+///             lightest first when the list overflows. A shelf of one part
+///             under a shelf of one part rises toward it.
 ///
 ///             The box is as wide as its widest shelf, as in LPub3D. A WIDTH
 ///             only sets where the shelves wrap.
@@ -187,6 +202,11 @@ typedef struct LDrawStepPartListMetrics
 
 /// What the frame occupies: `contentSize` plus the padding on all four sides.
 @property (nonatomic, readonly) Size2 frameSize;
+
+/// The placement under a point of the content, or nil. A label can stand
+/// outside its cell, so labels are tried first; of overlapping cells, the one
+/// whose icon's middle is nearest wins.
+- (nullable LDrawStepPartListPlacement *) placementAtPoint:(Point2)point NS_SWIFT_NAME(placement(at:));
 
 /// Points per inch the layout was packed at. Code that turns points back into
 /// inches, such as a resize drag, must use this and not a default.

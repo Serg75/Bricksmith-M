@@ -492,6 +492,20 @@ static BOOL BoxHasArea(Box2 box)
 }//end initWithLayout:viewTransform:file:origin:isPartsList:
 
 
+//========== drawsCountOfPlacement: ============================================
+///
+/// @abstract	Whether the picture draws a count for this cell: in a parts
+/// 			list whenever the cell has one, and for a finished submodel only
+/// 			when there are two or more, as in LPub3D.
+///
+//==============================================================================
+- (BOOL) drawsCountOfPlacement:(LDrawStepPartListPlacement *)placement
+{
+	return placement.showsCount && (self->_isPartsList || placement.entry.quantity >= 2);
+
+}//end drawsCountOfPlacement:
+
+
 //========== model =============================================================
 - (LDrawModel *) model
 {
@@ -1101,25 +1115,42 @@ static BOOL BoxHasArea(Box2 box)
 ///
 /// @abstract	The submodel shown at a point of the view, or nearest to it.
 ///
+/// @discussion	A count can stand in another submodel's area, so a point on a
+/// 			count picks its submodel first. Pictures slid together have
+/// 			areas that overlap, and then the area whose middle is nearest
+/// 			wins.
+///
 //==============================================================================
 - (nullable LDrawModel *) submodelAtPoint:(Point2)point
 {
-	NSArray<LDrawModel *>	*submodels	= self->_content.areaSubmodels;
-	const Box2				*areas		= self->_content.submodelAreas.bytes;
-	LDrawModel				*nearest	= nil;
-	double					 shortest	= DBL_MAX;
+	NSArray<LDrawModel *>	*labelSubmodels	= self->_content.labelSubmodels;
+	const Box2				*labels			= self->_content.labelAreas.bytes;
+
+	for (NSUInteger index = 0; index < labelSubmodels.count; index++) {
+		if (V2BoxContains(labels[index], point)) {
+			return labelSubmodels[index];
+		}
+	}
+
+	NSArray<LDrawModel *>	*submodels		= self->_content.areaSubmodels;
+	const Box2				*areas			= self->_content.submodelAreas.bytes;
+	LDrawModel				*nearest		= nil;
+	double					 shortest		= DBL_MAX;
+	double					 nearestMiddle	= DBL_MAX;
 
 	for (NSUInteger index = 0; index < submodels.count; index++) {
 		Box2 area = areas[index];
 
 		// How far outside the area the point is. Nothing for a point in it.
-		double dx		= MAX(MAX(V2BoxMinX(area) - point.x, point.x - V2BoxMaxX(area)), 0.0);
-		double dy		= MAX(MAX(V2BoxMinY(area) - point.y, point.y - V2BoxMaxY(area)), 0.0);
-		double distance	= hypot(dx, dy);
+		double dx			= MAX(MAX(V2BoxMinX(area) - point.x, point.x - V2BoxMaxX(area)), 0.0);
+		double dy			= MAX(MAX(V2BoxMinY(area) - point.y, point.y - V2BoxMaxY(area)), 0.0);
+		double distance		= hypot(dx, dy);
+		double fromMiddle	= hypot(point.x - V2BoxMidX(area), point.y - V2BoxMidY(area));
 
-		if (distance < shortest) {
-			shortest	= distance;
-			nearest		= submodels[index];
+		if (distance < shortest || (distance == shortest && fromMiddle < nearestMiddle)) {
+			shortest		= distance;
+			nearestMiddle	= fromMiddle;
+			nearest			= submodels[index];
 		}
 	}
 

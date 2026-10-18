@@ -314,6 +314,8 @@ typedef NSMutableArray<NSMutableArray<LDrawStepCalloutCell *> *> LDrawStepCallou
 
 		self->_submodelAreas	= [NSMutableData data];
 		self->_areaSubmodels	= [NSMutableArray array];
+		self->_labelAreas		= [NSMutableData data];
+		self->_labelSubmodels	= [NSMutableArray array];
 	}
 	return self;
 
@@ -329,13 +331,26 @@ typedef NSMutableArray<NSMutableArray<LDrawStepCalloutCell *> *> LDrawStepCallou
 }//end addArea:ofSubmodel:
 
 
+//========== addLabelArea:ofSubmodel: ==========================================
+- (void) addLabelArea:(Box2)area ofSubmodel:(LDrawModel *)submodel
+{
+	[self.labelAreas appendBytes:&area length:sizeof(Box2)];
+	[self.labelSubmodels addObject:submodel];
+
+}//end addLabelArea:ofSubmodel:
+
+
 //========== moveSubmodelAreasBy: ==============================================
 - (void) moveSubmodelAreasBy:(Point2)offset
 {
-	Box2 *areas = self.submodelAreas.mutableBytes;
+	Box2 *areas		= self.submodelAreas.mutableBytes;
+	Box2 *labels	= self.labelAreas.mutableBytes;
 
 	for (NSUInteger index = 0; index < self.areaSubmodels.count; index++) {
 		areas[index] = LDrawStepCalloutMovedBox(areas[index], offset);
+	}
+	for (NSUInteger index = 0; index < self.labelSubmodels.count; index++) {
+		labels[index] = LDrawStepCalloutMovedBox(labels[index], offset);
 	}
 
 }//end moveSubmodelAreasBy:
@@ -402,8 +417,15 @@ typedef NSMutableArray<NSMutableArray<LDrawStepCalloutCell *> *> LDrawStepCallou
 			return [entry.groupKey isEqualToString:placement.entry.groupKey];
 		}];
 
-		if (index != NSNotFound) {
-			[content addArea:placement.cellFrame ofSubmodel:submodels[index]];
+		if (index == NSNotFound) {
+			continue;
+		}
+
+		[content addArea:placement.cellFrame ofSubmodel:submodels[index]];
+
+		// A count can stand outside its cell. One that is not drawn names nothing.
+		if ([picture drawsCountOfPlacement:placement]) {
+			[content addLabelArea:placement.labelFrame ofSubmodel:submodels[index]];
 		}
 	}
 

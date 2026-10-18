@@ -152,6 +152,12 @@ extern void LDrawStepCalloutAppendRotation(NSMutableString *key, Matrix4 matrix)
 @property (nonatomic, readonly) NSMutableData	*submodelAreas;
 @property (nonatomic, readonly) NSMutableArray<LDrawModel *>				*areaSubmodels;
 
+/// The counts drawn in a summary, as Box2 values, and the submodel each
+/// names. A count can stand outside its row's area.
+@property (nonatomic, readonly) NSMutableData	*labelAreas;
+@property (nonatomic, readonly) NSMutableArray<LDrawModel *>				*labelSubmodels;
+
+/// Moves the areas and the counts together.
 - (void) moveSubmodelAreasBy:(Point2)offset;
 
 @property (nonatomic) NSUInteger		summarizedStepCount;

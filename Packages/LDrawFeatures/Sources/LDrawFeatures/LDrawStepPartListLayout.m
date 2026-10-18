@@ -7,7 +7,8 @@
 //
 //  Notes:      Cells are sorted tallest first and laid on shelves, left to
 //              right. A cell is a part's projected bounding box, so an angled
-//              part leaves some empty space in its cell.
+//              part leaves some empty space in its cell, and the next cell on
+//              the shelf slides into it.
 //
 //  Created by Sergey Slobodenyuk on 2026-09-10.
 //
@@ -47,6 +48,25 @@ static const double FIT_EPSILON = 1e-9;
 
 /// How many times a search halves the gap it looks in.
 static const NSUInteger HALVING_STEPS = 12;
+
+/// How far apart two parts on a shelf stay, as a share of the smaller one's
+/// size, and never less than two paddings. A small part can sit close under a
+/// big one, while two big parts keep a wider gap.
+static const double PART_GAP_FRACTION = 0.2;
+
+/// Corners this close to the lowest one count as the part's bottom edge.
+static const double BOTTOM_EDGE_SLACK = 0.5;
+
+/// How far a label keeps from the parts of other cells, in gaps between the
+/// two parts. Nearer, it reads as the other part's.
+static const double LABEL_CLEARANCE_GAPS = 2.0;
+
+/// The step, in points, between the places a moving label tries.
+static const double LABEL_SEARCH_STEP = 1.0;
+
+/// A label put exactly `decorationGap` from its part can come out a hair nearer
+/// after rounding. Testing with this much less of a gap counts it as clear.
+static const double TOUCH_SLACK = 1e-6;
 
 /// The most corners an outline keeps.
 #define MAXIMUM_OUTLINE_POINTS 16
@@ -277,6 +297,224 @@ static Box2 OffsetBox(Box2 box, Point2 offset)
 }//end OffsetBox
 
 
+//========== GrownPolygon() ====================================================
+///
+/// @abstract	A convex polygon grown by `amount` on every side, as packed
+/// 			`Point2`s: the hull of its corners, each moved to the four corners
+/// 			of a square around it.
+///
+//==============================================================================
+static NSData *GrownPolygon(const Point2 *polygon, NSUInteger count, double amount)
+{
+	NSUInteger	 pointCount	= 4 * count;
+	Point2		*points		= malloc(pointCount * sizeof(Point2));
+	Point2		*hull		= malloc((2 * pointCount + 1) * sizeof(Point2));
+
+	for (NSUInteger index = 0; index < count; index++) {
+		Point2 corner = polygon[index];
+
+		points[4 * index + 0] = V2Make(corner.x - amount, corner.y - amount);
+		points[4 * index + 1] = V2Make(corner.x + amount, corner.y - amount);
+		points[4 * index + 2] = V2Make(corner.x + amount, corner.y + amount);
+		points[4 * index + 3] = V2Make(corner.x - amount, corner.y + amount);
+	}
+
+	NSUInteger	 hullCount	= ConvexHull(points, pointCount, hull);
+	NSData		*grown		= [NSData dataWithBytes:hull length:hullCount * sizeof(Point2)];
+
+	free(hull);
+	free(points);
+
+	return grown;
+
+}//end GrownPolygon
+
+
+//========== GrownBox() ========================================================
+///
+/// @abstract	A box grown by `amount` on every side, as its four corners packed
+/// 			as `Point2`s.
+///
+//==============================================================================
+static NSData *GrownBox(Box2 box, double amount)
+{
+	Box2	grown		= V2BoxInset(box, -amount, -amount);
+	Point2	corners[4]	= { grown.origin,
+							V2Make(V2BoxMaxX(grown), grown.origin.y),
+							V2Make(V2BoxMaxX(grown), V2BoxMaxY(grown)),
+							V2Make(grown.origin.x, V2BoxMaxY(grown)) };
+
+	return [NSData dataWithBytes:corners length:sizeof(corners)];
+
+}//end GrownBox
+
+
+//========== PolygonSpanInBand() ===============================================
+///
+/// @abstract	How far left and right a convex polygon reaches between the
+/// 			heights `top` and `bottom`, which may be the same. Answers NO
+/// 			when it is not in the band. Either out pointer may be NULL.
+///
+//==============================================================================
+static BOOL PolygonSpanInBand(const Point2 *polygon, NSUInteger count, double top, double bottom,
+							  double *outLeft, double *outRight)
+{
+	double	left	= DBL_MAX;
+	double	right	= -DBL_MAX;
+
+	for (NSUInteger index = 0; index < count; index++) {
+		Point2 a		= polygon[index];
+		Point2 b		= polygon[(index + 1) % count];
+		double from		= 0.0;
+		double to		= 1.0;
+
+		// The part of the edge inside the band.
+		if (a.y == b.y) {
+			if (a.y < top || a.y > bottom) {
+				continue;
+			}
+		}
+		else {
+			double atTop	= (top - a.y) / (b.y - a.y);
+			double atBottom	= (bottom - a.y) / (b.y - a.y);
+
+			from	= MAX(from, MIN(atTop, atBottom));
+			to		= MIN(to, MAX(atTop, atBottom));
+
+			if (from > to) {
+				continue;
+			}
+		}
+
+		double fromX	= a.x + (b.x - a.x) * from;
+		double toX		= a.x + (b.x - a.x) * to;
+
+		left	= MIN(left, MIN(fromX, toX));
+		right	= MAX(right, MAX(fromX, toX));
+	}
+
+	if (outLeft != NULL) {
+		*outLeft = left;
+	}
+	if (outRight != NULL) {
+		*outRight = right;
+	}
+
+	return left <= right;
+
+}//end PolygonSpanInBand
+
+
+//========== ReachAtY() ========================================================
+///
+/// @abstract	How far `fixed` reaches past the left end of `moving` along the
+/// 			line at height `y`. -DBL_MAX when the line misses either.
+///
+//==============================================================================
+static double ReachAtY(const Point2 *fixed, NSUInteger fixedCount,
+					   const Point2 *moving, NSUInteger movingCount, double y)
+{
+	double fixedLeft, fixedRight, movingLeft, movingRight;
+
+	if (PolygonSpanInBand(fixed, fixedCount, y, y, &fixedLeft, &fixedRight) == NO
+		|| PolygonSpanInBand(moving, movingCount, y, y, &movingLeft, &movingRight) == NO) {
+		return -DBL_MAX;
+	}
+
+	return fixedRight - movingLeft;
+
+}//end ReachAtY
+
+
+//========== SlideDistance() ===================================================
+///
+/// @abstract	How far right the convex polygon `moving` must be moved to stand
+/// 			clear of the convex polygon `fixed`, on its right. -DBL_MAX when
+/// 			no level line crosses both.
+///
+/// @discussion	It is the most `fixed` reaches past `moving` along any line
+/// 			both cross. Both are convex, so that is largest at the height of a
+/// 			corner or at an end of the heights they share, and only those are
+/// 			tested.
+///
+//==============================================================================
+static double SlideDistance(NSData *fixed, NSData *moving)
+{
+	const Point2	*a			= fixed.bytes;
+	const Point2	*b			= moving.bytes;
+	NSUInteger		 aCount		= fixed.length / sizeof(Point2);
+	NSUInteger		 bCount		= moving.length / sizeof(Point2);
+	double			 aTop		= DBL_MAX;
+	double			 aBottom	= -DBL_MAX;
+	double			 bTop		= DBL_MAX;
+	double			 bBottom	= -DBL_MAX;
+
+	for (NSUInteger index = 0; index < aCount; index++) {
+		aTop	= MIN(aTop, a[index].y);
+		aBottom	= MAX(aBottom, a[index].y);
+	}
+	for (NSUInteger index = 0; index < bCount; index++) {
+		bTop	= MIN(bTop, b[index].y);
+		bBottom	= MAX(bBottom, b[index].y);
+	}
+
+	double top		= MAX(aTop, bTop);
+	double bottom	= MIN(aBottom, bBottom);
+
+	// Shapes that only touch along a line share no area.
+	if (bottom - top <= FIT_EPSILON) {
+		return -DBL_MAX;
+	}
+
+	double distance = MAX(ReachAtY(a, aCount, b, bCount, top),
+						  ReachAtY(a, aCount, b, bCount, bottom));
+
+	for (NSUInteger index = 0; index < aCount; index++) {
+		if (a[index].y > top && a[index].y < bottom) {
+			distance = MAX(distance, ReachAtY(a, aCount, b, bCount, a[index].y));
+		}
+	}
+	for (NSUInteger index = 0; index < bCount; index++) {
+		if (b[index].y > top && b[index].y < bottom) {
+			distance = MAX(distance, ReachAtY(a, aCount, b, bCount, b[index].y));
+		}
+	}
+
+	return distance;
+
+}//end SlideDistance
+
+
+//========== MovedPolygon() ====================================================
+///
+/// @abstract	A polygon moved by `offset`, then with x and y swapped when
+/// 			`swapsAxes`, as packed `Point2`s.
+///
+/// @discussion	Swapping the axes lets `SlideDistance()` measure downward.
+///
+//==============================================================================
+static NSData *MovedPolygon(NSData *polygon, Point2 offset, BOOL swapsAxes)
+{
+	if (swapsAxes == NO && offset.x == 0.0 && offset.y == 0.0) {
+		return polygon;
+	}
+
+	NSUInteger		 count	= polygon.length / sizeof(Point2);
+	const Point2	*from	= polygon.bytes;
+	NSMutableData	*moved	= [NSMutableData dataWithLength:polygon.length];
+	Point2			*to		= moved.mutableBytes;
+
+	for (NSUInteger index = 0; index < count; index++) {
+		Point2 point = V2Add(from[index], offset);
+
+		to[index] = swapsAxes ? V2Make(point.y, point.x) : point;
+	}
+
+	return moved;
+
+}//end MovedPolygon
+
+
 //========== ContentPointsForInches() ==========================================
 ///
 /// @abstract	The content length in points for a size given in inches: the
@@ -305,7 +543,9 @@ static double ContentPointsForInches(double inches, LDrawStepPartListMetrics met
 @property (nonatomic) NSData					*outline;
 /// How heavy the part looks: the volume of its bounding box.
 @property (nonatomic) double					 weight;
-/// The room the multiplier needs, and the badge's width, in points.
+/// Whether the multiplier is drawn, the room it needs, and the badge's width,
+/// in points. A cell with no multiplier needs no room for it.
+@property (nonatomic) BOOL						 showsCount;
 @property (nonatomic) Size2						 labelSize;
 @property (nonatomic) double					 annotationWidth;
 @end
@@ -336,6 +576,298 @@ static NSData *ScaledOutlineOfCell(LDrawStepPartListCell *cell, double scale, Po
 }//end ScaledOutlineOfCell
 
 
+/// What a cell draws, as convex polygons measured from the cell's bottom-left
+/// corner.
+@interface LDrawStepPartListCellShapes : NSObject
+/// The part's outline as drawn, grown by a padding, and grown by the gap
+/// between two parts of its size.
+@property (nonatomic) NSData				*outline;
+@property (nonatomic) NSData				*paddedOutline;
+@property (nonatomic) NSData				*grownOutline;
+/// The count and the badge, each grown by a padding.
+@property (nonatomic) NSArray<NSData *>	*labels;
+/// The count and the badge as drawn. The badge is empty when there is none.
+@property (nonatomic) Box2					 countBox;
+@property (nonatomic) Box2					 badgeBox;
+/// The outline with x and y swapped, for measuring across a label's width.
+@property (nonatomic) NSData				*column;
+/// How big the part looks: the shorter side of its icon. It sets how far
+/// other parts stay from it.
+@property (nonatomic) double				 partSize;
+/// How far the labels and the padded outline reach to each side.
+@property (nonatomic) double				 left;
+@property (nonatomic) double				 right;
+@end
+
+@implementation LDrawStepPartListCellShapes
+@end
+
+
+/// The cells and counts of one shelf, in its own coordinates: x from the
+/// shelf's left, y from its bottom line, up negative.
+@interface LDrawStepPartListShelfLabels : NSObject
+/// A `Box2` for each cell, and each cell's shapes.
+@property (nonatomic) NSData										*cells;
+@property (nonatomic) NSArray<LDrawStepPartListCellShapes *>	*shapes;
+/// A `Box2` for each count.
+@property (nonatomic) NSData										*counts;
+/// How far the counts reach below the shelf's bottom line.
+@property (nonatomic) double										 depth;
+@end
+
+@implementation LDrawStepPartListShelfLabels
+@end
+
+
+//========== PartGap() =========================================================
+///
+/// @abstract	How far two parts on a shelf stay apart: a share of the smaller
+/// 			one's size, and never less than two paddings.
+///
+//==============================================================================
+static double PartGap(double size, double otherSize, double padding)
+{
+	return MAX(2.0 * padding, PART_GAP_FRACTION * MIN(size, otherSize));
+
+}//end PartGap
+
+
+/// What the labels of a shelf keep clear of while they move: each cell's box
+/// and shapes, and every label as it stands. Shapes are measured from their
+/// cell's bottom-left corner, so a label is moved to the cell rather than a
+/// part to the shelf.
+typedef struct LDrawStepPartListShelf
+{
+	NSUInteger											 count;
+	const Box2											*cells;
+	__unsafe_unretained NSArray<LDrawStepPartListCellShapes *> *shapes;
+	Box2												*counts;
+	Box2												*badges;
+	double												 padding;
+	double												 decorationGap;
+
+} LDrawStepPartListShelf;
+
+
+//========== LabelIsClear() ====================================================
+///
+/// @abstract	Whether a label of cell `owner` at `box` keeps far enough from
+/// 			the rest of the shelf: from other parts by LABEL_CLEARANCE_GAPS
+/// 			gaps between the two parts, from other labels by two paddings,
+/// 			and from its own other label by `decorationGap`.
+///
+//==============================================================================
+static BOOL LabelIsClear(Box2 box, NSUInteger owner, BOOL isBadge, const LDrawStepPartListShelf *shelf)
+{
+	double ownSize = shelf->shapes[owner].partSize;
+
+	for (NSUInteger other = 0; other < shelf->count; other++) {
+		if (other == owner) {
+			Box2 sibling = isBadge ? shelf->counts[other] : shelf->badges[other];
+
+			if (BoxesOverlap(V2BoxInset(box, -shelf->decorationGap, -shelf->decorationGap), sibling)) {
+				return NO;
+			}
+			continue;
+		}
+
+		LDrawStepPartListCellShapes	*shapes		= shelf->shapes[other];
+		NSData						*part		= shapes.outline;
+		double						 partGap	= PartGap(ownSize, shapes.partSize, shelf->padding);
+		double						 reach		= LABEL_CLEARANCE_GAPS * partGap;
+		Box2						 padded		= V2BoxInset(box, -2.0 * shelf->padding, -2.0 * shelf->padding);
+		Box2						 reaching	= V2BoxInset(box, -reach, -reach);
+
+		if (BoxesOverlap(padded, shelf->counts[other]) || BoxesOverlap(padded, shelf->badges[other])) {
+			return NO;
+		}
+
+		// Only a cell the label's reach touches can be near enough.
+		if (BoxesOverlap(reaching, shelf->cells[other])
+			&& V2BoxIntersectsPolygon(OffsetBox(reaching, V2Make(-shelf->cells[other].origin.x, 0.0)),
+									  part.bytes, (int)(part.length / sizeof(Point2)))) {
+			return NO;
+		}
+	}
+
+	return YES;
+
+}//end LabelIsClear
+
+
+//========== LabelHitsOwnPart() ================================================
+///
+/// @abstract	Whether a label of cell `owner` at `box` comes nearer its own
+/// 			part than `decorationGap`. Exactly that far is clear.
+///
+//==============================================================================
+static BOOL LabelHitsOwnPart(Box2 box, NSUInteger owner, const LDrawStepPartListShelf *shelf)
+{
+	NSData	*part		= shelf->shapes[owner].outline;
+	double	 gap		= MAX(0.0, shelf->decorationGap - TOUCH_SLACK);
+	Box2	 nearPart	= OffsetBox(V2BoxInset(box, -gap, -gap), V2Make(-shelf->cells[owner].origin.x, 0.0));
+
+	return V2BoxIntersectsPolygon(nearPart, part.bytes, (int)(part.length / sizeof(Point2)));
+
+}//end LabelHitsOwnPart
+
+
+//========== BoxAgainstPart() ==================================================
+///
+/// @abstract	A label moved to `x` and against its own part: a badge as low as
+/// 			it stays `gap` above the part, a count as high as it stays `gap`
+/// 			below it, but neither past the line it started on.
+///
+/// @discussion	`column` is the part's outline with x and y swapped, so its span
+/// 			across the label's width is its span in height. It is measured
+/// 			from its cell, which starts at `start`.
+///
+//==============================================================================
+static Box2 BoxAgainstPart(Box2 box, double x, NSData *column, double start, BOOL isBadge, double gap)
+{
+	double	top		= 0.0;
+	double	bottom	= 0.0;
+	double	from	= x - gap - start;
+	Box2	moved	= V2MakeBox(x, box.origin.y, box.size.width, box.size.height);
+
+	if (PolygonSpanInBand(column.bytes, column.length / sizeof(Point2), from, from + box.size.width + 2.0 * gap,
+						  &top, &bottom) == NO) {
+		return moved;
+	}
+
+	if (isBadge) {
+		moved.origin.y = MIN(box.origin.y, top - gap - box.size.height);
+	}
+	else {
+		moved.origin.y = MAX(box.origin.y, bottom + gap);
+	}
+
+	return moved;
+
+}//end BoxAgainstPart
+
+
+//========== LabelKeptClear() ==================================================
+///
+/// @abstract	Moves a label of cell `owner` along its own part until it keeps
+/// 			far enough from the rest of the shelf. Answers NO, and leaves it,
+/// 			when no place in its cell does.
+///
+/// @discussion	It first moves away from the nearest other cell, then the other
+/// 			way, and takes the first place that is clear, so it moves no
+/// 			further than it must. A badge stays below `highest`, the shelf's
+/// 			top, and a count above `lowest`. With `alongLine` it keeps its
+/// 			height and only moves sideways.
+///
+//==============================================================================
+static BOOL LabelKeptClear(Box2 *box, NSUInteger owner, BOOL isBadge, const LDrawStepPartListShelf *shelf,
+						   double highest, double lowest, BOOL alongLine)
+{
+	Box2 start = *box;
+
+	// Moved straight to a line, a label can land on its own part.
+	BOOL (^isClear)(Box2) = ^BOOL(Box2 candidate) {
+		return LabelIsClear(candidate, owner, isBadge, shelf)
+			&& (alongLine == NO || LabelHitsOwnPart(candidate, owner, shelf) == NO);
+	};
+
+	if (BoxIsEmpty(start) || isClear(start)) {
+		return YES;
+	}
+
+	Box2	cell	= shelf->cells[owner];
+	double	minX	= cell.origin.x;
+	double	maxX	= V2BoxMaxX(cell) - start.size.width;
+	double	middle	= V2BoxMidX(start);
+	double	nearest	= DBL_MAX;
+	double	away	= 1.0;
+
+	for (NSUInteger other = 0; other < shelf->count; other++) {
+		double distance = fabs(V2BoxMidX(shelf->cells[other]) - middle);
+
+		if (other != owner && distance < nearest) {
+			nearest	= distance;
+			away	= (V2BoxMidX(shelf->cells[other]) < middle) ? 1.0 : -1.0;
+		}
+	}
+
+	double directions[2] = { away, -away };
+
+	for (NSUInteger pass = 0; pass < 2; pass++) {
+		double direction = directions[pass];
+
+		for (double x = start.origin.x + direction * LABEL_SEARCH_STEP;
+			 x >= minX - FIT_EPSILON && x <= maxX + FIT_EPSILON;
+			 x += direction * LABEL_SEARCH_STEP) {
+
+			Box2 moved = alongLine
+					   ? V2MakeBox(x, start.origin.y, start.size.width, start.size.height)
+					   : BoxAgainstPart(start, x, shelf->shapes[owner].column, cell.origin.x, isBadge,
+										shelf->decorationGap);
+
+			if (moved.origin.y < highest - FIT_EPSILON || V2BoxMaxY(moved) > lowest + FIT_EPSILON) {
+				continue;
+			}
+			if (isClear(moved)) {
+				*box = moved;
+				return YES;
+			}
+		}
+	}
+
+	return NO;
+
+}//end LabelKeptClear
+
+
+//========== ShelfOfLabels() ===================================================
+///
+/// @abstract	A shelf to move labels on, with the cells of `labels`, the counts
+/// 			in `counts`, and the badges written into `badges` where their
+/// 			cells put them.
+///
+//==============================================================================
+static LDrawStepPartListShelf ShelfOfLabels(LDrawStepPartListShelfLabels *labels, Box2 *counts, Box2 *badges,
+											LDrawStepPartListMetrics metrics)
+{
+	LDrawStepPartListShelf shelf;
+
+	shelf.count			= labels.shapes.count;
+	shelf.cells			= labels.cells.bytes;
+	shelf.shapes		= labels.shapes;
+	shelf.counts		= counts;
+	shelf.badges		= badges;
+	shelf.padding		= metrics.cellPadding;
+	shelf.decorationGap	= metrics.decorationGap;
+
+	for (NSUInteger index = 0; index < shelf.count; index++) {
+		badges[index] = OffsetBox(shelf.shapes[index].badgeBox, V2Make(shelf.cells[index].origin.x, 0.0));
+	}
+
+	return shelf;
+
+}//end ShelfOfLabels
+
+
+//========== DepthOfBoxes() ====================================================
+///
+/// @abstract	How far the lowest of these boxes reaches below the line at 0,
+/// 			or 0 when none does.
+///
+//==============================================================================
+static double DepthOfBoxes(const Box2 *boxes, NSUInteger count)
+{
+	double depth = 0.0;
+
+	for (NSUInteger index = 0; index < count; index++) {
+		depth = MAX(depth, V2BoxMaxY(boxes[index]));
+	}
+
+	return depth;
+
+}//end DepthOfBoxes
+
+
 /// One cell after a pack: it knows its scale and its size.
 @interface LDrawStepPartListPlacedCell : NSObject
 @property (nonatomic) LDrawStepPartListCell	*cell;
@@ -348,6 +880,29 @@ static NSData *ScaledOutlineOfCell(LDrawStepPartListCell *cell, double scale, Po
 /// Where the multiplier sits beside the part, on the bottom line of the icon's
 /// padded box and measured from its top-left. Empty when there is no room.
 @property (nonatomic) Box2					 labelBox;
+/// The multiplier has no room beside the part, so it goes in a strip below.
+@property (nonatomic) BOOL					 countIsInStrip;
+/// The badge fits on the top line of the icon's box, so the cell keeps no strip
+/// for it. Decided with the count beside the part, which it must avoid.
+@property (nonatomic) BOOL					 badgeIsInside;
+/// The part's outline, measured in the icon's padded box.
+@property (nonatomic) NSData				*roomOutline;
+/// Its place in packing order. Other cells key what they keep by it.
+@property (nonatomic) NSUInteger			 order;
+/// What it draws, with the counts beside the part or in a strip. Made when
+/// first needed.
+@property (nonatomic, nullable) LDrawStepPartListCellShapes *besideShapes;
+@property (nonatomic, nullable) LDrawStepPartListCellShapes *stripShapes;
+/// How far right of each earlier cell this one must start, by the earlier
+/// cell's order and the shelf's kind. Kept because a search packs the same
+/// pairs at every width it tries.
+@property (nonatomic) NSMutableDictionary<NSNumber *, NSNumber *> *slides;
+/// How far below the bottom of each cell this one's bottom must be when it
+/// stands right under it, by the upper cell's order. Kept for the same reason.
+@property (nonatomic) NSMutableDictionary<NSNumber *, NSNumber *> *drops;
+/// The labels of each shelf this cell starts, by how many cells the shelf
+/// holds. Shelves hold cells in packing order, so that names the shelf.
+@property (nonatomic) NSMutableDictionary<NSNumber *, LDrawStepPartListShelfLabels *> *shelfLabels;
 @end
 
 @implementation LDrawStepPartListPlacedCell
@@ -357,10 +912,14 @@ static NSData *ScaledOutlineOfCell(LDrawStepPartListCell *cell, double scale, Po
 /// One packed shelf.
 typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 
+/// Where each cell starts on its shelf, by shelf.
+typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartListOffsets;
+
 
 /// The result of one pack attempt.
 @interface LDrawStepPartListPacking : NSObject
 @property (nonatomic) NSArray<LDrawStepPartListRow *>					*rows;
+@property (nonatomic) LDrawStepPartListOffsets							*offsets;
 /// The widest row, which the searching modes score candidates by.
 @property (nonatomic) double											 usedWidth;
 @property (nonatomic) double											 height;
@@ -379,6 +938,7 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 @property (nonatomic, readwrite) Box2					 iconFrame;
 @property (nonatomic, readwrite) Box2					 annotationFrame;
 @property (nonatomic, readwrite) Box2					 labelFrame;
+@property (nonatomic, readwrite) BOOL					 showsCount;
 @property (nonatomic, readwrite) double					 scale;
 @property (nonatomic, readwrite) BOOL					 isScaledDown;
 @property (nonatomic, readwrite) NSUInteger				 rowIndex;
@@ -418,6 +978,9 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 @property (nonatomic, readwrite) Size2		resizeStartSize;
 /// The narrowest frame width at which no cell passes its share of the box.
 @property (nonatomic) double				shareFrameWidth;
+/// What the resize limits are measured from, until they are first read.
+@property (nonatomic, nullable) NSArray<LDrawStepPartListCell *> *limitCells;
+@property (nonatomic) LDrawStepPartListMetrics limitMetrics;
 @end
 
 
@@ -580,7 +1143,10 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	// HEIGHT only arranges them.
 	double								heightBudget = metrics.maximumHeight;
 
-	[layout measureResizeLimitsOfCells:cells metrics:metrics];
+	// The limits are measured when first read, since only a resize drag reads them.
+	layout.limitCells		= cells;
+	layout.limitMetrics		= metrics;
+	layout.shareFrameWidth	= [self shareFrameWidthOfCells:cells metrics:metrics];
 
 	// Shrink the scale until the packing fits the height, or until the icons
 	// would stop being readable.
@@ -609,7 +1175,8 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	if (heightBudget > 0.0) {
 		NSMutableArray *kept = [rows mutableCopy];
 
-		while (kept.count > 1 && [self heightOfRows:kept metrics:metrics] > heightBudget) {
+		while (kept.count > 1
+			   && [self heightOfStackedRows:kept offsets:packing.offsets metrics:metrics] > heightBudget) {
 			overflowCount += [(NSArray *)kept.firstObject count];
 			[kept removeObjectAtIndex:0];
 		}
@@ -617,6 +1184,7 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	}
 
 	[layout applyRows:rows
+			  offsets:packing.offsets
 			  metrics:metrics
 		overflowCount:overflowCount];
 
@@ -627,35 +1195,61 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 }//end layoutForEntries:constraint:viewTransform:metrics:
 
 
-//========== measureResizeLimitsOfCells:metrics: ===============================
+//---------- shareFrameWidthOfCells:metrics: -------------------------[static]--
+///
+/// @abstract	The narrowest frame width at which no cell passes its share of
+/// 			the box at the base scale. 0 when cells have no share.
+///
+//------------------------------------------------------------------------------
++ (double) shareFrameWidthOfCells:(NSArray<LDrawStepPartListCell *> *)cells
+						  metrics:(LDrawStepPartListMetrics)metrics
+{
+	double fraction		= MIN(metrics.maximumCellWidthFraction, 1.0);
+	double widestRoom	= 0.0;
+
+	if (fraction <= 0.0) {
+		return 0.0;
+	}
+
+	for (LDrawStepPartListCell *cell in cells) {
+		widestRoom = MAX(widestRoom, cell.iconLDU.width * metrics.baseScale + 2.0 * metrics.cellPadding);
+	}
+
+	return widestRoom / fraction + 2.0 * metrics.framePadding;
+
+}//end shareFrameWidthOfCells:metrics:
+
+
+//========== measureResizeLimits ===============================================
 ///
 /// @abstract	The frame sizes past which a resize drag changes nothing, at the
-/// 			base scale and whatever the constraint.
+/// 			base scale and whatever the constraint. Measured once.
 ///
 //==============================================================================
-- (void) measureResizeLimitsOfCells:(NSArray<LDrawStepPartListCell *> *)cells
-							metrics:(LDrawStepPartListMetrics)metrics
+- (void) measureResizeLimits
 {
+	NSArray<LDrawStepPartListCell *>	*cells		= self.limitCells;
+	LDrawStepPartListMetrics			 metrics	= self.limitMetrics;
+
+	if (cells == nil) {
+		return;
+	}
+	self.limitCells = nil;
+
 	// A width of 0 draws no icon smaller, as in the searching modes.
 	NSArray<LDrawStepPartListPlacedCell *>	*placedCells	=
 		[[self class] placedCellsForCells:cells
 								  atScale:metrics.baseScale
 							 contentWidth:0.0
 								  metrics:metrics];
-	double									 rowWidth		= 0.0;
+	LDrawStepPartListPacking				*oneRow			= [[self class] shelfPackPlacedCells:placedCells
+																					contentWidth:DBL_MAX
+																						 metrics:metrics];
 	double									 widestCell		= 0.0;
-	double									 widestRoom		= 0.0;
 
 	for (LDrawStepPartListPlacedCell *placed in placedCells) {
-		rowWidth	+= placed.size.width;
-		widestCell	= MAX(widestCell, placed.size.width);
-		widestRoom	= MAX(widestRoom, [[self class] roomOfPlacedCell:placed metrics:metrics].size.width);
+		widestCell = MAX(widestCell, placed.size.width);
 	}
-
-	// Narrower than this an icon is drawn smaller, and a smaller icon takes a
-	// shelf of its own.
-	double fraction		= MIN(metrics.maximumCellWidthFraction, 1.0);
-	double oneRowWidth	= (fraction > 0.0) ? MAX(rowWidth, widestRoom / fraction) : rowWidth;
 
 	// The narrowest packing HEIGHT tries is as wide as the widest cell.
 	LDrawStepPartListPacking	*tallest	= [[self class] shelfPackPlacedCells:placedCells
@@ -663,12 +1257,40 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 																		 metrics:metrics];
 	double						 padding	= 2.0 * metrics.framePadding;
 
-	self.oneRowFrameWidth	= oneRowWidth + padding;
-	self.oneRowFrameHeight	= [[self class] heightOfRow:placedCells metrics:metrics] + padding;
-	self.tallestFrameHeight	= tallest.height + padding;
-	self.shareFrameWidth	= (fraction > 0.0) ? widestRoom / fraction + padding : 0.0;
+	// Narrower than the share width an icon is drawn smaller, and a smaller
+	// icon takes a shelf of its own.
+	_oneRowFrameWidth	= MAX(oneRow.usedWidth + padding, self.shareFrameWidth);
+	_oneRowFrameHeight	= oneRow.height + padding;
+	_tallestFrameHeight	= tallest.height + padding;
 
-}//end measureResizeLimitsOfCells:metrics:
+}//end measureResizeLimits
+
+
+//========== oneRowFrameWidth ==================================================
+- (double) oneRowFrameWidth
+{
+	[self measureResizeLimits];
+	return _oneRowFrameWidth;
+
+}//end oneRowFrameWidth
+
+
+//========== oneRowFrameHeight =================================================
+- (double) oneRowFrameHeight
+{
+	[self measureResizeLimits];
+	return _oneRowFrameHeight;
+
+}//end oneRowFrameHeight
+
+
+//========== tallestFrameHeight ================================================
+- (double) tallestFrameHeight
+{
+	[self measureResizeLimits];
+	return _tallestFrameHeight;
+
+}//end tallestFrameHeight
 
 
 //========== measureResizeStartForConstraint:metrics: ==========================
@@ -707,66 +1329,87 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 }//end measureResizeStartForConstraint:metrics:
 
 
-//========== applyRows:metrics:overflowCount: ==================================
+//========== applyRows:offsets:metrics:overflowCount: ==========================
 ///
 /// @abstract	Turns packed shelves into placements with absolute positions.
 ///
 //==============================================================================
 - (void) applyRows:(NSArray<LDrawStepPartListRow *> *)rows
+		   offsets:(LDrawStepPartListOffsets *)offsets
 		   metrics:(LDrawStepPartListMetrics)metrics
 	 overflowCount:(NSUInteger)overflowCount
 {
 	NSMutableArray<LDrawStepPartListPlacement *>	*placements	= [NSMutableArray array];
-	double											y			= 0.0;
+	double											 bottom		= 0.0;
 
 	// The widest shelf, whatever WIDTH asked for, as LPub3D does. Found before
 	// anything is placed, because a capped cell is centered across it.
-	double contentWidth = [[self class] widestRowWidthOfRows:rows];
+	double				 contentWidth	= [[self class] widestRowWidthOfRows:rows offsets:offsets];
+	NSArray<NSNumber *>	*tops			= [[self class] topsOfRows:rows
+														   offsets:offsets
+													  contentWidth:contentWidth
+															bottom:&bottom
+														   metrics:metrics];
 
 	for (NSUInteger rowIndex = 0; rowIndex < rows.count; rowIndex++) {
 
 		NSArray<LDrawStepPartListPlacedCell *>	*row			= rows[rowIndex];
+		NSArray<NSNumber *>						*rowOffsets		= [offsets objectForKey:row];
 		double									 rowHeight		= [[self class] heightOfRow:row metrics:metrics];
 		BOOL									 labelIsInStrip	= [[self class] rowKeepsLabelStrip:row];
-		double									 stripHeight	= labelIsInStrip ? metrics.labelHeight : 0.0;
+		double									 y				= tops[rowIndex].doubleValue;
+		double									 shift			= [[self class] shiftOfRow:row
+																			  contentWidth:contentWidth];
+		LDrawStepPartListShelfLabels			*labels			= [[self class] labelsOfRow:row
+																					offsets:rowOffsets
+																					metrics:metrics];
+		NSData									*badges			= [[self class] badgesOfRow:row
+																					 labels:labels
+																					metrics:metrics];
+		Point2									 line			= V2Make(shift, y + rowHeight);
 
-		// A cell drawn smaller has the shelf to itself and is centered. The
-		// rest run left to right.
-		double x = 0.0;
+		for (NSUInteger index = 0; index < row.count; index++) {
 
-		if (row.count == 1 && row.firstObject.isScaledDown) {
-			x = MAX(0.0, (contentWidth - row.firstObject.size.width) / 2.0);
-		}
-
-		for (LDrawStepPartListPlacedCell *placed in row) {
+			LDrawStepPartListPlacedCell *placed = row[index];
 
 			// Cell bottoms line up, and so do the icon bottoms, since every cell
 			// on a shelf gets the same count strip.
-			double top = y + rowHeight - (placed.size.height + stripHeight);
+			double x		= shift + rowOffsets[index].doubleValue;
+			double height	= [[self class] heightOfCell:placed labelIsInStrip:labelIsInStrip metrics:metrics];
+			double top		= y + rowHeight - height;
 
-			[placements addObject:[self placementForCell:placed
-												atOrigin:V2Make(x, top)
-												rowIndex:rowIndex
-										  labelIsInStrip:labelIsInStrip
-												 metrics:metrics]];
-			x += placed.size.width;
+			LDrawStepPartListPlacement *placement = [self placementForCell:placed
+																  atOrigin:V2Make(x, top)
+																  rowIndex:rowIndex
+															labelIsInStrip:labelIsInStrip
+																   metrics:metrics];
+
+			// The labels as the shelf left them, which can be away from the part.
+			if (placement.showsCount) {
+				placement.labelFrame = OffsetBox(((const Box2 *)labels.counts.bytes)[index], line);
+			}
+
+			if (placed.showsAnnotation) {
+				placement.annotationFrame = OffsetBox(((const Box2 *)badges.bytes)[index], line);
+			}
+
+			[placements addObject:placement];
 		}
-
-		y += rowHeight + metrics.rowGap;
 	}
 
 	self.rowCount		= rows.count;
 	self.placements		= placements;
 	self.overflowCount	= overflowCount;
-	self.contentSize	= V2MakeSize(contentWidth, [[self class] heightOfRows:rows metrics:metrics]);
+	self.contentSize	= V2MakeSize(contentWidth, bottom);
 
-}//end applyRows:metrics:overflowCount:
+}//end applyRows:offsets:metrics:overflowCount:
 
 
 //========== placementForCell:atOrigin:rowIndex:labelIsInStrip:metrics: ========
 ///
 /// @abstract	One cell's frames, given the cell's top-left corner and whether
-/// 			its shelf puts the counts in strips.
+/// 			its shelf puts the counts in strips. The labels are left for the
+/// 			shelf to place, with an empty badge at the cell's corner.
 ///
 //==============================================================================
 - (LDrawStepPartListPlacement *) placementForCell:(LDrawStepPartListPlacedCell *)placedCell
@@ -778,48 +1421,26 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	LDrawStepPartListPlacement	*placement	= [LDrawStepPartListPlacement new];
 	LDrawStepPartListCell		*cell		= placedCell.cell;
 	double						 padding	= metrics.cellPadding;
+	double						 height		= [[self class] heightOfCell:placedCell
+														  labelIsInStrip:labelIsInStrip
+																 metrics:metrics];
 
 	placement.entry				= cell.entry;
 	placement.scale				= placedCell.scale;
 	placement.isScaledDown		= placedCell.isScaledDown;
 	placement.rowIndex			= rowIndex;
 	placement.annotationText	= placedCell.showsAnnotation ? cell.studText : nil;
+	placement.cellFrame			= V2MakeBox(origin.x, origin.y, placedCell.size.width, height);
+	placement.annotationFrame	= V2MakeBox(origin.x, origin.y, 0.0, 0.0);
+	placement.labelFrame		= V2MakeBox(origin.x, origin.y, 0.0, 0.0);
+	placement.showsCount		= cell.showsCount;
 
-	double badgeStripHeight = placedCell.showsAnnotation ? metrics.annotationHeight : 0.0;
-	double labelStripHeight = labelIsInStrip ? metrics.labelHeight : 0.0;
+	// A cell can be wider than its icon, and the icon stays centered in it.
+	Box2	room		= [[self class] roomOfPlacedCell:placedCell metrics:metrics];
+	Point2	roomOrigin	= V2Add(origin, V2Make(MAX(0.0, placedCell.size.width - room.size.width) / 2.0,
+											   [[self class] badgeStripHeightOfCell:placedCell metrics:metrics]));
 
-	placement.cellFrame	= V2MakeBox(origin.x, origin.y, placedCell.size.width,
-									placedCell.size.height + labelStripHeight);
-
-	// A cell can be wider than its icon, and the icon stays centered in it. The
-	// boxes beside the part move across with the icon.
-	double	roomWidth	= cell.iconLDU.width * placedCell.scale + 2.0 * padding;
-	Point2	roomOrigin	= V2Make(origin.x + MAX(0.0, placedCell.size.width - roomWidth) / 2.0,
-								 origin.y + badgeStripHeight);
-
-	placement.iconFrame	= V2MakeBox(roomOrigin.x + padding,
-									roomOrigin.y + padding,
-									roomWidth - 2.0 * padding,
-									MAX(0.0, placedCell.size.height - 2.0 * padding - badgeStripHeight));
-
-	// On a strip shelf the count is below the icon, so the badge has nothing to avoid.
-	Box2 labelBox = labelIsInStrip ? ZeroBox2 : placedCell.labelBox;
-
-	if (placedCell.showsAnnotation == NO) {
-		placement.annotationFrame = V2MakeBox(origin.x, origin.y, 0.0, 0.0);
-	}
-	else {
-		Box2 badge = [[self class] badgeBoxOfCell:placedCell avoiding:labelBox metrics:metrics];
-
-		placement.annotationFrame = OffsetBox(badge, roomOrigin);
-	}
-
-	placement.labelFrame = labelIsInStrip
-						 ? V2MakeBox(origin.x,
-									 origin.y + placedCell.size.height,
-									 placedCell.size.width,
-									 metrics.labelHeight)
-						 : OffsetBox(labelBox, roomOrigin);
+	placement.iconFrame	= V2BoxInset(OffsetBox(room, roomOrigin), padding, padding);
 
 	return placement;
 
@@ -841,6 +1462,49 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 					  self.contentSize.height + 2.0 * self.framePadding);
 
 }//end frameSize
+
+
+//========== placementAtPoint: =================================================
+///
+/// @abstract	The placement under a point of the content, or nil.
+///
+/// @discussion	A count can sink below its shelf and a badge rise into a taller
+/// 			neighbor's cell, so a point on a label belongs to that label's
+/// 			part. Cells slid together overlap, and then the one whose icon's
+/// 			middle is nearest wins.
+///
+//==============================================================================
+- (nullable LDrawStepPartListPlacement *) placementAtPoint:(Point2)point
+{
+	for (LDrawStepPartListPlacement *placement in self.placements) {
+		BOOL onCount = placement.showsCount && V2BoxContains(placement.labelFrame, point);
+		BOOL onBadge = (placement.annotationText != nil) && V2BoxContains(placement.annotationFrame, point);
+
+		if (onCount || onBadge) {
+			return placement;
+		}
+	}
+
+	LDrawStepPartListPlacement	*nearest	= nil;
+	double						 shortest	= DBL_MAX;
+
+	for (LDrawStepPartListPlacement *placement in self.placements) {
+		if (V2BoxContains(placement.cellFrame, point) == NO) {
+			continue;
+		}
+
+		Point2 middle	= V2BoxMid(placement.iconFrame);
+		double distance	= hypot(point.x - middle.x, point.y - middle.y);
+
+		if (distance < shortest) {
+			shortest	= distance;
+			nearest		= placement;
+		}
+	}
+
+	return nearest;
+
+}//end placementAtPoint:
 
 
 // MARK: - PACKING -
@@ -892,7 +1556,10 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 ///
 /// @abstract	Lays the cells on shelves of a fixed width, in the order given.
 ///
-/// @discussion	The cells given are not changed, so they can be packed again at
+/// @discussion	Each cell is slid in against the ones before it on its shelf,
+/// 			and a shelf is full when the slid cell would still pass the width.
+///
+/// 			The cells given are not moved, so they can be packed again at
 /// 			other widths.
 ///
 //------------------------------------------------------------------------------
@@ -900,38 +1567,68 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 									   contentWidth:(double)contentWidth
 											metrics:(LDrawStepPartListMetrics)metrics
 {
-	NSMutableArray<NSMutableArray<LDrawStepPartListPlacedCell *> *>	*rows		= [NSMutableArray array];
-	NSMutableArray<LDrawStepPartListPlacedCell *>					*currentRow	= [NSMutableArray array];
-	double															 rowWidth	= 0.0;
+	NSMutableArray<LDrawStepPartListRow *>	*rows			= [NSMutableArray array];
+	LDrawStepPartListOffsets				*offsets		= [self emptyOffsets];
+	NSArray<LDrawStepPartListPlacedCell *>	*currentRow		= @[];
+	NSArray<NSNumber *>						*rowOffsets		= @[];
+	BOOL									 labelIsInStrip	= NO;
+
+	void (^closeRow)(LDrawStepPartListRow *, NSArray<NSNumber *> *) =
+		^(LDrawStepPartListRow *row, NSArray<NSNumber *> *rowOffsets) {
+			[rows addObject:row];
+			[offsets setObject:[self offsetsTuckingTailOfRow:row offsets:rowOffsets] forKey:row];
+		};
 
 	for (LDrawStepPartListPlacedCell *placed in placedCells) {
 
 		if (placed.isScaledDown) {
 			// Otherwise a wide cell leaves a ragged shelf.
 			if (currentRow.count > 0) {
-				[rows addObject:currentRow];
-				currentRow = [NSMutableArray array];
-				rowWidth = 0.0;
+				closeRow(currentRow, rowOffsets);
+				currentRow		= @[];
+				rowOffsets		= @[];
+				labelIsInStrip	= NO;
 			}
-			[rows addObject:[NSMutableArray arrayWithObject:placed]];
+			closeRow(@[placed], @[@0.0]);
 			continue;
 		}
 
-		if (currentRow.count > 0 && rowWidth + placed.size.width > contentWidth + FIT_EPSILON) {
-			[rows addObject:currentRow];
-			currentRow = [NSMutableArray array];
-			rowWidth = 0.0;
+		NSArray<LDrawStepPartListPlacedCell *>	*row		= [currentRow arrayByAddingObject:placed];
+		BOOL									 inStrip	= labelIsInStrip || placed.countIsInStrip;
+		NSArray<NSNumber *>						*rowAt		= nil;
+
+		// A count moving into a strip changes every cell's shape on the shelf.
+		if (inStrip == labelIsInStrip) {
+			double x = [self offsetOfCell:placed
+							   afterCells:currentRow
+								  offsets:rowOffsets
+						   labelIsInStrip:inStrip
+								  metrics:metrics];
+
+			rowAt = [rowOffsets arrayByAddingObject:@(x)];
+		}
+		else {
+			rowAt = [self offsetsOfRow:row labelIsInStrip:inStrip metrics:metrics];
 		}
 
-		[currentRow addObject:placed];
-		rowWidth += placed.size.width;
+		if (currentRow.count > 0 && [self widthOfRow:row offsets:rowAt] > contentWidth + FIT_EPSILON) {
+			closeRow(currentRow, rowOffsets);
+
+			row		= @[placed];
+			rowAt	= @[@0.0];
+			inStrip	= placed.countIsInStrip;
+		}
+
+		currentRow		= row;
+		rowOffsets		= rowAt;
+		labelIsInStrip	= inStrip;
 	}
 
 	if (currentRow.count > 0) {
-		[rows addObject:currentRow];
+		closeRow(currentRow, rowOffsets);
 	}
 
-	return [self packingWithRows:rows metrics:metrics];
+	return [self packingWithRows:rows offsets:offsets metrics:metrics];
 
 }//end shelfPackPlacedCells:contentWidth:metrics:
 
@@ -980,35 +1677,65 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 		[columnWidths addObject:@(widest)];
 	}
 
+	// Nothing slides here, or the columns would not line up.
+	LDrawStepPartListOffsets *offsets = [self emptyOffsets];
+
 	for (NSMutableArray<LDrawStepPartListPlacedCell *> *row in rows) {
+		NSMutableArray<NSNumber *>	*rowOffsets	= [NSMutableArray array];
+		double						 x			= 0.0;
+
 		for (NSUInteger column = 0; column < row.count; column++) {
 			LDrawStepPartListPlacedCell *placed = row[column];
 			placed.size = V2MakeSize(columnWidths[column].doubleValue, placed.size.height);
+
+			[rowOffsets addObject:@(x)];
+			x += placed.size.width;
 		}
+		[offsets setObject:rowOffsets forKey:row];
 	}
 
-	return [self packingWithRows:rows metrics:metrics];
+	return [self packingWithRows:rows offsets:offsets metrics:metrics];
 
 }//end gridPackCells:atScale:columns:metrics:
 
 
-//---------- packingWithRows:metrics: --------------------------------[static]--
+//---------- packingWithRows:offsets:metrics: ------------------------[static]--
 ///
 /// @abstract	A packing of these finished shelves, measured.
 ///
 //------------------------------------------------------------------------------
 + (LDrawStepPartListPacking *) packingWithRows:(NSArray<LDrawStepPartListRow *> *)rows
+									   offsets:(LDrawStepPartListOffsets *)offsets
 									   metrics:(LDrawStepPartListMetrics)metrics
 {
 	LDrawStepPartListPacking *packing = [LDrawStepPartListPacking new];
 
 	packing.rows		= rows;
-	packing.height		= [self heightOfRows:rows metrics:metrics];
-	packing.usedWidth	= [self widestRowWidthOfRows:rows];
+	packing.offsets		= offsets;
+	// Measured in the order the shelves are placed, which decides how they stack.
+	packing.height		= [self heightOfStackedRows:[self rowsOrderedHeaviestLast:rows]
+											offsets:offsets
+											metrics:metrics];
+	packing.usedWidth	= [self widestRowWidthOfRows:rows offsets:offsets];
 
 	return packing;
 
-}//end packingWithRows:metrics:
+}//end packingWithRows:offsets:metrics:
+
+
+//---------- emptyOffsets --------------------------------------------[static]--
+///
+/// @abstract	A table of shelf offsets, keyed by the shelf itself rather than
+/// 			by what it holds.
+///
+//------------------------------------------------------------------------------
++ (LDrawStepPartListOffsets *) emptyOffsets
+{
+	NSPointerFunctionsOptions byShelf = NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPointerPersonality;
+
+	return [NSMapTable mapTableWithKeyOptions:byShelf valueOptions:NSPointerFunctionsStrongMemory];
+
+}//end emptyOffsets
 
 
 //---------- searchPackCells:atScale:constraint:metrics: -------------[static]--
@@ -1033,7 +1760,8 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 																				atScale:scale
 																		   contentWidth:0.0
 																				metrics:metrics];
-	NSArray<NSNumber *>						*candidates		= [self candidateWidthsForPlacedCells:placedCells];
+	NSArray<NSNumber *>						*candidates		= [self candidateWidthsForPlacedCells:placedCells
+																						  metrics:metrics];
 	LDrawStepPartListPacking				*best			= nil;
 	double									 bestScore		= 0.0;
 	BOOL									 bestFits		= NO;
@@ -1083,38 +1811,65 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 }//end searchPackCells:atScale:constraint:metrics:
 
 
-//---------- candidateWidthsForPlacedCells: --------------------------[static]--
+//---------- candidateWidthsForPlacedCells:metrics: ------------------[static]--
 ///
 /// @abstract	The widths worth trying, smallest first and without repeats.
 ///
-/// @discussion	Measured from the cells the shelves will pack, labels and all,
-/// 			because a cell can be wider than its icon.
+/// @discussion	Each is the width of the first so many cells on one shelf, slid
+/// 			together, and measured with labels and all, because a cell can
+/// 			be wider than its icon.
 ///
 //------------------------------------------------------------------------------
 + (NSArray<NSNumber *> *) candidateWidthsForPlacedCells:(NSArray<LDrawStepPartListPlacedCell *> *)placedCells
+												metrics:(LDrawStepPartListMetrics)metrics
 {
-	NSMutableArray<NSNumber *>	*candidates	= [NSMutableArray array];
-	double						 running	= 0.0;
+	NSMutableSet<NSNumber *>	*candidates	= [NSMutableSet set];
 	double						 widest		= 0.0;
 
 	for (LDrawStepPartListPlacedCell *placed in placedCells) {
 		widest = MAX(widest, placed.size.width);
 	}
 
-	for (LDrawStepPartListPlacedCell *placed in placedCells) {
-		running += placed.size.width;
+	// Counts go in strips from the first cell with no room beside its part.
+	NSUInteger firstStripped = placedCells.count;
 
-		// No shelf is narrower than the widest cell.
-		double candidate = MAX(widest, running);
-
-		if (candidates.count == 0 || candidates.lastObject.doubleValue < candidate) {
-			[candidates addObject:@(candidate)];
+	for (NSUInteger index = 0; index < placedCells.count && firstStripped == placedCells.count; index++) {
+		if (placedCells[index].countIsInStrip) {
+			firstStripped = index;
 		}
 	}
 
-	return candidates;
+	// A cell's offset depends only on the cells before it, so the first so many
+	// cells of these shelves are already slid as they would be on their own.
+	NSRange				 besideRange	= NSMakeRange(0, firstStripped);
+	NSArray<NSNumber *>	*beside			= [self offsetsOfRow:[placedCells subarrayWithRange:besideRange]
+											  labelIsInStrip:NO
+													 metrics:metrics];
+	NSArray<NSNumber *>	*inStrip		= nil;
+	double				 besideEnd		= 0.0;
+	double				 stripEnd		= 0.0;
 
-}//end candidateWidthsForPlacedCells:
+	if (firstStripped < placedCells.count) {
+		inStrip = [self offsetsOfRow:placedCells labelIsInStrip:YES metrics:metrics];
+	}
+
+	for (NSUInteger index = 0; index < placedCells.count; index++) {
+		double width = placedCells[index].size.width;
+
+		if (index < firstStripped) {
+			besideEnd = MAX(besideEnd, beside[index].doubleValue + width);
+		}
+		if (inStrip != nil) {
+			stripEnd = MAX(stripEnd, inStrip[index].doubleValue + width);
+		}
+
+		// No shelf is narrower than the widest cell.
+		[candidates addObject:@(MAX(widest, (index < firstStripped) ? besideEnd : stripEnd))];
+	}
+
+	return [candidates.allObjects sortedArrayUsingSelector:@selector(compare:)];
+
+}//end candidateWidthsForPlacedCells:metrics:
 
 
 //---------- placedCellsForCells:atScale:contentWidth:metrics: -------[static]--
@@ -1130,10 +1885,12 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	NSMutableArray<LDrawStepPartListPlacedCell *> *placedCells = [NSMutableArray arrayWithCapacity:cells.count];
 
 	for (LDrawStepPartListCell *cell in cells) {
-		[placedCells addObject:[self placedCellForCell:cell
-											   atScale:scale
-										  contentWidth:contentWidth
-											   metrics:metrics]];
+		LDrawStepPartListPlacedCell *placed = [self placedCellForCell:cell
+															  atScale:scale
+														 contentWidth:contentWidth
+															  metrics:metrics];
+		placed.order = placedCells.count;
+		[placedCells addObject:placed];
 	}
 
 	return placedCells;
@@ -1161,6 +1918,9 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	placed.scale			= scale;
 	placed.isScaledDown		= NO;
 	placed.showsAnnotation	= cell.needsSizeBadge;
+	placed.slides			= [NSMutableDictionary dictionary];
+	placed.drops			= [NSMutableDictionary dictionary];
+	placed.shelfLabels		= [NSMutableDictionary dictionary];
 
 	if (contentWidth > 0.0) {
 
@@ -1188,7 +1948,14 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 		}
 	}
 
-	placed.labelBox = [self bottomLabelBoxOfCell:placed metrics:metrics];
+	Box2 room = [self roomOfPlacedCell:placed metrics:metrics];
+
+	placed.roomOutline		= ScaledOutlineOfCell(cell, placed.scale, V2BoxMid(room));
+	placed.labelBox			= cell.showsCount ? [self bottomLabelBoxOfCell:placed metrics:metrics] : ZeroBox2;
+	placed.countIsInStrip	= cell.showsCount && BoxIsEmpty(placed.labelBox);
+	placed.badgeIsInside	= placed.showsAnnotation
+							&& [self getInsideBadgeBox:NULL ofCell:placed avoiding:placed.labelBox metrics:metrics];
+
 	[self sizePlacedCell:placed metrics:metrics];
 
 	return placed;
@@ -1199,12 +1966,9 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 //---------- bottomLabelBoxOfCell:metrics: ---------------------------[static]--
 ///
 /// @abstract	The multiplier's place beside the part, on the bottom line of
-/// 			the icon's box: slid in from each bottom corner, keeping the one
-/// 			nearer the middle. Empty when both corners are blocked.
-///
-/// @discussion	The outline is convex, so if any place on the line is clear, a
-/// 			corner is. Nearer the middle, because a count near an edge looks
-/// 			like it belongs to the gap between two cells.
+/// 			the icon's box, next to the part on the side with more room.
+/// 			LPub3D puts it bottom-left, so that side wins a tie. Empty when
+/// 			neither side has room.
 ///
 //------------------------------------------------------------------------------
 + (Box2) bottomLabelBoxOfCell:(LDrawStepPartListPlacedCell *)placed
@@ -1212,40 +1976,170 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 {
 	Size2	size	= placed.cell.labelSize;
 	Box2	room	= [self roomOfPlacedCell:placed metrics:metrics];
+	Box2	box		= ZeroBox2;
 
-	if (size.width > room.size.width || size.height > room.size.height) {
-		return ZeroBox2;
-	}
+	[self getBox:&box
+	  besidePart:placed
+		  ofSize:size
+		onLineAt:V2BoxMaxY(room) - size.height
+		avoiding:ZeroBox2
+	prefersRight:NO
+		 metrics:metrics];
 
-	NSData		*outline	= ScaledOutlineOfCell(placed.cell, placed.scale, V2BoxMid(room));
-	NSUInteger	 count		= outline.length / sizeof(Point2);
-	double		 y			= V2BoxMaxY(room) - size.height;
-	Point2		 middle		= V2Make(V2BoxMidX(room) - size.width / 2.0, y);
-	Box2		 left		= ZeroBox2;
-	Box2		 right		= ZeroBox2;
-
-	BOOL fitsFromLeft	= SlideBoxToward(size, V2Make(room.origin.x, y), middle,
-										 outline.bytes, count, ZeroBox2, metrics.decorationGap, &left);
-	BOOL fitsFromRight	= SlideBoxToward(size, V2Make(V2BoxMaxX(room) - size.width, y), middle,
-										 outline.bytes, count, ZeroBox2, metrics.decorationGap, &right);
-
-	if (fitsFromLeft && fitsFromRight) {
-		return (middle.x - left.origin.x <= right.origin.x - middle.x) ? left : right;
-	}
-
-	return fitsFromLeft ? left : (fitsFromRight ? right : ZeroBox2);
+	return box;
 
 }//end bottomLabelBoxOfCell:metrics:
 
 
+//---------- getBox:besidePart:ofSize:onLineAt:avoiding:prefersRight:metrics:
+///
+/// @abstract	Puts a box of `size` on the line at height `y` of the icon's box,
+/// 			`decorationGap` from the part and from `avoidedBox`: on the side
+/// 			of them with more room on that line, and on the right when both
+/// 			sides have the same if `prefersRight`. Answers NO when neither side
+/// 			has room. Measured in the icon's box.
+///
+/// @discussion	A long part drawn at an angle reaches the top line at one end
+/// 			and the bottom line at the other, and the box goes in the empty
+/// 			corner beside that end.
+///
+//------------------------------------------------------------------------------
++ (BOOL) getBox:(nullable Box2 *)outBox
+	 besidePart:(LDrawStepPartListPlacedCell *)placed
+		 ofSize:(Size2)size
+	   onLineAt:(double)y
+	   avoiding:(Box2)avoidedBox
+   prefersRight:(BOOL)prefersRight
+		metrics:(LDrawStepPartListMetrics)metrics
+{
+	Box2	room	= [self roomOfPlacedCell:placed metrics:metrics];
+	double	gap		= metrics.decorationGap;
+
+	if (size.width > room.size.width || size.height > room.size.height) {
+		return NO;
+	}
+
+	NSData	*outline	= placed.roomOutline;
+	double	 top		= y - gap;
+	double	 bottom		= y + size.height + gap;
+	double	 left		= DBL_MAX;
+	double	 right		= -DBL_MAX;
+
+	BOOL isBlocked = PolygonSpanInBand(outline.bytes, outline.length / sizeof(Point2), top, bottom, &left, &right);
+
+	if (BoxIsEmpty(avoidedBox) == NO && avoidedBox.origin.y < bottom && V2BoxMaxY(avoidedBox) > top) {
+		left		= MIN(left, avoidedBox.origin.x);
+		right		= MAX(right, V2BoxMaxX(avoidedBox));
+		isBlocked	= YES;
+	}
+
+	// Nothing on the line: the corner the box would have gone to.
+	double x = prefersRight ? V2BoxMaxX(room) - size.width : room.origin.x;
+
+	if (isBlocked) {
+		double roomOnLeft	= left - gap - room.origin.x;
+		double roomOnRight	= V2BoxMaxX(room) - (right + gap);
+		BOOL   goesRight	= (roomOnRight > roomOnLeft) || (roomOnRight == roomOnLeft && prefersRight);
+
+		if (goesRight && roomOnRight >= size.width) {
+			x = right + gap;
+		}
+		else if (goesRight == NO && roomOnLeft >= size.width) {
+			x = left - gap - size.width;
+		}
+		else {
+			return NO;
+		}
+	}
+
+	if (outBox != NULL) {
+		*outBox = V2MakeBox(x, y, size.width, size.height);
+	}
+
+	return YES;
+
+}//end getBox:besidePart:ofSize:onLineAt:avoiding:prefersRight:metrics:
+
+
+//---------- stripLabelBoxOfCell:metrics: ----------------------------[static]--
+///
+/// @abstract	Where the count goes in the strip below the icon, measured from
+/// 			the cell's top-left: at the part's lowest corner, so it sits by
+/// 			the part's bottom edge, and leaning toward the part's middle by
+/// 			up to half its width, so it stands under the part.
+///
+/// @discussion	A long part drawn at an angle comes down to the strip at one end
+/// 			only, and a count centered under the cell would sit below empty
+/// 			space. A count centered on that corner would hang half past the
+/// 			end of a small part. Under a flat bottom edge the count is
+/// 			centered on it.
+///
+//------------------------------------------------------------------------------
++ (Box2) stripLabelBoxOfCell:(LDrawStepPartListPlacedCell *)placed
+					 metrics:(LDrawStepPartListMetrics)metrics
+{
+	Box2			 room		= [self roomOfPlacedCell:placed metrics:metrics];
+	NSData			*outline	= placed.roomOutline;
+	const Point2	*corners	= outline.bytes;
+	NSUInteger		 count		= outline.length / sizeof(Point2);
+	double			 lowest		= -DBL_MAX;
+	double			 left		= DBL_MAX;
+	double			 right		= -DBL_MAX;
+
+	for (NSUInteger index = 0; index < count; index++) {
+		lowest = MAX(lowest, corners[index].y);
+	}
+	for (NSUInteger index = 0; index < count; index++) {
+		if (corners[index].y >= lowest - BOTTOM_EDGE_SLACK) {
+			left	= MIN(left, corners[index].x);
+			right	= MAX(right, corners[index].x);
+		}
+	}
+
+	// The icon's box is centered across the cell.
+	double width	= placed.cell.labelSize.width;
+	double corner	= (left + right) / 2.0;
+	double lean		= MIN(MAX(V2BoxMidX(room) - corner, -width / 2.0), width / 2.0);
+	double middle	= corner + lean + MAX(0.0, placed.size.width - room.size.width) / 2.0;
+	double x		= MIN(MAX(0.0, middle - width / 2.0), placed.size.width - width);
+
+	return V2MakeBox(x, placed.size.height, width, metrics.labelHeight);
+
+}//end stripLabelBoxOfCell:metrics:
+
+
+//---------- getInsideBadgeBox:ofCell:avoiding:metrics: --------------[static]--
+///
+/// @abstract	Puts the size badge on the top line of the icon's box, next to
+/// 			the part, on the side with more room. LPub3D puts it top-right,
+/// 			so that side wins a tie. Answers NO when neither side has room.
+///
+//------------------------------------------------------------------------------
++ (BOOL) getInsideBadgeBox:(nullable Box2 *)outBox
+					ofCell:(LDrawStepPartListPlacedCell *)placed
+				  avoiding:(Box2)labelBox
+				   metrics:(LDrawStepPartListMetrics)metrics
+{
+	return [self getBox:outBox
+			 besidePart:placed
+				 ofSize:V2MakeSize(placed.cell.annotationWidth, metrics.annotationHeight)
+			   onLineAt:0.0
+			   avoiding:labelBox
+		   prefersRight:YES
+				metrics:metrics];
+
+}//end getInsideBadgeBox:ofCell:avoiding:metrics:
+
+
 //---------- badgeBoxOfCell:avoiding:metrics: ------------------------[static]--
 ///
-/// @abstract	Where the size badge goes: centered across the icon's box, then
-/// 			let down until it is `decorationGap` clear of the part and of
-/// 			`labelBox`. Measured in the icon box, so negative y is the strip
-/// 			above it.
+/// @abstract	Where the size badge goes, measured in the icon box: on the top
+/// 			line of the box when it fits there, otherwise in the strip above,
+/// 			at negative y.
 ///
-/// @discussion	A part drawn at an angle does not reach the top of its box, so
+/// @discussion	In the strip it is centered across the icon's box, then let down
+/// 			until it is `decorationGap` clear of the part and of `labelBox`. A
+/// 			part drawn at an angle does not reach the top of its box, so
 /// 			letting the badge down closes that gap. It never goes past the
 /// 			middle of the box.
 ///
@@ -1254,10 +2148,17 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 			   avoiding:(Box2)labelBox
 				metrics:(LDrawStepPartListMetrics)metrics
 {
+	Box2 inside = ZeroBox2;
+
+	// It fit with the count beside the part in the way, so it fits with less.
+	if (placed.badgeIsInside && [self getInsideBadgeBox:&inside ofCell:placed avoiding:labelBox metrics:metrics]) {
+		return inside;
+	}
+
 	Box2	 room		= [self roomOfPlacedCell:placed metrics:metrics];
 	Size2	 size		= V2MakeSize(placed.cell.annotationWidth, metrics.annotationHeight);
 	Point2	 middle		= V2BoxMid(room);
-	NSData	*outline	= ScaledOutlineOfCell(placed.cell, placed.scale, middle);
+	NSData	*outline	= placed.roomOutline;
 
 	Point2	start	= V2Make(V2SizeCenteredOnPoint(size, middle).origin.x, room.origin.y - size.height);
 	Point2	end		= V2SizeCenteredOnPoint(size, middle).origin;
@@ -1289,10 +2190,24 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 }//end roomOfPlacedCell:metrics:
 
 
+//---------- badgeStripHeightOfCell:metrics: -------------------------[static]--
+///
+/// @abstract	How tall a strip the cell keeps above its icon for the badge:
+/// 			none when there is no badge or it fits on the icon's top line.
+///
+//------------------------------------------------------------------------------
++ (double) badgeStripHeightOfCell:(LDrawStepPartListPlacedCell *)placed
+						  metrics:(LDrawStepPartListMetrics)metrics
+{
+	return (placed.showsAnnotation && placed.badgeIsInside == NO) ? metrics.annotationHeight : 0.0;
+
+}//end badgeStripHeightOfCell:metrics:
+
+
 //---------- sizePlacedCell:metrics: ---------------------------------[static]--
 ///
-/// @abstract	The cell's size: the icon's padded box plus the badge's strip.
-/// 			The count's strip is added per shelf.
+/// @abstract	The cell's size: the icon's padded box plus any badge strip. The
+/// 			count's strip is added per shelf.
 ///
 //------------------------------------------------------------------------------
 + (void) sizePlacedCell:(LDrawStepPartListPlacedCell *)placed
@@ -1301,15 +2216,15 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 	LDrawStepPartListCell	*cell	= placed.cell;
 	Box2					 room	= [self roomOfPlacedCell:placed metrics:metrics];
 
-	// A label in a strip is centered across the cell, so the cell is at least as
-	// wide as the label. A count that fits beside its part is never wider.
+	// A label in a strip stays inside the cell, so the cell is at least as wide
+	// as the label. A count that fits beside its part is never wider.
 	double width = MAX(room.size.width, cell.labelSize.width);
 
 	if (placed.showsAnnotation) {
 		width = MAX(width, cell.annotationWidth);
 	}
 
-	placed.size = V2MakeSize(width, room.size.height + (placed.showsAnnotation ? metrics.annotationHeight : 0.0));
+	placed.size = V2MakeSize(width, room.size.height + [self badgeStripHeightOfCell:placed metrics:metrics]);
 
 }//end sizePlacedCell:metrics:
 
@@ -1387,29 +2302,6 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 }//end badgeRectForTextSize:inSlot:
 
 
-//---------- heightOfRows:metrics: -----------------------------------[static]--
-///
-/// @abstract	Sum of the shelf heights.
-///
-//------------------------------------------------------------------------------
-+ (double) heightOfRows:(NSArray<LDrawStepPartListRow *> *)rows
-				metrics:(LDrawStepPartListMetrics)metrics
-{
-	double total = 0.0;
-
-	for (NSArray<LDrawStepPartListPlacedCell *> *row in rows) {
-		total += [self heightOfRow:row metrics:metrics];
-	}
-
-	if (rows.count > 1) {
-		total += (double)(rows.count - 1) * metrics.rowGap;
-	}
-
-	return total;
-
-}//end heightOfRows:metrics:
-
-
 //---------- heightOfRow:metrics: ------------------------------------[static]--
 ///
 /// @abstract	How tall a shelf is: its tallest cell, plus the count strip when
@@ -1444,7 +2336,7 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 + (BOOL) rowKeepsLabelStrip:(NSArray<LDrawStepPartListPlacedCell *> *)row
 {
 	for (LDrawStepPartListPlacedCell *placed in row) {
-		if (BoxIsEmpty(placed.labelBox)) {
+		if (placed.countIsInStrip) {
 			return YES;
 		}
 	}
@@ -1492,27 +2384,833 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 }//end rowsOrderedHeaviestLast:
 
 
-//---------- widestRowWidthOfRows: -----------------------------------[static]--
+//---------- widestRowWidthOfRows:offsets: ---------------------------[static]--
 ///
 /// @abstract	The width of the widest shelf.
 ///
 //------------------------------------------------------------------------------
 + (double) widestRowWidthOfRows:(NSArray<LDrawStepPartListRow *> *)rows
+						offsets:(LDrawStepPartListOffsets *)offsets
 {
 	double widest = 0.0;
 
-	for (NSArray<LDrawStepPartListPlacedCell *> *row in rows) {
-		double rowWidth = 0.0;
-
-		for (LDrawStepPartListPlacedCell *placed in row) {
-			rowWidth += placed.size.width;
-		}
-		widest = MAX(widest, rowWidth);
+	for (LDrawStepPartListRow *row in rows) {
+		widest = MAX(widest, [self widthOfRow:row offsets:[offsets objectForKey:row]]);
 	}
 
 	return widest;
 
-}//end widestRowWidthOfRows:
+}//end widestRowWidthOfRows:offsets:
+
+
+//---------- widthOfRow:offsets: -------------------------------------[static]--
+///
+/// @abstract	How far a shelf reaches: the right edge of the cell that ends
+/// 			last. A cell slid under the one before it can end before it.
+///
+//------------------------------------------------------------------------------
++ (double) widthOfRow:(NSArray<LDrawStepPartListPlacedCell *> *)row
+			  offsets:(NSArray<NSNumber *> *)offsets
+{
+	double width = 0.0;
+
+	for (NSUInteger index = 0; index < row.count; index++) {
+		width = MAX(width, offsets[index].doubleValue + row[index].size.width);
+	}
+
+	return width;
+
+}//end widthOfRow:offsets:
+
+
+// MARK: - SLIDING -
+
+//---------- offsetsTuckingTailOfRow:offsets: ------------------------[static]--
+///
+/// @abstract	The same offsets, with the cells that end under an earlier,
+/// 			bigger one moved right until the last of them lines up with its
+/// 			right edge.
+///
+/// @discussion	As LPub3D puts a part that fits under the right side of the one
+/// 			before it. Only the cells after the one that ends the shelf move,
+/// 			so the shelf keeps its width, and a cell moved right stays as
+/// 			clear of the cells before it as it was.
+///
+//------------------------------------------------------------------------------
++ (NSArray<NSNumber *> *) offsetsTuckingTailOfRow:(NSArray<LDrawStepPartListPlacedCell *> *)row
+										  offsets:(NSArray<NSNumber *> *)offsets
+{
+	double		width	= [self widthOfRow:row offsets:offsets];
+	NSUInteger	last	= 0;
+
+	// The last cell that reaches the end of the shelf.
+	for (NSUInteger index = row.count; index > 0; index--) {
+		if (offsets[index - 1].doubleValue + row[index - 1].size.width >= width - FIT_EPSILON) {
+			last = index - 1;
+			break;
+		}
+	}
+
+	if (last + 1 >= row.count) {
+		return offsets;
+	}
+
+	NSRange						 range		= NSMakeRange(last + 1, row.count - last - 1);
+	NSArray<NSNumber *>			*tail		= [offsets subarrayWithRange:range];
+	double						 shift		= width - [self widthOfRow:[row subarrayWithRange:range] offsets:tail];
+	NSMutableArray<NSNumber *>	*tucked		= [offsets mutableCopy];
+
+	for (NSUInteger index = range.location; index < row.count; index++) {
+		tucked[index] = @(offsets[index].doubleValue + shift);
+	}
+
+	return tucked;
+
+}//end offsetsTuckingTailOfRow:offsets:
+
+
+//---------- offsetsOfRow:labelIsInStrip:metrics: --------------------[static]--
+///
+/// @abstract	Where each cell on a shelf starts, each slid in against the ones
+/// 			before it.
+///
+//------------------------------------------------------------------------------
++ (NSArray<NSNumber *> *) offsetsOfRow:(NSArray<LDrawStepPartListPlacedCell *> *)row
+						labelIsInStrip:(BOOL)labelIsInStrip
+							   metrics:(LDrawStepPartListMetrics)metrics
+{
+	NSMutableArray<NSNumber *> *offsets = [NSMutableArray arrayWithCapacity:row.count];
+
+	for (NSUInteger index = 0; index < row.count; index++) {
+		double x = [self offsetOfCell:row[index]
+						   afterCells:[row subarrayWithRange:NSMakeRange(0, index)]
+							  offsets:offsets
+					   labelIsInStrip:labelIsInStrip
+							  metrics:metrics];
+
+		[offsets addObject:@(x)];
+	}
+
+	return offsets;
+
+}//end offsetsOfRow:labelIsInStrip:metrics:
+
+
+//---------- offsetOfCell:afterCells:offsets:labelIsInStrip:metrics: -[static]--
+///
+/// @abstract	Where a cell starts on a shelf after `cells`, which start at
+/// 			`offsets`.
+///
+/// @discussion	The cell is slid left until it comes too near something an
+/// 			earlier cell draws: its part the gap between parts from another
+/// 			part, and a label two paddings from anything. A part drawn at an
+/// 			angle leaves empty corners in its cell, and the next part moves
+/// 			into them, as LPub3D slides one part into the next.
+///
+/// 			It never starts left of the cell before it, nor right of where
+/// 			the cells' boxes alone would put it.
+///
+//------------------------------------------------------------------------------
++ (double) offsetOfCell:(LDrawStepPartListPlacedCell *)placed
+			 afterCells:(NSArray<LDrawStepPartListPlacedCell *> *)cells
+				offsets:(NSArray<NSNumber *> *)offsets
+		 labelIsInStrip:(BOOL)labelIsInStrip
+				metrics:(LDrawStepPartListMetrics)metrics
+{
+	if (cells.count == 0) {
+		return 0.0;
+	}
+
+	LDrawStepPartListCellShapes	*moving		= [self shapesOfPlacedCell:placed
+														labelIsInStrip:labelIsInStrip
+															   metrics:metrics];
+	double						 padding	= metrics.cellPadding;
+	double						 x			= offsets.lastObject.doubleValue;
+	double						 boxesEnd	= 0.0;
+
+	// Nearest first. An earlier cell whose shapes end before this cell's shapes
+	// begin, with this cell at `x`, cannot push it further, and is skipped.
+	for (NSUInteger index = cells.count; index > 0; index--) {
+		LDrawStepPartListPlacedCell	*earlier	= cells[index - 1];
+		double						 start		= offsets[index - 1].doubleValue;
+		LDrawStepPartListCellShapes	*fixed		= [self shapesOfPlacedCell:earlier
+															labelIsInStrip:labelIsInStrip
+																   metrics:metrics];
+
+		// The moving part is grown by the gap, which reaches past its padding.
+		double reach = moving.left + padding - PartGap(fixed.partSize, moving.partSize, padding);
+
+		boxesEnd = MAX(boxesEnd, start + earlier.size.width);
+
+		if (start + fixed.right - reach <= x) {
+			continue;
+		}
+
+		double slide = [self slideOfCell:placed
+							   afterCell:earlier
+						  labelIsInStrip:labelIsInStrip
+								 metrics:metrics];
+
+		x = MAX(x, start + slide);
+	}
+
+	return MIN(x, boxesEnd);
+
+}//end offsetOfCell:afterCells:offsets:labelIsInStrip:metrics:
+
+
+//---------- slideOfCell:afterCell:labelIsInStrip:metrics: -----------[static]--
+///
+/// @abstract	How far right of where `earlier` starts the cell `later` must
+/// 			start to stay clear of it. Less than `earlier`'s width when
+/// 			`later` fits into an empty corner of it.
+///
+//------------------------------------------------------------------------------
++ (double) slideOfCell:(LDrawStepPartListPlacedCell *)later
+			 afterCell:(LDrawStepPartListPlacedCell *)earlier
+		labelIsInStrip:(BOOL)labelIsInStrip
+			   metrics:(LDrawStepPartListMetrics)metrics
+{
+	NSNumber	*key		= @(2 * earlier.order + (labelIsInStrip ? 1 : 0));
+	NSNumber	*remembered	= later.slides[key];
+
+	if (remembered != nil) {
+		return remembered.doubleValue;
+	}
+
+	LDrawStepPartListCellShapes	*fixed	= [self shapesOfPlacedCell:earlier
+													labelIsInStrip:labelIsInStrip
+														   metrics:metrics];
+	LDrawStepPartListCellShapes	*moving	= [self shapesOfPlacedCell:later
+													labelIsInStrip:labelIsInStrip
+														   metrics:metrics];
+	double						 slide	= [self distanceToClearShapes:fixed
+														   withShapes:moving
+															  movedBy:ZeroPoint2
+															 downward:NO
+															  metrics:metrics];
+
+	later.slides[key] = @(slide);
+
+	return slide;
+
+}//end slideOfCell:afterCell:labelIsInStrip:metrics:
+
+
+//---------- distanceToClearShapes:withShapes:movedBy:downward:metrics: -------
+///
+/// @abstract	How much further right, or down when `downward`, the shapes
+/// 			`moving` must go, after `offset`, to stand clear of `fixed`: the
+/// 			part by the gap between parts, the labels by two paddings.
+/// 			-DBL_MAX when nothing of the two shares a line.
+///
+/// @discussion	Both are measured from their own cell's bottom-left corner.
+///
+//------------------------------------------------------------------------------
++ (double) distanceToClearShapes:(LDrawStepPartListCellShapes *)fixed
+					  withShapes:(LDrawStepPartListCellShapes *)moving
+						 movedBy:(Point2)offset
+						downward:(BOOL)downward
+						 metrics:(LDrawStepPartListMetrics)metrics
+{
+	NSData *(^place)(NSData *, BOOL) = ^NSData *(NSData *polygon, BOOL moves) {
+		return MovedPolygon(polygon, moves ? offset : ZeroPoint2, downward);
+	};
+
+	double gap		= PartGap(fixed.partSize, moving.partSize, metrics.cellPadding);
+	double ownGap	= PartGap(moving.partSize, moving.partSize, metrics.cellPadding);
+
+	// Only the moving part is grown, by the whole gap.
+	NSData						*grownPart		= (gap == ownGap)
+												? moving.grownOutline
+												: GrownPolygon(moving.outline.bytes,
+															   moving.outline.length / sizeof(Point2), gap);
+	NSData						*fixedPart		= place(fixed.paddedOutline, NO);
+	NSData						*movingPart		= place(moving.paddedOutline, YES);
+	NSMutableArray<NSData *>	*movingLabels	= [NSMutableArray arrayWithCapacity:moving.labels.count];
+	double						 distance		= SlideDistance(place(fixed.outline, NO), place(grownPart, YES));
+
+	for (NSData *label in moving.labels) {
+		NSData *movingLabel = place(label, YES);
+
+		[movingLabels addObject:movingLabel];
+		distance = MAX(distance, SlideDistance(fixedPart, movingLabel));
+	}
+	for (NSData *label in fixed.labels) {
+		NSData *fixedLabel = place(label, NO);
+
+		distance = MAX(distance, SlideDistance(fixedLabel, movingPart));
+
+		for (NSData *movingLabel in movingLabels) {
+			distance = MAX(distance, SlideDistance(fixedLabel, movingLabel));
+		}
+	}
+
+	return distance;
+
+}//end distanceToClearShapes:withShapes:movedBy:downward:metrics:
+
+
+//---------- topsOfRows:offsets:contentWidth:bottom:metrics: ---------[static]--
+///
+/// @abstract	Where each shelf's top goes, from the top down: `rowGap` below
+/// 			everything above it, or closer when it and the shelf above both
+/// 			hold one part. Sets `outBottom` to where the lowest one ends.
+///
+//------------------------------------------------------------------------------
++ (NSArray<NSNumber *> *) topsOfRows:(NSArray<LDrawStepPartListRow *> *)rows
+							 offsets:(LDrawStepPartListOffsets *)offsets
+						contentWidth:(double)contentWidth
+							  bottom:(double *)outBottom
+							 metrics:(LDrawStepPartListMetrics)metrics
+{
+	NSMutableArray<NSNumber *>	*tops			= [NSMutableArray arrayWithCapacity:rows.count];
+	LDrawStepPartListPlacedCell	*above			= nil;
+	double						 aboveX			= 0.0;
+	double						 aboveBottom	= 0.0;
+	double						 bottom			= 0.0;
+	double						 y				= 0.0;
+
+	for (LDrawStepPartListRow *row in rows) {
+		NSArray<NSNumber *>	*rowOffsets	= [offsets objectForKey:row];
+		double				 rowHeight	= [self heightOfRow:row metrics:metrics];
+		double				 depth		= [self labelsOfRow:row offsets:rowOffsets metrics:metrics].depth;
+		double				 x			= [self shiftOfRow:row contentWidth:contentWidth]
+										+ rowOffsets.firstObject.doubleValue;
+
+		// One part under one part rises toward it.
+		if (row.count == 1 && above != nil) {
+			double lowerBottom = [self bottomOfCell:row.firstObject
+												atX:x
+										  underCell:above
+												atX:aboveX
+											 bottom:aboveBottom
+											metrics:metrics];
+
+			y = lowerBottom - rowHeight;
+		}
+
+		[tops addObject:@(y)];
+
+		above		= (row.count == 1) ? row.firstObject : nil;
+		aboveX		= x;
+		aboveBottom	= y + rowHeight;
+
+		// Counts moved below the shelf's line push the next shelf down.
+		bottom	= MAX(bottom, y + rowHeight + depth);
+		y		= bottom + metrics.rowGap;
+	}
+
+	*outBottom = bottom;
+
+	return tops;
+
+}//end topsOfRows:offsets:contentWidth:bottom:metrics:
+
+
+//---------- heightOfStackedRows:offsets:metrics: --------------------[static]--
+///
+/// @abstract	How tall these shelves are, stacked as they are placed.
+///
+//------------------------------------------------------------------------------
++ (double) heightOfStackedRows:(NSArray<LDrawStepPartListRow *> *)rows
+					   offsets:(LDrawStepPartListOffsets *)offsets
+					   metrics:(LDrawStepPartListMetrics)metrics
+{
+	double bottom = 0.0;
+
+	[self topsOfRows:rows
+			 offsets:offsets
+		contentWidth:[self widestRowWidthOfRows:rows offsets:offsets]
+			  bottom:&bottom
+			 metrics:metrics];
+
+	return bottom;
+
+}//end heightOfStackedRows:offsets:metrics:
+
+
+//---------- shiftOfRow:contentWidth: --------------------------------[static]--
+///
+/// @abstract	How far right a whole shelf goes: a cell drawn smaller has the
+/// 			shelf to itself and is centered.
+///
+//------------------------------------------------------------------------------
++ (double) shiftOfRow:(LDrawStepPartListRow *)row contentWidth:(double)contentWidth
+{
+	if (row.count == 1 && row.firstObject.isScaledDown) {
+		return MAX(0.0, (contentWidth - row.firstObject.size.width) / 2.0);
+	}
+
+	return 0.0;
+
+}//end shiftOfRow:contentWidth:
+
+
+//---------- bottomOfCell:atX:underCell:atX:bottom:metrics: ----------[static]--
+///
+/// @abstract	Where the bottom of a shelf's only cell goes when the shelf
+/// 			above also holds one: raised until something it draws comes as
+/// 			near the cell above as two parts on a shelf may.
+///
+/// @discussion	Two such shelves stack like a column, so the lower part can
+/// 			move up into the empty corners of the upper one, as LPub3D lets
+/// 			a part down into the one below it in a column. It never goes
+/// 			above the top of the shelf above, nor below where the shelf gap
+/// 			alone would put it.
+///
+//------------------------------------------------------------------------------
++ (double) bottomOfCell:(LDrawStepPartListPlacedCell *)lower
+					atX:(double)lowerX
+			  underCell:(LDrawStepPartListPlacedCell *)upper
+					atX:(double)upperX
+				 bottom:(double)upperBottom
+				metrics:(LDrawStepPartListMetrics)metrics
+{
+	BOOL	upperInStrip	= upper.countIsInStrip;
+	BOOL	lowerInStrip	= lower.countIsInStrip;
+	double	upperHeight		= [self heightOfCell:upper labelIsInStrip:upperInStrip metrics:metrics];
+	double	lowerHeight		= [self heightOfCell:lower labelIsInStrip:lowerInStrip metrics:metrics];
+
+	// Kept only for cells that start at the same place, as every packing but
+	// a cell drawn smaller has them.
+	NSNumber	*key		= @(upper.order);
+	NSNumber	*remembered	= (lowerX == upperX) ? lower.drops[key] : nil;
+	double		 drop		= remembered.doubleValue;
+
+	if (remembered == nil) {
+		LDrawStepPartListCellShapes	*fixed	= [self shapesOfPlacedCell:upper
+														labelIsInStrip:upperInStrip
+															   metrics:metrics];
+		LDrawStepPartListCellShapes	*moving	= [self shapesOfPlacedCell:lower
+														labelIsInStrip:lowerInStrip
+															   metrics:metrics];
+
+		// The labels of the two stay on lines of their own, a shelf gap apart,
+		// so a badge below does not read as part of the count above it.
+		double lines = [self bottomOfLabels:fixed] + metrics.rowGap - [self topOfLabels:moving];
+
+		drop = [self distanceToClearShapes:fixed
+								withShapes:moving
+								   movedBy:V2Make(lowerX - upperX, 0.0)
+								  downward:YES
+								   metrics:metrics];
+		drop = MAX(drop, lines);
+
+		if (lowerX == upperX) {
+			lower.drops[key] = @(drop);
+		}
+	}
+
+	double highest	= upperBottom - upperHeight + lowerHeight;
+	double lowest	= upperBottom + metrics.rowGap + lowerHeight;
+
+	return MIN(lowest, MAX(highest, upperBottom + drop));
+
+}//end bottomOfCell:atX:underCell:atX:bottom:metrics:
+
+
+//---------- topOfLabels: --------------------------------------------[static]--
+///
+/// @abstract	The top of a cell's highest label, measured from the cell's
+/// 			bottom. Its bottom when it has no label.
+///
+//------------------------------------------------------------------------------
++ (double) topOfLabels:(LDrawStepPartListCellShapes *)shapes
+{
+	double top = 0.0;
+
+	if (BoxIsEmpty(shapes.countBox) == NO) {
+		top = MIN(top, shapes.countBox.origin.y);
+	}
+	if (BoxIsEmpty(shapes.badgeBox) == NO) {
+		top = MIN(top, shapes.badgeBox.origin.y);
+	}
+
+	return top;
+
+}//end topOfLabels:
+
+
+//---------- bottomOfLabels: -----------------------------------------[static]--
+///
+/// @abstract	The bottom of a cell's lowest label, measured from the cell's
+/// 			bottom. Far above the cell when it has no label.
+///
+//------------------------------------------------------------------------------
++ (double) bottomOfLabels:(LDrawStepPartListCellShapes *)shapes
+{
+	double bottom = -DBL_MAX;
+
+	if (BoxIsEmpty(shapes.countBox) == NO) {
+		bottom = MAX(bottom, V2BoxMaxY(shapes.countBox));
+	}
+	if (BoxIsEmpty(shapes.badgeBox) == NO) {
+		bottom = MAX(bottom, V2BoxMaxY(shapes.badgeBox));
+	}
+
+	return bottom;
+
+}//end bottomOfLabels:
+
+
+//---------- heightOfCell:labelIsInStrip:metrics: --------------------[static]--
+///
+/// @abstract	How tall a cell stands on its shelf: its size, plus the count
+/// 			strip when the shelf keeps one.
+///
+//------------------------------------------------------------------------------
++ (double) heightOfCell:(LDrawStepPartListPlacedCell *)placed
+		 labelIsInStrip:(BOOL)labelIsInStrip
+				metrics:(LDrawStepPartListMetrics)metrics
+{
+	return placed.size.height + (labelIsInStrip ? metrics.labelHeight : 0.0);
+
+}//end heightOfCell:labelIsInStrip:metrics:
+
+
+//---------- roomOriginOfCell:labelIsInStrip:metrics: ----------------[static]--
+///
+/// @abstract	Where the icon's padded box starts, measured from the cell's
+/// 			bottom-left corner: centered across the cell, as when it is
+/// 			placed, and below any badge strip.
+///
+//------------------------------------------------------------------------------
++ (Point2) roomOriginOfCell:(LDrawStepPartListPlacedCell *)placed
+			 labelIsInStrip:(BOOL)labelIsInStrip
+					metrics:(LDrawStepPartListMetrics)metrics
+{
+	Box2	room		= [self roomOfPlacedCell:placed metrics:metrics];
+	double	cellHeight	= [self heightOfCell:placed labelIsInStrip:labelIsInStrip metrics:metrics];
+	double	badgeStrip	= [self badgeStripHeightOfCell:placed metrics:metrics];
+
+	return V2Make(MAX(0.0, placed.size.width - room.size.width) / 2.0, badgeStrip - cellHeight);
+
+}//end roomOriginOfCell:labelIsInStrip:metrics:
+
+
+//---------- countBoxOfCell:labelIsInStrip:metrics: ------------------[static]--
+///
+/// @abstract	Where the count goes, measured from the cell's bottom-left
+/// 			corner: in the strip or beside the part.
+///
+//------------------------------------------------------------------------------
++ (Box2) countBoxOfCell:(LDrawStepPartListPlacedCell *)placed
+		 labelIsInStrip:(BOOL)labelIsInStrip
+				metrics:(LDrawStepPartListMetrics)metrics
+{
+	if (placed.cell.showsCount == NO) {
+		return ZeroBox2;
+	}
+
+	if (labelIsInStrip) {
+		double cellHeight = [self heightOfCell:placed labelIsInStrip:YES metrics:metrics];
+
+		return OffsetBox([self stripLabelBoxOfCell:placed metrics:metrics], V2Make(0.0, -cellHeight));
+	}
+
+	return OffsetBox(placed.labelBox, [self roomOriginOfCell:placed labelIsInStrip:NO metrics:metrics]);
+
+}//end countBoxOfCell:labelIsInStrip:metrics:
+
+
+//---------- badgeBoxOfCell:labelIsInStrip:metrics: ------------------[static]--
+///
+/// @abstract	Where the badge goes, measured from the cell's bottom-left
+/// 			corner, or an empty box when there is none.
+///
+/// @discussion	On a strip shelf the count is below the icon, so the badge has
+/// 			nothing of its own to avoid.
+///
+//------------------------------------------------------------------------------
++ (Box2) badgeBoxOfCell:(LDrawStepPartListPlacedCell *)placed
+		 labelIsInStrip:(BOOL)labelIsInStrip
+				metrics:(LDrawStepPartListMetrics)metrics
+{
+	if (placed.showsAnnotation == NO) {
+		return ZeroBox2;
+	}
+
+	Box2 badge = [self badgeBoxOfCell:placed
+							 avoiding:(labelIsInStrip ? ZeroBox2 : placed.labelBox)
+							  metrics:metrics];
+
+	return OffsetBox(badge, [self roomOriginOfCell:placed labelIsInStrip:labelIsInStrip metrics:metrics]);
+
+}//end badgeBoxOfCell:labelIsInStrip:metrics:
+
+
+//---------- countBoxOfCell:onLine:metrics: --------------------------[static]--
+///
+/// @abstract	Where a count beside its part goes when the shelf's counts sit
+/// 			on a line `line` points below the shelf's bottom line, measured
+/// 			from the cell's bottom-left corner.
+///
+/// @discussion	Next to the part on that line as on the bottom line, on the side
+/// 			with more room. A line below the part, or one with no room next
+/// 			to it, puts the count under the part as in a strip, and never
+/// 			higher than `decorationGap` below the part, so it can reach past
+/// 			the line.
+///
+//------------------------------------------------------------------------------
++ (Box2) countBoxOfCell:(LDrawStepPartListPlacedCell *)placed
+				 onLine:(double)line
+				metrics:(LDrawStepPartListMetrics)metrics
+{
+	Size2			 size		= placed.cell.labelSize;
+	Point2			 roomOrigin	= [self roomOriginOfCell:placed labelIsInStrip:NO metrics:metrics];
+	double			 y			= line - size.height - roomOrigin.y;
+	const Point2	*corners	= placed.roomOutline.bytes;
+	NSUInteger		 count		= placed.roomOutline.length / sizeof(Point2);
+	double			 gap		= metrics.decorationGap;
+	Box2			 box		= ZeroBox2;
+
+	// With nothing of the part on the line, the box would go to a corner of the
+	// icon's box rather than next to the part.
+	BOOL touchesPart = PolygonSpanInBand(corners, count, y - gap, y + size.height + gap, NULL, NULL);
+
+	if (touchesPart && [self getBox:&box
+						 besidePart:placed
+							 ofSize:size
+						   onLineAt:y
+						   avoiding:ZeroBox2
+					   prefersRight:NO
+							metrics:metrics]) {
+		return OffsetBox(box, roomOrigin);
+	}
+
+	double partBottom = -DBL_MAX;
+
+	for (NSUInteger index = 0; index < count; index++) {
+		partBottom = MAX(partBottom, corners[index].y + roomOrigin.y);
+	}
+
+	Box2	strip	= [self stripLabelBoxOfCell:placed metrics:metrics];
+	double	top		= MAX(line - size.height, partBottom + gap);
+
+	return V2MakeBox(strip.origin.x, top, size.width, size.height);
+
+}//end countBoxOfCell:onLine:metrics:
+
+
+//---------- labelsOfRow:offsets:metrics: ----------------------------[static]--
+///
+/// @abstract	The cells and counts of a shelf, each count moved along the
+/// 			bottom of its own part when it came nearer another part than
+/// 			LABEL_CLEARANCE_GAPS gaps.
+///
+/// @discussion	A count beside its part can be slid into the corner of a
+/// 			neighbor and read as its label. It moves down below the shelf's
+/// 			line by at most a count's height, and the shelf grows by that.
+/// 			Counts in a strip stay put. Kept on the shelf's first cell,
+/// 			because a search measures the same shelves at many widths.
+///
+//------------------------------------------------------------------------------
++ (LDrawStepPartListShelfLabels *) labelsOfRow:(LDrawStepPartListRow *)row
+									   offsets:(NSArray<NSNumber *> *)offsets
+									   metrics:(LDrawStepPartListMetrics)metrics
+{
+	NSUInteger						 count	= row.count;
+	NSNumber						*key	= @(count);
+	LDrawStepPartListShelfLabels	*labels	= row.firstObject.shelfLabels[key];
+
+	if (labels != nil) {
+		return labels;
+	}
+
+	BOOL			 labelIsInStrip	= [self rowKeepsLabelStrip:row];
+	NSMutableData	*cells			= [NSMutableData dataWithLength:count * sizeof(Box2)];
+	NSMutableData	*counts			= [NSMutableData dataWithLength:count * sizeof(Box2)];
+
+	NSMutableArray<LDrawStepPartListCellShapes *> *shapes = [NSMutableArray arrayWithCapacity:count];
+
+	for (NSUInteger index = 0; index < count; index++) {
+		LDrawStepPartListPlacedCell	*placed		= row[index];
+		double						 x			= offsets[index].doubleValue;
+		double						 height		= [self heightOfCell:placed
+													  labelIsInStrip:labelIsInStrip
+															 metrics:metrics];
+		LDrawStepPartListCellShapes	*cellShapes	= [self shapesOfPlacedCell:placed
+															labelIsInStrip:labelIsInStrip
+																   metrics:metrics];
+
+		((Box2 *)cells.mutableBytes)[index]		= V2MakeBox(x, -height, placed.size.width, height);
+		((Box2 *)counts.mutableBytes)[index]	= OffsetBox(cellShapes.countBox, V2Make(x, 0.0));
+		[shapes addObject:cellShapes];
+	}
+
+	labels			= [LDrawStepPartListShelfLabels new];
+	labels.cells	= cells;
+	labels.shapes	= shapes;
+	labels.counts	= counts;
+
+	if (count > 1 && labelIsInStrip == NO) {
+		NSMutableData			*badges	= [NSMutableData dataWithLength:count * sizeof(Box2)];
+		LDrawStepPartListShelf	 shelf	= ShelfOfLabels(labels, counts.mutableBytes, badges.mutableBytes, metrics);
+
+		for (NSUInteger index = 0; index < count; index++) {
+			LabelKeptClear(&shelf.counts[index], index, NO, &shelf, -DBL_MAX, metrics.labelHeight, NO);
+		}
+
+		// The counts of a shelf are read as one line, so when one sank below the
+		// shelf's line, the others go down to it too, each next to its own part.
+		// If one finds no clear place on that line, every count keeps the place
+		// it had.
+		double depth = DepthOfBoxes(shelf.counts, count);
+
+		if (depth > FIT_EPSILON) {
+			NSData	*before	= [NSData dataWithBytes:shelf.counts length:count * sizeof(Box2)];
+			double	 line	= depth;
+			BOOL	 clear	= YES;
+
+			for (NSUInteger index = 0; index < count; index++) {
+				Box2 sunk = shelf.counts[index];
+
+				if (V2BoxMaxY(sunk) > FIT_EPSILON) {
+					sunk.origin.y = depth - sunk.size.height;
+				}
+				else {
+					sunk = OffsetBox([self countBoxOfCell:row[index] onLine:depth metrics:metrics],
+									 V2Make(shelf.cells[index].origin.x, 0.0));
+				}
+				shelf.counts[index] = sunk;
+				line = MAX(line, V2BoxMaxY(sunk));
+			}
+
+			// A count put under its part can reach past the line; the others follow.
+			for (NSUInteger index = 0; index < count; index++) {
+				shelf.counts[index].origin.y = line - shelf.counts[index].size.height;
+			}
+
+			for (NSUInteger index = 0; index < count && clear; index++) {
+				clear = LabelKeptClear(&shelf.counts[index], index, NO, &shelf, -DBL_MAX, DBL_MAX, YES);
+			}
+
+			if (clear == NO) {
+				memcpy(shelf.counts, before.bytes, before.length);
+			}
+		}
+	}
+
+	labels.depth = DepthOfBoxes(counts.bytes, count);
+	row.firstObject.shelfLabels[key] = labels;
+
+	return labels;
+
+}//end labelsOfRow:offsets:metrics:
+
+
+//---------- badgesOfRow:labels:metrics: -----------------------------[static]--
+///
+/// @abstract	The badges of a shelf with these cells and counts, as `Box2`s,
+/// 			each moved along the top of its own part when it came nearer
+/// 			another part than LABEL_CLEARANCE_GAPS gaps.
+///
+/// @discussion	A badge on the top line of its box can be slid into the corner
+/// 			of a neighbor and read as its label. It moves up into the room a
+/// 			shorter cell leaves above it on the shelf, so it never changes
+/// 			the shelf's size. Badges in a strip stay put.
+///
+//------------------------------------------------------------------------------
++ (NSData *) badgesOfRow:(LDrawStepPartListRow *)row
+				  labels:(LDrawStepPartListShelfLabels *)labels
+				 metrics:(LDrawStepPartListMetrics)metrics
+{
+	NSUInteger				 count		= row.count;
+	NSMutableData			*counts		= [labels.counts mutableCopy];
+	NSMutableData			*badges		= [NSMutableData dataWithLength:count * sizeof(Box2)];
+	LDrawStepPartListShelf	 shelf		= ShelfOfLabels(labels, counts.mutableBytes, badges.mutableBytes, metrics);
+	double					 rowHeight	= [self heightOfRow:row metrics:metrics];
+
+	for (NSUInteger index = 0; count > 1 && index < count; index++) {
+		if (row[index].badgeIsInside) {
+			LabelKeptClear(&shelf.badges[index], index, YES, &shelf, -rowHeight, DBL_MAX, NO);
+		}
+	}
+
+	return badges;
+
+}//end badgesOfRow:labels:metrics:
+
+
+//---------- shapesOfPlacedCell:labelIsInStrip:metrics: --------------[static]--
+///
+/// @abstract	What a cell draws, as convex shapes: the part's outline, the
+/// 			count and the badge. Labels are grown by a padding, so labels of
+/// 			two cells that touch are two paddings apart.
+///
+/// @discussion	Measured from the cell's bottom-left corner, so cells standing
+/// 			on one shelf can be compared as they are.
+///
+//------------------------------------------------------------------------------
++ (LDrawStepPartListCellShapes *) shapesOfPlacedCell:(LDrawStepPartListPlacedCell *)placed
+									 labelIsInStrip:(BOOL)labelIsInStrip
+											metrics:(LDrawStepPartListMetrics)metrics
+{
+	LDrawStepPartListCellShapes *shapes = labelIsInStrip ? placed.stripShapes : placed.besideShapes;
+
+	if (shapes != nil) {
+		return shapes;
+	}
+
+	LDrawStepPartListCell		*cell		= placed.cell;
+	double						 grow		= metrics.cellPadding;
+	Point2						 roomOrigin	= [self roomOriginOfCell:placed
+													  labelIsInStrip:labelIsInStrip
+															 metrics:metrics];
+	NSData						*outline	= MovedPolygon(placed.roomOutline, roomOrigin, NO);
+	NSUInteger					 count		= outline.length / sizeof(Point2);
+	NSMutableArray<NSData *>	*labels		= [NSMutableArray array];
+	Box2						 label		= [self countBoxOfCell:placed
+													labelIsInStrip:labelIsInStrip
+														   metrics:metrics];
+	Box2						 badge		= [self badgeBoxOfCell:placed
+													labelIsInStrip:labelIsInStrip
+														   metrics:metrics];
+
+	if (BoxIsEmpty(label) == NO) {
+		[labels addObject:GrownBox(label, grow)];
+	}
+
+	if (BoxIsEmpty(badge) == NO) {
+		[labels addObject:GrownBox(badge, grow)];
+	}
+
+	shapes					= [LDrawStepPartListCellShapes new];
+	shapes.outline			= outline;
+	shapes.paddedOutline	= GrownPolygon(outline.bytes, count, grow);
+	shapes.labels			= labels;
+	shapes.countBox			= label;
+	shapes.badgeBox			= badge;
+	shapes.column			= MovedPolygon(outline, ZeroPoint2, YES);
+	shapes.partSize			= MIN(cell.iconLDU.width, cell.iconLDU.height) * placed.scale;
+	shapes.grownOutline		= GrownPolygon(outline.bytes, count, PartGap(shapes.partSize, shapes.partSize, grow));
+
+	double left		= DBL_MAX;
+	double right	= -DBL_MAX;
+
+	for (NSData *polygon in [labels arrayByAddingObject:shapes.paddedOutline]) {
+		const Point2 *corners = polygon.bytes;
+
+		for (NSUInteger index = 0; index < polygon.length / sizeof(Point2); index++) {
+			left	= MIN(left, corners[index].x);
+			right	= MAX(right, corners[index].x);
+		}
+	}
+
+	shapes.left		= left;
+	shapes.right	= right;
+
+	if (labelIsInStrip) {
+		placed.stripShapes = shapes;
+	}
+	else {
+		placed.besideShapes = shapes;
+	}
+
+	return shapes;
+
+}//end shapesOfPlacedCell:labelIsInStrip:metrics:
 
 
 // MARK: - MEASURING -
@@ -1531,6 +3229,11 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 													   metrics:(LDrawStepPartListMetrics)metrics
 {
 	NSMutableArray<LDrawStepPartListCell *> *cells = [NSMutableArray arrayWithCapacity:entries.count];
+
+	// A list of nothing but one submodel placed once needs no "1×": the
+	// picture alone says what to build.
+	LDrawStepPartListEntry	*only		= entries.firstObject;
+	BOOL					 hasCounts	= (entries.count != 1 || only.isSubmodel == NO || only.quantity > 1);
 
 	for (LDrawStepPartListEntry *entry in entries) {
 		LDrawStepPartListCell	*cell		= [LDrawStepPartListCell new];
@@ -1559,7 +3262,9 @@ typedef NSArray<LDrawStepPartListPlacedCell *> LDrawStepPartListRow;
 			cell.needsSizeBadge	= longSide > limit;
 		}
 
-		cell.labelSize			= [self labelSizeForQuantity:entry.quantity metrics:metrics];
+		cell.showsCount			= hasCounts;
+		cell.labelSize			= hasCounts ? [self labelSizeForQuantity:entry.quantity metrics:metrics]
+											: V2MakeSize(0.0, 0.0);
 		cell.annotationWidth	= [self annotationWidthForText:cell.studText metrics:metrics];
 
 		[cells addObject:cell];

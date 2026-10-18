@@ -66,6 +66,12 @@ static const Vector3 SHAPE_DIRECTIONS[SHAPE_DIRECTION_COUNT] = {
 	{ 1.0,  1.0,  1.0 }, { 1.0,  1.0, -1.0 }, { 1.0, -1.0,  1.0 }, { 1.0, -1.0, -1.0 },
 };
 
+/// How many directions a listed part's own outline is measured along, each
+/// also backwards. Spread evenly over a sphere and dense enough that the corners
+/// found are the corners of the part's hull, so a count kept off the outline
+/// does not touch the part.
+#define OUTLINE_DIRECTION_COUNT 128
+
 /// How deep a part's subparts are followed. Real parts are far shallower.
 static const NSUInteger MAXIMUM_SHAPE_DEPTH = 24;
 
@@ -78,16 +84,43 @@ static BOOL		StepPartList_pageFollowsHostShape	= NO;
 static LDrawPartListOrientations *StepPartList_partOrientations = nil;
 
 
-//========== NoteShapePoint() ==================================================
+//========== OutlineDirections() ===============================================
 ///
-/// @abstract	Keeps a point when it reaches further along one of the shape
-/// 			directions, or against it, than any point before.
+/// @abstract	OUTLINE_DIRECTION_COUNT directions spread evenly over a sphere,
+/// 			on a Fibonacci spiral.
 ///
 //==============================================================================
-static void NoteShapePoint(Point3 point, Point3 *furthest, double *reach)
+static const Vector3 *OutlineDirections(void)
 {
-	for (NSUInteger index = 0; index < SHAPE_DIRECTION_COUNT; index++) {
-		Vector3	direction	= SHAPE_DIRECTIONS[index];
+	static Vector3			directions[OUTLINE_DIRECTION_COUNT];
+	static dispatch_once_t	once;
+
+	dispatch_once(&once, ^{
+		double turn = M_PI * (3.0 - sqrt(5.0));
+
+		for (NSUInteger index = 0; index < OUTLINE_DIRECTION_COUNT; index++) {
+			double y		= 1.0 - (index + 0.5) * 2.0 / OUTLINE_DIRECTION_COUNT;
+			double radius	= sqrt(1.0 - y * y);
+
+			directions[index] = V3Make(radius * cos(turn * index), y, radius * sin(turn * index));
+		}
+	});
+
+	return directions;
+
+}//end OutlineDirections
+
+
+//========== NoteShapePoint() ==================================================
+///
+/// @abstract	Keeps a point when it reaches further along one of `directions`,
+/// 			or against it, than any point before.
+///
+//==============================================================================
+static void NoteShapePoint(Point3 point, const Vector3 *directions, NSUInteger count, Point3 *furthest, double *reach)
+{
+	for (NSUInteger index = 0; index < count; index++) {
+		Vector3	direction	= directions[index];
 		double	along		= point.x * direction.x + point.y * direction.y + point.z * direction.z;
 
 		if (along > reach[index * 2]) {
@@ -452,14 +485,23 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			entry = [entry entryWithColor:inheritedColor];
 		}
 
-		// Once per row, not once per instance: every instance of a submodel
-		// is the same submodel.
-		if (shouldMeasure && entry.isSubmodel && entriesByKey[entry.groupKey] == nil
-			&& [directive isKindOfClass:[LDrawPart class]]) {
-			LDrawModel *submodel = [self submodelForPart:(LDrawPart *)directive
-												 library:[LDrawPartLibrary sharedPartLibraryIfRegistered]];
+		// Measured once per row, not once per instance.
+		if (shouldMeasure && entriesByKey[entry.groupKey] == nil && [directive isKindOfClass:[LDrawPart class]]) {
+			LDrawPart			*part		= (LDrawPart *)directive;
+			LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
 
-			entry = [entry entryWithOutlinePoints:[self outlinePointsOfModel:submodel]];
+			if (entry.isSubmodel) {
+				LDrawModel *submodel = [self submodelForPart:part library:library];
+
+				entry = [entry entryWithOutlinePoints:[self outlinePointsOfModel:submodel]];
+			}
+			else if (entry.isMissing == NO) {
+				LDrawModel *piece = [library modelForName:[part referenceName]];
+
+				if (piece != nil) {
+					entry = [entry entryWithOutlinePoints:[self outlinePointsOfPiece:piece library:library]];
+				}
+			}
 		}
 
 		[self addEntry:entry toGroups:entriesByKey order:keyOrder];
@@ -1347,16 +1389,72 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 		shapes = [NSMapTable weakToStrongObjectsMapTable];
 	}
 
-	NSData *shape = [shapes objectForKey:piece];
+	return [self pointsOfPiece:piece
+					   library:library
+					directions:SHAPE_DIRECTIONS
+						 count:SHAPE_DIRECTION_COUNT
+						 cache:shapes];
 
-	if (shape != nil) {
-		return shape;
+}//end shapePointsOfPiece:library:
+
+
+//---------- outlinePointsOfPiece:library: ---------------------------[static]--
+///
+/// @abstract	The corners of a catalog part's hull, in the part's own
+/// 			coordinates, or nil for a part with nothing to draw.
+///
+/// @discussion	A part listed on its own is outlined by these rather than by its
+/// 			box: an inverted slope or a turbine leaves much of its box empty,
+/// 			and a count kept off the box sits far below the part. Measured
+/// 			along more directions than `shapePointsOfPiece:library:`, as the
+/// 			labels go right against this outline.
+///
+//------------------------------------------------------------------------------
++ (nullable NSData *) outlinePointsOfPiece:(LDrawModel *)piece library:(LDrawPartLibrary *)library
+{
+	static NSMapTable<LDrawModel *, NSData *> *outlines = nil;
+
+	if (outlines == nil) {
+		outlines = [NSMapTable weakToStrongObjectsMapTable];
 	}
 
-	Point3 furthest[SHAPE_DIRECTION_COUNT * 2];
-	double reach[SHAPE_DIRECTION_COUNT * 2];
+	NSData *points = [self pointsOfPiece:piece
+								 library:library
+							  directions:OutlineDirections()
+								   count:OUTLINE_DIRECTION_COUNT
+								   cache:outlines];
 
-	for (NSUInteger index = 0; index < SHAPE_DIRECTION_COUNT * 2; index++) {
+	return (points.length > 0) ? points : nil;
+
+}//end outlinePointsOfPiece:library:
+
+
+//---------- pointsOfPiece:library:directions:count:cache: -----------[static]--
+///
+/// @abstract	For each of `directions` and against it, the corner of a catalog
+/// 			part that reaches furthest, without repeats. Empty for a part with
+/// 			nothing to draw.
+///
+/// @discussion	Kept in `cache` for as long as the catalog keeps the part,
+/// 			because walking its geometry is slow.
+///
+//------------------------------------------------------------------------------
++ (NSData *) pointsOfPiece:(LDrawModel *)piece
+				   library:(LDrawPartLibrary *)library
+				directions:(const Vector3 *)directions
+					 count:(NSUInteger)count
+					 cache:(NSMapTable<LDrawModel *, NSData *> *)cache
+{
+	NSData *points = [cache objectForKey:piece];
+
+	if (points != nil) {
+		return points;
+	}
+
+	Point3	*furthest	= malloc(count * 2 * sizeof(Point3));
+	double	*reach		= malloc(count * 2 * sizeof(double));
+
+	for (NSUInteger index = 0; index < count * 2; index++) {
 		reach[index] = -INFINITY;
 	}
 
@@ -1364,29 +1462,46 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			 transform:IdentityMatrix4
 			   library:library
 				 depth:0
+			directions:directions
+				 count:count
 			  furthest:furthest
 				 reach:reach];
 
 	NSMutableData *found = [NSMutableData data];
 
-	for (NSUInteger index = 0; index < SHAPE_DIRECTION_COUNT * 2; index++) {
-		if (reach[index] > -INFINITY) {
+	for (NSUInteger index = 0; index < count * 2; index++) {
+		if (reach[index] == -INFINITY) {
+			continue;
+		}
+
+		// Neighboring directions often find the same corner.
+		const Point3	*kept		= found.bytes;
+		BOOL			 isRepeat	= NO;
+
+		for (NSUInteger other = 0; other < found.length / sizeof(Point3) && isRepeat == NO; other++) {
+			isRepeat = V3PointsWithinTolerance(kept[other], furthest[index]);
+		}
+
+		if (isRepeat == NO) {
 			[found appendBytes:&furthest[index] length:sizeof(Point3)];
 		}
 	}
 
-	[shapes setObject:found forKey:piece];
+	free(reach);
+	free(furthest);
+
+	[cache setObject:found forKey:piece];
 
 	return found;
 
-}//end shapePointsOfPiece:library:
+}//end pointsOfPiece:library:directions:count:cache:
 
 
-//---------- measureModel:transform:library:depth:furthest:reach: ----[static]--
+//---------- measureModel:transform:library:depth:directions:count:furthest:reach:
 ///
 /// @abstract	Walks a part's lines, triangles and quadrilaterals, and the
-/// 			subparts it places, keeping the corner furthest along each
-/// 			direction and against it.
+/// 			subparts it places, keeping the corner furthest along each of
+/// 			`directions` and against it.
 ///
 /// @discussion	`depth` stops a part file that places itself.
 ///
@@ -1395,6 +1510,8 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			transform:(Matrix4)transform
 			  library:(LDrawPartLibrary *)library
 				depth:(NSUInteger)depth
+		   directions:(const Vector3 *)directions
+				count:(NSUInteger)directionCount
 			 furthest:(Point3 *)furthest
 				reach:(double *)reach
 {
@@ -1417,6 +1534,8 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 							 transform:Matrix4Multiply([part transformationMatrix], transform)
 							   library:library
 								 depth:depth + 1
+							directions:directions
+								 count:directionCount
 							  furthest:furthest
 								 reach:reach];
 				}
@@ -1449,12 +1568,13 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			}
 
 			for (NSUInteger index = 0; index < count; index++) {
-				NoteShapePoint(V3MulPointByProjMatrix(corners[index], transform), furthest, reach);
+				NoteShapePoint(V3MulPointByProjMatrix(corners[index], transform),
+							   directions, directionCount, furthest, reach);
 			}
 		}
 	}
 
-}//end measureModel:transform:library:depth:furthest:reach:
+}//end measureModel:transform:library:depth:directions:count:furthest:reach:
 
 
 //---------- entryForLSynth: -----------------------------------------[static]--

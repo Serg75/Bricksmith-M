@@ -446,6 +446,10 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 
 		[self drawAnnotationForPlacement:placement chrome:chrome font:badgeFont inContext:context];
 
+		if (placement.showsCount == NO) {
+			continue;
+		}
+
 		// The file's font is not cut short, as LPub3D does not cut it.
 		NSString	*text	= [LDrawStepPartListLayout quantityTextForQuantity:placement.entry.quantity];
 		CGRect		 rect	= LDrawStepRectFromBox(placement.labelFrame);
@@ -790,11 +794,10 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		return;
 	}
 
-	// One of something needs no count, as in LPub3D.
 	LDrawStepFont font = LDrawStepFontCreateSystem(chrome.labelPointSize, LDrawStepFontWeightBold);
 
 	for (LDrawStepPartListPlacement *placement in layout.placements) {
-		if (placement.entry.quantity < 2) {
+		if ([picture drawsCountOfPlacement:placement] == NO) {
 			continue;
 		}
 

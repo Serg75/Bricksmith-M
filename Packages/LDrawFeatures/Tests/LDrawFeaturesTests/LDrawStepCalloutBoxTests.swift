@@ -331,7 +331,9 @@ extension StepPartListStaticSettings {
         }
 
         /// One callout of two submodels, which a summary packs as a small list.
-        private func twoSubmodels() -> (file: LDrawFile, model: LDrawModel, callouts: [LDrawStepCallout]) {
+        /// The first is placed `firstCount` times.
+        private func twoSubmodels(firstCount: Int = 1)
+            -> (file: LDrawFile, model: LDrawModel, callouts: [LDrawStepCallout]) {
             let file = LDrawFile()
             let main = LDrawMPDModel.model() as! LDrawMPDModel
             main.setModelName("main.ldr")
@@ -346,7 +348,8 @@ extension StepPartListStaticSettings {
 
             let begin: LPubCallout = lpub("CALLOUT BEGIN")
             let end: LPubCallout = lpub("CALLOUT END")
-            let step = addStep(to: main, [begin, part("first.ldr"), part("second.ldr"), end])
+            let firsts: [LDrawDirective] = (0..<firstCount).map { _ in part("first.ldr") }
+            let step = addStep(to: main, [begin] + firsts + [part("second.ldr"), end])
 
             return (file, main, LDrawStepCallout.callouts(forStep: step))
         }
@@ -371,6 +374,31 @@ extension StepPartListStaticSettings {
 
                 #expect((box.submodel(at: point) as? LDrawMPDModel)?.modelName() == placement.entry.partName)
             }
+        }
+
+        @Test("A finished submodel gets a count only when it is placed twice or more")
+        func finishedPicturesCountOnlyRepeats() throws {
+            let box = try #require(boxes(twoSubmodels(firstCount: 2)).first)
+            let picture = try #require(box.pictures.first { !$0.isPartsList })
+            let placements = try #require(picture.layout?.placements)
+            let twice = try #require(placements.first { $0.entry.partName == "first.ldr" })
+            let once = try #require(placements.first { $0.entry.partName == "second.ldr" })
+
+            #expect(twice.entry.quantity == 2)
+            #expect(picture.drawsCount(of: twice))
+            #expect(!picture.drawsCount(of: once))
+        }
+
+        @Test("A point on a drawn count gives the submodel it counts")
+        func drawnCountKnowsItsSubmodel() throws {
+            let box = try #require(boxes(twoSubmodels(firstCount: 2)).first)
+            let picture = try #require(box.pictures.first { !$0.isPartsList })
+            let twice = try #require(picture.layout?.placements.first { $0.entry.partName == "first.ldr" })
+            var point = middle(twice.labelFrame)
+            point.x += picture.rect.origin.x
+            point.y += picture.rect.origin.y
+
+            #expect((box.submodel(at: point) as? LDrawMPDModel)?.modelName() == "first.ldr")
         }
 
         @Test("On the page, a point on a step gives the submodel the step is of")

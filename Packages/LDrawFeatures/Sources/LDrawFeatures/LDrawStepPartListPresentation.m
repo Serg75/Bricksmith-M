@@ -852,20 +852,13 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 ///
 /// @abstract	The row of the list whose cell is under a point of the view.
 ///
-/// @discussion	Cells are measured from the corner of the icon area.
+/// @discussion	Cells are measured from the corner of the icon area. A point on
+/// 			a count or a badge picks its part, even outside the part's cell.
 ///
 //==============================================================================
 - (nullable LDrawStepPartListEntry *) entryAtPoint:(Point2)point
 {
-	Point2 inContent = V2Sub(point, self->_contentRect.origin);
-
-	for (LDrawStepPartListPlacement *placement in self->_layout.placements) {
-		if (V2BoxContains(placement.cellFrame, inContent)) {
-			return placement.entry;
-		}
-	}
-
-	return nil;
+	return [self->_layout placementAtPoint:V2Sub(point, self->_contentRect.origin)].entry;
 
 }//end entryAtPoint:
 

@@ -108,6 +108,27 @@ extension StepOverlayTests {
             #expect(box(around, holds: ink))
         }
 
+        @Test("A list of nothing but one submodel placed once draws no count")
+        func loneSubmodelHasNoCount() {
+            let submodel = LDrawStepPartListEntry(partName: "boom.ldr",
+                                                  displayTitle: "boom.ldr",
+                                                  color: nil,
+                                                  quantity: 1,
+                                                  modelBounds: Box3(min: Point3(x: 0, y: 0, z: 0),
+                                                                    max: Point3(x: 40, y: 24, z: 20)),
+                                                  isMissing: false,
+                                                  isSubmodel: true)
+            let canvas = Canvas(width: 400, height: 300)
+
+            LDrawStepOverlayRenderer.drawLabels(of: layout([submodel]),
+                                                chrome: LDrawStepPartListPolicy.defaultChrome(),
+                                                contentWidth: 400,
+                                                overflowFormat: "+%lu",
+                                                in: canvas.context)
+
+            #expect(canvas.inkBounds == nil)
+        }
+
         @Test("A part that is missing gets a box where its picture would be")
         func missingPart() throws {
             let packed = layout([entry("nosuch.dat", isMissing: true)])

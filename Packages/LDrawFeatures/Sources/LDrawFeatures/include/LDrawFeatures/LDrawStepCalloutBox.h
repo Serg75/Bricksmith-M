@@ -115,6 +115,9 @@ typedef struct LDrawStepCalloutArrow
 /// finished, where one of something needs no count.
 @property (nonatomic, readonly) BOOL		isPartsList;
 
+/// Whether the picture draws a count for this cell of its layout.
+- (BOOL) drawsCountOfPlacement:(LDrawStepPartListPlacement *)placement NS_SWIFT_NAME(drawsCount(of:));
+
 @end
 
 

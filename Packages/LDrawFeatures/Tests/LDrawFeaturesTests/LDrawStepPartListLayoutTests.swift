@@ -122,6 +122,10 @@ struct LDrawStepPartListLayoutTests {
         box.origin.y + box.size.height
     }
 
+    private func maxX(_ box: Box2) -> Double {
+        box.origin.x + box.size.width
+    }
+
     // MARK: - Degenerate input
 
     @Test("No entries is an empty layout, not a crash")
@@ -920,12 +924,8 @@ struct LDrawStepPartListLayoutTests {
         let result = angledLayout([entry("3460.dat", width: 20, height: 8, depth: 160)])
         let plate = try #require(result.placements.first)
 
-        // Every annotated cell reserves the badge's strip above the icon.
-        let annotationStrip = plate.annotationText != nil ? settings.annotationHeight : 0
-
         // No strip below the icon...
-        #expect(abs(plate.cellFrame.size.height
-                    - (plate.iconFrame.size.height + 2 * settings.cellPadding + annotationStrip)) < 0.001)
+        #expect(abs(maxY(plate.cellFrame) - (maxY(plate.iconFrame) + settings.cellPadding)) < 0.001)
 
         // ...because the multiplier is inside the icon's padded box, on its
         // bottom line.
@@ -934,45 +934,37 @@ struct LDrawStepPartListLayoutTests {
         #expect(abs(maxY(plate.labelFrame) - (maxY(plate.iconFrame) + settings.cellPadding)) < 0.001)
     }
 
-    /// A count starts in a bottom corner and slides toward the middle until it
-    /// is `decorationGap` from the part.
-    @Test("A count slides in until the part stops it")
-    func countsSlideInUntilThePartStopsThem() throws {
-        let gap = metrics().decorationGap
+    /// A count beside its part sits on the bottom line, `decorationGap` from
+    /// the part, on the side with more room on that line. LPub3D puts it
+    /// bottom-left, so the left wins a tie.
+    @Test("A count sits next to the part, on the roomier side of the bottom line")
+    func countsSitNextToThePart() throws {
+        let settings = metrics()
+        let gap = settings.decorationGap
 
-        // A 1x8 plate leaves the middle of the bottom line clear.
-        let thin = try #require(angledLayout([entry("3460.dat", width: 20, height: 8, depth: 160)]).placements.first)
-        let thinLabel = thin.labelFrame
+        for (name, width, depth) in [("3460.dat", 20.0, 160.0), ("6x8.dat", 120.0, 160.0),
+                                     ("8x6.dat", 160.0, 120.0), ("1x8.dat", 160.0, 20.0)] {
+            let placement = try #require(angledLayout([entry(name, width: width, height: 8, depth: depth)])
+                .placements.first)
+            let label = placement.labelFrame
+            let roomLeft = placement.iconFrame.origin.x - settings.cellPadding
+            let roomRight = maxX(placement.iconFrame) + settings.cellPadding
+            let span = try #require(hullSpanX(outline(of: placement),
+                                              fromY: label.origin.y - gap, toY: maxY(label) + gap))
+            let spaceLeft = span.lo - gap - roomLeft
+            let spaceRight = roomRight - (span.hi + gap)
 
-        #expect(thinLabel.size.width < thin.cellFrame.size.width)
-        #expect(abs(middleX(thinLabel) - middleX(thin.iconFrame)) < 0.01)
-        let thinSpan = try #require(hullSpanX(outline(of: thin), fromY: thinLabel.origin.y - gap, toY: maxY(thinLabel) + gap))
-        #expect(thinSpan.hi < thinLabel.origin.x - gap || thinSpan.lo > thinLabel.origin.x + thinLabel.size.width + gap)
+            // Beside the part, on the bottom line of the icon's box.
+            #expect(label.size.width < placement.cellFrame.size.width, "\(name)")
+            #expect(abs(maxY(label) - (maxY(placement.iconFrame) + settings.cellPadding)) < 0.001, "\(name)")
 
-        // A 6x8 plate is in the way, so its count stops on the right, a gap
-        // short of the part.
-        let wide = try #require(angledLayout([entry("6x8.dat", width: 120, height: 8, depth: 160)]).placements.first)
-        let wideLabel = wide.labelFrame
-        let span = try #require(hullSpanX(outline(of: wide), fromY: wideLabel.origin.y - gap, toY: maxY(wideLabel) + gap))
-
-        #expect(wideLabel.size.width < wide.cellFrame.size.width)
-        #expect(middleX(wideLabel) > middleX(wide.iconFrame) + 1)
-        #expect(abs(wideLabel.origin.x - (span.hi + gap)) < 0.25)
-
-        // Turned the other way, the plate leaves the left nearer the middle.
-        let turned = try #require(angledLayout([entry("8x6.dat", width: 160, height: 8, depth: 120)]).placements.first)
-        let turnedLabel = turned.labelFrame
-        let turnedSpan = try #require(hullSpanX(outline(of: turned), fromY: turnedLabel.origin.y - gap, toY: maxY(turnedLabel) + gap))
-
-        #expect(middleX(turnedLabel) < middleX(turned.iconFrame) - 1)
-        #expect(abs((turnedLabel.origin.x + turnedLabel.size.width) - (turnedSpan.lo - gap)) < 0.25)
-
-        // A turned 1x8 blocks the right corner, so its count comes in from the
-        // left.
-        let crossing = try #require(angledLayout([entry("1x8.dat", width: 160, height: 8, depth: 20)]).placements.first)
-
-        #expect(crossing.labelFrame.size.width < crossing.cellFrame.size.width)
-        #expect(abs(middleX(crossing.labelFrame) - middleX(crossing.iconFrame)) < 0.01)
+            if spaceRight > spaceLeft {
+                #expect(abs(label.origin.x - (span.hi + gap)) < 0.01, "\(name): right of the part")
+            }
+            else {
+                #expect(abs(maxX(label) - (span.lo - gap)) < 0.01, "\(name): left of the part")
+            }
+        }
     }
 
     /// Face-on, the ring's outline has 96 corners, and the count is still kept
@@ -990,37 +982,11 @@ struct LDrawStepPartListLayoutTests {
         #expect(!overlaps(placement.labelFrame, shape))
     }
 
-    /// The badge is centered across the cell and let down from its strip until
-    /// it is just clear of the part. A part drawn at an angle does not reach
-    /// the top of its box across the whole width, so a badge left on the
-    /// strip's line would hang over an empty corner.
-    @Test("A badge is centered over the cell and let down onto the part")
-    func badgesAreCenteredAndLetDown() throws {
-        let settings = metrics()
-        let result = angledLayout([entry("2x16.dat", width: 40, height: 8, depth: 320)])
-        let plate = try #require(result.placements.first)
-
-        #expect(plate.annotationText == "2×16")
-
-        // Centered across the cell.
-        #expect(abs(middleX(plate.annotationFrame) - middleX(plate.cellFrame)) < 0.001)
-
-        // Let down from the strip's own line, but never past the middle of
-        // the icon's box.
-        #expect(plate.annotationFrame.origin.y > plate.cellFrame.origin.y + 0.001)
-        #expect(plate.annotationFrame.origin.y
-                <= plate.iconFrame.origin.y - settings.cellPadding + plate.iconFrame.size.height / 2 + 0.001)
-
-        // The multiplier is beside the part, below the badge.
-        #expect(plate.labelFrame.size.width < plate.cellFrame.size.width)
-        #expect(plate.labelFrame.origin.y > plate.annotationFrame.origin.y)
-    }
-
     /// On a strip shelf the count is drawn below the icon, so the badge does
-    /// not stop where the count would have sat beside the part. A count only
-    /// reaches the badge's path when it is tall and narrow and the padding is
+    /// not keep clear of where the count would have sat beside the part. A
+    /// count only reaches the badge's line when it is tall and the padding is
     /// wide, so these metrics are unusual.
-    @Test("A badge is not held up by a count drawn in the strip")
+    @Test("A badge does not make room for a count drawn in the strip")
     func badgesIgnoreACountInTheStrip() throws {
         var settings = metrics()
         settings.baseScale = 0.25
@@ -1038,22 +1004,25 @@ struct LDrawStepPartListLayoutTests {
         func plateIn(_ packed: LDrawStepPartListLayout) throws -> LDrawStepPartListPlacement {
             try #require(packed.placements.first { $0.entry.partName == "3460.dat" })
         }
-        func badgeDrop(_ placement: LDrawStepPartListPlacement) -> Double {
-            placement.annotationFrame.origin.y - placement.iconFrame.origin.y
+        func badgeOffset(_ placement: LDrawStepPartListPlacement) -> Point2 {
+            offset(placement.annotationFrame, from: placement.iconFrame)
+        }
+        func distance(_ a: Point2, _ b: Point2) -> Double {
+            hypot(a.x - b.x, a.y - b.y)
         }
 
-        // Alone, the count sits beside the plate and holds the badge up.
+        // Alone, the count sits beside the plate and the badge keeps clear of it.
         let beside = try plateIn(angledLayout([plate], pinned, settings))
         // A count too wide to sit beside the plate leaves the badge free.
         let unheld = try plateIn(angledLayout([plate], pinned, wideCount))
         // A tiny part has no room for its count, so the shelf keeps a strip.
         let onShelf = try plateIn(angledLayout([plate, entry("tiny.dat", width: 2, height: 2, depth: 2)], pinned, settings))
 
-        #expect(beside.labelFrame.size.width < beside.cellFrame.size.width)
-        #expect(badgeDrop(beside) < badgeDrop(unheld) - 1)
+        #expect(beside.labelFrame.origin.y < maxY(beside.iconFrame))
+        #expect(distance(badgeOffset(beside), badgeOffset(unheld)) > 1)
 
-        #expect(abs(onShelf.labelFrame.size.width - onShelf.cellFrame.size.width) < 0.001)
-        #expect(abs(badgeDrop(onShelf) - badgeDrop(unheld)) < 0.001)
+        #expect(onShelf.labelFrame.origin.y >= maxY(onShelf.iconFrame) + settings.cellPadding - 0.001)
+        #expect(distance(badgeOffset(onShelf), badgeOffset(unheld)) < 0.001)
     }
 
     /// A 1x1 brick fills its box at any angle, so no corner has room for the
@@ -1064,11 +1033,17 @@ struct LDrawStepPartListLayoutTests {
         let result = angledLayout([entry("3005.dat", width: 20, height: 24, depth: 20)])
         let brick = try #require(result.placements.first)
 
+        let lowest = try #require(outline(of: brick).max { $0.y < $1.y })
+
         #expect(abs(brick.cellFrame.size.height
                     - (brick.iconFrame.size.height + 2 * settings.cellPadding + settings.labelHeight)) < 0.001)
-        #expect(abs(brick.labelFrame.size.width - brick.cellFrame.size.width) < 0.001)
         #expect(abs((brick.labelFrame.origin.y + brick.labelFrame.size.height)
                     - (brick.cellFrame.origin.y + brick.cellFrame.size.height)) < 0.001)
+
+        // Under the brick's lowest corner, and inside the cell.
+        #expect(abs(middleX(brick.labelFrame) - lowest.x) < 0.01)
+        #expect(brick.labelFrame.origin.x >= brick.cellFrame.origin.x - 0.001)
+        #expect(maxX(brick.labelFrame) <= maxX(brick.cellFrame) + 0.001)
     }
 
     @Test("No label overlaps its part or the other label")
@@ -1092,6 +1067,594 @@ struct LDrawStepPartListLayoutTests {
             #expect(!overlaps(placement.labelFrame, shape), "\(name): multiplier on the part")
             #expect(!overlaps(placement.annotationFrame, shape), "\(name): annotation on the part")
             #expect(!intersects(placement.labelFrame, placement.annotationFrame), "\(name): labels collide")
+        }
+    }
+
+    // MARK: - Sliding into empty corners
+
+    /// LPub3D's own parts list angle. A part long in X runs up to the right
+    /// across its cell, and leaves the bottom-right corner empty.
+    private var partListView: Matrix4 {
+        LDrawStepPartListLayout.viewTransform(latitude: 23, longitude: -45)
+    }
+
+    private func slantedLayout(_ entries: [LDrawStepPartListEntry],
+                               _ constraint: LDrawStepPartListConstraint,
+                               _ metrics: LDrawStepPartListMetrics? = nil) -> LDrawStepPartListLayout {
+        LDrawStepPartListLayout.layout(forEntries: entries,
+                                       constraint: constraint,
+                                       viewTransform: partListView,
+                                       metrics: metrics ?? self.metrics())
+    }
+
+    /// Metrics like those of a printed page: icons half again as big, and
+    /// labels in a 30 point font, nearly twice the default.
+    private var pageMetrics: LDrawStepPartListMetrics {
+        var page = metrics()
+        let ratio = 1.522
+        page.baseScale = ratio
+        page.cellPadding *= ratio
+        page.decorationGap *= ratio
+        page.rowGap *= ratio
+        page.framePadding *= ratio
+        page.labelHeight = 24.4
+        page.annotationHeight = 28.9
+        page.labelCharacterWidth = 9.65
+        page.annotationCharacterWidth = 9.6
+        return page
+    }
+
+    private func slantedOutline(of placement: LDrawStepPartListPlacement) -> [Point] {
+        outline(of: placement, points: corners(of: placement.entry.modelBounds), view: partListView)
+    }
+
+    /// Five plates, four of them long: a 6x12, a 2x12, a 1x12, a 2x10 and a
+    /// 2x2.
+    private var longPlates: [LDrawStepPartListEntry] {
+        [entry("3028.dat", width: 240, height: 8, depth: 120),
+         entry("2445.dat", width: 240, height: 8, depth: 40),
+         entry("60479.dat", width: 240, height: 8, depth: 20),
+         entry("3832.dat", width: 200, height: 8, depth: 40),
+         entry("3022.dat", width: 40, height: 8, depth: 40, quantity: 2)]
+    }
+
+    /// A gear rack, a 2x4 plate and a 1x4 plate.
+    private var rackShelf: [LDrawStepPartListEntry] {
+        [entry("6630.dat", width: 160, height: 24, depth: 20),
+         entry("3020.dat", width: 80, height: 12, depth: 40),
+         entry("3710.dat", width: 80, height: 12, depth: 20, quantity: 2)]
+    }
+
+    /// Corners of a box, in turn.
+    private func corners(of box: Box2) -> [Point] {
+        let right = box.origin.x + box.size.width
+        let bottom = box.origin.y + box.size.height
+        return [(box.origin.x, box.origin.y), (right, box.origin.y), (right, bottom), (box.origin.x, bottom)]
+    }
+
+    /// A convex shape grown by `amount` on every side and moved `dx` to the
+    /// right and `dy` down.
+    private func grown(_ shape: [Point], by amount: Double, dx: Double = 0, dy: Double = 0) -> [Point] {
+        var moved: [Point] = []
+        for point in shape {
+            let x = point.x + dx, y = point.y + dy
+            moved += [(x - amount, y - amount), (x + amount, y - amount),
+                      (x + amount, y + amount), (x - amount, y + amount)]
+        }
+        return convexHull(moved)
+    }
+
+    /// Whether two convex polygons share any area, by looking for a line
+    /// between them along the sides of both.
+    private func hullsOverlap(_ a: [Point], _ b: [Point]) -> Bool {
+        for shape in [a, b] {
+            for index in 0..<shape.count {
+                let p = shape[index], q = shape[(index + 1) % shape.count]
+                let normal = (x: q.y - p.y, y: p.x - q.x)
+                let along = { (point: Point) in point.x * normal.x + point.y * normal.y }
+                let aSpan = a.map(along), bSpan = b.map(along)
+
+                if aSpan.max()! <= bSpan.min()! + 1e-9 || bSpan.max()! <= aSpan.min()! + 1e-9 {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    /// The gap the packer keeps between two parts: a fifth of the smaller
+    /// one's shorter side, and at least two paddings.
+    private func partGap(_ a: LDrawStepPartListPlacement, _ b: LDrawStepPartListPlacement,
+                         _ metrics: LDrawStepPartListMetrics? = nil) -> Double {
+        let size = { (placement: LDrawStepPartListPlacement) in
+            min(placement.iconFrame.size.width, placement.iconFrame.size.height)
+        }
+        return max(2 * (metrics ?? self.metrics()).cellPadding, 0.2 * min(size(a), size(b)))
+    }
+
+    /// Whether `b`, moved `dx` to the right and `dy` down, comes nearer `a`
+    /// than the packer allows, less `slack`: the parts by their gap, and the
+    /// labels by two paddings from everything.
+    private func crowds(_ a: LDrawStepPartListPlacement, _ b: LDrawStepPartListPlacement,
+                        dx: Double = 0, dy: Double = 0, slack: Double = 0) -> Bool {
+        let half = metrics().cellPadding - slack / 2
+        let labels = { (placement: LDrawStepPartListPlacement) -> [[Point]] in
+            var found = [self.corners(of: placement.labelFrame)]
+            if placement.annotationText != nil {
+                found.append(self.corners(of: placement.annotationFrame))
+            }
+            return found
+        }
+        let partA = slantedOutline(of: a)
+        let partB = slantedOutline(of: b)
+
+        if hullsOverlap(partA, grown(partB, by: partGap(a, b) - slack, dx: dx, dy: dy)) {
+            return true
+        }
+
+        let shapesA = labels(a).map { grown($0, by: half) } + [grown(partA, by: half)]
+        let shapesB = labels(b).map { grown($0, by: half, dx: dx, dy: dy) }
+        let partBGrown = grown(partB, by: half, dx: dx, dy: dy)
+
+        return shapesA.contains { one in shapesB.contains { hullsOverlap(one, $0) } }
+            || labels(a).contains { hullsOverlap(grown($0, by: half), partBGrown) }
+    }
+
+    /// The 2x10 would sit beside the 1x12's box. Its left end fits in the
+    /// empty corner under the 1x12's right end, so it moves in until it comes
+    /// as near the 1x12 as the packer allows.
+    @Test("A long part slides into the empty corner of the one before it")
+    func longPartsSlideIntoEmptyCorners() throws {
+        let result = slantedLayout([entry("60479.dat", width: 240, height: 8, depth: 20),
+                                    entry("3832.dat", width: 200, height: 8, depth: 40)],
+                                   constraint(.width, inches: 6.0))
+
+        #expect(result.rowCount == 1)
+
+        let first = try #require(result.placements.first { $0.entry.partName == "60479.dat" })
+        let second = try #require(result.placements.first { $0.entry.partName == "3832.dat" })
+        #expect(second.cellFrame.origin.x < maxX(first.cellFrame) - 40)
+        #expect(abs(result.contentSize.width - maxX(second.cellFrame)) < 0.001)
+
+        // Clear, and one point further left it would not be.
+        #expect(!crowds(first, second, slack: 0.01))
+        #expect(crowds(first, second, dx: -1))
+    }
+
+    /// Two parts that touch along a line, two counts side by side, or a count
+    /// under the next part would all read wrong. Parts keep a gap that grows
+    /// with the smaller of them, labels two paddings.
+    @Test("Nothing slid together comes nearer its neighbor than the packer allows")
+    func slidCellsKeepTheirDistance() throws {
+        let entries = longPlates + [entry("32018.dat", width: 280, height: 24, depth: 20, quantity: 2),
+                                    entry("3005.dat", width: 20, height: 24, depth: 20, quantity: 12),
+                                    entry("3894.dat", width: 120, height: 24, depth: 20),
+                                    entry("3666.dat", width: 120, height: 8, depth: 20)]
+
+        for mode in [constraint(.area), constraint(.width, inches: 5.0), constraint(.width, inches: 9.0)] {
+            let result = slantedLayout(entries, mode)
+
+            for a in result.placements {
+                for b in result.placements where a !== b && a.rowIndex == b.rowIndex
+                                              && a.cellFrame.origin.x <= b.cellFrame.origin.x {
+                    #expect(!crowds(a, b, slack: 0.01), "\(a.entry.partName) / \(b.entry.partName)")
+                }
+            }
+        }
+    }
+
+    /// A 1x6 brick and a 1x6 plate are both big, so the plate stays well clear
+    /// of the brick, while a pin under a long brick may come as near as two
+    /// paddings.
+    @Test("Two big parts keep a wider gap than a small part under a big one")
+    func bigPartsKeepAWiderGap() throws {
+        let padding = metrics().cellPadding
+        let pair = slantedLayout([entry("3894.dat", width: 120, height: 24, depth: 20),
+                                  entry("3666.dat", width: 120, height: 8, depth: 20)],
+                                 constraint(.width, inches: 6.0))
+        let brick = try #require(pair.placements.first { $0.entry.partName == "3894.dat" })
+        let plate = try #require(pair.placements.first { $0.entry.partName == "3666.dat" })
+
+        #expect(partGap(brick, plate) > 2 * padding + 3)
+        let grownPlate = grown(slantedOutline(of: plate), by: partGap(brick, plate) - 0.01)
+        #expect(!hullsOverlap(slantedOutline(of: brick), grownPlate))
+
+        let small = slantedLayout([entry("3703.dat", width: 320, height: 24, depth: 20),
+                                   entry("2780.dat", width: 32, height: 16, depth: 16, quantity: 10)],
+                                  constraint(.width, inches: 6.0))
+        let long = try #require(small.placements.first { $0.entry.partName == "3703.dat" })
+        let pin = try #require(small.placements.first { $0.entry.partName == "2780.dat" })
+
+        #expect(abs(partGap(long, pin) - 2 * padding) < 0.001)
+    }
+
+    /// As LPub3D puts a part under the right side of the one before it. The
+    /// pin is the only part after the long brick, and it fits under its raised
+    /// right end.
+    @Test("A small last part lines up with the right edge of the part it sits under")
+    func aSmallLastPartLinesUpUnderTheBigOne() throws {
+        let result = slantedLayout([entry("3703.dat", width: 320, height: 24, depth: 20),
+                                    entry("2780.dat", width: 32, height: 16, depth: 16, quantity: 10)],
+                                   constraint(.width, inches: 9.0))
+        let brick = try #require(result.placements.first { $0.entry.partName == "3703.dat" })
+        let pin = try #require(result.placements.first { $0.entry.partName == "2780.dat" })
+
+        #expect(result.rowCount == 1)
+        #expect(abs(maxX(pin.cellFrame) - maxX(brick.cellFrame)) < 0.001)
+        #expect(abs(result.contentSize.width - maxX(brick.cellFrame)) < 0.001)
+        #expect(!crowds(brick, pin, slack: 0.01))
+    }
+
+    /// Only the parts after the one that ends the shelf line up. Here the
+    /// corner plate reaches past the long brick, so the 1x1 brick under the
+    /// long one stays where it slid.
+    @Test("A part under a big one stays put when a later part ends the shelf")
+    func aTuckedPartStaysWhenALaterOneEndsTheShelf() throws {
+        let result = slantedLayout([entry("2730.dat", width: 200, height: 24, depth: 20),
+                                    entry("3005.dat", width: 20, height: 24, depth: 20, quantity: 2),
+                                    entry("2420.dat", width: 40, height: 8, depth: 40, quantity: 2)],
+                                   constraint(.width, inches: 9.0))
+        let long = try #require(result.placements.first { $0.entry.partName == "2730.dat" })
+        let brick = try #require(result.placements.first { $0.entry.partName == "3005.dat" })
+        let plate = try #require(result.placements.first { $0.entry.partName == "2420.dat" })
+
+        #expect(result.rowCount == 1)
+        #expect(maxX(plate.cellFrame) > maxX(long.cellFrame))
+        #expect(abs(result.contentSize.width - maxX(plate.cellFrame)) < 0.001)
+        #expect(maxX(brick.cellFrame) < maxX(long.cellFrame) - 1)
+    }
+
+    /// A 1x2 plate over a 1x4 plate in one column. The 1x4 runs up to the
+    /// right, so its top-left corner is empty, and its shelf rises toward the
+    /// 1x2. The labels of the two stay on lines of their own,
+    /// a shelf gap apart.
+    @Test("One part under one part rises toward it")
+    func onePartUnderOnePartRises() throws {
+        let settings = metrics()
+        let result = slantedLayout([entry("3710.dat", width: 80, height: 8, depth: 20),
+                                    entry("3023.dat", width: 40, height: 8, depth: 20, quantity: 2)],
+                                   constraint(.columns, columns: 1))
+
+        #expect(result.rowCount == 2)
+
+        let upper = try #require(result.placements.first { $0.rowIndex == 0 })
+        let lower = try #require(result.placements.first { $0.rowIndex == 1 })
+
+        #expect(upper.entry.partName == "3023.dat")
+
+        // Closer than the shelf gap, never above the shelf above.
+        #expect(lower.cellFrame.origin.y < maxY(upper.cellFrame) + settings.rowGap - 1)
+        #expect(lower.cellFrame.origin.y >= upper.cellFrame.origin.y)
+
+        // Clear, with the labels on lines of their own.
+        let lowestAbove = max(maxY(upper.labelFrame), upper.annotationText != nil ? maxY(upper.annotationFrame) : 0)
+        let highestBelow = min(lower.labelFrame.origin.y,
+                               lower.annotationText != nil ? lower.annotationFrame.origin.y : .infinity)
+
+        #expect(!crowds(upper, lower, slack: 0.01))
+        #expect(highestBelow >= lowestAbove + settings.rowGap - 0.01)
+
+        // One point higher and something would come too near.
+        let tooHigh = crowds(upper, lower, dy: -1) || highestBelow - 1 < lowestAbove + settings.rowGap
+        #expect(tooHigh)
+
+        #expect(abs(result.contentSize.height - maxY(lower.cellFrame)) < 0.001)
+        #expect(abs(result.frameSize.height - (maxY(lower.cellFrame) + 2 * settings.framePadding)) < 0.001)
+    }
+
+    /// An inverted slope over a 2x5 part in one column. The slope is
+    /// outlined by its own corners, full on top and narrow at the bottom, and
+    /// its count sits under its low corner, beside where the 2x5's badge would
+    /// come. The two must not read as one label, so the labels stay a shelf gap
+    /// apart, one line above the other.
+    @Test("A badge below stays a shelf gap under the count above")
+    func aBadgeBelowStaysUnderTheCountAbove() throws {
+        let settings = metrics()
+        var corners: [Point3] = []
+        for x in [0.0, 40.0] {
+            for z in [0.0, 60.0] { corners.append(Point3(x: x, y: 0, z: z)) }
+            for z in [40.0, 60.0] { corners.append(Point3(x: x, y: 24, z: z)) }
+        }
+        let slope = entry("3747a.dat", width: 40, height: 24, depth: 60, quantity: 2).withOutlinePoints(points(corners))
+        let result = slantedLayout([slope, entry("6087.dat", width: 100, height: 24, depth: 40, quantity: 2)],
+                                   constraint(.columns, columns: 1))
+        let upper = try #require(result.placements.first { $0.rowIndex == 0 })
+        let lower = try #require(result.placements.first { $0.rowIndex == 1 })
+
+        #expect(upper.entry.partName == "3747a.dat")
+        #expect(lower.annotationText == "2×5")
+        #expect(lower.annotationFrame.origin.y >= maxY(upper.labelFrame) + settings.rowGap - 0.01)
+        #expect(!crowds(upper, lower, slack: 0.01))
+    }
+
+    /// Only a shelf of one part under a shelf of one part rises. Counts are
+    /// read across a shelf of several, so such a shelf keeps the shelf gap.
+    @Test("A shelf of several parts keeps the shelf gap")
+    func shelvesOfSeveralPartsKeepTheGap() throws {
+        let settings = metrics()
+        let entries = [entry("3710.dat", width: 80, height: 8, depth: 20),
+                       entry("3023.dat", width: 40, height: 8, depth: 20),
+                       entry("3024.dat", width: 20, height: 8, depth: 20)]
+        let result = slantedLayout(entries, constraint(.area))
+        let rows = Dictionary(grouping: result.placements, by: \.rowIndex).sorted { $0.key < $1.key }.map(\.value)
+
+        for (upper, lower) in zip(rows, rows.dropFirst()) where upper.count > 1 || lower.count > 1 {
+            let upperBottom = upper.map { maxY($0.cellFrame) }.max() ?? 0
+            let lowerTop = lower.map(\.cellFrame.origin.y).min() ?? 0
+
+            #expect(abs(lowerTop - (upperBottom + settings.rowGap)) < 0.001)
+        }
+    }
+
+    /// How far a box can grow on every side before it touches a convex
+    /// outline.
+    private func clearance(_ box: Box2, _ outline: [Point]) -> Double {
+        var low = 0.0, high = 400.0
+        for _ in 0..<40 {
+            let middle = (low + high) / 2
+            if hullsOverlap(grown(corners(of: box), by: middle), outline) { high = middle } else { low = middle }
+        }
+        return low
+    }
+
+    /// The same cell laid out on its own, where nothing moves its labels.
+    private func alone(_ placement: LDrawStepPartListPlacement, _ metrics: LDrawStepPartListMetrics) throws
+        -> LDrawStepPartListPlacement {
+        try #require(slantedLayout([placement.entry], constraint(.area), metrics).placements.first)
+    }
+
+    /// Where a frame sits from its icon's corner.
+    private func offset(_ box: Box2, from icon: Box2) -> Point2 {
+        Point2(x: box.origin.x - icon.origin.x, y: box.origin.y - icon.origin.y)
+    }
+
+    /// Four long plates on a page. Slid together, the badges of the 2x12, the
+    /// 1x12 and the 2x10 would stand right by the raised end of the plate
+    /// before each. Each moves up, into the room the 6x12 leaves above the
+    /// shorter plates, and along the top of its own plate, until it is twice
+    /// the plates' gap from the other one, and no further.
+    @Test("A badge moves along its part away from the part before it")
+    func badgesMoveAwayFromThePartBefore() throws {
+        let page = pageMetrics
+        let result = slantedLayout(Array(longPlates[0...3]), constraint(.width, inches: 9.0), page)
+        let shelfTop = result.placements.map(\.cellFrame.origin.y).min() ?? 0
+        let row = result.placements.sorted { $0.cellFrame.origin.x < $1.cellFrame.origin.x }
+
+        #expect(result.rowCount == 1)
+
+        for (before, placement) in zip(row, row.dropFirst()) {
+            let name = placement.entry.partName
+            let badge = placement.annotationFrame
+            let reach = 2 * partGap(before, placement, page)
+            let own = slantedOutline(of: placement)
+
+            #expect(clearance(badge, slantedOutline(of: before)) >= reach - 0.05, "\(name): far from the part before")
+            #expect(badge.origin.y >= shelfTop - 0.001, "\(name): inside the shelf")
+            #expect(!overlaps(badge, own), "\(name): off its own part")
+            let nearBadge = grown(corners(of: badge), by: page.decorationGap + 0.5)
+            #expect(hullsOverlap(nearBadge, own), "\(name): against its part")
+
+            // Moved, and a point back it would be too near.
+            let lone = try alone(placement, page)
+            let natural = offset(lone.annotationFrame, from: lone.iconFrame)
+            let here = offset(badge, from: placement.iconFrame)
+            #expect(here.x > natural.x + 1, "\(name): moved right")
+
+            let back = Box2(origin: Point2(x: badge.origin.x - 1, y: badge.origin.y), size: badge.size)
+            #expect(clearance(back, slantedOutline(of: before)) < reach, "\(name): no further than it must")
+        }
+    }
+
+    /// A gear rack, a 2x4 plate and a 1x4 plate slid in after it, on a page.
+    /// The 2x4's count, beside it on the bottom line, would sit between the 2x4
+    /// and the 1x4, so it moves down and along the 2x4's bottom toward its low
+    /// corner, and the shelf grows by as much. The other counts go down to its
+    /// line, each next to its own part.
+    @Test("A count moves along its part away from the part after it")
+    func countsMoveAwayFromThePartAfter() throws {
+        let page = pageMetrics
+        let result = slantedLayout(rackShelf, constraint(.width, inches: 9.0), page)
+
+        #expect(result.rowCount == 1)
+
+        let plate = try #require(result.placements.first { $0.entry.partName == "3020.dat" })
+        let after = try #require(result.placements.first { $0.entry.partName == "3710.dat" })
+        let count = plate.labelFrame
+        let reach = 2 * partGap(plate, after, page)
+
+        #expect(clearance(count, slantedOutline(of: after)) >= reach - 0.05)
+        #expect(!overlaps(count, slantedOutline(of: plate)))
+        #expect(maxY(count) > maxY(plate.cellFrame) + 0.5, "below the shelf's line")
+        #expect(maxY(count) <= maxY(plate.cellFrame) + page.labelHeight + 0.001)
+
+        let bottom = result.placements.map { max(maxY($0.cellFrame), maxY($0.labelFrame)) }.max() ?? 0
+        #expect(abs(result.contentSize.height - bottom) < 0.001)
+
+        for placement in result.placements {
+            let name = placement.entry.partName
+
+            #expect(abs(maxY(placement.labelFrame) - maxY(count)) < 0.001, "\(name): on the one line")
+            #expect(!overlaps(placement.labelFrame, slantedOutline(of: placement)), "\(name): off its part")
+        }
+    }
+
+    /// A badge that rose above its cell can stand in the cell of the plate
+    /// before it, and a count that sank stands below its own cell. A point on
+    /// either still picks the label's own part.
+    @Test("A point on a label picks the label's part, even outside its cell")
+    func aPointOnALabelPicksItsPart() throws {
+        let plates = slantedLayout(Array(longPlates[0...3]), constraint(.width, inches: 9.0), pageMetrics)
+        let lifted = plates.placements.filter {
+            $0.annotationText != nil && $0.annotationFrame.origin.y < $0.cellFrame.origin.y
+        }
+
+        #expect(lifted.isEmpty == false)
+        for placement in lifted {
+            let point = Point2(x: middleX(placement.annotationFrame),
+                               y: placement.annotationFrame.origin.y + placement.annotationFrame.size.height / 2)
+            #expect(plates.placement(at: point) === placement, "\(placement.entry.partName)")
+        }
+
+        let shelf = slantedLayout(rackShelf, constraint(.width, inches: 9.0), pageMetrics)
+        let plate = try #require(shelf.placements.first { $0.entry.partName == "3020.dat" })
+        let count = Point2(x: middleX(plate.labelFrame), y: maxY(plate.labelFrame) - 1)
+
+        #expect(count.y > maxY(plate.cellFrame))
+        #expect(shelf.placement(at: count) === plate)
+
+        // Off every label, the cell whose icon is nearest.
+        #expect(shelf.placement(at: Point2(x: middleX(plate.iconFrame), y: plate.iconFrame.origin.y + 1)) === plate)
+        #expect(shelf.placement(at: Point2(x: -50, y: -50)) == nil)
+    }
+
+    /// Wherever the labels of a shelf move to, none ends on its own part, and
+    /// none comes within two paddings of another part on the shelf.
+    @Test("Labels that move stay off their parts and clear of other cells",
+          arguments: [3.0, 4.0, 5.0, 6.0, 9.0])
+    func movedLabelsStayClear(inches: Float) throws {
+        let entries = longPlates + rackShelf + [entry("32018.dat", width: 280, height: 24, depth: 20, quantity: 2),
+                                                entry("3894.dat", width: 120, height: 24, depth: 20)]
+        let result = slantedLayout(entries, constraint(.width, inches: inches), pageMetrics)
+
+        for placement in result.placements {
+            let name = placement.entry.partName
+            let own = slantedOutline(of: placement)
+
+            #expect(!overlaps(placement.labelFrame, own), "\(name): count on its part")
+            if placement.annotationText != nil {
+                #expect(!overlaps(placement.annotationFrame, own), "\(name): badge on its part")
+            }
+            for other in result.placements where other !== placement && other.rowIndex == placement.rowIndex {
+                let badges = placement.annotationText != nil ? [placement.annotationFrame] : []
+                for label in [placement.labelFrame] + badges {
+                    #expect(clearance(label, slantedOutline(of: other)) >= 2 * pageMetrics.cellPadding - 0.05,
+                            "\(name) near \(other.entry.partName)")
+                }
+            }
+        }
+    }
+
+    /// A long part at an angle comes down to the strip at one end only, and
+    /// its count goes there, by the part's bottom edge. It leans toward the
+    /// part's middle by half its width, so it stands under the part rather
+    /// than half past its end.
+    @Test("A count in a strip sits at the part's lowest corner, under the part")
+    func stripCountsSitUnderTheLowestCorner() throws {
+        let result = slantedLayout([entry("60479.dat", width: 240, height: 8, depth: 20),
+                                    entry("3005.dat", width: 20, height: 24, depth: 20)],
+                                   constraint(.width, inches: 6.0))
+        let plate = try #require(result.placements.first { $0.entry.partName == "60479.dat" })
+        let lowest = try #require(slantedOutline(of: plate).max { $0.y < $1.y })
+
+        // In the strip, under the icon's box.
+        #expect(plate.labelFrame.origin.y >= maxY(plate.iconFrame) + metrics().cellPadding - 0.001)
+        #expect(plate.labelFrame.size.width < plate.cellFrame.size.width)
+
+        // From the lowest corner, which for a part long in X is at its left,
+        // toward the part.
+        #expect(abs(plate.labelFrame.origin.x - max(lowest.x, plate.cellFrame.origin.x)) < 0.01)
+        #expect(middleX(plate.labelFrame) < middleX(plate.cellFrame) - 40)
+    }
+
+    /// LPub3D puts the annotation top-right. A plate long in X reaches the top
+    /// of its box at its right end, so the badge goes just left of that end;
+    /// one long in Z reaches it at its left end, and the badge goes right of
+    /// it. Either way the badge is inside the icon's box, and the cell keeps no
+    /// strip for it.
+    @Test("A badge goes next to a long part's top end, on the side with more room")
+    func badgesGoNextToTheTopEnd() throws {
+        let settings = metrics()
+        let gap = settings.decorationGap
+
+        for (name, width, depth, onLeft) in [("1x12x.dat", 240.0, 20.0, true), ("1x12z.dat", 20.0, 240.0, false)] {
+            let result = slantedLayout([entry(name, width: width, height: 8, depth: depth)], constraint(.area))
+            let plate = try #require(result.placements.first)
+            let badge = plate.annotationFrame
+            let top = plate.iconFrame.origin.y - settings.cellPadding
+
+            #expect(plate.annotationText == "1×12", "\(name)")
+            #expect(abs(badge.origin.y - top) < 0.001, "\(name): on the top line")
+            #expect(abs(plate.cellFrame.origin.y - top) < 0.001, "\(name): no strip")
+
+            let span = try #require(hullSpanX(slantedOutline(of: plate),
+                                              fromY: badge.origin.y - gap, toY: maxY(badge) + gap))
+
+            if onLeft {
+                #expect(abs(maxX(badge) - (span.lo - gap)) < 0.01, "\(name): left of the top end")
+            }
+            else {
+                #expect(abs(badge.origin.x - (span.hi + gap)) < 0.01, "\(name): right of the top end")
+            }
+        }
+    }
+
+    /// A 6x12 plate reaches the top of its box right of its middle, so there is
+    /// more room on the left, and the badge goes there.
+    @Test("A wide plate's badge takes the roomier side of its top corner")
+    func aWidePlatesBadgeTakesTheRoomierSide() throws {
+        let settings = metrics()
+        let result = slantedLayout([entry("3028.dat", width: 240, height: 8, depth: 120)], constraint(.area))
+        let plate = try #require(result.placements.first)
+        let highest = try #require(slantedOutline(of: plate).min { $0.y < $1.y })
+
+        #expect(highest.x > middleX(plate.iconFrame))
+        #expect(maxX(plate.annotationFrame) < highest.x)
+        #expect(abs(plate.cellFrame.origin.y - (plate.iconFrame.origin.y - settings.cellPadding)) < 0.001)
+    }
+
+    /// Sliding only ever takes room away, and no cell slides past the shelf's
+    /// left edge.
+    @Test("A shelf slid together is never wider than its boxes side by side")
+    func slidShelvesAreNoWider() throws {
+        let entries = longPlates + mixedEntries
+
+        for mode in [constraint(.area), constraint(.square), constraint(.width, inches: 3.0)] {
+            let result = slantedLayout(entries, mode)
+            let rows = Dictionary(grouping: result.placements, by: \.rowIndex)
+
+            for (_, row) in rows {
+                let boxes = row.map(\.cellFrame.size.width).reduce(0, +)
+                let reach = row.map { maxX($0.cellFrame) }.max() ?? 0
+
+                #expect(reach <= boxes + 0.001)
+                #expect(row.allSatisfy { $0.cellFrame.origin.x >= -0.001 })
+            }
+
+            let reach = result.placements.map { maxX($0.cellFrame) }.max() ?? 0
+            #expect(abs(result.contentSize.width - reach) < 0.001)
+        }
+    }
+
+    /// The width the two plates take slid together is less than their boxes
+    /// side by side, and a width between the two still holds them on one shelf.
+    @Test("Parts slid together fit a width their boxes would not")
+    func slidPartsFitANarrowerWidth() throws {
+        let settings = metrics()
+        let plates = Array(longPlates[2...3])
+        let wide = slantedLayout(plates, constraint(.width, inches: 9.0))
+        let boxes = wide.placements.map(\.cellFrame.size.width).reduce(0, +)
+
+        #expect(wide.rowCount == 1)
+        #expect(wide.contentSize.width < boxes - 40)
+
+        let between = (wide.contentSize.width + boxes) / 2 + 2 * settings.framePadding
+        let narrow = slantedLayout(plates, constraint(.width, inches: Float(between / settings.pointsPerInch)))
+
+        #expect(narrow.rowCount == 1)
+        #expect(abs(narrow.contentSize.width - wide.contentSize.width) < 0.001)
+    }
+
+    /// Seen face on, a box fills its cell and leaves no corner to slide into,
+    /// so the cells stand edge to edge.
+    @Test("Parts that fill their boxes stand edge to edge")
+    func fullBoxesDoNotSlide() throws {
+        let result = layout(mixedEntries, constraint(.width, inches: 9.0))
+        let row = result.placements.sorted { $0.cellFrame.origin.x < $1.cellFrame.origin.x }
+
+        #expect(result.rowCount == 1)
+        for (a, b) in zip(row, row.dropFirst()) {
+            #expect(abs(b.cellFrame.origin.x - maxX(a.cellFrame)) < 0.001,
+                    "\(a.entry.partName) / \(b.entry.partName)")
         }
     }
 
@@ -1206,7 +1769,7 @@ struct LDrawStepPartListLayoutTests {
         // The compact brick fills its box and has no corner free. On its own
         // the long plate would have taken its count beside it.
         for placement in [plate, brick] {
-            #expect(abs(placement.labelFrame.size.width - placement.cellFrame.size.width) < 0.001)
+            #expect(placement.labelFrame.origin.y >= maxY(placement.iconFrame) + metrics().cellPadding - 0.001)
         }
 
         #expect(abs(plate.labelFrame.origin.y - brick.labelFrame.origin.y) < 0.001)
@@ -1218,7 +1781,7 @@ struct LDrawStepPartListLayoutTests {
         // The shelf is its tallest cell without a count strip, plus one strip.
         let settings = metrics()
         let tallest = [plate, brick].map {
-            $0.iconFrame.size.height + 2 * settings.cellPadding + ($0.annotationText != nil ? settings.annotationHeight : 0)
+            maxY($0.iconFrame) + settings.cellPadding - $0.cellFrame.origin.y
         }.max() ?? 0
         #expect(abs(result.contentSize.height - (tallest + settings.labelHeight)) < 0.001)
 
@@ -1336,6 +1899,40 @@ struct LDrawStepPartListLayoutTests {
         #expect(placement.annotationText == nil)
     }
 
+    private func submodel(_ name: String, quantity: UInt = 1) -> LDrawStepPartListEntry {
+        LDrawStepPartListEntry(partName: name, displayTitle: name, color: nil, quantity: quantity,
+                               modelBounds: Box3(min: Point3(x: 0, y: 0, z: 0), max: Point3(x: 40, y: 24, z: 40)),
+                               isMissing: false, isSubmodel: true)
+    }
+
+    /// The picture of the one submodel a step adds says what to build, so it
+    /// needs no "1×", and its cell keeps no room for one.
+    @Test("A list of nothing but one submodel placed once has no count")
+    func aLoneSubmodelHasNoCount() throws {
+        let padding = metrics().cellPadding
+        let result = layout([submodel("boom.ldr")], constraint(.area))
+        let placement = try #require(result.placements.first)
+
+        #expect(!placement.showsCount)
+        #expect(placement.labelFrame.size.width == 0 && placement.labelFrame.size.height == 0)
+        #expect(abs(placement.cellFrame.size.width - (placement.iconFrame.size.width + 2 * padding)) < 0.001)
+        #expect(abs(placement.cellFrame.size.height - (placement.iconFrame.size.height + 2 * padding)) < 0.001)
+    }
+
+    @Test("A submodel placed twice or listed with other parts keeps its count, as does a lone part")
+    func otherListsKeepTheirCounts() throws {
+        let lists: [[LDrawStepPartListEntry]] = [[submodel("boom.ldr", quantity: 2)],
+                                                 [submodel("boom.ldr"), entry("3001.dat")],
+                                                 [entry("3001.dat")]]
+
+        for entries in lists {
+            for placement in layout(entries, constraint(.area)).placements {
+                #expect(placement.showsCount, "\(placement.entry.partName) of \(entries.count)")
+                #expect(placement.labelFrame.size.width > 0, "\(placement.entry.partName) of \(entries.count)")
+            }
+        }
+    }
+
     // MARK: - Closing up a width
 
     /// As in LPub3D, a WIDTH from the view, the document or a drag only
@@ -1424,13 +2021,16 @@ struct LDrawStepPartListLayoutTests {
 
     /// One shelf is the 3009 with its badge, 45 points, and a 12 point count
     /// strip. At the widest cell, 126 points, the shelves are 57, 42, 42 and
-    /// 26 points with three gaps.
+    /// 26 points with three gaps. The 3009 and the 3010 each have a shelf to
+    /// themselves. The 3009's badge is let down 2 points into its strip, and
+    /// the labels of the two need only stay a shelf gap apart, so the 3009
+    /// rises 2 points.
     @Test("A height packs one shelf below the one-row height, and the same packing above the tallest")
     func heightLimitsBracketWhatAHeightChanges() {
         let packed = layout(mixedEntries, constraint(.area))
 
         #expect(abs(packed.oneRowFrameHeight - 69) < 0.001)
-        #expect(abs(packed.tallestFrameHeight - 197) < 0.001)
+        #expect(abs(packed.tallestFrameHeight - 195) < 0.01)
 
         for inches in [writtenInches(packed.oneRowFrameHeight), 0.25] {
             let short = layout(mixedEntries, constraint(.height, inches: inches))
