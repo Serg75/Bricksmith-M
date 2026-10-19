@@ -22,6 +22,7 @@
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepCalloutArrangement.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
+#import <LDrawFeatures/LDrawStepPageNumbers.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
@@ -82,6 +83,10 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	/// the step they were taken for. Dropped when the file changes.
 	NSData				*assemblyOutline;
 	__weak LDrawStep	*assemblyOutlineStep;
+
+	/// The pages of the model's file, counted once. Dropped when the file
+	/// changes.
+	LDrawStepPageNumbers	*pageNumbers;
 
 	/// The step the page was last centered on, and the PLACEMENT lines it had
 	/// then. The page is centered again when either changes.
@@ -167,7 +172,6 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 {
 	// One walk of the file for all the lookups of this layout.
 	[LDrawStepPartListPolicy performWithCachedLookups:^{
-		LDrawModel						*model			= self.model;
 		LDrawStepPartListHostState		 host			= {0};
 		LDrawStepPartListPresentation	*presentation	= nil;
 
@@ -179,14 +183,14 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 		}
 
 		host			= [self hostState];
-		presentation	= [LDrawStepPartListPresentation presentationForModel:model host:host];
+		presentation	= [self presentationForHost:host];
 
 		// Centering moves the camera, so the step is laid out again for it.
 		if ([self needsPageCenterForPresentation:presentation]) {
 			[self centerPageOnPresentation:presentation keepingItOnScreen:YES];
 
 			host			= [self hostState];
-			presentation	= [LDrawStepPartListPresentation presentationForModel:model host:host];
+			presentation	= [self presentationForHost:host];
 		}
 
 		[self moveCalloutsWithSubmodelsInPresentation:presentation aroundAssembly:host.assemblyRect];
@@ -197,6 +201,25 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	[self updateCalloutArrows];
 
 }//end reload
+
+
+//========== presentationForHost: ==============================================
+///
+/// @abstract	Lays the visible step out for what the host measured, with the
+/// 			page numbers kept for the file.
+///
+//==============================================================================
+- (LDrawStepPartListPresentation *) presentationForHost:(LDrawStepPartListHostState)host
+{
+	LDrawFile *file = [self.model enclosingFile];
+
+	if ([LDrawStepPartList showsPageNumber] && file != nil && self->pageNumbers.file != file) {
+		self->pageNumbers = [LDrawStepPageNumbers pageNumbersOfFile:file];
+	}
+
+	return [LDrawStepPartListPresentation presentationForModel:self.model host:host pageNumbers:self->pageNumbers];
+
+}//end presentationForHost:
 
 
 //========== changeForCameraMove ===============================================
@@ -236,8 +259,9 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 		return LDrawStepOverlayChangeNone;
 	}
 
-	// The parts the assembly is measured by may have changed.
-	self->assemblyOutline = nil;
+	// The parts the assembly is measured by, and the pages, may have changed.
+	self->assemblyOutline	= nil;
+	self->pageNumbers		= nil;
 	[self.layoutCache removeAll];
 
 	BOOL isInModel = directive != nil
@@ -403,7 +427,7 @@ static BOOL IsSameViewingAngle(Tuple3 first, Tuple3 second)
 	[LDrawStepPartListPolicy performWithCachedLookups:^{
 		LDrawStepPartListPresentation *measured = nil;
 
-		measured = [LDrawStepPartListPresentation presentationForModel:model host:[self hostState]];
+		measured = [self presentationForHost:[self hostState]];
 
 		[self centerPageOnPresentation:measured keepingItOnScreen:NO];
 

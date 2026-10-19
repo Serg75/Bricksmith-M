@@ -405,6 +405,43 @@ struct LPubCalloutMetaTests {
         try expectGenericAndVerbatim("0 !LPUB ASSEM SHOW_STEP_NUMBER")
     }
 
+    @Test("PAGE DISPLAY_PAGE_NUMBER and TOGGLE_PAGE_NUMBER_PLACEMENT are booleans with a scope")
+    func pageNumberSwitches() throws {
+        let hidden = try #require(parse("0 !LPUB PAGE DISPLAY_PAGE_NUMBER GLOBAL FALSE") as? LPubPageNumberDisplay)
+        #expect(hidden.kind == .display)
+        #expect(hidden.isOn == false)
+        #expect(hidden.scope == .global)
+        #expect(hidden.write() == "0 !LPUB PAGE DISPLAY_PAGE_NUMBER GLOBAL FALSE")
+
+        let toggled = try #require(parse("0 !LPUB PAGE TOGGLE_PAGE_NUMBER_PLACEMENT TRUE") as? LPubPageNumberDisplay)
+        #expect(toggled.kind == .toggle)
+        #expect(toggled.isOn)
+        #expect(toggled.scope == .unspecified)
+
+        #expect(LPubPageNumberDisplay().isOn)
+
+        try expectGenericAndVerbatim("0 !LPUB PAGE DISPLAY_PAGE_NUMBER MAYBE")
+        try expectGenericAndVerbatim("0 !LPUB PAGE TOGGLE_PAGE_NUMBER_PLACEMENT TRUE FALSE")
+        try expectGenericAndVerbatim("0 !LPUB ASSEM DISPLAY_PAGE_NUMBER TRUE")
+    }
+
+    @Test("PAGE NUMBER PLACEMENT places the page's number")
+    func pageNumberPlacement() throws {
+        let line = "0 !LPUB PAGE NUMBER PLACEMENT GLOBAL BOTTOM_LEFT PAGE INSIDE 0.01 -0.02"
+        let placement = try #require(parse(line) as? LPubPlacement)
+
+        #expect(placement.branch == .pageNumber)
+        #expect(placement.scope == .global)
+        #expect(placement.position == .bottomLeft)
+        #expect(placement.relativeTo == "PAGE")
+        #expect(placement.isInside)
+        #expect(placement.offset.y == -0.02)
+        #expect(placement.write() == line)
+
+        try expectGenericAndVerbatim("0 !LPUB PAGE PLACEMENT BOTTOM_LEFT PAGE INSIDE")
+        try expectGenericAndVerbatim("0 !LPUB PAGE NUMBER PLACEMENT BOTTOM_LEFT")
+    }
+
     /// The shapes LPub3D writes, taken from a real file, with type-2 lines in
     /// place of the parts.
     @Test("A file's callout lines come back out exactly as they went in")

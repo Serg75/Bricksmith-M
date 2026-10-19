@@ -40,6 +40,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// estimate: the host draws the text in the middle of it.
 - (Size2) sizeForCharacterCount:(NSUInteger)count NS_SWIFT_NAME(size(forCharacterCount:));
 
+/// The same for a line of this text. A symbol outside plain ASCII is counted
+/// as two characters, since most are about as wide as two digits.
+- (Size2) sizeForText:(NSString *)text NS_SWIFT_NAME(size(for:));
+
 @end
 
 

@@ -152,6 +152,26 @@ static LDrawStepFont FontCreateForText(LDrawStepCalloutText *text, CGFloat size)
 }//end FontCreateForText
 
 
+//========== DrawStyledText ====================================================
+///
+/// @abstract	Draws one line in the font and color a file names, in the middle
+///				of a rect. The font's size is in page inches.
+///
+//==============================================================================
+static void DrawStyledText(CGContextRef context, NSString *string, CGRect rect, LDrawStepCalloutText *text,
+						   double pointsPerPageInch)
+{
+	LDrawStepFont	font	= FontCreateForText(text, text.fontSize * pointsPerPageInch);
+	double			rgba[4];
+
+	LPubColorComponentsGetRGBA(text.color, rgba);
+
+	LDrawStepDrawTextCentered(context, string, rect, font, rgba);
+	LDrawStepFontRelease(font);
+
+}//end DrawStyledText
+
+
 //========== DrawPill ==========================================================
 ///
 /// @abstract	Draws an outlined pill with one line of text in its middle. The
@@ -290,6 +310,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGContextSetFlatness(context, CURVE_FLATNESS);
 
 	[self drawPageSurroundInContext:context viewSize:viewSize];
+	[self drawPageNumberInContext:context];
 	[self drawListFrameInContext:context];
 
 	CGContextRestoreGState(context);
@@ -320,6 +341,26 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGContextEOFillPath(context);
 
 }//end drawPageSurroundInContext:viewSize:
+
+
+//========== drawPageNumberInContext: ==========================================
+///
+/// @abstract	Writes the page's number in the file's font and color, in the
+///				middle of the room the presentation keeps for it.
+///
+//==============================================================================
+- (void) drawPageNumberInContext:(CGContextRef)context
+{
+	LDrawStepPartListPresentation *presentation = self.presentation;
+
+	if (presentation.pageNumber == nil) {
+		return;
+	}
+
+	DrawStyledText(context, presentation.pageNumber, LDrawStepRectFromBox(presentation.pageNumberRect),
+				   presentation.pageNumberText, presentation.pointsPerPageInch);
+
+}//end drawPageNumberInContext:
 
 
 //========== drawListFrameInContext: ===========================================
@@ -739,13 +780,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		return;
 	}
 
-	LDrawStepFont	font	= FontCreateForText(text, text.fontSize * self.presentation.pointsPerPageInch);
-	double			rgba[4];
-
-	LPubColorComponentsGetRGBA(text.color, rgba);
-
-	LDrawStepDrawTextCentered(context, label.text, rect, font, rgba);
-	LDrawStepFontRelease(font);
+	DrawStyledText(context, label.text, rect, text, self.presentation.pointsPerPageInch);
 
 }//end drawLabel:withText:inContext:
 

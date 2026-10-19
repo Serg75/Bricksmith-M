@@ -2268,6 +2268,9 @@ PreferencesDialogController *preferencesDialog = nil;
 	[LDrawStepPartList setUsesLPubScale:[userDefaults boolForKey:STEP_PART_LIST_LPUB_SCALE_KEY]];
 	[LDrawStepPartList setPlacesCalloutsAutomatically:[userDefaults boolForKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY]];
 
+	// Not a preference: the page shows its number whenever the file does.
+	[LDrawStepPartList setShowsPageNumber:YES];
+
 }//end pushStepPartListDefaults
 
 

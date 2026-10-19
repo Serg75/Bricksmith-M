@@ -3,14 +3,15 @@
 //  File:       LPubCalloutMargins.m
 //  Package:    LDrawCore
 //
-//  Purpose:    The room kept around a callout or something in it, or around
-//              a parts list or its counts.
+//  Purpose:    The room kept around a callout or something in it, around
+//              a parts list or its counts, inside the page, or around the
+//              page's number.
 //
 //              Line format:
 //              0 !LPUB CALLOUT [ASSEM | PLI | STEP_NUMBER | INSTANCE_COUNT]
 //                  MARGINS [GLOBAL|LOCAL] <x> <y>
 //              0 !LPUB PLI [INSTANCE_COUNT] MARGINS [GLOBAL|LOCAL] <x> <y>
-//              0 !LPUB PAGE MARGINS [GLOBAL|LOCAL] <x> <y>
+//              0 !LPUB PAGE [NUMBER] MARGINS [GLOBAL|LOCAL] <x> <y>
 //
 //              A parsed line is written back as it was read.
 //
@@ -29,8 +30,8 @@ static const double DEFAULT_MARGIN = 0.05;
 
 //========== PartNames() =======================================================
 ///
-/// @abstract	The keyword of each thing inside a callout or a parts list, by
-/// 			its part.
+/// @abstract	The keyword of each thing inside a callout, a parts list or the
+/// 			page, by its part.
 ///
 //==============================================================================
 static NSDictionary<NSNumber *, NSString *> *PartNames(void)
@@ -41,6 +42,7 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 		@(LPubCalloutPartStepNumber):		LPUB_CALLOUT_STEP_NUMBER,
 		@(LPubCalloutPartInstanceCount):	LPUB_CALLOUT_INSTANCE_COUNT,
 		@(LPubCalloutPartAnnotation):		LPUB_PLI_ANNOTATE,
+		@(LPubCalloutPartPageNumber):		LPUB_PAGE_NUMBER,
 	};
 
 }//end PartNames
@@ -83,10 +85,11 @@ static NSDictionary<NSNumber *, NSString *> *PartNames(void)
 
 	if ([self getPart:&part fromToken:parameters[index]]) {
 		// A parts list has only its count inside it, a callout has no
-		// annotation, and a page has none of these.
+		// annotation or page number, and a page has only its number.
 		if ((branch == LPubStyleBranchPartsList && part != LPubCalloutPartInstanceCount)
-			|| (branch == LPubStyleBranchCallout && part == LPubCalloutPartAnnotation)
-			|| branch == LPubStyleBranchPage) {
+			|| (branch == LPubStyleBranchCallout
+				&& (part == LPubCalloutPartAnnotation || part == LPubCalloutPartPageNumber))
+			|| (branch == LPubStyleBranchPage && part != LPubCalloutPartPageNumber)) {
 			return nil;
 		}
 		index += 1;

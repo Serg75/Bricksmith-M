@@ -31,7 +31,9 @@ typedef NS_ENUM(NSInteger, LPubCalloutPart) {
 	/// How many times the box is built, or a part is used in a parts list.
 	LPubCalloutPartInstanceCount	= 4,
 	/// The text on a part in a parts list. Only a PLI line has it.
-	LPubCalloutPartAnnotation		= 5
+	LPubCalloutPartAnnotation		= 5,
+	/// The page's number. Only a PAGE line has it.
+	LPubCalloutPartPageNumber		= 6
 };
 
 
@@ -40,11 +42,12 @@ typedef NS_ENUM(NSInteger, LPubCalloutPart) {
 /// @class      LPubCalloutMargins
 ///
 /// @abstract   The room kept around a callout or something in it, around a
-///             parts list or its counts, or inside the page:
+///             parts list or its counts, inside the page, or around its
+///             number:
 ///             0 !LPUB CALLOUT [ASSEM | PLI | STEP_NUMBER | INSTANCE_COUNT]
 ///                 MARGINS [GLOBAL|LOCAL] <x> <y>
 ///             0 !LPUB PLI [INSTANCE_COUNT] MARGINS [GLOBAL|LOCAL] <x> <y>
-///             0 !LPUB PAGE MARGINS [GLOBAL|LOCAL] <x> <y>
+///             0 !LPUB PAGE [NUMBER] MARGINS [GLOBAL|LOCAL] <x> <y>
 ///
 /// @discussion The properties are read from the line. Set lPubCommandString
 ///             to change them.
@@ -55,18 +58,20 @@ typedef NS_ENUM(NSInteger, LPubCalloutPart) {
 @property (nonatomic, readonly) LPubStyleBranch	branch;
 @property (nonatomic, readonly) LPubMetaScope	scope;
 
-/// The box for a line with no part. In a parts list only the count has one.
+/// The box for a line with no part. In a parts list only the count has one,
+/// and on the page only the number.
 @property (nonatomic, readonly) LPubCalloutPart	part;
 
 /// In inches. LPub3D's default is 0.05 each way.
 @property (nonatomic, readonly) Size2			margins;
 
-/// Reads the keyword of a thing inside a callout or a parts list: ASSEM, PLI,
-/// STEP_NUMBER, INSTANCE_COUNT or ANNOTATE. NO for any other word.
+/// Reads the keyword of a thing inside a callout, a parts list or the page:
+/// ASSEM, PLI, STEP_NUMBER, INSTANCE_COUNT, ANNOTATE or NUMBER. NO for any
+/// other word.
 + (BOOL) getPart:(LPubCalloutPart *)outPart fromToken:(NSString *)token;
 
-/// The keyword of a thing inside a callout or a parts list, or nil for the
-/// box itself.
+/// The keyword of a thing inside a callout, a parts list or the page, or nil
+/// for the box itself.
 + (nullable NSString *) nameForPart:(LPubCalloutPart)part;
 
 @end

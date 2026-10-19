@@ -41,7 +41,8 @@ struct LPubCommandTests {
                                "LPubCalloutMargins",
                                "LPubCalloutSeparator",
                                "LPubCalloutFont",
-                               "LPubAssemShowStepNumber"])
+                               "LPubAssemShowStepNumber",
+                               "LPubPageNumberDisplay"])
     }
 
     @Test("The LPub text and the whole line are archived, and they read back")

@@ -718,8 +718,7 @@ struct LPubPliMetaTests {
     /// PAGE has about a dozen other leaves, and we model a few of them.
     @Test("The other PAGE metas stay generic")
     func otherPageMetasFallThrough() throws {
-        try expectGenericAndVerbatim("0 !LPUB PAGE NUMBER MARGINS GLOBAL 0.1200 0.1200")
-        try expectGenericAndVerbatim("0 !LPUB PAGE DISPLAY_PAGE_NUMBER GLOBAL TRUE")
+        try expectGenericAndVerbatim("0 !LPUB PAGE SUBMODEL_INSTANCE_COUNT FONT_COLOR GLOBAL \"#000000\"")
         try expectGenericAndVerbatim("0 !LPUB PAGE ORIENTATION SIDEWAYS")
     }
 

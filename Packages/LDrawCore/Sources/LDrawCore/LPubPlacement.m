@@ -3,11 +3,11 @@
 //  File:       LPubPlacement.m
 //  Package:    LDrawCore
 //
-//  Purpose:    Where a callout's box, a step's assembly or its parts list
-//              sits.
+//  Purpose:    Where a callout's box, a step's assembly, its parts list or
+//              the page's number sits.
 //
-//              Line format, after 0 !LPUB (CALLOUT | ASSEM | PLI) PLACEMENT
-//              [GLOBAL|LOCAL]:
+//              Line format, after 0 !LPUB (CALLOUT | ASSEM | PLI | PAGE NUMBER)
+//              PLACEMENT [GLOBAL|LOCAL]:
 //              (TOP|BOTTOM) [LEFT|CENTER|RIGHT] <relative to>
 //                  (INSIDE|OUTSIDE) [[OFFSET] <x> <y>]
 //              (LEFT|RIGHT) [TOP|CENTER|BOTTOM] <relative to>
@@ -163,11 +163,12 @@ static NSString *OffsetText(double offset)
 //------------------------------------------------------------------------------
 + (LPubCommand *) lpubCommandInstance:(NSArray<NSString *> *)parameters
 {
-	if (parameters.count < 5 || [parameters[1] isEqualToString:LPUB_PLACEMENT] == NO) {
+	LPubPlacementBranch	branch	= LPubPlacementBranchCallout;
+	NSUInteger			index	= 1;
+
+	if (parameters.count < 2) {
 		return nil;
 	}
-
-	LPubPlacementBranch branch = LPubPlacementBranchCallout;
 
 	if ([parameters[0] isEqualToString:LPUB_ASSEM]) {
 		branch = LPubPlacementBranchAssembly;
@@ -175,11 +176,19 @@ static NSString *OffsetText(double offset)
 	else if ([parameters[0] isEqualToString:LPUB_PLI]) {
 		branch = LPubPlacementBranchPartsList;
 	}
+	else if ([parameters[0] isEqualToString:LPUB_PAGE] && [parameters[1] isEqualToString:LPUB_PAGE_NUMBER]) {
+		branch	= LPubPlacementBranchPageNumber;
+		index	= 2;
+	}
 	else if ([parameters[0] isEqualToString:LPUB_CALLOUT] == NO) {
 		return nil;
 	}
 
-	NSUInteger				index			= 2;
+	if (parameters.count < index + 4 || [parameters[index] isEqualToString:LPUB_PLACEMENT] == NO) {
+		return nil;
+	}
+	index += 1;
+
 	LPubMetaScope			scope			= [LPubCommand scopeInParameters:parameters index:&index];
 	LPubPlacementPosition	position		= LPubPlacementPositionCenter;
 	LPubPlacementPosition	justification	= LPubPlacementPositionCenter;
@@ -300,6 +309,9 @@ static NSString *OffsetText(double offset)
 	}
 	else if (self.branch == LPubPlacementBranchPartsList) {
 		subject = LPUB_PLI;
+	}
+	else if (self.branch == LPubPlacementBranchPageNumber) {
+		subject = [NSString stringWithFormat:@"%@ %@", LPUB_PAGE, LPUB_PAGE_NUMBER];
 	}
 
 	return [NSString stringWithFormat:@"%@ %@ [%@ %@ %@]", subject, LPUB_PLACEMENT,

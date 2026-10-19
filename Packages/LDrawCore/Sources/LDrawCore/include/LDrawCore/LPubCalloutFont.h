@@ -17,14 +17,16 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @class      LPubCalloutFont
 ///
-/// @abstract   The font or the color of the text in a callout's box, or of
-///             the counts and annotations in a parts list:
+/// @abstract   The font or the color of the text in a callout's box, of the
+///             counts and annotations in a parts list, or of the page's
+///             number:
 ///             0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT
 ///                 [GLOBAL|LOCAL] "<font>"
 ///             0 !LPUB CALLOUT (STEP_NUMBER | INSTANCE_COUNT) FONT_COLOR
 ///                 [GLOBAL|LOCAL] <color>
 ///             0 !LPUB PLI (INSTANCE_COUNT | ANNOTATE)
 ///                 (FONT "<font>" | FONT_COLOR <color>)
+///             0 !LPUB PAGE NUMBER (FONT "<font>" | FONT_COLOR <color>)
 ///                 with the same optional scope.
 ///
 /// @discussion A font is written the way Qt describes one: the family, the

@@ -224,6 +224,22 @@ BOOL LDrawStepReadTextColor(LDrawStepStyleLookup lookup, LPubStyleBranch branch,
 
 }//end sizeForCharacterCount:
 
+
+//========== sizeForText: ======================================================
+- (Size2) sizeForText:(NSString *)text
+{
+	__block NSUInteger count = 0;
+
+	[text enumerateSubstringsInRange:NSMakeRange(0, text.length)
+							 options:NSStringEnumerationByComposedCharacterSequences
+						  usingBlock:^(NSString *character, NSRange range, NSRange enclosing, BOOL *stop) {
+		count += ([character characterAtIndex:0] < 0x80) ? 1 : 2;
+	}];
+
+	return [self sizeForCharacterCount:count];
+
+}//end sizeForText:
+
 @end
 
 

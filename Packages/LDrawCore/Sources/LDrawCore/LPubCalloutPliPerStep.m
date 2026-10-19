@@ -60,21 +60,9 @@
 	NSUInteger		index	= 3;
 	LPubMetaScope	scope	= [LPubCommand scopeInParameters:parameters index:&index];
 
-	// The boolean is the last token, and there must be nothing after it.
-	if (index != parameters.count - 1) {
-		return nil;
-	}
+	BOOL isPerStep = YES;
 
-	BOOL		isPerStep	= YES;
-	NSString	*token		= parameters[index];
-
-	if ([token isEqualToString:LPUB_BOOLEAN_TRUE]) {
-		isPerStep = YES;
-	}
-	else if ([token isEqualToString:LPUB_BOOLEAN_FALSE]) {
-		isPerStep = NO;
-	}
-	else {
+	if ([LPubCommand getBoolean:&isPerStep inParameters:parameters atIndex:index] == NO) {
 		return nil;
 	}
 

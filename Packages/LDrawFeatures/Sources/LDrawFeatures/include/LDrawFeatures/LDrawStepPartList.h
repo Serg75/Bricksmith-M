@@ -99,6 +99,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) pageFollowsHostShape;
 + (void) setPageFollowsHostShape:(BOOL)flag;
 
+/// Whether LPub3D's page shows its number, as the file prints it. Default NO,
+/// for a host that shows the number its own way.
++ (BOOL) showsPageNumber;
++ (void) setShowsPageNumber:(BOOL)flag;
+
 /// The base orientation of each part, from LPub3D's PLI control file, or nil.
 /// Default nil. Used only when the icons do not follow the step's rotation.
 + (nullable LDrawPartListOrientations *) partOrientations;

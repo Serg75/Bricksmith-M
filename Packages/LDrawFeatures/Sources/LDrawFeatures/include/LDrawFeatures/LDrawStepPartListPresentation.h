@@ -19,6 +19,7 @@
 @class LDrawStepCalloutArrangement;
 @class LDrawStepCalloutBox;
 @class LDrawStepCalloutText;
+@class LDrawStepPageNumbers;
 @class LDrawStepPartListEntry;
 @class LDrawStepPartListLayout;
 
@@ -79,6 +80,13 @@ typedef struct LDrawStepPartListHostState {
 								 host:(LDrawStepPartListHostState)host
 	NS_SWIFT_NAME(init(model:host:));
 
+/// The same, with the page numbers a host keeps for the file. Nil, or a count
+/// for another file, counts the pages again.
++ (instancetype) presentationForModel:(nullable LDrawModel *)model
+								 host:(LDrawStepPartListHostState)host
+						  pageNumbers:(nullable LDrawStepPageNumbers *)pageNumbers
+	NS_SWIFT_NAME(init(model:host:pageNumbers:));
+
 /// Whether the list is drawn on LPub3D's page. Only then does the document's
 /// CONSTRAIN count, and only then can the frame be resized.
 @property (nonatomic, readonly) BOOL isOnPage;
@@ -135,6 +143,15 @@ typedef struct LDrawStepPartListHostState {
 /// the page, and for a file that gives none. Their size and color are the
 /// chrome's.
 @property (nonatomic, readonly, nullable) LDrawStepCalloutText *annotationText;
+
+/// The page's number as the file prints it, such as "16", or "10/15" for a
+/// step on two pages. Nil off the page, when the file or the host hides it,
+/// and for a step on no page.
+@property (nonatomic, readonly, nullable) NSString *pageNumber;
+
+/// Where the number is drawn in the view, and its font and color.
+@property (nonatomic, readonly) Box2 pageNumberRect;
+@property (nonatomic, readonly, nullable) LDrawStepCalloutText *pageNumberText;
 
 /// The packed list, or nil when there is nothing to draw.
 @property (nonatomic, readonly, nullable) LDrawStepPartListLayout *layout;

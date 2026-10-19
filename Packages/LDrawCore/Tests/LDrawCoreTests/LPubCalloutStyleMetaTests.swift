@@ -462,10 +462,38 @@ struct LPubCalloutStyleMetaTests {
                                       as? LPubCalloutBackground)
         #expect(background.branch == .page)
 
-        // The page's text and its number are other kinds of line.
-        try expectGenericAndVerbatim("0 !LPUB PAGE NUMBER MARGINS GLOBAL 0.12 0.12")
+        // The page's other text is another kind of line.
         try expectGenericAndVerbatim("0 !LPUB PAGE INSTANCE_COUNT MARGINS 0.1 0.1")
         try expectGenericAndVerbatim("0 !LPUB PAGE INSTANCE_COUNT FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+    }
+
+    @Test("The page's number has a FONT, a FONT_COLOR and MARGINS")
+    func pageNumberLines() throws {
+        let fontLine = "0 !LPUB PAGE NUMBER FONT GLOBAL \"Arial,72,-1,5,50,0,0,0,0,0\""
+        let font = try #require(parse(fontLine) as? LPubCalloutFont)
+
+        #expect(font.branch == .page)
+        #expect(font.part == .pageNumber)
+        #expect(font.family == "Arial")
+        #expect(font.size == 72)
+        #expect(font.isBold == false)
+        #expect(font.write() == fontLine)
+
+        let color = try #require(parse("0 !LPUB PAGE NUMBER FONT_COLOR \"#2d3bce\"") as? LPubCalloutFont)
+
+        #expect(color.part == .pageNumber)
+        #expect(color.isColor)
+        expectColor(color.color, 45.0 / 255.0, 59.0 / 255.0, 206.0 / 255.0)
+
+        let margins = try #require(parse("0 !LPUB PAGE NUMBER MARGINS GLOBAL 0.1200 0.1300") as? LPubCalloutMargins)
+
+        #expect(margins.branch == .page)
+        #expect(margins.part == .pageNumber)
+        #expect(abs(margins.margins.height - 0.13) < 1e-9)
+
+        // Only the page has a number.
+        try expectGenericAndVerbatim("0 !LPUB CALLOUT NUMBER FONT \"Arial,36,-1,5,50,0,0,0,0,0\"")
+        try expectGenericAndVerbatim("0 !LPUB PLI NUMBER MARGINS 0.1 0.1")
     }
 
     @Test("A CALLOUT line keeps the callout branch")

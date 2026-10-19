@@ -40,6 +40,7 @@
 #import <LDrawFeatures/LDrawStepCalloutArrangement.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
 #import <LDrawFeatures/LDrawStepCalloutStyle.h>
+#import <LDrawFeatures/LDrawStepPageNumbers.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListLayout.h>

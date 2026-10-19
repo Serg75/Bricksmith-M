@@ -118,6 +118,9 @@ static NSString * const	LPUB_PAGE_SIZE				= @"SIZE";
 static NSString * const	LPUB_PAGE_ORIENTATION		= @"ORIENTATION";
 static NSString * const	LPUB_PAGE_PORTRAIT			= @"PORTRAIT";
 static NSString * const	LPUB_PAGE_LANDSCAPE			= @"LANDSCAPE";
+static NSString * const	LPUB_PAGE_NUMBER			= @"NUMBER";
+static NSString * const	LPUB_PAGE_DISPLAY_NUMBER	= @"DISPLAY_PAGE_NUMBER";
+static NSString * const	LPUB_PAGE_TOGGLE_NUMBER		= @"TOGGLE_PAGE_NUMBER_PLACEMENT";
 
 // LPub CALLOUT.
 static NSString * const	LPUB_CALLOUT				= @"CALLOUT";

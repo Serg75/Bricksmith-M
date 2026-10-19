@@ -19,6 +19,7 @@
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
 #import <LDrawFeatures/LDrawStepCalloutStyle.h>
+#import <LDrawFeatures/LDrawStepPageNumbers.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListLayout.h>
@@ -27,11 +28,33 @@
 
 #import "LDrawStepCalloutContent.h"
 #import "LDrawStepCalloutFollower.h"
+#import "LDrawStepPageNumberStyle.h"
 
 
 /// Below this size there is nothing worth drawing, and a camera cannot make a
 /// projection.
 static const double MINIMUM_CONTENT_SIDE = 8.0;
+
+
+//========== MirroredPosition() ================================================
+///
+/// @abstract	The place on the other side of the page, left for right. LPub3D
+/// 			puts the number of an even page there when the file asks.
+///
+//==============================================================================
+static LPubPlacementPosition MirroredPosition(LPubPlacementPosition position)
+{
+	switch (position) {
+		case LPubPlacementPositionTopLeft:		return LPubPlacementPositionTopRight;
+		case LPubPlacementPositionTopRight:		return LPubPlacementPositionTopLeft;
+		case LPubPlacementPositionLeft:			return LPubPlacementPositionRight;
+		case LPubPlacementPositionRight:		return LPubPlacementPositionLeft;
+		case LPubPlacementPositionBottomLeft:	return LPubPlacementPositionBottomRight;
+		case LPubPlacementPositionBottomRight:	return LPubPlacementPositionBottomLeft;
+		default:								return position;
+	}
+
+}//end MirroredPosition
 
 
 //========== GrowBounds() ======================================================
@@ -78,17 +101,29 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 + (instancetype) presentationForModel:(nullable LDrawModel *)model
 								 host:(LDrawStepPartListHostState)host
 {
-	return [[self alloc] initWithModel:model host:host];
+	return [[self alloc] initWithModel:model host:host pageNumbers:nil];
 
 }//end presentationForModel:host:
 
 
-//========== initWithModel:host: ===============================================
+//---------- presentationForModel:host:pageNumbers: ------------------[static]--
++ (instancetype) presentationForModel:(nullable LDrawModel *)model
+								 host:(LDrawStepPartListHostState)host
+						  pageNumbers:(nullable LDrawStepPageNumbers *)pageNumbers
+{
+	return [[self alloc] initWithModel:model host:host pageNumbers:pageNumbers];
+
+}//end presentationForModel:host:pageNumbers:
+
+
+//========== initWithModel:host:pageNumbers: ===================================
 ///
 /// @abstract	Does the work, in the order it has to happen.
 ///
 //==============================================================================
-- (instancetype) initWithModel:(nullable LDrawModel *)model host:(LDrawStepPartListHostState)host
+- (instancetype) initWithModel:(nullable LDrawModel *)model
+						  host:(LDrawStepPartListHostState)host
+				   pageNumbers:(nullable LDrawStepPageNumbers *)pageNumbers
 {
 	self = [super init];
 	if (self == nil) {
@@ -102,7 +137,8 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	self->_calloutBoxes	= @[];
 	self->_placementKey	= @"";
 
-	self->_calloutChrome = self->_chrome;
+	self->_calloutChrome	= self->_chrome;
+	self->_pageNumberRect	= ZeroBox2;
 
 	if (model == nil) {
 		return self;
@@ -134,6 +170,8 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 		self->_calloutChrome = self->_chrome;
 
 		listMetrics = [self applyStyleOfModel:model toMetrics:metrics];
+
+		[self placePageNumberForModel:model pageNumbers:pageNumbers];
 	}
 
 	// The list first: the callouts go under its frame. They keep the plain
@@ -152,7 +190,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 
 	return self;
 
-}//end initWithModel:host:
+}//end initWithModel:host:pageNumbers:
 
 
 //========== applyStyleOfModel:toMetrics: ======================================
@@ -211,23 +249,91 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end pageColor
 
 
-//========== listGapOnPage =====================================================
+//========== placePageNumberForModel:pageNumbers: ==============================
 ///
-/// @abstract	The room between the page's edges and a list placed inside it,
-/// 			in points.
+/// @abstract	Finds the visible step's page number and where it goes on the
+/// 			page. With no PAGE NUMBER PLACEMENT line it goes in the bottom
+/// 			right corner.
 ///
-/// @discussion	LPub3D keeps the larger of the page's margin and the list's.
+/// @discussion	Only a place inside the page is read, since the page's header
+/// 			and footer are not drawn here. A count for another file is
+/// 			made again.
 ///
 //==============================================================================
-- (Size2) listGapOnPage
+- (void) placePageNumberForModel:(LDrawModel *)model pageNumbers:(nullable LDrawStepPageNumbers *)pageNumbers
+{
+	LDrawStepPageNumberStyle *style = nil;
+
+	if ([LDrawStepPartList showsPageNumber]) {
+		style = [LDrawStepPageNumberStyle styleForVisibleStepOfModel:model];
+	}
+
+	if (style == nil) {
+		return;
+	}
+
+	LDrawFile *file = [model enclosingFile];
+
+	if (pageNumbers.file != file) {
+		pageNumbers = [LDrawStepPageNumbers pageNumbersOfFile:file];
+	}
+
+	NSArray<LDrawStepPageNumber *> *pages = [pageNumbers pagesShowingStep:[model visibleStep]];
+
+	if (pages.count == 0) {
+		return;
+	}
+
+	NSString				*text		= [LDrawStepPageNumbers textForPages:pages];
+	LPubPlacement			*placement	= style.placement;
+	LPubPlacementPosition	 position	= LPubPlacementPositionBottomRight;
+	Point2					 offset		= ZeroPoint2;
+	double					 scale		= self->_pointsPerPageInch;
+	Size2					 inches		= [style.text sizeForText:text];
+	Size2					 size		= V2MakeSize(inches.width * scale, inches.height * scale);
+
+	if (placement.isInside && [placement.relativeTo isEqualToString:LPUB_PAGE]) {
+		position	= placement.position;
+		offset		= placement.offset;
+	}
+
+	if (style.togglesSides && pages.firstObject.number % 2 == 0) {
+		position = MirroredPosition(position);
+	}
+
+	Point2 origin = [LDrawStepCalloutBox originForSize:size
+											  position:position
+										 justification:LPubPlacementPositionCenter
+											  isInside:YES
+												anchor:self->_pageRect
+												margin:[self gapOnPageForMargins:style.margins]];
+
+	origin.x += V2BoxWidth(self->_pageRect) * offset.x;
+	origin.y += V2BoxHeight(self->_pageRect) * offset.y;
+
+	self->_pageNumber		= text;
+	self->_pageNumberText	= style.text;
+	self->_pageNumberRect	= V2MakeBox(origin.x, origin.y, size.width, size.height);
+
+}//end placePageNumberForModel:pageNumbers:
+
+
+//========== gapOnPageForMargins: ==============================================
+///
+/// @abstract	The room between the page's edges and something placed inside
+/// 			it with these margins, in points.
+///
+/// @discussion	LPub3D keeps the larger of the page's margin and the thing's.
+///
+//==============================================================================
+- (Size2) gapOnPageForMargins:(Size2)margins
 {
 	Size2	page	= self->listStyle.pageMargins;
-	Size2	list	= self->listStyle.margins;
 	double	scale	= self->_pointsPerPageInch;
 
-	return V2MakeSize(MAX(page.width, list.width) * scale, MAX(page.height, list.height) * scale);
+	return V2MakeSize(MAX(page.width, margins.width) * scale, MAX(page.height, margins.height) * scale);
 
-}//end listGapOnPage
+}//end gapOnPageForMargins:
 
 
 //========== allowedFrameSize ==================================================
@@ -237,7 +343,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 		return [LDrawStepPartListPolicy allowedFrameSizeInHostSize:self->_hostSize pointsPerPageInch:0.0];
 	}
 
-	Size2 gap = [self listGapOnPage];
+	Size2 gap = [self gapOnPageForMargins:self->listStyle.margins];
 
 	return V2MakeSize(MAX(0.0, V2BoxWidth(self->_pageRect) - 2.0 * gap.width),
 					  MAX(0.0, V2BoxHeight(self->_pageRect) - 2.0 * gap.height));
@@ -661,7 +767,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	BOOL					 isInside		= YES;
 	Point2					 offset			= ZeroPoint2;
 	Box2					 anchor			= self->_pageRect;
-	Size2					 margin			= [self listGapOnPage];
+	Size2					 margin			= [self gapOnPageForMargins:self->listStyle.margins];
 
 	if (placement.isInside && [placement.relativeTo isEqualToString:LPUB_PAGE]) {
 		position	= placement.position;

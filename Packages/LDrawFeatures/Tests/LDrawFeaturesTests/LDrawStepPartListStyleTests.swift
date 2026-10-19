@@ -23,6 +23,7 @@ extension StepPartListStaticSettings {
         deinit {
             LDrawStepPartList.setEnabled(false)
             LDrawStepPartList.setUsesLPubScale(false)
+            LDrawStepPartList.setShowsPageNumber(false)
         }
 
         // MARK: - Fixtures
@@ -554,6 +555,124 @@ extension StepPartListStaticSettings {
             #expect(presentation.chrome.borderWidth == LDrawStepPartListPolicy.defaultChrome().borderWidth)
             #expect(presentation.countText == nil)
             #expect(presentation.annotationText == nil)
+        }
+
+        // MARK: - The page's number
+
+        private typealias NumberedPage = (file: LDrawFile, presentation: LDrawStepPartListPresentation)
+
+        /// A file whose first model has `count` steps of one part each, showing
+        /// the one before the last, on a letter page at 100 dots to the inch.
+        /// The lines are in the first step. The caller keeps the file.
+        private func numberedPage(_ lines: [String], steps count: Int = 2, showsNumber: Bool = true) -> NumberedPage {
+            LDrawStepPartList.setEnabled(true)
+            LDrawStepPartList.setUsesLPubScale(true)
+            LDrawStepPartList.setShowsPageNumber(showsNumber)
+
+            let file = LDrawFile()
+            let model = LDrawMPDModel.model() as! LDrawMPDModel
+            model.setModelName("main.ldr")
+            file.addSubmodel(model)
+
+            for index in 0..<count {
+                let step = model.addStep()
+                if index == 0 {
+                    for line in ["PAGE SIZE 8.5 11", "RESOLUTION 100 DPI"] + lines {
+                        step.add(lpub(line))
+                    }
+                }
+                step.add(part() as LDrawDirective)
+            }
+            // A new model starts with an empty step of its own.
+            model.setStepDisplay(true)
+            model.setMaximumStepIndexForStepDisplay(UInt(model.steps().count - 2))
+
+            return (file, LDrawStepPartListPresentation(model: model, host: host()))
+        }
+
+        @Test("The page's number is LPub3D's: bold Arial 24 in black, in the bottom right corner")
+        func pageNumberDefaults() throws {
+            let (file, presentation) = numberedPage([], steps: 3)
+            let text = try #require(presentation.pageNumberText)
+            let page = presentation.pageRect
+            let number = presentation.pageNumberRect
+            let margin = 0.05 * presentation.pointsPerPageInch
+
+            withExtendedLifetime(file) {}
+            #expect(presentation.pageNumber == "2")
+            #expect(text.fontFamily == "Arial")
+            expectNear(text.fontSize, 24.0 / 100.0)
+            #expect(text.isBold)
+            expectColor(text.color, 0, 0, 0)
+            expectNear(number.origin.x + number.size.width, page.origin.x + page.size.width - margin)
+            expectNear(number.origin.y + number.size.height, page.origin.y + page.size.height - margin)
+        }
+
+        @Test("A symbol outside plain ASCII takes the room of two characters")
+        func textSizeCountsSymbols() {
+            let text = LDrawStepPartListStyle(visibleStepOf: model()).countText
+
+            expectNear(text.size(for: "12/3").width, text.size(forCharacterCount: 4).width)
+            expectNear(text.size(for: "➟12").width, text.size(forCharacterCount: 4).width)
+        }
+
+        @Test("The page's number takes the file's font, color and margins")
+        func pageNumberFromTheFile() throws {
+            let (file, presentation) = numberedPage([
+                "PAGE MARGINS 0.15 0.15",
+                "PAGE NUMBER MARGINS 0.1 0.3",
+                "PAGE NUMBER FONT \"Times,72,-1,5,50,0,0,0,0,0\"",
+                "PAGE NUMBER FONT_COLOR \"#ff0000\"",
+            ], steps: 3)
+            let text = try #require(presentation.pageNumberText)
+            let page = presentation.pageRect
+            let number = presentation.pageNumberRect
+            let scale = presentation.pointsPerPageInch
+
+            withExtendedLifetime(file) {}
+            #expect(text.fontFamily == "Times")
+            expectNear(text.fontSize, 0.72)
+            #expect(text.isBold == false)
+            expectColor(text.color, 1, 0, 0)
+            expectNear(number.size.width, text.size(forCharacterCount: 1).width * scale)
+
+            // The larger of the page's margin and the number's, on each side.
+            expectNear(number.origin.x + number.size.width, page.origin.x + page.size.width - 0.15 * scale)
+            expectNear(number.origin.y + number.size.height, page.origin.y + page.size.height - 0.3 * scale)
+        }
+
+        @Test("PAGE NUMBER PLACEMENT puts the number, and an even page toggles it")
+        func pageNumberPlacement() {
+            let topLeft = numberedPage(["PAGE NUMBER PLACEMENT TOP_LEFT PAGE INSIDE"], steps: 3)
+            let page = topLeft.presentation.pageRect
+            let margin = 0.05 * topLeft.presentation.pointsPerPageInch
+
+            expectNear(topLeft.presentation.pageNumberRect.origin.x, page.origin.x + margin)
+            expectNear(topLeft.presentation.pageNumberRect.origin.y, page.origin.y + margin)
+
+            let even = numberedPage(["PAGE TOGGLE_PAGE_NUMBER_PLACEMENT TRUE"], steps: 3)
+
+            #expect(even.presentation.pageNumber == "2")
+            expectNear(even.presentation.pageNumberRect.origin.x, even.presentation.pageRect.origin.x + margin)
+
+            let odd = numberedPage(["PAGE TOGGLE_PAGE_NUMBER_PLACEMENT TRUE"], steps: 2)
+            let oddRect = odd.presentation.pageNumberRect
+
+            #expect(odd.presentation.pageNumber == "1")
+            expectNear(oddRect.origin.x + oddRect.size.width,
+                       odd.presentation.pageRect.origin.x + odd.presentation.pageRect.size.width - margin)
+            withExtendedLifetime([topLeft.file, even.file, odd.file]) {}
+        }
+
+        @Test("No number when the file or the host hides it")
+        func pageNumberHidden() {
+            let hiddenByFile = numberedPage(["PAGE DISPLAY_PAGE_NUMBER FALSE"])
+            let hiddenByHost = numberedPage([], showsNumber: false)
+
+            #expect(hiddenByFile.presentation.pageNumber == nil)
+            #expect(hiddenByHost.presentation.pageNumber == nil)
+            #expect(hiddenByHost.presentation.pageNumberText == nil)
+            withExtendedLifetime([hiddenByFile.file, hiddenByHost.file]) {}
         }
     }
 }

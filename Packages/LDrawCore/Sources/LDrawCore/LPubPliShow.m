@@ -50,21 +50,9 @@
 	NSUInteger		index	= 2;
 	LPubMetaScope	scope	= [LPubCommand scopeInParameters:parameters index:&index];
 
-	// The boolean is the last token, and there must be nothing after it.
-	if (index != parameters.count - 1) {
-		return nil;
-	}
+	BOOL isShown = YES;
 
-	BOOL		isShown	= YES;
-	NSString	*token	= parameters[index];
-
-	if ([token isEqualToString:LPUB_BOOLEAN_TRUE]) {
-		isShown = YES;
-	}
-	else if ([token isEqualToString:LPUB_BOOLEAN_FALSE]) {
-		isShown = NO;
-	}
-	else {
+	if ([LPubCommand getBoolean:&isShown inParameters:parameters atIndex:index] == NO) {
 		return nil;
 	}
 

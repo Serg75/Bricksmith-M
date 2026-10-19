@@ -16,6 +16,7 @@
 | `pli_style` | The list's border, fill, margins and count text from the file, on the page | completed |
 | `pli_placement` | `PAGE MARGINS` and `PLI PLACEMENT` against the page or the assembly | completed |
 | `page_color` | The page in the file's `PAGE BACKGROUND COLOR` | completed |
+| `page_number` | The page's number, counted as the book prints it, in the file's `PAGE NUMBER` style | completed |
 
 Phases 0–2 and 5 land entirely in the packages; Phases 3–4 are the only ones with macOS-app code, and even there the geometry and policy halves stay portable. The iOS smoke build must keep passing after every phase.
 
@@ -661,9 +662,37 @@ A list placed against the assembly makes the step's center depend on the list, s
 
 **Resizing a list that grows the other way.** A list placed by its right or bottom edge keeps that edge as it grows, so its size is set from the left or top edge. The presentation says so (`growsLeftward`, `growsUpward`) and mirrors points across the edge that stays put before the policy's hit testing and drag arithmetic read them (`-resizePointForPoint:`), so a drag away from the frame always makes it bigger. Its edges and pins (`-controlAtPoint:`, `-pinRectForAxis:`) are on the left and top. A list centered on an axis grows both ways and is resized from the right or bottom edge, which then moves half as far as the pointer.
 
+### The page's number
+
+On the page Bricksmith writes the number the step has in the printed book (`pageNumber`, `pageNumberRect` and `pageNumberText` on the presentation, drawn by `-[LDrawStepOverlayRenderer drawPageNumberInContext:]`). A host turns it on with `+[LDrawStepPartList setShowsPageNumber:]`. It is off by default, since a host that shows its own number would show two. Bricksmith turns it on in `+pushStepPartListDefaults`.
+
+**Counting.** `LDrawStepPageNumbers` counts the book from the file's first model, whatever model is on display, and keeps the pages of every step:
+
+- A step with no part and no hose has no page. Parts inside a texture or a group count.
+- A submodel's pages come before the step that first places it. A later placement adds no pages.
+- A submodel placed between `CALLOUT BEGIN` and `CALLOUT END`, with no `ASSEMBLED` or `ROTATED`, has no pages of its own. Each of its steps that the box shows (`+[LDrawStepCallout stepBuildsSomething:]`) is on the page of the step that places it, and its number has a mark before it: `➟22`. A callout shows the steps each time, also of a submodel placed before it, and does not count as placing it, so a later placement outside a callout gives the submodel pages.
+- The last page shows the finished model. It is the first model's last step, so that step shows two numbers when it places something itself.
+- A step on more than one page shows them all, in reading order: `➟1/➟2/3` for a submodel called out in two steps and then placed on its own.
+- A model the first model never places has no number.
+
+This is how LPub3D lays a book out with one step per page, with no cover pages, no multi-step pages and no `NOSTEP` steps. A host that makes its own book from the file the same way gets the same numbers: parts inside `PART BEGIN IGN` and parts a `REMOVE GROUP` drops still count. The presenter counts once and keeps the count until the file changes (`changeForChangedObject:`), so a camera move costs a lookup. A presentation made without a count makes its own.
+
+**Style and place.** `LDrawStepPageNumberStyle`, inside the package, reads the `PAGE` lines in force for the visible step, only when the host shows the number, with LPub3D's own choice where the file says nothing (`PageMeta::PageMeta()` in `meta.cpp`):
+
+| What | Line | LPub3D's default |
+|------|------|------------------|
+| Shown | `PAGE DISPLAY_PAGE_NUMBER` | `TRUE` |
+| Font | `PAGE NUMBER FONT` | Arial 24, bold |
+| Color | `PAGE NUMBER FONT_COLOR` | black |
+| Room around it | `PAGE NUMBER MARGINS` | 0.05 in |
+| Place | `PAGE NUMBER PLACEMENT` | `BOTTOM_RIGHT PAGE INSIDE` |
+| Other side on even pages | `PAGE TOGGLE_PAGE_NUMBER_PLACEMENT` | `FALSE` |
+
+`FONT`, `FONT_COLOR` and `MARGINS` are the callout's style lines under the `PAGE` branch, with the new part `LPubCalloutPartPageNumber` (`NUMBER`). `PLACEMENT` is an `LPubPlacement` with the branch `LPubPlacementBranchPageNumber`. The two switches are `LPubPageNumberDisplay`. The font size is that many dots at the file's resolution, as for the other text. The number is placed with `+[LDrawStepCalloutBox originForSize:…]` inside the page, the larger of `PAGE MARGINS` and `PAGE NUMBER MARGINS` from its edges (`placement.cpp`), and the line's offset is a share of the page. A placement against anything but the page, such as LPub3D's page header or footer, is read as no line. With the toggle on, an even page swaps left and right, as `formatpage.cpp` does. For a step on several pages the first page decides. The room the number takes is the callout's estimate (`-[LDrawStepCalloutText sizeForText:]`, which counts a symbol outside ASCII as two digits), and the text is drawn in its middle.
+
 ### Which meta line is in force
 
-Every meta the parts list reads goes through one lookup, `+[LDrawStepPartListPolicy directiveInForceForStep:excluding:matching:]`: `PLI CONSTRAIN`, `PLI SHOW`, `PLI CAMERA_ANGLES`, `PLI PART_ROTATION`, `MODEL_SCALE`, `PAGE SIZE`, `PAGE ORIENTATION`, `PAGE MARGINS`, `PAGE BACKGROUND`, `RESOLUTION`, `PLI PLACEMENT`, and the style lines `PLI BORDER`, `BACKGROUND`, `MARGINS` and `INSTANCE_COUNT FONT`/`FONT_COLOR`. It reads a file the way LPub3D's parser does (`BranchMeta::parse`, `LeafMeta::pop` and `findPage` in `traverse.cpp`), for one kind of line at a time.
+Every meta the parts list reads goes through one lookup, `+[LDrawStepPartListPolicy directiveInForceForStep:excluding:matching:]`: `PLI CONSTRAIN`, `PLI SHOW`, `PLI CAMERA_ANGLES`, `PLI PART_ROTATION`, `MODEL_SCALE`, `PAGE SIZE`, `PAGE ORIENTATION`, `PAGE MARGINS`, `PAGE BACKGROUND`, the page number's lines, `RESOLUTION`, `PLI PLACEMENT`, and the style lines `PLI BORDER`, `BACKGROUND`, `MARGINS` and `INSTANCE_COUNT FONT`/`FONT_COLOR`. It reads a file the way LPub3D's parser does (`BranchMeta::parse`, `LeafMeta::pop` and `findPage` in `traverse.cpp`), for one kind of line at a time.
 
 - **The rule.** There are two slots: the carried line and the step's line. A `LOCAL` line goes in the step's slot, and so does any later line of the same kind in that step. Any other line replaces the carried line. The step's slot empties at each step. The answer is the step's line, else the carried line. LPub3D writes `GLOBAL` in the top model's header, but its parser never checks where a `GLOBAL` line is, so it counts from where it is written, like a line with no keyword.
 - **`PART_ROTATION` and `RESOLUTION`** keep one value in LPub3D, so `LOCAL` does not end with the step. Both are read as if unscoped.

@@ -101,6 +101,9 @@ typedef NS_ENUM(NSInteger, LPubStyleBranch) {
 /// anything left over is rejected.
 + (BOOL) getInteger:(NSInteger *)outValue fromToken:(NSString *)token atLeast:(NSInteger)minimum;
 
+/// Reads TRUE or FALSE at index, which must be the line's last word.
++ (BOOL) getBoolean:(BOOL *)outValue inParameters:(NSArray<NSString *> *)parameters atIndex:(NSUInteger)index;
+
 /// Stores the text without re-deriving anything from it. Use it when the text
 /// already matches the properties.
 - (void) adoptCommandString:(NSString *)commandString;

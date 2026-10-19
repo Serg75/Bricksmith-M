@@ -337,6 +337,26 @@ static LPubMetaScope ScopeForKeyword(NSString *keyword)
 }//end getPositiveNumber:fromToken:
 
 
+//---------- getBoolean:inParameters:atIndex: ------------------------[static]--
++ (BOOL) getBoolean:(BOOL *)outValue inParameters:(NSArray<NSString *> *)parameters atIndex:(NSUInteger)index
+{
+	if (index + 1 != parameters.count) {
+		return NO;
+	}
+
+	if ([parameters[index] isEqualToString:LPUB_BOOLEAN_TRUE]) {
+		*outValue = YES;
+		return YES;
+	}
+	if ([parameters[index] isEqualToString:LPUB_BOOLEAN_FALSE]) {
+		*outValue = NO;
+		return YES;
+	}
+	return NO;
+
+}//end getBoolean:inParameters:atIndex:
+
+
 //---------- getInteger:fromToken:atLeast: --------------------------[static]--
 + (BOOL) getInteger:(NSInteger *)outValue fromToken:(NSString *)token atLeast:(NSInteger)minimum
 {

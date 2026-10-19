@@ -45,7 +45,9 @@ typedef NS_ENUM(NSInteger, LPubPlacementBranch) {
 	/// The step's assembly picture.
 	LPubPlacementBranchAssembly		= 1,
 	/// The step's parts list.
-	LPubPlacementBranchPartsList	= 2
+	LPubPlacementBranchPartsList	= 2,
+	/// The page's number.
+	LPubPlacementBranchPageNumber	= 3
 };
 
 
@@ -53,8 +55,10 @@ typedef NS_ENUM(NSInteger, LPubPlacementBranch) {
 ///
 /// @class      LPubPlacement
 ///
-/// @abstract   Where a callout's box, a step's assembly or its parts list sits:
-///             0 !LPUB (CALLOUT | ASSEM | PLI) PLACEMENT [GLOBAL|LOCAL]
+/// @abstract   Where a callout's box, a step's assembly, its parts list or the
+///             page's number sits:
+///             0 !LPUB (CALLOUT | ASSEM | PLI | PAGE NUMBER) PLACEMENT
+///                 [GLOBAL|LOCAL]
 ///                 <position> [<justification>] <relative to> (INSIDE|OUTSIDE)
 ///                 [[OFFSET] <x> <y>]
 ///

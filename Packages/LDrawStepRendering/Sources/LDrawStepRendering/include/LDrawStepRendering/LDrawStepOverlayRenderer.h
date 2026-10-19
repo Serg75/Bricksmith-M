@@ -24,9 +24,9 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @class      LDrawStepOverlayRenderer
 ///
-/// @abstract   Draws what a step shows over the model: LPub3D's page, the parts
-///             list's frame and labels, the callouts, and the button that leads
-///             back from a called-out submodel.
+/// @abstract   Draws what a step shows over the model: LPub3D's page and its
+///             number, the parts list's frame and labels, the callouts, and the
+///             button that leads back from a called-out submodel.
 ///
 /// @discussion Plain CoreGraphics and CoreText, so any host with a context can
 ///             use it. In the context the view's top left corner is the origin
@@ -64,8 +64,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// What the button that leads back says. Nil or empty shows no button.
 @property (nonatomic, copy, nullable) NSString *returnTitle;
 
-/// The bottom layer: the dimming around the page, and the list's frame with
-/// its pins.
+/// The bottom layer: the dimming around the page, the page's number, and the
+/// list's frame with its pins.
 - (void) drawPageAndFrameInContext:(CGContextRef)context viewSize:(Size2)viewSize
 	NS_SWIFT_NAME(drawPageAndFrame(in:viewSize:));
 

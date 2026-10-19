@@ -87,6 +87,7 @@
 #import <LDrawCore/LPubColor.h>
 #import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/LPubModelScale.h>
+#import <LDrawCore/LPubPageNumberDisplay.h>
 #import <LDrawCore/LPubPageOrientation.h>
 #import <LDrawCore/LPubPageSize.h>
 #import <LDrawCore/LPubPlacement.h>
