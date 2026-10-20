@@ -61,6 +61,7 @@
 	// Scope bar
 	__weak IBOutlet NSButton					*viewAllButton;
 	__weak IBOutlet NSButton					*viewStepsButton;
+	__weak IBOutlet NSButton					*lpubPageCheckbox;
 	__weak IBOutlet NSPopUpButton				*submodelPopUpMenu;
 	__weak IBOutlet NSView						*scopeStepControlsContainer;
 	__weak IBOutlet NSTextField					*stepField;
@@ -140,6 +141,7 @@
 // - Scope bar
 - (IBAction) viewAll:(id)sender;
 - (IBAction) viewSteps:(id)sender;
+- (IBAction) lpubPageCheckboxClicked:(id)sender;
 - (IBAction) stepFieldChanged:(id)sender;
 - (IBAction) stepNavigatorClicked:(id)sender;
 

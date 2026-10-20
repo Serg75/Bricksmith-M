@@ -358,6 +358,11 @@ PreferencesDialogController *preferencesDialog = nil;
 
 	[self selectPaneWithIdentifier:lastIdentifier];
 
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(stepPartListDidChange:)
+												 name:LDrawStepPartListDidChangeNotification
+											   object:nil];
+
 	return self;
 
 }//end init
@@ -1590,12 +1595,38 @@ PreferencesDialogController *preferencesDialog = nil;
 {
 	BOOL on = ([toggle state] == NSControlStateValueOn);
 
-	[[NSUserDefaults standardUserDefaults] setBool:on forKey:key];
-
-	[[self class] pushStepPartListDefaults];
-	[self postStepPartListDidChange];
+	[[self class] storeStepPartListFlag:on forKey:key];
 
 }//end storeStepPartListFlagFromSwitch:forKey:
+
+
+//---------- storeStepPartListFlag:forKey: ---------------------------[static]--
+//
+// Purpose:		Stores a parts list flag and tells the open documents and the
+//				preferences window.
+//
+//------------------------------------------------------------------------------
++ (void) storeStepPartListFlag:(BOOL)on forKey:(NSString *)key
+{
+	[[NSUserDefaults standardUserDefaults] setBool:on forKey:key];
+
+	[self pushStepPartListDefaults];
+	[[NSNotificationCenter defaultCenter] postNotificationName:LDrawStepPartListDidChangeNotification
+														object:nil];
+
+}//end storeStepPartListFlag:forKey:
+
+
+//========== stepPartListDidChange: ============================================
+//
+// Purpose:		Shows a parts list flag that a document window switched.
+//
+//==============================================================================
+- (void) stepPartListDidChange:(NSNotification *)notification
+{
+	[self setStepPartListSwitch:stepPartListLPubScaleSwitch fromKey:STEP_PART_LIST_LPUB_SCALE_KEY];
+
+}//end stepPartListDidChange:
 
 
 //========== setStepPartListSwitch:fromKey: ====================================

@@ -17,6 +17,7 @@
                 <outlet property="coordinateLabelZ" destination="1068" id="1077"/>
                 <outlet property="fileContentsOutline" destination="56" id="60"/>
                 <outlet property="fileContentsSplitView" destination="630" id="681"/>
+                <outlet property="lpubPageCheckbox" destination="LPg-Ck-Bx1" id="LPg-Ck-Ot1"/>
                 <outlet property="partsBrowser" destination="37" id="75"/>
                 <outlet property="scopeStepControlsContainer" destination="568" id="569"/>
                 <outlet property="stepField" destination="534" id="576"/>
@@ -261,7 +262,7 @@
                                                 </popUpButtonCell>
                                             </popUpButton>
                                             <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="540">
-                                                <rect key="frame" x="5" y="6" width="40" height="17"/>
+                                                <rect key="frame" x="5" y="5" width="40" height="17"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="View:" id="846">
                                                     <font key="font" metaFont="systemBold"/>
@@ -289,6 +290,18 @@
                                                 </buttonCell>
                                                 <connections>
                                                     <action selector="viewAll:" target="-2" id="564"/>
+                                                </connections>
+                                            </button>
+                                            <button hidden="YES" verticalHuggingPriority="750" id="LPg-Ck-Bx1">
+                                                <rect key="frame" x="146" y="4" width="100" height="18"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Draw on LPub3D's page</string>
+                                                <buttonCell key="cell" type="check" title="LPub3D Page" bezelStyle="regularSquare" imagePosition="left" controlSize="small" inset="2" id="LPg-Ck-Cl1">
+                                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                                    <font key="font" metaFont="smallSystem"/>
+                                                </buttonCell>
+                                                <connections>
+                                                    <action selector="lpubPageCheckboxClicked:" target="-2" id="LPg-Ck-Ac1"/>
                                                 </connections>
                                             </button>
                                         </subviews>

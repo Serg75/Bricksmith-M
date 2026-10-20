@@ -88,6 +88,7 @@
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
 #import "PieceCountPanel.h"
+#import "PreferencesDialogController.h"
 #import "RotationPanelController.h"
 #import "SearchPanelController.h"
 #import "StepPartListController.h"
@@ -873,6 +874,8 @@ void AppendChoicesToNewItem(
 	[self->viewStepsButton setState:(showStepsFlag == YES)];
 	
 	[self->scopeStepControlsContainer setHidden:(showStepsFlag == NO)];
+	[self->lpubPageCheckbox setHidden:(showStepsFlag == NO)];
+	[self->lpubPageCheckbox setState:[LDrawStepPartList usesLPubScale]];
 	[self->stepField setIntegerValue:[activeModel maximumStepIndexForStepDisplay] + 1];
 	
 }//end setStepDisplay:
@@ -1480,6 +1483,20 @@ void AppendChoicesToNewItem(
 	[self setStepDisplay:YES];
 
 }//end viewSteps:
+
+
+//========== lpubPageCheckboxClicked: ==========================================
+//
+// Purpose:		Switches the Draw on LPub3D's page preference.
+//
+//==============================================================================
+- (IBAction) lpubPageCheckboxClicked:(id)sender
+{
+	BOOL on = ([sender state] == NSControlStateValueOn);
+
+	[PreferencesDialogController storeStepPartListFlag:on forKey:STEP_PART_LIST_LPUB_SCALE_KEY];
+
+}//end lpubPageCheckboxClicked:
 
 
 //========== stepFieldChanged: =================================================
@@ -4510,6 +4527,7 @@ void AppendChoicesToNewItem(
 	BOOL pageWasSwitchedOn	= (usesLPubScale && usesLPubScale != self->usedLPubScale);
 
 	self->usedLPubScale = usesLPubScale;
+	[self->lpubPageCheckbox setState:usesLPubScale];
 
 	// First, so the overlay and its page exist before anything asks for
 	// them.

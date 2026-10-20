@@ -26,5 +26,6 @@
 + (void) ensureDefaults;
 + (void) loadStepPartListOrientations;
 + (void) pushStepPartListDefaults;
++ (void) storeStepPartListFlag:(BOOL)on forKey:(NSString *)key;
 
 @end
