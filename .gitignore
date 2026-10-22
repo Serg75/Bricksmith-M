@@ -77,3 +77,6 @@ ignore
 
 # AI chat history with SpecStory
 .specstory
+
+## Local code signing
+Bricksmith/Signing.local.xcconfig

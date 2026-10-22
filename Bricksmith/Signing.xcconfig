@@ -1,0 +1,8 @@
+// Code signing for the app targets.
+// An ad hoc signature changes with every build, so macOS treats each build as a new app and
+// forgets its recent documents. To keep one signature, create Signing.local.xcconfig here with:
+//   CODE_SIGN_IDENTITY = Apple Development
+//   DEVELOPMENT_TEAM = <your team ID>
+CODE_SIGN_IDENTITY = -
+
+#include? "Signing.local.xcconfig"

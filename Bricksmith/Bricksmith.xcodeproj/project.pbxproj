@@ -659,6 +659,7 @@
 		737728C3A3DF6166BE9183ED /* InspectionLSynth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InspectionLSynth.m; sourceTree = "<group>"; usesTabs = 0; };
 		73772D9444E1E3B92321011F /* InspectionLSynth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectionLSynth.h; sourceTree = "<group>"; };
 		73772F01F06AC293E3F650C4 /* libicucore.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicucore.dylib; path = ../../../../../Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/usr/lib/libicucore.dylib; sourceTree = SDKROOT; };
+		6E86DBAF2A0F418891234BFF /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = SOURCE_ROOT; };
 		8D15AC360486D014006FF6A4 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
 		8D15AC370486D014006FF6A4 /* Bricksmith.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bricksmith.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9506E0EE18A3F4130006CE9C /* SearchPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SearchPanelController.h; sourceTree = "<group>"; };
@@ -1101,6 +1102,7 @@
 				0BA3BE421772B3E10087579B /* LDraw */,
 				8D15AC360486D014006FF6A4 /* Info.plist */,
 				18B935CD2B60072900291171 /* Info-M.plist */,
+				6E86DBAF2A0F418891234BFF /* Signing.xcconfig */,
 				0B34306508B2E93D00A06A40 /* Localizable.strings */,
 				0B9FE56408AD97280046511D /* Credits.rtf */,
 				0B9FE54E08AD971E0046511D /* InfoPlist.strings */,
@@ -2251,10 +2253,10 @@
 /* Begin XCBuildConfiguration section */
 		2BB5974E09FEFD180077A885 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6E86DBAF2A0F418891234BFF /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
@@ -2298,10 +2300,10 @@
 		};
 		2BB5974F09FEFD180077A885 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6E86DBAF2A0F418891234BFF /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2433,11 +2435,11 @@
 		};
 		956D9C982A30768000FA956B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6E86DBAF2A0F418891234BFF /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-M";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = NO;
@@ -2484,11 +2486,11 @@
 		};
 		956D9C992A30768000FA956B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6E86DBAF2A0F418891234BFF /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-M";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = NO;
