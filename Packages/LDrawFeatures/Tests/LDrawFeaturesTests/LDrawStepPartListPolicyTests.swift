@@ -1113,6 +1113,27 @@ extension StepPartListStaticSettings {
             }
         }
 
+        @Test("The outline is a length on the page, so it grows with the zoom")
+        func outlineGrowsWithThePage() {
+            let atFit = LDrawStepPartListPolicy.outlineWidth(forPointsPerPageInch: 75)
+            let zoomedIn = LDrawStepPartListPolicy.outlineWidth(forPointsPerPageInch: 150)
+
+            #expect(atFit > 0.5 && atFit < 1.5)
+            #expect(abs(zoomedIn - 2.0 * atFit) < 0.0001)
+
+            // Off the page parts keep their usual edge lines.
+            #expect(LDrawStepPartListPolicy.outlineWidth(forPointsPerPageInch: 0) == 0)
+        }
+
+        @Test("Zoomed far into the page, the outline stops growing")
+        func outlineStopsGrowing() {
+            let far = LDrawStepPartListPolicy.outlineWidth(forPointsPerPageInch: 2_000)
+            let farther = LDrawStepPartListPolicy.outlineWidth(forPointsPerPageInch: 10_000)
+
+            #expect(far == 2.0)
+            #expect(farther == 2.0)
+        }
+
         @Test("A fit aims the drawn scale at the page, and a resize keeps the magnification")
         func theFitterAimsTheDrawnScale() {
             let document = model([[pageSize(8.5, 11), line(from: Point3(x: 0, y: 0, z: 0),

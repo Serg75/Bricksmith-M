@@ -113,6 +113,10 @@ typedef struct LDrawStepPartListHostState {
 /// Points one page inch covers, or 0 off the page.
 @property (nonatomic, readonly) double pointsPerPageInch;
 
+/// How wide the parts are outlined on the page, in points. 0 off the page, or
+/// when bold outlines are off.
+@property (nonatomic, readonly) double outlineWidth;
+
 /// What the frame is packed against and sits in: the page, else the view.
 @property (nonatomic, readonly) Size2 hostSize;
 

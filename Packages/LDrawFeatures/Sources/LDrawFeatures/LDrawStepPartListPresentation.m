@@ -706,6 +706,18 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end placePageForModel:host:
 
 
+//========== outlineWidth ======================================================
+- (double) outlineWidth
+{
+	if ([LDrawStepPartList drawsBoldOutlines] == NO) {
+		return 0.0;
+	}
+
+	return [LDrawStepPartListPolicy outlineWidthForPointsPerPageInch:self->_pointsPerPageInch];
+
+}//end outlineWidth
+
+
 //========== placeFrameWithMetrics:host: =======================================
 ///
 /// @abstract	Places the frame, and the icon area inside its padding.

@@ -24,6 +24,7 @@ extension StepPartListStaticSettings {
             LDrawStepPartList.setEnabled(false)
             LDrawStepPartList.setUsesLPubScale(false)
             LDrawStepPartList.setShowsPageNumber(false)
+            LDrawStepPartList.setDrawsBoldOutlines(false)
         }
 
         // MARK: - Fixtures
@@ -673,6 +674,24 @@ extension StepPartListStaticSettings {
             #expect(hiddenByHost.presentation.pageNumber == nil)
             #expect(hiddenByHost.presentation.pageNumberText == nil)
             withExtendedLifetime([hiddenByFile.file, hiddenByHost.file]) {}
+        }
+
+        // MARK: - The parts' outlines
+
+        @Test("The parts are outlined boldly only when asked, and only on the page")
+        func boldOutlines() {
+            LDrawStepPartList.setDrawsBoldOutlines(false)
+            #expect(onPage([]).outlineWidth == 0)
+
+            LDrawStepPartList.setDrawsBoldOutlines(true)
+            let presentation = onPage([])
+            let expected = LDrawStepPartListPolicy.outlineWidth(forPointsPerPageInch: presentation.pointsPerPageInch)
+            #expect(presentation.outlineWidth > 0)
+            #expect(presentation.outlineWidth == expected)
+
+            LDrawStepPartList.setUsesLPubScale(false)
+            let offPage = LDrawStepPartListPresentation(model: model(first: ["PAGE SIZE 8.5 11"]), host: host())
+            #expect(offPage.outlineWidth == 0)
         }
     }
 }

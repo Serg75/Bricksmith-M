@@ -205,6 +205,7 @@ static const NSTimeInterval CALLOUT_MOVE_FRAME_SECONDS = 1.0 / 60.0;
 														name:LDrawViewCameraDidChangeNotification
 													  object:self.hostView];
 		self.hostView.pageBackgroundColor = nil;
+		self.hostView.outlineWidth = 0.0;
 	}
 
 	if (self.overlayView != nil) {
@@ -310,6 +311,7 @@ static const NSTimeInterval CALLOUT_MOVE_FRAME_SECONDS = 1.0 / 60.0;
 	// The overlay is drawn over the model, so the page's color goes behind it.
 	// The overlay dims what lies outside the page.
 	self.hostView.pageBackgroundColor = StepPartListPageColor(presenter.presentation);
+	self.hostView.outlineWidth = presenter.presentation.outlineWidth;
 
 	[self showLayoutInTracker];
 

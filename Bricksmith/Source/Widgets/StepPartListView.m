@@ -70,6 +70,8 @@ static void ClipViewToBounds(NSView *view)
 /// Draws the frame and the callouts, and keeps the callouts' pictures.
 @property (nonatomic, strong) LDrawStepOverlayRenderer					*renderer;
 @property (nonatomic, strong) LDrawStepCalloutPictureStore				*pictureStore;
+/// Whether the callouts' pictures were drawn with bold outlines.
+@property (nonatomic) BOOL												picturesHaveOutlines;
 
 // Resize tracking
 /// The press in progress on the frame's controls.
@@ -247,6 +249,15 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 	self.presentation = presentation;
 	self.renderer.presentation = presentation;
 
+	// The pictures are kept by size and zoom, so switching bold outlines on or
+	// off has to draw them again.
+	BOOL hasOutlines = (presentation.outlineWidth > 0.0);
+
+	if (hasOutlines != self.picturesHaveOutlines) {
+		self.picturesHaveOutlines = hasOutlines;
+		[self.pictureStore discardPictures];
+	}
+
 	// Before the list, which returns early when the step has none. While a
 	// zoom runs, the pictures on show are stretched.
 	[self.pictureStore setScale:[self pictureScale]];
@@ -294,6 +305,7 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 								 NSMidY(contentRect) - NSMinY(shownRect));
 
 	[iconView scrollModelPoint:presentation.iconCenter toViewPoint:middle];
+	[iconView setOutlineWidth:presentation.outlineWidth];
 
 	[self.iconContainer setHidden:NO];
 
@@ -577,7 +589,8 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 									   center:center
 							   zoomPercentage:zoomPercentage
 										 size:CGSizeMake(size.width, size.height)
-										scale:scale];
+										scale:scale
+								 outlineWidth:self.presentation.outlineWidth];
 #else
 	return NULL;
 #endif

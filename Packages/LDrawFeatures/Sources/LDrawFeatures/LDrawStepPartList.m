@@ -82,6 +82,7 @@ static BOOL		StepPartList_usesLPubScale			= NO;
 static BOOL		StepPartList_placesCallouts			= NO;
 static BOOL		StepPartList_pageFollowsHostShape	= NO;
 static BOOL		StepPartList_showsPageNumber		= NO;
+static BOOL		StepPartList_drawsBoldOutlines		= NO;
 static LDrawPartListOrientations *StepPartList_partOrientations = nil;
 
 
@@ -856,6 +857,17 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 + (void) setShowsPageNumber:(BOOL)flag
 {
 	StepPartList_showsPageNumber = flag;
+}
+
+
++ (BOOL) drawsBoldOutlines
+{
+	return StepPartList_drawsBoldOutlines;
+}
+
++ (void) setDrawsBoldOutlines:(BOOL)flag
+{
+	StepPartList_drawsBoldOutlines = flag;
 }
 
 

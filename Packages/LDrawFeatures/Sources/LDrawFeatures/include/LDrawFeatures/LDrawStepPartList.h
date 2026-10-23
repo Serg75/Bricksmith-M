@@ -104,6 +104,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) showsPageNumber;
 + (void) setShowsPageNumber:(BOOL)flag;
 
+/// Whether the parts on LPub3D's page are outlined boldly, as printed
+/// instructions draw them. Default NO, for the usual thin edge lines.
++ (BOOL) drawsBoldOutlines;
++ (void) setDrawsBoldOutlines:(BOOL)flag;
+
 /// The base orientation of each part, from LPub3D's PLI control file, or nil.
 /// Default nil. Used only when the icons do not follow the step's rotation.
 + (nullable LDrawPartListOrientations *) partOrientations;

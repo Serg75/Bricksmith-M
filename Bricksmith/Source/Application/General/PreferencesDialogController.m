@@ -266,6 +266,7 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 	NSSwitch		*stepPartListSubmodelsSwitch;
 	NSSwitch		*stepPartListFollowsStepSwitch;
 	NSSwitch		*stepPartListLPubScaleSwitch;
+	NSSwitch		*stepPageBoldOutlinesSwitch;
 	NSSwitch		*stepCalloutsAutomaticSwitch;
 	NSTextField		*stepPartListOrientationsField;
 
@@ -633,7 +634,8 @@ PreferencesDialogController *preferencesDialog = nil;
 														@"group or a previous step. Higher is fainter.", nil);
 	NSString	*partListNote		= NSLocalizedString(@"A framed list of the parts the current step adds. With "
 														@"Draw on LPub3D's page on, it is packed like LPub3D, and "
-														@"dragging its edge sizes it for each step.", nil);
+														@"dragging its edge sizes it for each step. Bold outlines "
+														@"draw the parts on the page as printed instructions do.", nil);
 	NSString	*calloutsNote		= NSLocalizedString(@"Puts each callout in a free spot near its submodel on "
 														@"LPub3D's page. Positions saved in the file are ignored, "
 														@"and callouts cannot be dragged.", nil);
@@ -653,6 +655,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSView		*submodelsRow		= nil;
 	NSView		*followsStepRow		= nil;
 	NSView		*lpubScaleRow		= nil;
+	NSView		*boldOutlinesRow	= nil;
 	NSView		*calloutsRow		= nil;
 	NSView		*orientationsRow	= nil;
 	NSView		*selectionSection	= nil;
@@ -689,6 +692,8 @@ PreferencesDialogController *preferencesDialog = nil;
 															  action:@selector(stepPartListFollowsStepChanged:)];
 	stepPartListLPubScaleSwitch = [PreferencesForm switchWithTarget:self
 															action:@selector(stepPartListLPubScaleChanged:)];
+	stepPageBoldOutlinesSwitch = [PreferencesForm switchWithTarget:self
+															action:@selector(stepPageBoldOutlinesChanged:)];
 	stepCalloutsAutomaticSwitch = [PreferencesForm switchWithTarget:self
 															 action:@selector(stepCalloutsAutomaticChanged:)];
 
@@ -721,6 +726,8 @@ PreferencesDialogController *preferencesDialog = nil;
 											control:stepPartListFollowsStepSwitch];
 	lpubScaleRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Draw on LPub3D's page", nil)
 											control:stepPartListLPubScaleSwitch];
+	boldOutlinesRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Draw bold part outlines on the page", nil)
+											control:stepPageBoldOutlinesSwitch];
 	calloutsRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Place callouts automatically", nil)
 											control:stepCalloutsAutomaticSwitch];
 
@@ -738,7 +745,7 @@ PreferencesDialogController *preferencesDialog = nil;
 											   footer:ghostsNote];
 	partListSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Parts List", nil)
 												   rows:@[showListRow, submodelsRow, followsStepRow,
-														  lpubScaleRow, orientationsRow]
+														  lpubScaleRow, boldOutlinesRow, orientationsRow]
 												 footer:partListNote];
 	calloutsSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Callouts", nil)
 												   rows:@[calloutsRow]
@@ -1048,6 +1055,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self setStepPartListSwitch:stepPartListSubmodelsSwitch		fromKey:STEP_PART_LIST_SUBMODELS_KEY];
 	[self setStepPartListSwitch:stepPartListFollowsStepSwitch	fromKey:STEP_PART_LIST_FOLLOWS_STEP_KEY];
 	[self setStepPartListSwitch:stepPartListLPubScaleSwitch		fromKey:STEP_PART_LIST_LPUB_SCALE_KEY];
+	[self setStepPartListSwitch:stepPageBoldOutlinesSwitch		fromKey:STEP_PAGE_BOLD_OUTLINES_KEY];
 	[self setStepPartListSwitch:stepCalloutsAutomaticSwitch		fromKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
 
 	[self showStepPartListOrientations];
@@ -1464,6 +1472,19 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self storeStepPartListFlagFromSwitch:stepPartListLPubScaleSwitch forKey:STEP_PART_LIST_LPUB_SCALE_KEY];
 
 }//end stepPartListLPubScaleChanged:
+
+
+//========== stepPageBoldOutlinesChanged: ======================================
+//
+// Purpose:		The user chose whether the parts on LPub3D's page are outlined
+//				boldly, as printed instructions draw them.
+//
+//==============================================================================
+- (IBAction) stepPageBoldOutlinesChanged:(id)sender
+{
+	[self storeStepPartListFlagFromSwitch:stepPageBoldOutlinesSwitch forKey:STEP_PAGE_BOLD_OUTLINES_KEY];
+
+}//end stepPageBoldOutlinesChanged:
 
 
 //========== stepCalloutsAutomaticChanged: =====================================
@@ -2266,6 +2287,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[LDrawStepPartList setIncludesSubmodels:[userDefaults boolForKey:STEP_PART_LIST_SUBMODELS_KEY]];
 	[LDrawStepPartList setFollowsStepRotation:[userDefaults boolForKey:STEP_PART_LIST_FOLLOWS_STEP_KEY]];
 	[LDrawStepPartList setUsesLPubScale:[userDefaults boolForKey:STEP_PART_LIST_LPUB_SCALE_KEY]];
+	[LDrawStepPartList setDrawsBoldOutlines:[userDefaults boolForKey:STEP_PAGE_BOLD_OUTLINES_KEY]];
 	[LDrawStepPartList setPlacesCalloutsAutomatically:[userDefaults boolForKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY]];
 
 	// Not a preference: the page shows its number whenever the file does.

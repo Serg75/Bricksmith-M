@@ -448,6 +448,12 @@ typedef struct LDrawStepPartListBadgeStyle
 + (double) partListScaleForAssemblyScale:(double)pointsPerLDU inModel:(nullable LDrawModel *)model
 	NS_SWIFT_NAME(partListScale(forAssemblyScale:inModel:));
 
+/// How wide the parts are outlined on the page, in points, so they read as in
+/// printed instructions. It grows with the zoom up to 2 points. 0 when
+/// `pointsPerPageInch` is 0.
++ (double) outlineWidthForPointsPerPageInch:(double)pointsPerPageInch
+	NS_SWIFT_NAME(outlineWidth(forPointsPerPageInch:));
+
 /// Whether the step's own CONSTRAIN pins this axis: a `WIDTH` for the width
 /// axis, or `HEIGHT` for the height axis. The frame's pins show this and
 /// clicking one clears it.

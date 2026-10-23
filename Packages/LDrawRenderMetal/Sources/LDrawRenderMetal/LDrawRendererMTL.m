@@ -779,7 +779,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 } // end newImageWithPixelSize:transparent:
 
 
-//---------- newImageOfDirective:center:zoomPercentage:size:scale: ---[static]--
+//---------- newImageOfDirective:center:zoomPercentage:size:... ------[static]--
 //
 // Purpose:		A picture of a directive seen straight on with no perspective,
 //				on a clear background.
@@ -793,6 +793,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 				   zoomPercentage:(CGFloat)zoomPercentage
 							 size:(CGSize)size
 							scale:(CGFloat)scale
+					 outlineWidth:(CGFloat)outlineWidth
 {
 	static LDrawRenderer		*renderer	= nil;
 	static LDrawPictureScroller	*scroller	= nil;
@@ -820,6 +821,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[renderer setViewingAngle:ZeroPoint3];
 	[renderer setZoomPercentage:zoomPercentage];
 	[renderer scrollCenterToModelPoint:center];
+	[renderer setOutlineWidth:outlineWidth];
 
 	CGSize		pixelSize	= CGSizeMake(ceil(size.width * scale), ceil(size.height * scale));
 	CGImageRef	picture		= [renderer newImageWithPixelSize:pixelSize transparent:YES];
@@ -828,7 +830,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 
 	return picture;
 
-} // end newImageOfDirective:center:zoomPercentage:size:scale:
+} // end newImageOfDirective:center:zoomPercentage:size:scale:outlineWidth:
 
 
 //========== drawMarqueeWithEncoder: ===========================================

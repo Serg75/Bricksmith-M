@@ -61,6 +61,15 @@ static const double PAGE_FIT_MARGIN						= 6.0;
 /// LPub3D's default parts list border line, in inches.
 static const double LPUB_BORDER_INCHES					= 1.0 / 32.0;
 
+/// How wide the parts are outlined on the page, in inches. Twice the dot wide
+/// edge lines LPub3D draws at 170 DPI, which look faint next to printed
+/// instructions.
+static const double OUTLINE_INCHES						= 2.0 / 170.0;
+
+/// The widest outline, in points. Zoomed far into the page, wider lines would
+/// cover the parts.
+static const double MAXIMUM_OUTLINE_WIDTH				= 2.0;
+
 
 /// CONSTRAIN is written with four decimals.
 static const double WRITTEN_INCHES_STEP					= 0.0001;
@@ -1196,6 +1205,14 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 	return pointsPerLDU * [self modelScaleForBranch:LPubModelScaleBranchPli inModel:model] / assemblyScale;
 
 }//end partListScaleForAssemblyScale:inModel:
+
+
+//---------- outlineWidthForPointsPerPageInch: -----------------------[static]--
++ (double) outlineWidthForPointsPerPageInch:(double)pointsPerPageInch
+{
+	return MIN(pointsPerPageInch * OUTLINE_INCHES, MAXIMUM_OUTLINE_WIDTH);
+
+}//end outlineWidthForPointsPerPageInch:
 
 
 //---------- assemblyScaleFittingPageInHostSize:inModel: -------------[static]--
