@@ -257,18 +257,22 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 
 	NSRect contentRect = StepPartListRectFromBox(presentation.contentRect);
 
-	if (NSIsEmptyRect(contentRect)) {
+	// The 3D view covers only the part of the list on screen. Zoomed far into
+	// the page, the whole list is bigger than a Metal texture can be.
+	NSRect shownRect = NSIntersectionRect(contentRect, [self bounds]);
+
+	if (NSIsEmptyRect(shownRect)) {
 		[self tearDownContentLayers];
 		return;
 	}
 
-	[self buildContentLayersWithFrame:contentRect];
+	[self buildContentLayersWithFrame:shownRect];
 
 	// Hidden while its size, model and camera change, so it cannot redraw
 	// halfway through.
 	[self.iconContainer setHidden:YES];
 
-	[self.iconContainer setFrame:contentRect];
+	[self.iconContainer setFrame:shownRect];
 	[self.chromeView setFrame:contentRect];
 
 	// Lay out now: the camera takes its size from the 3D view, and the zoom
@@ -283,7 +287,13 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 	// and the layout positions are screen positions.
 	[iconView setViewingAngle:ZeroPoint3];
 	[iconView setZoomPercentage:presentation.iconZoomPercentage];
-	[iconView scrollCenterToModelPoint:presentation.iconCenter];
+
+	// The list's middle, which is off the 3D view's when only part of the list
+	// is shown.
+	NSPoint middle = NSMakePoint(NSMidX(contentRect) - NSMinX(shownRect),
+								 NSMidY(contentRect) - NSMinY(shownRect));
+
+	[iconView scrollModelPoint:presentation.iconCenter toViewPoint:middle];
 
 	[self.iconContainer setHidden:NO];
 

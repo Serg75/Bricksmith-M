@@ -118,6 +118,9 @@ enum : NSUInteger { MaxBuffersInFlight = 3 };					// The maximum number of comma
 static id<MTLBuffer>				_vertexUniformBuffers[MaxBuffersInFlight];
 static NSUInteger					_currentUniformBufferIndex = 0;
 
+// The widest and tallest texture Metal makes on a Mac.
+enum : NSUInteger { MaxTextureSize = 16384 };
+
 
 static const void * kLDrawRendererMetalDrawStateKey = &kLDrawRendererMetalDrawStateKey;
 
@@ -391,6 +394,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	BOOL			considerFastDraw	= NO;
 	BOOL			boundsOnly			= NO;
 
+	// Metal cannot make the textures for a view this big, so it is not drawn.
+	if (view.drawableSize.width > MaxTextureSize || view.drawableSize.height > MaxTextureSize) {
+		return;
+	}
+
 	// Wait to ensure only a maximum of `MaxBuffersInFlight` frames are being processed by the GPU at any time.
 	// This prevents the CPU from overwriting buffer data still in use by the GPU, avoiding rendering artefacts.
 	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
@@ -617,7 +625,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	NSUInteger	height		= (NSUInteger)pixelSize.height;
 	NSUInteger	bytesPerRow	= width * 4;
 
-	if (width == 0 || height == 0 || _commandQueue == nil) {
+	if (width == 0 || height == 0 || width > MaxTextureSize || height > MaxTextureSize || _commandQueue == nil) {
 		return NULL;
 	}
 
@@ -717,6 +725,9 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	if (directive == nil || size.width < 1.0 || size.height < 1.0 || scale <= 0.0) {
 		return NULL;
 	}
+
+	// A picture bigger than a texture can be is drawn at a lower resolution.
+	scale = MIN(scale, MaxTextureSize / MAX(size.width, size.height));
 
 	if (renderer == nil) {
 		scroller = [[LDrawPictureScroller alloc] init];
