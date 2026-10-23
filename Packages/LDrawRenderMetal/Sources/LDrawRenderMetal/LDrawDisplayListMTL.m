@@ -128,6 +128,7 @@ struct LDrawDL {
 	struct LDrawDLInstance *instance_head;		// Linked list of instances to draw.
 	struct LDrawDLInstance *instance_tail;
 	int						instance_count;
+	int						deferred_count;		// Links in the session's transparent and ghost lists that draw it.
 	int						flags;				// See flags defs above.
 	id<MTLBuffer> 			vertexBuffer;		// Single buffer containing all geometry in the DL.
 #if WANT_SMOOTH
@@ -523,6 +524,7 @@ static void saveForDeferredDraw(struct LDrawDLSession *		session,
 	}
 
 	link->dl = dl;
+	++dl->deferred_count;
 	link->ghost_id = ghost_id;
 	link->ghost_alpha = ghost_alpha;
 	memcpy(link->color,cur_color,sizeof(float)*4);
@@ -535,6 +537,24 @@ static void saveForDeferredDraw(struct LDrawDLSession *		session,
 		memset((void*)&link->spec, 0, sizeof(struct LDrawTextureSpec));
 
 } // end saveForDeferredDraw
+
+
+//========== endDeferredUse ======================================================
+//
+// Purpose:	Notes that the transparent or ghost pass is done with a DL. One its
+//			owner destroyed while it was queued goes on the list to destroy,
+//			once nothing draws it any more.
+//
+//================================================================================
+static void endDeferredUse(struct LDrawDL * dl, struct LDrawDL ** doomed_head)
+{
+	if (--dl->deferred_count == 0 && (dl->flags & dl_needs_destroy))
+	{
+		dl->next_dl = *doomed_head;
+		*doomed_head = dl;
+	}
+
+} // end endDeferredUse
 
 
 //========== saveForInstanceDraw =================================================
@@ -833,6 +853,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	dl->instance_head = NULL;
 	dl->instance_tail = NULL;
 	dl->instance_count = 0;
+	dl->deferred_count = 0;
 
 	dl->tex_count = total_texes;
 
@@ -1093,6 +1114,7 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	dl->instance_head = NULL;
 	dl->instance_tail = NULL;
 	dl->instance_count = 0;
+	dl->deferred_count = 0;
 
 	dl->tex_count = total_texes;
 
@@ -1206,14 +1228,15 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 //================================================================================
 void LDrawDLDestroy(struct LDrawDL * dl)
 {
-	if (dl->instance_head != NULL)
+	if (dl->instance_head != NULL || dl->deferred_count > 0)
 	{
 		// Special case: if our DL is destroyed WHILE a session is using it for
 		// deferred drawing, we do NOT destroy it - we mark it for destruction
 		// later and the session nukes it.  This is needed for the case where
 		// client code creates a DL, draws it, and immediately destroys it, as
 		// a silly way to get 'immediate' drawing.  In this case, the session
-		// may have intentionally deferred the DL.
+		// may have intentionally deferred the DL, for instancing or for the
+		// transparent or ghost pass.
 		dl->flags |= dl_needs_destroy;
 		return;
 	}
@@ -1222,6 +1245,12 @@ void LDrawDLDestroy(struct LDrawDL * dl)
 	// when: (1) we build a temp DL and don't mark it as temp or (2) we for some
 	// reason inval a DL mid-draw, which is usually a sign of coding error.
 	assert(dl->instance_head == NULL);
+
+	// free() does not release the buffers.
+	dl->vertexBuffer = nil;
+#if WANT_SMOOTH
+	dl->indexBuffer = nil;
+#endif
 
 	free(dl);
 
@@ -1273,6 +1302,10 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 {
 	struct LDrawDLInstance * inst;
 	struct LDrawDL * dl;
+
+	// DLs their owner destroyed while they were queued. The segments, the
+	// transparent pass and the ghost pass still read them, so they go last.
+	struct LDrawDL * doomed_head = NULL;
 
 	// INSTANCED DRAWING CASE
 
@@ -1388,9 +1421,11 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			dl->instance_count = 0;
 			// Bug fix: bump the list head FIRST (pop front) before we blow things up, lest we use freed memory.
 			session->dl_head = dl->next_dl;
-			if (dl->flags & dl_needs_destroy)
+			// One the transparent or ghost pass still draws waits for it.
+			if ((dl->flags & dl_needs_destroy) && dl->deferred_count == 0)
 			{
-				LDrawDLDestroy(dl);
+				dl->next_dl = doomed_head;
+				doomed_head = dl;
 			}
 			else
 			{
@@ -1598,6 +1633,20 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 		float noGhost = 1.0f;
 		[renderEncoder setVertexBytes:&noGhost length:sizeof(noGhost) atIndex:BufferIndexGhostAlpha];
+	}
+
+	for (l = session->sorted_head; l; l = l->next)
+		endDeferredUse(l->dl, &doomed_head);
+
+	for (l = session->ghost_head; l; l = l->next)
+		endDeferredUse(l->dl, &doomed_head);
+
+	// The encoder keeps the buffers it was given until the GPU is done.
+	while (doomed_head)
+	{
+		dl = doomed_head;
+		doomed_head = dl->next_dl;
+		LDrawDLDestroy(dl);
 	}
 
 	#if WANT_STATS
