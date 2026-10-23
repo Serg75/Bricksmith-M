@@ -2621,6 +2621,28 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 }//end setPageBackgroundColor:
 
 
+//========== outlineWidth ======================================================
+- (CGFloat) outlineWidth
+{
+	return [self->renderer outlineWidth];
+
+}//end outlineWidth
+
+
+//========== setOutlineWidth: ==================================================
+///
+/// @abstract	Outlines the parts this many points wide, as on a printed page.
+///				0 goes back to the usual edge lines.
+///
+//==============================================================================
+- (void) setOutlineWidth:(CGFloat)width
+{
+	[self makeCurrentContext];
+	[self->renderer setOutlineWidth:width];
+
+}//end setOutlineWidth:
+
+
 //========== postCameraDidChange ===============================================
 //
 // Purpose:		Tells overlays the camera turned.

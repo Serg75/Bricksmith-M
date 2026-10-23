@@ -40,6 +40,8 @@ NS_ASSUME_NONNULL_BEGIN
 	// The box the camera stands back from in place of what is drawn, or
 	// InvalidBox.
 	Box3					cameraBounds;
+
+	CGFloat					outlineWidth;			// in points; 0 for edge lines a pixel wide
 }
 
 - (Matrix4)getInverseMatrix;

@@ -116,6 +116,13 @@ typedef NS_ENUM(NSInteger, LDrawDetailMode)
 - (Box3)cameraBounds;
 - (void)setCameraBounds:(Box3)bounds;
 
+/// How wide parts are outlined, in points, as on a printed page: edge lines
+/// this wide, and the conditional lines that outline curved surfaces, all
+/// unlit and in a shade of the part's color. 0 draws edge lines a pixel wide
+/// and leaves conditional lines out. The OpenGL renderer always does that.
+- (CGFloat)outlineWidth;
+- (void)setOutlineWidth:(CGFloat)width;
+
 @end
 
 

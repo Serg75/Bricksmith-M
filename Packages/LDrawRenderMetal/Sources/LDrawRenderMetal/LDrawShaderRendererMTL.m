@@ -24,6 +24,7 @@
 
 #import <LDrawRenderCore/LDrawPoolAllocator.h>
 #import <LDrawRenderCore/LDrawDisplayList.h>
+#import "LDrawDisplayListMTL.h"
 #import "LDrawRenderMetalResources.h"
 #import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawRenderMetal/MetalGPU.h>
@@ -334,5 +335,22 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 	
 } // end finishDraw:
 
+
+@end
+
+
+@implementation LDrawShaderRenderer (MetalWideLines)
+
+//========== setWideLines: =======================================================
+//
+// Purpose:	Draws this drawing's edge and conditional lines as quads of the
+//			given width.
+//
+//================================================================================
+- (void)setWideLines:(const struct LDrawDLWideLines *)lines
+{
+	LDrawDLSessionSetWideLines(_renderEncoder, session, lines);
+
+} // end setWideLines:
 
 @end

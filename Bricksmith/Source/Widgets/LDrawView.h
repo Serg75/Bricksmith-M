@@ -82,6 +82,10 @@
 /// such as the color of a printed page. Nil for the user's.
 @property (nonatomic, copy, nullable) NSColor *pageBackgroundColor;
 
+/// How wide the parts are outlined, in points, as on a printed page. 0 for
+/// the usual edge lines.
+@property (nonatomic) CGFloat outlineWidth;
+
 // Accessors
 - (LDrawDirective *) LDrawDirective;
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix;

@@ -29,6 +29,7 @@
 #include <LDrawRenderMetal/MetalCommonDefinitions.h>
 #import <LDrawRenderCore/LDrawDisplayListBuilder.h>	// VERT_STRIDE - our vertex descriptor has to match what the DL builder writes.
 
+#import "LDrawDisplayListMTL.h"
 #import "LDrawRenderMetalResources.h"
 #import <LDrawRenderMetal/LDrawShaderRendererMTL.h>
 #import <LDrawRenderMetal/MetalGPU.h>
@@ -107,6 +108,7 @@
 
 static id<MTLCommandQueue>			_commandQueue;
 static id<MTLRenderPipelineState>	_pipelineState;
+static id<MTLRenderPipelineState>	_wideLinePipelineState;
 static id<MTLRenderPipelineState>	_marqueePipelineState;
 static id<MTLDepthStencilState>		_depthStencilState;
 static dispatch_semaphore_t			_inFlightSemaphore;
@@ -207,6 +209,17 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	NSError *error = nil;
 	_pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
 	if (!_pipelineState) {
+		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+	}
+
+	// Wide lines blend the same way and draw to the same targets. Their shader
+	// reads the vertices itself, so there is no vertex descriptor.
+	pipelineDescriptor.vertexFunction = [defaultLibrary newFunctionWithName:@"wideLineVertexShader"];
+	pipelineDescriptor.fragmentFunction = [defaultLibrary newFunctionWithName:@"wideLineFragmentShader"];
+	pipelineDescriptor.vertexDescriptor = nil;
+
+	_wideLinePipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	if (!_wideLinePipelineState) {
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
 
@@ -598,6 +611,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 																 projection:[camera projection]];
 
 	[ren setBoundsOnlyDrawing:boundsOnly];
+	[self applyOutlineToShaderRenderer:ren pixelSize:CGSizeMake(multisampleTexture.width, multisampleTexture.height)];
 	[self->fileBeingDrawn drawSelf:ren];
 
 	[ren finishDraw];
@@ -609,6 +623,67 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	return YES;
 
 } // end encodeDrawWithCommandBuffer:...
+
+
+//========== applyOutlineToShaderRenderer:pixelSize: ===========================
+//
+// Purpose:		Has the drawing outline its parts -outlineWidth points wide, on
+//				a surface of this many pixels. With a width of 0 it does
+//				nothing, and the usual edge lines are drawn.
+//
+//==============================================================================
+- (void)applyOutlineToShaderRenderer:(LDrawShaderRenderer *)ren pixelSize:(CGSize)pixelSize
+{
+	CGFloat	width		= [self outlineWidth];
+	Size2	surfaceSize	= [self viewport].size;
+
+	if (width <= 0.0 || surfaceSize.width <= 0.0 || _wideLinePipelineState == nil) {
+		return;
+	}
+
+	struct LDrawDLWideLines lines;
+
+	lines.line_pipeline		= _wideLinePipelineState;
+	lines.face_pipeline		= _pipelineState;
+	// Never thinner than the lines it replaces.
+	lines.width				= MAX(width * pixelSize.width / surfaceSize.width, 1.0);
+	lines.viewport_size		= simd_make_float2(pixelSize.width, pixelSize.height);
+	lines.face_bias_clamp	= [self depthOfFaceAt45DegreesAcross:lines.width * 0.5f
+												  pixelWidth:pixelSize.width];
+
+	[ren setWideLines:&lines];
+
+} // end applyOutlineToShaderRenderer:pixelSize:
+
+
+//========== depthOfFaceAt45DegreesAcross:pixelWidth: ==========================
+//
+// Purpose:		How much depth a face at 45 degrees to the eye covers across
+//				this many pixels, on a surface this many pixels wide. Measured
+//				at the rotation center, near the middle of the model.
+//
+// Notes:		0, which means no limit, when the camera gives nothing to
+//				measure.
+//
+//==============================================================================
+- (float)depthOfFaceAt45DegreesAcross:(float)pixels pixelWidth:(CGFloat)pixelWidth
+{
+	simd_float4x4	projection	= simd_matrix4x4_from_array_transposed([camera projection]);
+	simd_float4x4	modelView	= simd_matrix4x4_from_array_transposed([camera modelView]);
+	Point3			center		= [camera rotationCenter];
+	simd_float4		eye			= simd_mul(modelView, simd_make_float4(center.x, center.y, center.z, 1.0f));
+
+	// One unit across the screen, and one unit further from the eye.
+	simd_float4		middle		= simd_mul(projection, eye);
+	simd_float4		across		= simd_mul(projection, eye + simd_make_float4(1.0f, 0.0f, 0.0f, 0.0f));
+	simd_float4		deeper		= simd_mul(projection, eye - simd_make_float4(0.0f, 0.0f, 1.0f, 0.0f));
+	float			unitPixels	= fabsf(across.x / across.w - middle.x / middle.w) * pixelWidth * 0.5f;
+	float			unitDepth	= fabsf(deeper.z / deeper.w - middle.z / middle.w);
+	float			depth		= pixels / unitPixels * unitDepth;
+
+	return (isfinite(depth) && depth > 0.0f) ? depth : 0.0f;
+
+} // end depthOfFaceAt45DegreesAcross:pixelWidth:
 
 
 //========== newImageWithPixelSize:transparent: ================================

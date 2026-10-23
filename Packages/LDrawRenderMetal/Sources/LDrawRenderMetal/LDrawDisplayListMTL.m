@@ -20,6 +20,7 @@
 #import <LDrawRenderCore/LDrawShaderRenderer.h>
 #import <LDrawRenderCore/MeshSmooth.h>
 #import <LDrawRenderMetal/MetalGPU.h>
+#import "LDrawDisplayListMTL.h"
 #import "MetalUtilities.h"
 #import <LDrawCore/MatrixMath.h>
 
@@ -104,6 +105,8 @@ struct LDrawDLPerTex {
 	uint32_t				line_count;
 	uint32_t				cond_line_off;
 	uint32_t				cond_line_count;
+	uint32_t				cond_quad_off;		// Conditional lines with their control points, in condIndexBuffer.
+	uint32_t				cond_quad_count;
 	uint32_t				tri_off;
 	uint32_t				tri_count;
 };
@@ -133,6 +136,7 @@ struct LDrawDL {
 	id<MTLBuffer> 			vertexBuffer;		// Single buffer containing all geometry in the DL.
 #if WANT_SMOOTH
 	id<MTLBuffer> 			indexBuffer;		// Single buffer containing all mesh indices.
+	id<MTLBuffer>			condIndexBuffer;	// Conditional lines with their two control points, or nil.
 #endif
 	int						tex_count;			// Number of per-textures; untex case is always first if present.
 	#if WANT_STATS
@@ -156,6 +160,8 @@ struct LDrawDLSegment {
 	id<MTLBuffer> 			vertexBuffer;		// Vertex buffer of the brick we are going to draw - contains the actual brick mesh.
 #if WANT_SMOOTH
 	id<MTLBuffer> 			indexBuffer;
+	// Not retained: the DL keeps it, and the session's pool would never release it.
+	__unsafe_unretained id<MTLBuffer> condIndexBuffer;
 #endif
 	struct LDrawDLPerTex *	dl;					// Ptr to the per-tex info for that brick - only untexed bricks get instanced, so we only have one "per tex", by definition.
 	float *					inst_base;			// Buffer-relative ptr to the instance data base in the instance buffer.
@@ -213,6 +219,8 @@ struct LDrawDLSession {
 
 	float								model_view[16];			// Model-view matrix, used to Z sort translucent objects.
 	unsigned int						inst_ring;				// If using more than one instancing buffer, this tells which one we use.
+
+	struct LDrawDLWideLines				wide_lines;				// Edge and conditional lines as quads, when asked for.
 
 	id<MTLTexture>						current_bound_texture;
 };
@@ -398,6 +406,146 @@ static int compare_ghost_link(const void * lhs, const void * rhs)
 } // end compare_ghost_link
 
 
+#if WANT_SMOOTH
+
+// The part of the faces' depth bias that does not depend on their slope, in
+// the depth buffer's smallest steps. It keeps a line on a face turned straight
+// to the eye in front of that face.
+static const float FACE_DEPTH_BIAS = 2.0f;
+
+//========== setFaceDepthBias ====================================================
+//
+// Purpose:	Pushes the faces back by the depth they cover across half a wide
+//			line, so the lines on their edges stay whole. A face turned toward
+//			the eye moves least, so it still hides the lines behind it.
+//
+// Notes:	No more than half a line: two faces that meet at different slopes
+//			can swap places within that distance, and there the line covers
+//			them. A face seen almost edge on is pushed back only as far as the
+//			clamp lets it, so it cannot slip behind what it touches.
+//
+//================================================================================
+static void setFaceDepthBias(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session)
+{
+	[renderEncoder setDepthBias:FACE_DEPTH_BIAS
+					 slopeScale:session->wide_lines.width * 0.5f
+						  clamp:session->wide_lines.face_bias_clamp];
+
+} // end setFaceDepthBias
+
+
+//========== beginWideLines ======================================================
+//
+// Purpose:	Switches the encoder from faces to wide lines, which are drawn at
+//			their own depth.
+//
+//================================================================================
+static void beginWideLines(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session)
+{
+	[renderEncoder setRenderPipelineState:session->wide_lines.line_pipeline];
+	[renderEncoder setDepthBias:0.0f slopeScale:0.0f clamp:0.0f];
+
+} // end beginWideLines
+
+
+//========== endWideLines ========================================================
+//
+// Purpose:	Switches the encoder back to faces after wide lines.
+//
+//================================================================================
+static void endWideLines(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session)
+{
+	[renderEncoder setRenderPipelineState:session->wide_lines.face_pipeline];
+	setFaceDepthBias(renderEncoder, session);
+
+} // end endWideLines
+
+
+//========== drawWideLines =======================================================
+//
+// Purpose:	Draws a mesh's edge and conditional lines as quads.
+//
+// Notes:	The caller sets the line pipeline. Six vertices make one line's
+//			quad.
+//
+//================================================================================
+static void drawWideLines(id<MTLRenderCommandEncoder>	renderEncoder,
+						  struct LDrawDLSession *		session,
+						  id<MTLBuffer>					indexBuffer,
+						  id<MTLBuffer>					condIndexBuffer,
+						  struct LDrawDLPerTex *		tptr,
+						  NSUInteger					instanceCount)
+{
+	struct LDrawDLWideLines *	wide	= &session->wide_lines;
+	struct LineUniform			line	= { .viewport_size	= wide->viewport_size,
+											.width			= wide->width,
+											.conditional	= 0 };
+
+	if (tptr->line_count)
+	{
+		[renderEncoder setVertexBytes:&line length:sizeof(line) atIndex:BufferIndexLineUniforms];
+		[renderEncoder setVertexBuffer:indexBuffer
+								offset:tptr->line_off * sizeof(uint32_t)
+							   atIndex:BufferIndexLineIndices];
+		[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+						  vertexStart:0
+						  vertexCount:tptr->line_count / 2 * 6
+						instanceCount:instanceCount];
+	}
+
+	if (tptr->cond_quad_count)
+	{
+		line.conditional = 1;
+
+		[renderEncoder setVertexBytes:&line length:sizeof(line) atIndex:BufferIndexLineUniforms];
+		[renderEncoder setVertexBuffer:condIndexBuffer
+								offset:tptr->cond_quad_off * sizeof(uint32_t)
+							   atIndex:BufferIndexLineIndices];
+		[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+						  vertexStart:0
+						  vertexCount:tptr->cond_quad_count / 4 * 6
+						instanceCount:instanceCount];
+	}
+
+} // end drawWideLines
+
+
+//========== drawLines ===========================================================
+//
+// Purpose:	Draws a mesh's edge lines a pixel wide, or its edge and conditional
+//			lines as quads when the session asks for wide lines.
+//
+//================================================================================
+static void drawLines(id<MTLRenderCommandEncoder>	renderEncoder,
+					  struct LDrawDLSession *		session,
+					  struct LDrawDL *				dl,
+					  struct LDrawDLPerTex *		tptr,
+					  NSUInteger					instanceCount)
+{
+	struct LDrawDLWideLines * wide = &session->wide_lines;
+
+	if (wide->line_pipeline == nil)
+	{
+		if (tptr->line_count)
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
+									  indexCount:tptr->line_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
+								   instanceCount:instanceCount];
+	}
+	else if (tptr->line_count || tptr->cond_quad_count)
+	{
+		beginWideLines(renderEncoder, session);
+		drawWideLines(renderEncoder, session, dl->indexBuffer, dl->condIndexBuffer, tptr, instanceCount);
+		endWideLines(renderEncoder, session);
+	}
+
+} // end drawLines
+
+#endif
+
+
 //========== drawDeferredInstance =================================================
 //
 // Purpose:	Draw one deferred instance -- a transparent part or a ghost -- one
@@ -452,13 +600,7 @@ static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
 			setup_tex_spec(&l->spec, session, renderEncoder);
 
 		#if WANT_SMOOTH
-		if (tptr->line_count)
-			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-									  indexCount:tptr->line_count
-									   indexType:MTLIndexTypeUInt32
-									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
-								   instanceCount:1];
+		drawLines(renderEncoder, session, dl, tptr, 1);
 
 		if (tptr->tri_count)
 			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
@@ -687,13 +829,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 				setup_tex_spec(spec, session, renderEncoder);
 
 			#if WANT_SMOOTH
-			if (tptr->line_count)
-				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-										  indexCount:tptr->line_count
-										   indexType:MTLIndexTypeUInt32
-										 indexBuffer:dl->indexBuffer
-								   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
-									   instanceCount:1];
+			drawLines(renderEncoder, session, dl, tptr, 1);
 
 			if (tptr->tri_count)
 				[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
@@ -758,6 +894,7 @@ static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 		if (segment->vertexBuffer != dl->vertexBuffer) segment->vertexBuffer = dl->vertexBuffer;
 #if WANT_SMOOTH
 		segment->indexBuffer = dl->indexBuffer;
+		segment->condIndexBuffer = dl->condIndexBuffer;
 #endif
 		segment->dl = &dl->texes[0];
 	}
@@ -992,6 +1129,42 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		quad_start,
 		quad_count);
 
+	// Wide conditional lines need their control points, so they keep all four
+	// indices in a buffer of their own. Below, the index buffer keeps only the
+	// ends, for a wireframe.
+	int *			cond_quad_start			= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int *			cond_quad_count			= (int *) LDrawPoolAllocate(ctx->alloc, sizeof(int) * total_texes);
+	int				total_cond_indices		= 0;
+	id<MTLBuffer>	stagingCondIndexBuffer	= nil;
+
+	for (ti = 0; ti < total_texes; ++ti)
+	{
+		cond_quad_start[ti] = total_cond_indices;
+		cond_quad_count[ti] = cond_line_count[ti];
+		total_cond_indices += cond_line_count[ti];
+	}
+
+	if (total_cond_indices > 0)
+	{
+		NSUInteger condIndexBufferSize = total_cond_indices * sizeof(uint32_t);
+
+		stagingCondIndexBuffer = [device newBufferWithLength:condIndexBufferSize
+													 options:MTLResourceStorageModeShared];
+		stagingCondIndexBuffer.label = @"Staging conditional line index buffer";
+
+		uint32_t * cond_ptr = (uint32_t *)[stagingCondIndexBuffer contents];
+
+		for (ti = 0; ti < total_texes; ++ti)
+		{
+			for (int i = 0; i < cond_line_count[ti]; ++i)
+				*cond_ptr++ = index_ptr[cond_line_start[ti] + i];
+		}
+
+		dl->condIndexBuffer = [device newBufferWithLength:condIndexBufferSize
+												  options:MTLResourceStorageModePrivate];
+		dl->condIndexBuffer.label = @"Conditional line index buffer";
+	}
+
 	if (*cond_line_count > 0) {
 		volatile uint32_t * in_ptr = index_ptr + *cond_line_start;
 		volatile uint32_t * out_ptr = in_ptr;
@@ -1032,6 +1205,13 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 			  destinationOffset:0
 						   size:indexBufferSize];
 
+	if (stagingCondIndexBuffer != nil)
+		[blitEncoder copyFromBuffer:stagingCondIndexBuffer
+					   sourceOffset:0
+						   toBuffer:dl->condIndexBuffer
+				  destinationOffset:0
+							   size:stagingCondIndexBuffer.length];
+
 	[blitEncoder endEncoding];
 	[copyCommandBuffer commit];
 	[copyCommandBuffer waitUntilCompleted];
@@ -1052,6 +1232,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		cur_tex->tri_off			= tri_start[ti];
 		cur_tex->line_count			= line_count[ti];
 		cur_tex->cond_line_count	= cond_line_count[ti];
+		cur_tex->cond_quad_off		= cond_quad_start[ti];
+		cur_tex->cond_quad_count	= cond_quad_count[ti];
 		cur_tex->tri_count			= tri_count[ti];
 
 		++ti;
@@ -1250,6 +1432,7 @@ void LDrawDLDestroy(struct LDrawDL * dl)
 	dl->vertexBuffer = nil;
 #if WANT_SMOOTH
 	dl->indexBuffer = nil;
+	dl->condIndexBuffer = nil;
 #endif
 
 	free(dl);
@@ -1285,11 +1468,36 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	memset(&session->stats,0,sizeof(session->stats));
 	#endif
 	memcpy(session->model_view,model_view,sizeof(float)*16);
+	memset(&session->wide_lines, 0, sizeof(session->wide_lines));
 	session->inst_ring = inst_ring_last;
 	// each session picks up a new buffer in the ring of instance buffers.
 	inst_ring_last = (inst_ring_last+1)%INST_RING_BUFFER_COUNT;
 	return session;
 } // end LDrawDLSessionCreate
+
+
+//========== LDrawDLSessionSetWideLines ==========================================
+//
+// Purpose:	Draws the session's edge and conditional lines as quads, so they
+//			can be wider than a pixel. A nil line pipeline goes back to edge
+//			lines a pixel wide and no conditional lines.
+//
+// Notes:	Call it before anything is drawn: a textured part draws its faces
+//			at once, and they need the face depth bias.
+//
+//================================================================================
+void LDrawDLSessionSetWideLines(id<MTLRenderCommandEncoder>		renderEncoder,
+								struct LDrawDLSession *			session,
+								const struct LDrawDLWideLines *	lines)
+{
+	session->wide_lines = *lines;
+
+	#if WANT_SMOOTH
+	if (lines->line_pipeline)
+		setFaceDepthBias(renderEncoder, session);
+	#endif
+
+} // end LDrawDLSessionSetWideLines
 
 
 //========== LDrawDLSessionDrawAndDestroy ========================================
@@ -1389,12 +1597,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					setup_tex_spec(NULL, session, renderEncoder);
 
 					#if WANT_SMOOTH
-					if (tptr->line_count)
-						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
-												  indexCount:tptr->line_count
-												   indexType:MTLIndexTypeUInt32
-												 indexBuffer:dl->indexBuffer
-										   indexBufferOffset:tptr->line_off * sizeof(uint32_t)];
+					drawLines(renderEncoder, session, dl, tptr, 1);
 
 					if (tptr->tri_count)
 						[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
@@ -1482,7 +1685,8 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 				[renderEncoder setVertexBufferOffset:(NSUInteger)s->inst_base atIndex:BufferIndexPerInstanceData];
 
 				#if WANT_SMOOTH	
-				if (s->dl->line_count)
+				// Wide lines are drawn after every segment's faces, below.
+				if (s->dl->line_count && (s->is_wireframe || session->wide_lines.line_pipeline == nil))
 					[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
 											  indexCount:s->dl->line_count
 											   indexType:MTLIndexTypeUInt32
@@ -1519,6 +1723,28 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 									instanceCount:s->inst_count];
 				#endif
 			}
+
+			#if WANT_SMOOTH
+			// One switch to the line pipeline for all of them. A wireframe
+			// keeps its thin lines.
+			if (session->wide_lines.line_pipeline)
+			{
+				beginWideLines(renderEncoder, session);
+
+				for (s = segments; s < cur_segment; ++s)
+				{
+					if (s->is_wireframe)
+						continue;
+
+					[renderEncoder setVertexBuffer:s->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+					[renderEncoder setVertexBufferOffset:(NSUInteger)s->inst_base atIndex:BufferIndexPerInstanceData];
+
+					drawWideLines(renderEncoder, session, s->indexBuffer, s->condIndexBuffer, s->dl, s->inst_count);
+				}
+
+				endWideLines(renderEncoder, session);
+			}
+			#endif
 		}
 	}
 
@@ -1660,8 +1886,12 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					 session->stats.num_work_ins +
 					 session->stats.num_work_att) * VERT_STRIDE * sizeof(float) / (1024 * 1024));
 	#endif
-	
-	// Finally done - all allocations for session (including our own obj) come from a BDP, so cleanup is quick.  
+
+	// What is drawn after the session, such as drag handles, has no bias.
+	if (session->wide_lines.line_pipeline)
+		[renderEncoder setDepthBias:0.0f slopeScale:0.0f clamp:0.0f];
+
+	// Finally done - all allocations for session (including our own obj) come from a BDP, so cleanup is quick.
 	// Instance buffer remains to be reused.
 	// DLs themselves live on beyond session.
 	LDrawPoolDestroy(session->alloc);

@@ -40,6 +40,9 @@ typedef enum BufferIndex {
 	// A lone float scaling the alpha of everything the draw call produces, baked-in mesh
 	// colors included.  1 for everything that is not a ghost.
 	BufferIndexGhostAlpha				= 4,
+	// The index buffer a wide line reads its ends from, and how it is drawn.
+	BufferIndexLineIndices				= 5,
+	BufferIndexLineUniforms				= 6,
 	BufferIndexFragmentUniforms 		= 0
 } BufferIndex;
 
@@ -76,6 +79,14 @@ typedef struct TexturePlaneData {
 	vector_float4	plane_s;
 	vector_float4	plane_t;
 } TexturePlaneData;
+
+// How a wide line is drawn. Each line is a quad of two triangles.
+typedef struct LineUniform {
+	vector_float2	viewport_size;		// in pixels
+	float			width;				// in pixels
+	unsigned int	conditional;		// nonzero: four indices per line, and drawn only where
+										// both control points are on one side
+} LineUniform;
 
 
 // MARK: - Fragment shader -

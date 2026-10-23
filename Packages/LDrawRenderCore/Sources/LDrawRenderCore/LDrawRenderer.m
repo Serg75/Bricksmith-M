@@ -546,6 +546,34 @@
 } //end setCameraBounds:
 
 
+//========== outlineWidth ======================================================
+- (CGFloat)outlineWidth
+{
+	return self->outlineWidth;
+
+} //end outlineWidth
+
+
+//========== setOutlineWidth: ==================================================
+//
+// Purpose:		Outlines parts this many points wide, as on a printed page. 0
+//				goes back to edge lines a pixel wide.
+//
+//==============================================================================
+- (void)setOutlineWidth:(CGFloat)width
+{
+	if (width == self->outlineWidth)
+	{
+		return;
+	}
+
+	self->outlineWidth = width;
+
+	[self->delegate LDrawRendererNeedsRedisplay:self];
+
+} //end setOutlineWidth:
+
+
 //========== boundsForCamera ===================================================
 - (Box3)boundsForCamera
 {
