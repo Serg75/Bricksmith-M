@@ -153,9 +153,13 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 {
 	camera.usesZeroToOneDepth = YES;
 	id<MTLDevice> device = MetalGPU.device;
-	_commandQueue = [device newCommandQueue];
-	_commandQueue.label = @"Main Command Queue";
-	_inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
+	// One queue, and one count of frames in flight, for every renderer: the
+	// uniform buffers are shared by them all.
+	if (_commandQueue == nil) {
+		_commandQueue = [device newCommandQueue];
+		_commandQueue.label = @"Main Command Queue";
+		_inFlightSemaphore = dispatch_semaphore_create(MaxBuffersInFlight);
+	}
 
 	// Load the shader library from the LDrawRenderMetal package bundle.
 	id<MTLLibrary> defaultLibrary = [LDrawRenderMetalResources defaultLibraryForDevice:device];
