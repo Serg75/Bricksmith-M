@@ -63,12 +63,11 @@ const int MSAASampleCount = 4;
 	
 	During that deferred draw-out we either build a hardware instance list or simply draw.
 
-	DEFERRED DARWING FOR Z SORTING
-	
-	When a DL does not have to be drawn immediately and has translucency, we always try to save it to the sorted list.
-	
-	Then when the session is destroyed, we sort all of these "sort-deferred" DLs by their local origin and draw back to front.
-	This helps keep translucency looking good.
+	DEFERRED DRAWING FOR TRANSPARENCY
+
+	When a DL has translucency, we always save it to the transparent list.
+
+	Then when the session is destroyed, these DLs are sorted by their local origin and drawn back to front.
 
 */
 
@@ -222,6 +221,8 @@ struct LDrawDLSession {
 
 	struct LDrawDLWideLines				wide_lines;				// Edge and conditional lines as quads, when asked for.
 
+	BOOL								transparent_bias;		// Transparent faces get more depth bias.
+
 	id<MTLTexture>						current_bound_texture;
 };
 
@@ -335,14 +336,36 @@ static void setup_tex_spec(struct LDrawTextureSpec * spec,
 // Purpose:	Functor to compare two sorted instances by their "eval" value, which
 //			is eye space Z right now. API fits C qsort.
 //
+// Notes:	Compared, not subtracted: the difference would be cut to an int,
+//			and parts less than 1 apart would not sort.
+//
 //================================================================================
 static int compare_sorted_link(const void * lhs, const void * rhs)
 {
 	const struct LDrawDLSortedInstanceLink * a = (const struct LDrawDLSortedInstanceLink *) lhs;
 	const struct LDrawDLSortedInstanceLink * b = (const struct LDrawDLSortedInstanceLink *) rhs;
-	return a->eval - b->eval;
+
+	return (a->eval < b->eval) ? -1 : ((a->eval > b->eval) ? 1 : 0);
 
 } // end compare_sorted_link
+
+
+//========== newDepthState =======================================================
+//
+// Purpose:	A depth state that compares with this function and writes depth or
+//			not. The states below each keep one.
+//
+//================================================================================
+static id<MTLDepthStencilState> newDepthState(MTLCompareFunction compare, BOOL writes)
+{
+	MTLDepthStencilDescriptor *descriptor = [[MTLDepthStencilDescriptor alloc] init];
+
+	descriptor.depthCompareFunction = compare;
+	descriptor.depthWriteEnabled = writes;
+
+	return [MetalGPU.device newDepthStencilStateWithDescriptor:descriptor];
+
+} // end newDepthState
 
 
 //========== defaultDepthState ===================================================
@@ -355,15 +378,26 @@ static id<MTLDepthStencilState> defaultDepthState(void)
 {
 	static id<MTLDepthStencilState> state = nil;
 	if (state == nil)
-	{
-		MTLDepthStencilDescriptor *descriptor = [[MTLDepthStencilDescriptor alloc] init];
-		descriptor.depthCompareFunction = MTLCompareFunctionLess;
-		descriptor.depthWriteEnabled = YES;
-		state = [MetalGPU.device newDepthStencilStateWithDescriptor:descriptor];
-	}
+		state = newDepthState(MTLCompareFunctionLess, YES);
 	return state;
 
 } // end defaultDepthState
+
+
+//========== transparentDepthState ===============================================
+//
+// Purpose:	Depth state for transparent parts: what is opaque hides them, but
+//			they hide nothing, not even their own faces.
+//
+//================================================================================
+static id<MTLDepthStencilState> transparentDepthState(void)
+{
+	static id<MTLDepthStencilState> state = nil;
+	if (state == nil)
+		state = newDepthState(MTLCompareFunctionLess, NO);
+	return state;
+
+} // end transparentDepthState
 
 
 //========== ghostBlendDepthState ================================================
@@ -376,12 +410,7 @@ static id<MTLDepthStencilState> ghostBlendDepthState(void)
 {
 	static id<MTLDepthStencilState> state = nil;
 	if (state == nil)
-	{
-		MTLDepthStencilDescriptor *descriptor = [[MTLDepthStencilDescriptor alloc] init];
-		descriptor.depthCompareFunction = MTLCompareFunctionEqual;
-		descriptor.depthWriteEnabled = NO;
-		state = [MetalGPU.device newDepthStencilStateWithDescriptor:descriptor];
-	}
+		state = newDepthState(MTLCompareFunctionEqual, NO);
 	return state;
 
 } // end ghostBlendDepthState
@@ -406,33 +435,68 @@ static int compare_ghost_link(const void * lhs, const void * rhs)
 } // end compare_ghost_link
 
 
-#if WANT_SMOOTH
-
 // The part of the faces' depth bias that does not depend on their slope, in
 // the depth buffer's smallest steps. It keeps a line on a face turned straight
 // to the eye in front of that face.
 static const float FACE_DEPTH_BIAS = 2.0f;
 
+// How much further back transparent faces go than opaque ones, in the depth
+// buffer's smallest steps. One that lies on an opaque face, such as the inside
+// of a plate on the studs below it, is then hidden by it everywhere rather
+// than in a speckle. None of it scales with slope: a face seen almost edge on
+// would go behind what is close behind it. Metal biases only triangles, so
+// thin lines drawn with it keep their depth.
+static const float TRANSPARENT_FACE_DEPTH_BIAS = 16.0f;
+
+// The largest of the depth buffer's smallest steps, between depths of 0.5 and
+// 1, as a depth.
+static const float DEPTH_LARGEST_STEP = 1.0f / 16777216.0f;
+
 //========== setFaceDepthBias ====================================================
 //
-// Purpose:	Pushes the faces back by the depth they cover across half a wide
-//			line, so the lines on their edges stay whole. A face turned toward
-//			the eye moves least, so it still hides the lines behind it.
+// Purpose:	With wide lines, pushes the faces back by the depth they cover
+//			across half a line, so the lines on their edges stay whole. A face
+//			turned toward the eye moves least, so it still hides the lines
+//			behind it. Transparent faces go a little further.
 //
 // Notes:	No more than half a line: two faces that meet at different slopes
 //			can swap places within that distance, and there the line covers
 //			them. A face seen almost edge on is pushed back only as far as the
 //			clamp lets it, so it cannot slip behind what it touches.
 //
+//			The clamp is a depth, and a steep face reaches it by its slope
+//			alone. So it goes up with the transparent faces' extra bias, or
+//			they would get no more than opaque faces there.
+//
 //================================================================================
 static void setFaceDepthBias(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session)
 {
-	[renderEncoder setDepthBias:FACE_DEPTH_BIAS
-					 slopeScale:session->wide_lines.width * 0.5f
-						  clamp:session->wide_lines.face_bias_clamp];
+	float	bias	= 0.0f;
+	float	slope	= 0.0f;
+	float	clamp	= 0.0f;
+
+	if (session->wide_lines.line_pipeline)
+	{
+		bias	= FACE_DEPTH_BIAS;
+		slope	= session->wide_lines.width * 0.5f;
+		clamp	= session->wide_lines.face_bias_clamp;
+	}
+
+	if (session->transparent_bias)
+	{
+		bias += TRANSPARENT_FACE_DEPTH_BIAS;
+
+		// A clamp of 0 is no limit.
+		if (clamp > 0.0f)
+			clamp += TRANSPARENT_FACE_DEPTH_BIAS * DEPTH_LARGEST_STEP;
+	}
+
+	[renderEncoder setDepthBias:bias slopeScale:slope clamp:clamp];
 
 } // end setFaceDepthBias
 
+
+#if WANT_SMOOTH
 
 //========== beginWideLines ======================================================
 //
@@ -623,6 +687,73 @@ static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
 	}
 
 } // end drawDeferredInstance
+
+
+//========== copyWithEyeDepth ====================================================
+//
+// Purpose:	Copies a list of deferred instances into an array from the
+//			session's pool, each with the eye-space Z of its origin as its
+//			eval, for sorting.
+//
+// Notes:	The copy carries everything across; only eval, which shares
+//			storage with the list pointer, is new.
+//
+//================================================================================
+static struct LDrawDLSortedInstanceLink * copyWithEyeDepth(struct LDrawDLSession *				session,
+														   struct LDrawDLSortedInstanceLink *	head,
+														   int									count)
+{
+	struct LDrawDLSortedInstanceLink *	arr			= LDrawPoolAllocate(session->alloc, sizeof(*arr) * count);
+	struct LDrawDLSortedInstanceLink *	p			= arr;
+	simd_float4x4						modelView	= simd_matrix4x4_from_array(session->model_view);
+	struct LDrawDLSortedInstanceLink *	l;
+
+	for (l = head; l; l = l->next, ++p)
+	{
+		simd_float4 origin = simd_make_float4(l->transform[12], l->transform[13], l->transform[14], 1.0f);
+
+		memcpy(p, l, sizeof(*p));
+		p->eval = simd_mul(modelView, origin).z;
+	}
+
+	return arr;
+
+} // end copyWithEyeDepth
+
+
+//========== drawTransparentSorted ===============================================
+//
+// Purpose:	Blends the transparent parts one at a time, far to near by their
+//			origins.
+//
+// Notes:	They do not write depth, so a part hides neither its own faces nor
+//			the parts behind it. Parts that overlap can blend in the wrong
+//			order, and lines that lie on each other blend twice. Lines that
+//			wrote depth would hide the faces drawn after them, which shows as
+//			a light seam along every line.
+//
+//================================================================================
+static void drawTransparentSorted(id<MTLRenderCommandEncoder> renderEncoder, struct LDrawDLSession * session)
+{
+	struct LDrawDLSortedInstanceLink * arr = copyWithEyeDepth(session, session->sorted_head, session->sort_count);
+
+	// Now: sort our array ascending to get far to near in eye space.
+	qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
+
+	[renderEncoder setDepthStencilState:transparentDepthState()];
+	session->transparent_bias = YES;
+	setFaceDepthBias(renderEncoder, session);
+
+	// NOW we can walk our sorted array and draw each brick, 1x1.
+	int lc;
+	for (lc = 0; lc < session->sort_count; ++lc)
+		drawDeferredInstance(renderEncoder, session, arr + lc, NO);
+
+	[renderEncoder setDepthStencilState:defaultDepthState()];
+	session->transparent_bias = NO;
+	setFaceDepthBias(renderEncoder, session);
+
+} // end drawTransparentSorted
 
 
 //========== saveForDeferredDraw =================================================
@@ -1469,6 +1600,7 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	#endif
 	memcpy(session->model_view,model_view,sizeof(float)*16);
 	memset(&session->wide_lines, 0, sizeof(session->wide_lines));
+	session->transparent_bias = NO;
 	session->inst_ring = inst_ring_last;
 	// each session picks up a new buffer in the ring of instance buffers.
 	inst_ring_last = (inst_ring_last+1)%INST_RING_BUFFER_COUNT;
@@ -1748,40 +1880,11 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 		}
 	}
 
-	// MAIN LOOP 3: sorted deferred drawing (!)
-	// transparent parts
+	// MAIN LOOP 3: transparent parts.
 
 	struct LDrawDLSortedInstanceLink * l;
 	if (session->sorted_head)
-	{
-		// If we have any sorting to do, allocate an array of the size of all sorted geometry for sorting purposes.
-		struct LDrawDLSortedInstanceLink * arr = (struct LDrawDLSortedInstanceLink *) LDrawPoolAllocate(session->alloc,sizeof(struct LDrawDLSortedInstanceLink) * session->sort_count);
-		struct LDrawDLSortedInstanceLink * p = arr;		
-		
-		// Copy each sorted instance into our array.  "Eval" is the measurement of distance - calculate eye-space Z and use that.
-		for (l = session->sorted_head; l; l = l->next)
-		{
-			memcpy((void*)p, (void*)l, sizeof(struct LDrawDLSortedInstanceLink));
-
-			simd_float4x4 modelView = simd_matrix4x4_from_array(session->model_view);
-			simd_float4 v = simd_make_float4(l->transform[12],
-											 l->transform[13],
-											 l->transform[14], 1.0f);
-
-			simd_float4 v_eye = simd_mul(modelView, v);
-
-			p->eval = v_eye.z;
-			++p;
-		}
-		
-		// Now: sort our array ascending to get far to near in eye space.
-		qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
-
-		// NOW we can walk our sorted array and draw each brick, 1x1.
-		int lc;
-		for (lc = 0; lc < session->sort_count; ++lc)
-			drawDeferredInstance(renderEncoder, session, arr + lc, NO);
-	}
+		drawTransparentSorted(renderEncoder, session);
 
 	// MAIN LOOP 4: ghosted parts (removed MLCAD groups).
 	//
@@ -1808,24 +1911,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	// solid parts occlude each other.
 	if (session->ghost_head)
 	{
-		struct LDrawDLSortedInstanceLink * arr = (struct LDrawDLSortedInstanceLink *) LDrawPoolAllocate(session->alloc,sizeof(struct LDrawDLSortedInstanceLink) * session->ghost_count);
-		struct LDrawDLSortedInstanceLink * p = arr;
-
-		for (l = session->ghost_head; l; l = l->next)
-		{
-			// The copy carries the ghost id across; only eval, which shares
-			// storage with the list pointer, has to be computed here.
-			memcpy((void*)p, (void*)l, sizeof(struct LDrawDLSortedInstanceLink));
-
-			simd_float4x4 modelView = simd_matrix4x4_from_array(session->model_view);
-			simd_float4 v = simd_make_float4(l->transform[12],
-											 l->transform[13],
-											 l->transform[14], 1.0f);
-			simd_float4 v_eye = simd_mul(modelView, v);
-
-			p->eval = v_eye.z;
-			++p;
-		}
+		struct LDrawDLSortedInstanceLink * arr = copyWithEyeDepth(session, session->ghost_head, session->ghost_count);
 
 		qsort(arr,session->ghost_count,sizeof(struct LDrawDLSortedInstanceLink),compare_ghost_link);
 
