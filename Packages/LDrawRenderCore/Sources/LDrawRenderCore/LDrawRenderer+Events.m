@@ -170,6 +170,14 @@
 	{
 		self->initialDragLocation = [self modelPointForPoint:point_view];
 	}
+	else
+	{
+		// Taken again under the last pointer, so a scroll made between two
+		// events, such as a snap, is kept.
+		self->initialDragLocation = [self modelPointForPoint:self->panDragPoint
+										 depthReferencePoint:self->initialDragLocation];
+	}
+	self->panDragPoint = point_view;
 	
 	Box2	viewport		= [self viewport];
 	Point2	point_viewport	= [self convertPointToViewport:point_view];

@@ -36,6 +36,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 	BOOL					isStartingDrag;			// this is the first event in a drag
 	Point3                  initialDragLocation;	// pan-drag anchor in model space
+	Point2					panDragPoint;			// the pointer at the pan drag's last event, in the view
 
 	// The box the camera stands back from in place of what is drawn, or
 	// InvalidBox.
