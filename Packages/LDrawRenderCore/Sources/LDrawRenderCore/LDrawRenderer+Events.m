@@ -311,7 +311,9 @@
 //==============================================================================
 - (void)rotateByDegrees:(float)angle
 {
-	if ([self projectionMode] != LDrawProjectionModePerspective)
+	// As with a drag, a straight-on view becomes a 3D view in perspective, and a 3D view keeps its projection.
+	if (	[self projectionMode] != LDrawProjectionModePerspective
+		&&	self->viewOrientation != LDrawViewOrientation3D)
 	{
 		[self setProjectionMode:LDrawProjectionModePerspective];
 		self->viewOrientation = LDrawViewOrientation3D;

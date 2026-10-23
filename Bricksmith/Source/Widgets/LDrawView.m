@@ -1762,31 +1762,40 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 #pragma mark -
 #pragma mark Gestures
 
-//========== beginGestureWithEvent: ============================================
+//========== trackGesturePhase: ================================================
 //
-// Purpose:		A multitouch trackpad gesture has begun. (Scrolling counts.)
+// Purpose:		Notes where a pinch or twist starts and ends. One trackpad
+//				gesture can send both, and the one that starts first is what
+//				the user meant. The renderer is told a gesture is going on from
+//				the first start to the last end.
 //
-//==============================================================================
-- (void) beginGestureWithEvent:(NSEvent *)theEvent
-{
-	[self makeCurrentContext];
-	self->startingGestureType = [theEvent type];
-	[self->renderer beginGesture];
-
-}//end beginGestureWithEvent:
-
-
-//========== endGestureWithEvent: ==============================================
-//
-// Purpose:		A multitouch trackpad gesture has ended.
+// Notes:		Each event's phase tells this. AppKit no longer sends the
+//				events that began and ended a gesture.
 //
 //==============================================================================
-- (void) endGestureWithEvent:(NSEvent *)theEvent
+- (void) trackGesturePhase:(NSEvent *)theEvent
 {
-	[self makeCurrentContext];
-	[self->renderer endGesture];
+	NSEventMask	gesture		= NSEventMaskFromType([theEvent type]);
+	NSEventMask	wasActive	= self->activeGestures;
 
-}//end endGestureWithEvent:
+	if ([theEvent phase] == NSEventPhaseBegan) {
+		self->activeGestures |= gesture;
+	}
+	else if ([theEvent phase] & (NSEventPhaseEnded | NSEventPhaseCancelled)) {
+		self->activeGestures &= ~gesture;
+	}
+
+	if (wasActive == 0 && self->activeGestures != 0)
+	{
+		self->startingGestureType = [theEvent type];
+		[self->renderer beginGesture];
+	}
+	else if (wasActive != 0 && self->activeGestures == 0)
+	{
+		[self->renderer endGesture];
+	}
+
+}//end trackGesturePhase:
 
 
 //========== magnifyWithEvent: =================================================
@@ -1797,6 +1806,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 - (void) magnifyWithEvent:(NSEvent *)theEvent
 {
 	[self makeCurrentContext];
+	[self trackGesturePhase:theEvent];
 
 	NSPoint windowPoint     = [theEvent locationInWindow];
 	NSPoint viewPoint       = [self convertPoint:windowPoint fromView:nil];
@@ -1823,11 +1833,14 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 {
 	CGFloat	angle = [theEvent rotation]; // degrees counterclockwise
 
-	// Do not allow rotating in orthographic views if we started out doing a
-	// zoom gesture. Rotating will automatically change an orthographic view to
-	// perspective, and we don't want to do that when unexpected.
-	if(([self->renderer projectionMode] == LDrawProjectionModePerspective)
-		|| (self->startingGestureType == NSEventTypeRotate))
+	[self makeCurrentContext];
+	[self trackGesturePhase:theEvent];
+
+	// Twisting a straight-on view turns it into a 3D view in perspective. Not
+	// when the gesture started as a pinch: a zoom should not do that.
+	if(		([self->renderer projectionMode] == LDrawProjectionModePerspective)
+		||	([self->renderer viewOrientation] == LDrawViewOrientation3D)
+		||	(self->startingGestureType == NSEventTypeRotate))
 	{
 		[self lockContextAndExecute:^
 		{

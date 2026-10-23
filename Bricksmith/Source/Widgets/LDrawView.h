@@ -70,7 +70,8 @@
 	BOOL                    dragEndedInOurDocument;	// YES if the drag we initiated ended in the document we display
 	BOOL					selectionIsMarquee;		// Remembers when a select-click misses and can thus start a marquee.  Only if we HIT an object can we start dragging.
 	LDrawSelectionMode		marqueeSelectionMode;
-	NSEventType				startingGestureType;
+	NSEventType				startingGestureType;	// the pinch or twist a trackpad gesture began with
+	NSEventMask				activeGestures;			// the pinches and twists going on
 	Vector3					nudgeVector;			// direction of nudge action (valid only in nudgeAction callback)
 	
 	NSArray					*topLevelObjects;		// holds NIB objects
