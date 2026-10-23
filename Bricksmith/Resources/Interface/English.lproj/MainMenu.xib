@@ -619,6 +619,12 @@ CA
                                     <action selector="backOneStep:" target="-1" id="279"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Arrange Assembly" tag="410" keyEquivalent="a" id="Arr-Mn-It1">
+                                <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                <connections>
+                                    <action selector="arrangeAssembly:" target="-1" id="Arr-Mn-Ac1"/>
+                                </connections>
+                            </menuItem>
                         </items>
                     </menu>
                 </menuItem>

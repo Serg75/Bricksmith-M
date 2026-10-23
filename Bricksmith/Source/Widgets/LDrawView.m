@@ -566,6 +566,9 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 {
 	LDrawViewOrientation newAngle = (LDrawViewOrientation)[sender tag];
 
+	if(self.locksTurning)
+		return;
+
 	[self makeCurrentContext];
 
 	[self->renderer setViewOrientation:newAngle];
@@ -588,6 +591,9 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 //==============================================================================
 - (IBAction) zoomIn:(id)sender
 {
+	if([self delegateZoomsByFactor:2.0])
+		return;
+
 	[self makeCurrentContext];
 	[self->renderer zoomIn:sender];
 
@@ -601,10 +607,26 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 //==============================================================================
 - (IBAction) zoomOut:(id)sender
 {
+	if([self delegateZoomsByFactor:0.5])
+		return;
+
 	[self makeCurrentContext];
 	[self->renderer zoomOut:sender];
 
 }//end zoomOut:
+
+
+//========== delegateZoomsByFactor: ============================================
+//
+// Purpose:		Lets the delegate zoom in its own way, as a document does.
+//
+//==============================================================================
+- (BOOL) delegateZoomsByFactor:(CGFloat)factor
+{
+	return [self->ldrawDelegate respondsToSelector:@selector(LDrawView:zoomByFactor:)]
+		&& [self->ldrawDelegate LDrawView:self zoomByFactor:factor];
+
+}//end delegateZoomsByFactor:
 
 
 //========== zoomToFit: ========================================================
@@ -719,7 +741,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 	BOOL		 isClicked		= NO; /*[[NSApp currentEvent] type] == NSLeftMouseDown;*/ //not enough; overwhelmed by repeating key events
 	NSCursor	*cursor			= nil;
 	NSImage		*cursorImage	= nil;
-	LDrawToolMode toolMode		= [ToolPalette toolMode];
+	LDrawToolMode toolMode		= [self effectiveToolMode];
 	
 	switch(toolMode)
 	{
@@ -779,6 +801,11 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 			break;
 		
 		case LDrawToolModeSpin:
+			if(self.locksTurning)
+			{
+				[self addLockedTurnCursorRectsIn:visibleRect];
+				break;
+			}
 			cursorImage = [NSImage imageNamed:@"Spin"];
 			cursor = [[NSCursor alloc] initWithImage:cursorImage
 											 hotSpot:NSMakePoint(7, 10)];
@@ -798,6 +825,41 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 	}
 		
 }//end resetCursorRects
+
+
+//========== addLockedTurnCursorRectsIn: =======================================
+//
+// Purpose:		The cursors of the Spin tool while turning is locked: the locked
+//				turn cursor over its rect, and the arrow around it. The rects do
+//				not overlap, so each part of the view has one cursor.
+//
+//==============================================================================
+- (void) addLockedTurnCursorRectsIn:(NSRect)visibleRect
+{
+	NSCursor	*arrow	= [NSCursor arrowCursor];
+	NSRect		 shown	= NSIntersectionRect(self.lockedTurnCursorRect, visibleRect);
+
+	if(self.lockedTurnCursor == nil || NSIsEmptyRect(shown))
+	{
+		[self addCursorRect:visibleRect cursor:arrow];
+		return;
+	}
+
+	NSRect around[] = {
+		NSMakeRect(NSMinX(visibleRect), NSMinY(visibleRect), NSWidth(visibleRect), NSMinY(shown) - NSMinY(visibleRect)),
+		NSMakeRect(NSMinX(visibleRect), NSMaxY(shown), NSWidth(visibleRect), NSMaxY(visibleRect) - NSMaxY(shown)),
+		NSMakeRect(NSMinX(visibleRect), NSMinY(shown), NSMinX(shown) - NSMinX(visibleRect), NSHeight(shown)),
+		NSMakeRect(NSMaxX(shown), NSMinY(shown), NSMaxX(visibleRect) - NSMaxX(shown), NSHeight(shown)) };
+
+	for(NSUInteger index = 0; index < 4; index++)
+	{
+		if(NSIsEmptyRect(around[index]) == NO)
+			[self addCursorRect:around[index] cursor:arrow];
+	}
+
+	[self addCursorRect:shown cursor:self.lockedTurnCursor];
+
+}//end addLockedTurnCursorRectsIn:
 
 
 //========== worksWhenModal ====================================================
@@ -848,7 +910,8 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 			case NSDownArrowFunctionKey:
 			case NSLeftArrowFunctionKey:
 			case NSRightArrowFunctionKey:
-				[self nudgeKeyDown:theEvent];
+				if(self.locksParts == NO)
+					[self nudgeKeyDown:theEvent];
 				break;
 			
 			// handled by menu item
@@ -906,7 +969,8 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 			case '0':
 			{
 				LDrawViewOrientation orientation = LDrawViewOrientation3D;
-				if([LDrawViewportPolicy viewOrientation:&orientation fromHotkeyCharacter:firstCharacter])
+				if(		self.locksTurning == NO
+				   &&	[LDrawViewportPolicy viewOrientation:&orientation fromHotkeyCharacter:firstCharacter])
 				{
 					[self setProjectionMode:[LDrawViewportPolicy projectionModeForViewOrientation:orientation]];
 					[self setViewOrientation:orientation];
@@ -1024,7 +1088,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 {
 	NSUserDefaults			*userDefaults		= [NSUserDefaults standardUserDefaults];
 	LDrawMouseDragBehavior	draggingBehavior	= (LDrawMouseDragBehavior)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
-	LDrawToolMode			toolMode			= [ToolPalette toolMode];
+	LDrawToolMode			toolMode			= [self effectiveToolMode];
 
 	if([theEvent buttonNumber] == 1)
 		toolMode = LDrawToolModeSpin;
@@ -1099,7 +1163,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 {
 	NSUserDefaults         *userDefaults       = [NSUserDefaults standardUserDefaults];
 	LDrawMouseDragBehavior draggingBehavior    = (LDrawMouseDragBehavior)[userDefaults integerForKey:MOUSE_DRAGGING_BEHAVIOR_KEY];
-	LDrawToolMode          toolMode            = [ToolPalette toolMode];
+	LDrawToolMode          toolMode            = [self effectiveToolMode];
 	Vector2                dragDelta           = V2Make([theEvent deltaX], [theEvent deltaY]);
 
 	if([theEvent buttonNumber] == 1)
@@ -1130,8 +1194,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 	}
 	else if(toolMode == LDrawToolModeSpin)
 	{
-		[self->renderer rotationDragged:dragDelta];
-		[self postCameraDidChange];
+		[self turnByDrag:dragDelta];
 	}
 	else if(toolMode == LDrawToolModeSmoothZoom)
 	{
@@ -1147,11 +1210,11 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 		switch(dragAction)
 		{
 			case LDrawRotateSelectDragRotateCamera:
-				[self->renderer rotationDragged:dragDelta];
-				[self postCameraDidChange];
+				[self turnByDrag:dragDelta];
 				break;
 			case LDrawRotateSelectDragDirectInteraction:
-				[self directInteractionDragged:theEvent];
+				if(self.locksParts == NO)
+					[self directInteractionDragged:theEvent];
 				break;
 			case LDrawRotateSelectDragMarqueeSelection:
 				[self mousePartSelection:theEvent];
@@ -1174,7 +1237,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 //==============================================================================
 - (void) mouseUp:(NSEvent *)theEvent
 {
-	LDrawToolMode	toolMode = [ToolPalette toolMode];
+	LDrawToolMode	toolMode = [self effectiveToolMode];
 	if([theEvent buttonNumber] == 1)
 		toolMode = LDrawToolModeSpin;
 
@@ -1272,8 +1335,7 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 
 		[[self->renderer camera] setUseTurntable:USE_TURNTABLE];
 		[self->renderer mouseDragged];
-		[self->renderer rotationDragged:dragDelta];
-		[self postCameraDidChange];
+		[self turnByDrag:dragDelta];
 	}
 }
 
@@ -1427,6 +1489,22 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 }
 
 #pragma mark - Dragging
+
+//========== turnByDrag: =======================================================
+//
+// Purpose:		Turns the view by a drag, unless turning is locked.
+//
+//==============================================================================
+- (void) turnByDrag:(Vector2)dragDelta
+{
+	if(self.locksTurning)
+		return;
+
+	[self->renderer rotationDragged:dragDelta];
+	[self postCameraDidChange];
+
+}//end turnByDrag:
+
 
 //========== directInteractionDragged: =========================================
 //
@@ -1836,6 +1914,9 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 	[self makeCurrentContext];
 	[self trackGesturePhase:theEvent];
 
+	if(self.locksTurning)
+		return;
+
 	// Twisting a straight-on view turns it into a 3D view in perspective. Not
 	// when the gesture started as a pinch: a zoom should not do that.
 	if(		([self->renderer projectionMode] == LDrawProjectionModePerspective)
@@ -2152,6 +2233,8 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 			[menuItem setState:NSControlStateValueOff];
 		else
 			[menuItem setState:NSControlStateValueOff];
+
+		return (self.locksTurning == NO);
 	}
 	
 	return YES;
@@ -2654,6 +2737,80 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 	[self->renderer setOutlineWidth:width];
 
 }//end setOutlineWidth:
+
+
+//========== setPlainDragPans: =================================================
+///
+/// @abstract	Has a plain drag pan, or select and move parts again. The
+///				cursor shows which.
+///
+//==============================================================================
+- (void) setPlainDragPans:(BOOL)flag
+{
+	if (flag == self->_plainDragPans) {
+		return;
+	}
+
+	self->_plainDragPans = flag;
+	[self resetCursor];
+
+}//end setPlainDragPans:
+
+
+//========== setLocksTurning: ==================================================
+- (void) setLocksTurning:(BOOL)flag
+{
+	if (flag == self->_locksTurning) {
+		return;
+	}
+
+	self->_locksTurning = flag;
+	[self resetCursor];
+
+}//end setLocksTurning:
+
+
+//========== setLockedTurnCursor:inRect: =======================================
+///
+/// @abstract	Sets the cursor the Spin tool shows over a rect while turning is
+///				locked. The cursor rects are made again only when the Spin tool
+///				shows it now. A change of tool makes them again anyway.
+///
+//==============================================================================
+- (void) setLockedTurnCursor:(NSCursor *)cursor inRect:(NSRect)rect
+{
+	if (cursor == self->_lockedTurnCursor && NSEqualRects(rect, self->_lockedTurnCursorRect)) {
+		return;
+	}
+
+	self->_lockedTurnCursor		= cursor;
+	self->_lockedTurnCursorRect	= rect;
+
+	if (self.locksTurning && [self effectiveToolMode] == LDrawToolModeSpin) {
+		[self resetCursor];
+	}
+
+}//end setLockedTurnCursor:inRect:
+
+
+//========== effectiveToolMode =================================================
+///
+/// @abstract	The tool the mouse acts as: the palette's, but the hand where a
+///				plain drag pans. The eraser pans too, so no part is deleted.
+///
+//==============================================================================
+- (LDrawToolMode) effectiveToolMode
+{
+	LDrawToolMode toolMode = [ToolPalette toolMode];
+
+	if (self.plainDragPans
+		&& (toolMode == LDrawToolModeRotateSelect || toolMode == LDrawToolModeEraser)) {
+		return LDrawToolModePanScroll;
+	}
+
+	return toolMode;
+
+}//end effectiveToolMode
 
 
 //========== postCameraDidChange ===============================================

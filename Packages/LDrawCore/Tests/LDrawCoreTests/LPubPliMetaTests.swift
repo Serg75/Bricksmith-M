@@ -300,7 +300,33 @@ struct LPubPliMetaTests {
         // LPub3D takes numbers after HOME and LAT_LON only.
         try expectGenericAndVerbatim("0 !LPUB PLI CAMERA_ANGLES FRONT 10 20")
         try expectGenericAndVerbatim("0 !LPUB PLI CAMERA_ANGLES 23")
-        try expectGenericAndVerbatim("0 !LPUB ASSEM CAMERA_ANGLES 23 45")
+        try expectGenericAndVerbatim("0 !LPUB BOM CAMERA_ANGLES 23 45")
+    }
+
+    @Test("CAMERA_ANGLES reads the assembly's line too, with its own default")
+    func assemblyCameraAnglesParse() throws {
+        let plain = try #require(parse("0 !LPUB ASSEM CAMERA_ANGLES LOCAL 30 60") as? LPubPliCameraAngles)
+        #expect(plain.branch == .assembly)
+        #expect(plain.scope == .local)
+        #expect(plain.latitude == 30)
+        #expect(plain.longitude == 60)
+
+        let parts = try #require(parse("0 !LPUB PLI CAMERA_ANGLES 30 60") as? LPubPliCameraAngles)
+        #expect(parts.branch == .pli)
+
+        // LAT_LON is the branch's default: the assembly's is seen from the
+        // other side.
+        let assemblyDefault = try #require(parse("0 !LPUB ASSEM CAMERA_ANGLES LAT_LON") as? LPubPliCameraAngles)
+        #expect(assemblyDefault.latitude == 23)
+        #expect(assemblyDefault.longitude == 45)
+
+        let partsDefault = try #require(parse("0 !LPUB PLI CAMERA_ANGLES LAT_LON") as? LPubPliCameraAngles)
+        #expect(partsDefault.longitude == -45)
+
+        for line in ["0 !LPUB ASSEM CAMERA_ANGLES LOCAL 30 60",
+                     "0 !LPUB ASSEM CAMERA_ANGLES GLOBAL TOP"] {
+            #expect(try written(line) == line)
+        }
     }
 
     // MARK: - PART_ROTATION

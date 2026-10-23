@@ -13,10 +13,27 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
+/// @enum       LPubCameraAnglesBranch
+///
+/// @abstract   Which picture a CAMERA_ANGLES line turns.
+///
+//------------------------------------------------------------------------------
+typedef NS_ENUM(NSInteger, LPubCameraAnglesBranch) {
+	/// The parts list's icons.
+	LPubCameraAnglesBranchPli		= 0,
+	/// The step's assembly picture.
+	LPubCameraAnglesBranchAssembly	= 1
+};
+
+
+//------------------------------------------------------------------------------
+///
 /// @class      LPubPliCameraAngles
 ///
-/// @abstract   The angle LPub3D draws the parts list icons from:
-///             0 !LPUB PLI CAMERA_ANGLES [GLOBAL|LOCAL] <latitude> <longitude>
+/// @abstract   The angle LPub3D draws the parts list icons or the step's
+///             assembly from:
+///             0 !LPUB (PLI | ASSEM) CAMERA_ANGLES [GLOBAL|LOCAL]
+///                 <latitude> <longitude>
 ///
 /// @discussion A named view can stand in for the numbers: FRONT, BACK, TOP,
 ///             BOTTOM, LEFT, RIGHT, HOME, LAT_LON. HOME and LAT_LON may carry
@@ -30,6 +47,7 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LPubPliCameraAngles : LPubCommand
 
+@property (nonatomic, readonly) LPubCameraAnglesBranch branch;
 @property (nonatomic, readonly) LPubMetaScope scope;
 
 /// Degrees, resolved from the numbers or the named view.
@@ -44,6 +62,14 @@ NS_ASSUME_NONNULL_BEGIN
 /// latitude 23, longitude -45.
 + (double) defaultLatitude;
 + (double) defaultLongitude;
+
+/// The angles LPub3D gives a named view: FRONT, BACK, TOP, BOTTOM, LEFT,
+/// RIGHT, HOME, or LAT_LON for the branch's default. NO for another name.
++ (BOOL) getLatitude:(double *)latitude
+		   longitude:(double *)longitude
+		 ofNamedView:(NSString *)name
+			  branch:(LPubCameraAnglesBranch)branch
+	NS_SWIFT_NAME(getLatitude(_:longitude:ofNamedView:branch:));
 
 @end
 

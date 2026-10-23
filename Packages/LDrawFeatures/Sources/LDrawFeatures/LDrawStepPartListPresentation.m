@@ -11,6 +11,7 @@
 
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
 
+#import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LPubModelScale.h>
@@ -34,6 +35,13 @@
 /// Below this size there is nothing worth drawing, and a camera cannot make a
 /// projection.
 static const double MINIMUM_CONTENT_SIDE = 8.0;
+
+/// How far the dashed line runs outside the step while it is arranged, how
+/// big the handles on its corners are drawn, and how much further out a press
+/// still takes one, in points.
+static const double ARRANGE_FRAME_OUTSET	= 6.0;
+static const double ARRANGE_HANDLE_SIDE		= 7.0;
+static const double ARRANGE_HANDLE_REACH	= 3.0;
 
 
 //========== MirroredPosition() ================================================
@@ -70,6 +78,32 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end GrowBounds
 
 
+//========== PlacedShare() =====================================================
+///
+/// @abstract	Where a box placed at this position is held, as shares of its
+/// 			size: 0 at its left or top, 1 at its right or bottom, and 0.5 in
+/// 			its middle.
+///
+//==============================================================================
+static Point2 PlacedShare(LPubPlacementPosition position)
+{
+	switch (position) {
+		case LPubPlacementPositionTopLeft:		return V2Make(0.0, 0.0);
+		case LPubPlacementPositionTop:			return V2Make(0.5, 0.0);
+		case LPubPlacementPositionTopRight:		return V2Make(1.0, 0.0);
+		case LPubPlacementPositionRight:		return V2Make(1.0, 0.5);
+		case LPubPlacementPositionBottomRight:	return V2Make(1.0, 1.0);
+		case LPubPlacementPositionBottom:		return V2Make(0.5, 1.0);
+		case LPubPlacementPositionBottomLeft:	return V2Make(0.0, 1.0);
+		case LPubPlacementPositionLeft:			return V2Make(0.0, 0.5);
+		case LPubPlacementPositionCenter:		return V2Make(0.5, 0.5);
+	}
+
+	return V2Make(0.5, 0.5);
+
+}//end PlacedShare
+
+
 @implementation LDrawStepPartListPresentation
 {
 	/// The sizes each axis inherits, indexed by LPubPliAxis.
@@ -90,7 +124,19 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	/// Whether the list is placed against the assembly, which makes it part of
 	/// what is centered on the page.
 	BOOL						 listIsCenteredWithAssembly;
+
+	/// Where the step's box is held as it grows, as shares of its size.
+	Point2						 stepAnchorShare;
+
+	/// The angle the list's icons and the callouts' lists are drawn at.
+	Matrix4						 stepViewTransform;
+
+	/// The file the icon model takes submodels from, when it is first asked
+	/// for.
+	__weak LDrawFile			*iconFile;
 }
+
+@synthesize iconModel = _iconModel;
 
 //---------- presentationForModel:host: ------------------------------[static]--
 ///
@@ -173,6 +219,8 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 
 		[self placePageNumberForModel:model pageNumbers:pageNumbers];
 	}
+
+	self->stepViewTransform = [LDrawStepPartListPolicy viewTransformForVisibleStepOfModel:model];
 
 	// The list first: the callouts go under its frame. They keep the plain
 	// metrics, since the file's PLI lines are not theirs.
@@ -292,7 +340,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	Size2					 inches		= [style.text sizeForText:text];
 	Size2					 size		= V2MakeSize(inches.width * scale, inches.height * scale);
 
-	if (placement.isInside && [placement.relativeTo isEqualToString:LPUB_PAGE]) {
+	if (placement.isInsidePage) {
 		position	= placement.position;
 		offset		= placement.offset;
 	}
@@ -386,7 +434,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 																	  host:host
 															  allowedWidth:room.width
 															 pointsPerInch:metrics.pointsPerInch];
-	Matrix4						viewTransform	= [LDrawStepPartListPolicy viewTransformForVisibleStepOfModel:model];
+	Matrix4						viewTransform	= self->stepViewTransform;
 
 	self->_layout		= [LDrawStepPartListLayout layoutForEntries:entries
 														 constraint:constraint
@@ -406,9 +454,9 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	}
 
 	// The document's file, so a submodel draws its real contents.
-	self->_iconModel	= [LDrawStepPartListModelBuilder modelForLayout:self->_layout
-														  viewTransform:viewTransform
-													  submodelsFromFile:[model enclosingFile]];
+	self->iconFile			= [model enclosingFile];
+	self->_iconKey			= [LDrawStepPartListModelBuilder iconKeyForLayout:self->_layout
+																viewTransform:viewTransform];
 
 	self->_iconZoomPercentage	= [LDrawStepPartListModelBuilder zoomPercentageForLayout:self->_layout];
 	self->_iconCenter			= [LDrawStepPartListModelBuilder centerPointForLayout:self->_layout];
@@ -446,7 +494,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	options.hostRect			= V2MakeBox(0.0, 0.0, self->_hostSize.width, self->_hostSize.height);
 	options.listFrame			= self->_frameRect;
 	options.pointsPerPageInch	= self->_pointsPerPageInch;
-	options.listViewTransform	= [LDrawStepPartListPolicy viewTransformForVisibleStepOfModel:model];
+	options.listViewTransform	= self->stepViewTransform;
 	options.showsLists			= [LDrawStepPartList isShownForVisibleStepOfModel:model];
 
 	options.assemblyRect		= ZeroBox2;
@@ -533,6 +581,8 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 
 	self->_hasStepCenter	= YES;
 	self->_stepCenterInView	= [self stepCenterForAssembly:assembly placement:placement leavingOut:nil];
+	self->_stepRect			= [self stepBoxForAssembly:assembly leavingOut:nil];
+	self->stepAnchorShare	= PlacedShare(placement.isInsidePage ? placement.position : LPubPlacementPositionCenter);
 
 	// A box that is dragged is left out of what is centered, and the host
 	// then centers the step again with the page where it is.
@@ -603,24 +653,98 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end findFileObstaclesOfBoxes
 
 
-//========== stepCenterForAssembly:placement:leavingOut: =======================
+//========== pageMargins =======================================================
+- (Size2) pageMargins
+{
+	return self->listStyle.pageMargins;
+
+}//end pageMargins
+
+
+//========== stepAnchorInView ==================================================
+- (Point2) stepAnchorInView
+{
+	Box2 step = self->_stepRect;
+
+	return V2Make(V2BoxMinX(step) + self->stepAnchorShare.x * V2BoxWidth(step),
+				  V2BoxMinY(step) + self->stepAnchorShare.y * V2BoxHeight(step));
+
+}//end stepAnchorInView
+
+
+//========== arrangeFrameRect ==================================================
+- (Box2) arrangeFrameRect
+{
+	Box2 step = self->_stepRect;
+
+	if (V2BoxWidth(step) <= 0.0 || V2BoxHeight(step) <= 0.0) {
+		return ZeroBox2;
+	}
+
+	return V2BoxInset(step, -ARRANGE_FRAME_OUTSET, -ARRANGE_FRAME_OUTSET);
+
+}//end arrangeFrameRect
+
+
+//========== rectOfArrangeHandle: ==============================================
 ///
-/// @abstract	Where the middle of the page belongs for an assembly and the
-/// 			boxes centered with it, but for one box. Nil leaves none out.
+/// @abstract	The square drawn for a handle, on its corner of the frame.
 ///
-/// @discussion	The box around the assembly and those callouts goes where the
-/// 			ASSEM PLACEMENT line says, moved by the line's offset as a
-/// 			share of the page. A line that places the assembly against
-/// 			anything but the page is read as none.
-///
-/// 			Both are read on the document's own page. A page grown to the
-/// 			host's shape keeps that one in its middle, so the step is not
-/// 			pushed to the far edge of a tall window.
+/// @discussion	The corner the step is placed by stays put as it grows, so a
+/// 			drag there could not scale it, and it has no handle.
 ///
 //==============================================================================
-- (Point2) stepCenterForAssembly:(Box2)assembly
-					   placement:(nullable LPubPlacement *)placement
-					  leavingOut:(nullable LDrawStepCalloutBox *)leftOut
+- (Box2) rectOfArrangeHandle:(LDrawStepArrangeHandle)handle
+{
+	Box2	frame		= self.arrangeFrameRect;
+	BOOL	isRight		= (handle == LDrawStepArrangeHandleTopRight || handle == LDrawStepArrangeHandleBottomRight);
+	BOOL	isBottom	= (handle == LDrawStepArrangeHandleBottomLeft || handle == LDrawStepArrangeHandleBottomRight);
+	Point2	share		= V2Make(isRight ? 1.0 : 0.0, isBottom ? 1.0 : 0.0);
+
+	if (handle == LDrawStepArrangeHandleNone
+		|| V2BoxWidth(frame) <= 0.0
+		|| (share.x == self->stepAnchorShare.x && share.y == self->stepAnchorShare.y)) {
+		return ZeroBox2;
+	}
+
+	Point2 corner = V2Make(isRight ? V2BoxMaxX(frame) : V2BoxMinX(frame),
+						   isBottom ? V2BoxMaxY(frame) : V2BoxMinY(frame));
+
+	return V2SizeCenteredOnPoint(V2MakeSize(ARRANGE_HANDLE_SIDE, ARRANGE_HANDLE_SIDE), corner);
+
+}//end rectOfArrangeHandle:
+
+
+//========== arrangeHandleAtPoint: =============================================
+- (LDrawStepArrangeHandle) arrangeHandleAtPoint:(Point2)point
+{
+	const LDrawStepArrangeHandle handles[] = {
+		LDrawStepArrangeHandleTopLeft, LDrawStepArrangeHandleTopRight,
+		LDrawStepArrangeHandleBottomRight, LDrawStepArrangeHandleBottomLeft
+	};
+
+	for (size_t index = 0; index < sizeof(handles) / sizeof(handles[0]); index++) {
+		Box2 rect = [self rectOfArrangeHandle:handles[index]];
+
+		if (V2BoxWidth(rect) > 0.0
+			&& V2BoxContains(V2BoxInset(rect, -ARRANGE_HANDLE_REACH, -ARRANGE_HANDLE_REACH), point)) {
+			return handles[index];
+		}
+	}
+
+	return LDrawStepArrangeHandleNone;
+
+}//end arrangeHandleAtPoint:
+
+
+//========== stepBoxForAssembly:leavingOut: ====================================
+///
+/// @abstract	The box around the assembly and what is centered with it: the
+/// 			callouts placed against it that have not been dragged, but for
+/// 			one box, and a list placed against it.
+///
+//==============================================================================
+- (Box2) stepBoxForAssembly:(Box2)assembly leavingOut:(nullable LDrawStepCalloutBox *)leftOut
 {
 	Point2 minimum = assembly.origin;
 	Point2 maximum = V2Make(V2BoxMaxX(assembly), V2BoxMaxY(assembly));
@@ -640,10 +764,38 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 		GrowBounds(&minimum, &maximum, list);
 	}
 
+	return V2MakeBox(minimum.x, minimum.y, maximum.x - minimum.x, maximum.y - minimum.y);
+
+}//end stepBoxForAssembly:leavingOut:
+
+
+//========== stepCenterForAssembly:placement:leavingOut: =======================
+///
+/// @abstract	Where the middle of the page belongs for an assembly and the
+/// 			boxes centered with it, but for one box. Nil leaves none out.
+///
+/// @discussion	The box around the assembly and those callouts goes where the
+/// 			ASSEM PLACEMENT line says, moved by the line's offset as a
+/// 			share of the page. A line that places the assembly against
+/// 			anything but the page is read as none.
+///
+/// 			Both are read on the document's own page. A page grown to the
+/// 			host's shape keeps that one in its middle, so the step is not
+/// 			pushed to the far edge of a tall window.
+///
+//==============================================================================
+- (Point2) stepCenterForAssembly:(Box2)assembly
+					   placement:(nullable LPubPlacement *)placement
+					  leavingOut:(nullable LDrawStepCalloutBox *)leftOut
+{
+	Box2	around	= [self stepBoxForAssembly:assembly leavingOut:leftOut];
+	Point2	minimum	= around.origin;
+	Point2	maximum	= V2Make(V2BoxMaxX(around), V2BoxMaxY(around));
+
 	LPubPlacementPosition	position	= LPubPlacementPositionCenter;
 	Point2					offset		= ZeroPoint2;
 
-	if (placement != nil && placement.isInside && [placement.relativeTo isEqualToString:LPUB_PAGE]) {
+	if (placement.isInsidePage) {
 		position	= placement.position;
 		offset		= placement.offset;
 	}
@@ -781,7 +933,7 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	Box2					 anchor			= self->_pageRect;
 	Size2					 margin			= [self gapOnPageForMargins:self->listStyle.margins];
 
-	if (placement.isInside && [placement.relativeTo isEqualToString:LPUB_PAGE]) {
+	if (placement.isInsidePage) {
 		position	= placement.position;
 		offset		= placement.offset;
 	}
@@ -800,6 +952,11 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	// The packer already kept the list within the page less its margins, so
 	// it is drawn at its own size and never cut.
 	Size2 size = self->_layout.frameSize;
+
+	// A drag holds the frame where it is, at its size.
+	if (host.hasListPreview) {
+		return V2MakeBox(host.listPreviewOrigin.x, host.listPreviewOrigin.y, size.width, size.height);
+	}
 
 	Point2 origin	= [LDrawStepCalloutBox originForSize:size
 											   position:position
@@ -825,6 +982,23 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 	return V2MakeBox(origin.x, origin.y, size.width, size.height);
 
 }//end placeFrameOnPageWithHost:
+
+
+//========== listOriginAtPagePosition: =========================================
+- (Point2) listOriginAtPagePosition:(LPubPlacementPosition)position
+{
+	if (self->_isOnPage == NO || self->_layout.placements.count == 0) {
+		return ZeroPoint2;
+	}
+
+	return [LDrawStepCalloutBox originForSize:self->_layout.frameSize
+									 position:position
+								justification:LPubPlacementPositionCenter
+									 isInside:YES
+									   anchor:self->_pageRect
+									   margin:[self gapOnPageForMargins:self->listStyle.margins]];
+
+}//end listOriginAtPagePosition:
 
 
 // MARK: - RESIZING -
@@ -869,9 +1043,28 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 }//end resizeFrame
 
 
+//========== iconModel =========================================================
+- (nullable LDrawModel *) iconModel
+{
+	if (self->_iconModel == nil && self->_layout != nil) {
+		self->_iconModel = [LDrawStepPartListModelBuilder modelForLayout:self->_layout
+														   viewTransform:self->stepViewTransform
+													   submodelsFromFile:self->iconFile];
+	}
+
+	return self->_iconModel;
+
+}//end iconModel
+
+
 //========== controlAtPoint: ===================================================
 - (LDrawStepPartListControl) controlAtPoint:(Point2)point
 {
+	// The corner pin sits where no edge is dragged, so it can go first.
+	if (self.placementPinned && V2BoxContains(self.placementPinRect, point)) {
+		return LDrawStepPartListControlPlacementPin;
+	}
+
 	return [LDrawStepPartListPolicy controlAtPoint:[self resizePointForPoint:point]
 										   inFrame:[self resizeFrame]
 									   widthPinned:self.widthPinned
@@ -883,20 +1076,39 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 //========== pinRectForAxis: ===================================================
 - (Box2) pinRectForAxis:(LPubPliAxis)axis
 {
-	Box2 pin	= [LDrawStepPartListPolicy pinRectForAxis:axis inFrame:[self resizeFrame]];
-	Box2 frame	= self->_frameRect;
-
-	// Mirrored back, so the pin is on the edge that moves.
-	if (self->_growsLeftward) {
-		pin.origin.x = 2.0 * V2BoxMaxX(frame) - V2BoxMaxX(pin);
-	}
-	if (self->_growsUpward) {
-		pin.origin.y = 2.0 * V2BoxMaxY(frame) - V2BoxMaxY(pin);
-	}
-
-	return pin;
+	return [self viewRectForResizeRect:[LDrawStepPartListPolicy pinRectForAxis:axis inFrame:[self resizeFrame]]];
 
 }//end pinRectForAxis:
+
+
+//========== placementPinRect ==================================================
+- (Box2) placementPinRect
+{
+	return [self viewRectForResizeRect:[LDrawStepPartListPolicy placementPinRectInFrame:[self resizeFrame]]];
+
+}//end placementPinRect
+
+
+//========== viewRectForResizeRect: ============================================
+///
+/// @abstract	A rect of the resize space mirrored back into the view, so a pin
+/// 			is drawn where it is hit.
+///
+//==============================================================================
+- (Box2) viewRectForResizeRect:(Box2)rect
+{
+	Box2 frame = self->_frameRect;
+
+	if (self->_growsLeftward) {
+		rect.origin.x = 2.0 * V2BoxMaxX(frame) - V2BoxMaxX(rect);
+	}
+	if (self->_growsUpward) {
+		rect.origin.y = 2.0 * V2BoxMaxY(frame) - V2BoxMaxY(rect);
+	}
+
+	return rect;
+
+}//end viewRectForResizeRect:
 
 
 //========== constraintForModel:host:allowedWidth:pointsPerInch: ===============
@@ -940,8 +1152,8 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 
 //========== updatePinsForModel:host: ==========================================
 ///
-/// @abstract	A pin marks a size the step sets itself, and clicking it clears
-/// 			that. Only on the page, where the frame can be resized.
+/// @abstract	A pin marks a size or a place the step sets itself, and clicking
+/// 			it clears that. Only on the page, where the frame can be resized.
 ///
 //==============================================================================
 - (void) updatePinsForModel:(LDrawModel *)model host:(LDrawStepPartListHostState)host
@@ -954,6 +1166,9 @@ static void GrowBounds(Point2 *minimum, Point2 *maximum, Box2 box)
 
 	self->_widthPinned	= [LDrawStepPartListPolicy isAxis:LPubPliAxisWidth pinnedInStep:step];
 	self->_heightPinned	= [LDrawStepPartListPolicy isAxis:LPubPliAxisHeight pinnedInStep:step];
+
+	// A drag of the list may write a line or not, so its pin waits for the drop.
+	self->_placementPinned = (host.hasListPreview == NO) && [LDrawStepPartListPolicy isPlacementPinnedInStep:step];
 
 	self->inheritedInches[LPubPliAxisWidth]		= [LDrawStepPartListPolicy inheritedInchesForAxis:LPubPliAxisWidth
 																						  inModel:model];

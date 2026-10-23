@@ -41,6 +41,14 @@ NSRect StepPartListRectFromBox(Box2 box)
 }//end StepPartListRectFromBox
 
 
+//========== StepPartListBoxFromRect ===========================================
+Box2 StepPartListBoxFromRect(NSRect rect)
+{
+	return V2MakeBox(NSMinX(rect), NSMinY(rect), NSWidth(rect), NSHeight(rect));
+
+}//end StepPartListBoxFromRect
+
+
 @implementation StepPartListChromeView
 
 //========== isFlipped =========================================================

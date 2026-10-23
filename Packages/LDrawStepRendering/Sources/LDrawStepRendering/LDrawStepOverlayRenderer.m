@@ -53,8 +53,35 @@ static const CGFloat STEPS_BADGE_PADDING_Y = 1.0;
 static const CGFloat RETURN_BUTTON_PADDING_X = 9.0;
 static const CGFloat RETURN_BUTTON_PADDING_Y = 4.0;
 
+/// The strip of a turned view: how far its buttons are from its edge, how far
+/// its text is from its left end, and the gaps after the text and between the
+/// buttons, in points.
+static const CGFloat TURNED_STRIP_INSET			= 4.0;
+static const CGFloat TURNED_STRIP_TEXT_INSET	= 12.0;
+static const CGFloat TURNED_STRIP_TEXT_GAP		= 10.0;
+static const CGFloat TURNED_STRIP_BUTTON_GAP	= 6.0;
+
 /// The line around a badge, a button and a missing part's box.
 static const CGFloat HAIRLINE_WIDTH = 1.0;
+
+/// The dashed line around a step being arranged: its width, and its dash and
+/// gap, in points.
+static const CGFloat ARRANGE_FRAME_WIDTH	= 1.5;
+static const CGFloat ARRANGE_FRAME_DASH		= 6.0;
+static const CGFloat ARRANGE_FRAME_GAP		= 4.0;
+
+/// The line around the page while a step is arranged, and a guide on the
+/// page, in points.
+static const CGFloat ARRANGE_EDGE_WIDTH		= 3.0;
+static const CGFloat GUIDE_WIDTH			= 1.0;
+
+/// How strongly the previous step's picture shows through.
+static const CGFloat GHOST_IMAGE_ALPHA		= 0.35;
+
+/// The outline of the item the arrow keys move: its width, and how far out
+/// from the item's frame it runs, in points.
+static const CGFloat SELECTION_WIDTH		= 2.0;
+static const CGFloat SELECTION_OUTSET		= 2.0;
 
 /// How closely a curve is followed, in pixels. AppKit draws its paths with
 /// this value, so a round corner comes out the same in every host.
@@ -233,6 +260,15 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 }//end ReturnButtonFontCreate
 
 
+/// Where the parts of the turned view's strip go, in the view.
+typedef struct TurnedViewStripLayout {
+	CGRect	strip;
+	CGRect	text;
+	CGRect	useAngle;
+	CGRect	stepAngle;
+} TurnedViewStripLayout;
+
+
 @implementation LDrawStepOverlayRenderer
 
 
@@ -257,6 +293,11 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 {
 	CGColorRelease(self->_listBackgroundColor);
 	CGColorRelease(self->_pinColor);
+	CGColorRelease(self->_arrangeFrameColor);
+	CGColorRelease(self->_guideColor);
+	CGColorRelease(self->_ghostColor);
+	CGColorRelease(self->_selectionColor);
+	CGImageRelease(self->_ghostImage);
 
 }//end dealloc
 
@@ -282,6 +323,56 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	self->_pinColor = color;
 
 }//end setPinColor:
+
+
+//========== setArrangeFrameColor: =============================================
+- (void) setArrangeFrameColor:(nullable CGColorRef)color
+{
+	CGColorRetain(color);
+	CGColorRelease(self->_arrangeFrameColor);
+	self->_arrangeFrameColor = color;
+
+}//end setArrangeFrameColor:
+
+
+//========== setGuideColor: ====================================================
+- (void) setGuideColor:(nullable CGColorRef)color
+{
+	CGColorRetain(color);
+	CGColorRelease(self->_guideColor);
+	self->_guideColor = color;
+
+}//end setGuideColor:
+
+
+//========== setGhostColor: ====================================================
+- (void) setGhostColor:(nullable CGColorRef)color
+{
+	CGColorRetain(color);
+	CGColorRelease(self->_ghostColor);
+	self->_ghostColor = color;
+
+}//end setGhostColor:
+
+
+//========== setGhostImage: ====================================================
+- (void) setGhostImage:(nullable CGImageRef)image
+{
+	CGImageRetain(image);
+	CGImageRelease(self->_ghostImage);
+	self->_ghostImage = image;
+
+}//end setGhostImage:
+
+
+//========== setSelectionColor: ================================================
+- (void) setSelectionColor:(nullable CGColorRef)color
+{
+	CGColorRetain(color);
+	CGColorRelease(self->_selectionColor);
+	self->_selectionColor = color;
+
+}//end setSelectionColor:
 
 
 //========== chrome ============================================================
@@ -310,6 +401,7 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGContextSetFlatness(context, CURVE_FLATNESS);
 
 	[self drawPageSurroundInContext:context viewSize:viewSize];
+	[self drawGhostInContext:context];
 	[self drawPageNumberInContext:context];
 	[self drawListFrameInContext:context];
 
@@ -341,6 +433,47 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	CGContextEOFillPath(context);
 
 }//end drawPageSurroundInContext:viewSize:
+
+
+//========== drawGhostInContext: ===============================================
+///
+/// @abstract	Shows where the previous step's assembly sat, so the step can be
+///				lined up with it: its picture, faintly, or else its outline
+///				filled.
+///
+//==============================================================================
+- (void) drawGhostInContext:(CGContextRef)context
+{
+	const Point2	*point	= self.ghostOutline.bytes;
+	NSUInteger		 count	= self.ghostOutline.length / sizeof(Point2);
+	CGRect			 rect	= LDrawStepRectFromBox(self.ghostRect);
+
+	if (self.ghostImage != NULL && CGRectIsEmpty(rect) == NO) {
+		CGContextSaveGState(context);
+		CGContextSetAlpha(context, GHOST_IMAGE_ALPHA);
+		LDrawStepDrawImage(context, self.ghostImage, rect);
+		CGContextRestoreGState(context);
+		return;
+	}
+
+	if (count < 3 || self.ghostColor == NULL) {
+		return;
+	}
+
+	CGContextSaveGState(context);
+
+	CGContextMoveToPoint(context, point[0].x, point[0].y);
+	for (NSUInteger index = 1; index < count; index++) {
+		CGContextAddLineToPoint(context, point[index].x, point[index].y);
+	}
+	CGContextClosePath(context);
+
+	LDrawStepSetColor(context, self.ghostColor);
+	CGContextFillPath(context);
+
+	CGContextRestoreGState(context);
+
+}//end drawGhostInContext:
 
 
 //========== drawPageNumberInContext: ==========================================
@@ -397,6 +530,10 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	[self drawPinForAxis:LPubPliAxisWidth inContext:context];
 	[self drawPinForAxis:LPubPliAxisHeight inContext:context];
 
+	if (self.presentation.placementPinned) {
+		[self drawPin:self.presentation.placementPinRect inContext:context];
+	}
+
 }//end drawListFrameInContext:
 
 
@@ -428,17 +565,25 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	BOOL							 isPinned		= (axis == LPubPliAxisWidth) ? presentation.widthPinned
 																				 : presentation.heightPinned;
 
-	if (isPinned == NO || self.pinColor == NULL) {
-		return;
+	if (isPinned) {
+		[self drawPin:[presentation pinRectForAxis:axis] inContext:context];
 	}
 
-	Box2 pin = [presentation pinRectForAxis:axis];
+}//end drawPinForAxis:inContext:
+
+
+//========== drawPin:inContext: ================================================
+- (void) drawPin:(Box2)pin inContext:(CGContextRef)context
+{
+	if (self.pinColor == NULL) {
+		return;
+	}
 
 	LDrawStepSetColor(context, self.pinColor);
 	LDrawStepAddOval(context, CGRectInset(LDrawStepRectFromBox(pin), 1.0, 1.0));
 	CGContextFillPath(context);
 
-}//end drawPinForAxis:inContext:
+}//end drawPin:inContext:
 
 
 // MARK: - A LIST'S LABELS -
@@ -617,11 +762,156 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 		[self drawCalloutBox:box inContext:context];
 	}
 
+	[self drawSelectionInContext:context];
+	[self drawGuidesInContext:context];
+	[self drawArrangeFrameInContext:context];
+	[self drawArrangeEdgeInContext:context viewSize:viewSize];
 	[self drawReturnButtonInContext:context viewSize:viewSize];
+	[self drawTurnedViewStripInContext:context viewSize:viewSize];
 
 	CGContextRestoreGState(context);
 
 }//end drawCalloutsInContext:viewSize:
+
+
+//========== drawSelectionInContext: ===========================================
+///
+/// @abstract	Outlines the item the arrow keys move, just outside its frame.
+///
+//==============================================================================
+- (void) drawSelectionInContext:(CGContextRef)context
+{
+	CGRect rect = LDrawStepRectFromBox(self.selectionRect);
+
+	if (self.selectionColor == NULL || CGRectIsEmpty(rect)) {
+		return;
+	}
+
+	CGContextSaveGState(context);
+
+	LDrawStepSetColor(context, self.selectionColor);
+	CGContextSetLineWidth(context, SELECTION_WIDTH);
+	CGContextStrokeRect(context, CGRectInset(rect, -SELECTION_OUTSET, -SELECTION_OUTSET));
+
+	CGContextRestoreGState(context);
+
+}//end drawSelectionInContext:
+
+
+//========== drawArrangeFrameInContext: ========================================
+///
+/// @abstract	Draws a dashed line a little outside the step while it is
+///				arranged, so it is plain that a move of the camera moves the
+///				step. Its corners that move as the step grows get a handle:
+///				a white square, edged in the frame's color.
+///
+//==============================================================================
+- (void) drawArrangeFrameInContext:(CGContextRef)context
+{
+	LDrawStepPartListPresentation	*presentation	= self.presentation;
+	CGRect							 frameRect		= LDrawStepRectFromBox(presentation.arrangeFrameRect);
+	CGFloat							 pattern[2]		= { ARRANGE_FRAME_DASH, ARRANGE_FRAME_GAP };
+
+	if (self.arrangeFrameColor == NULL || CGRectIsEmpty(frameRect)) {
+		return;
+	}
+
+	CGContextSaveGState(context);
+
+	LDrawStepSetColor(context, self.arrangeFrameColor);
+	CGContextAddRect(context, frameRect);
+	CGContextSetLineWidth(context, ARRANGE_FRAME_WIDTH);
+	CGContextSetLineDash(context, 0.0, pattern, 2);
+	CGContextStrokePath(context);
+
+	CGContextSetLineDash(context, 0.0, NULL, 0);
+	CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 1.0);
+
+	for (LDrawStepArrangeHandle handle = LDrawStepArrangeHandleTopLeft;
+		 handle <= LDrawStepArrangeHandleBottomLeft;
+		 handle++) {
+		CGRect handleRect = LDrawStepRectFromBox([presentation rectOfArrangeHandle:handle]);
+
+		if (CGRectIsEmpty(handleRect) == NO) {
+			CGContextAddRect(context, handleRect);
+		}
+	}
+
+	CGContextDrawPath(context, kCGPathFillStroke);
+
+	CGContextRestoreGState(context);
+
+}//end drawArrangeFrameInContext:
+
+
+//========== drawGuidesInContext: ==============================================
+///
+/// @abstract	Draws the guides on the page, such as the middle lines and
+///				margins the arranged step or a dragged list meets, as thin
+///				lines.
+///
+//==============================================================================
+- (void) drawGuidesInContext:(CGContextRef)context
+{
+	const Box2	*lines	= self.guides.bytes;
+	NSUInteger	 count	= self.guides.length / sizeof(Box2);
+
+	if (self.guideColor == NULL || count == 0) {
+		return;
+	}
+
+	CGContextSaveGState(context);
+
+	LDrawStepSetColor(context, self.guideColor);
+	CGContextSetLineWidth(context, GUIDE_WIDTH);
+
+	for (NSUInteger index = 0; index < count; index++) {
+		Box2 line = lines[index];
+
+		CGContextMoveToPoint(context, line.origin.x, line.origin.y);
+		CGContextAddLineToPoint(context, V2BoxMaxX(line), V2BoxMaxY(line));
+	}
+
+	CGContextStrokePath(context);
+	CGContextRestoreGState(context);
+
+}//end drawGuidesInContext:
+
+
+//========== drawArrangeEdgeInContext:viewSize: ================================
+///
+/// @abstract	Draws a line just outside the page while a step is arranged, so
+///				the page says the camera moves the step on it.
+///
+/// @discussion	Where the page runs past the view, the line runs along the
+///				inside of the part the scroll bars leave instead.
+///
+//==============================================================================
+- (void) drawArrangeEdgeInContext:(CGContextRef)context viewSize:(Size2)viewSize
+{
+	CGFloat	half	= ARRANGE_EDGE_WIDTH / 2.0;
+	CGRect	shown	= LDrawStepRectFromBox(self.unobscuredRect);
+	CGRect	page	= LDrawStepRectFromBox(self.presentation.pageRect);
+
+	if (CGRectIsEmpty(shown)) {
+		shown = CGRectMake(0.0, 0.0, viewSize.width, viewSize.height);
+	}
+
+	CGRect	edge	= CGRectIntersection(CGRectInset(page, -half, -half), CGRectInset(shown, half, half));
+
+	if (self.arrangeFrameColor == NULL || CGRectIsEmpty(page) || CGRectIsEmpty(edge)) {
+		return;
+	}
+
+	CGContextSaveGState(context);
+
+	LDrawStepSetColor(context, self.arrangeFrameColor);
+	CGContextSetLineWidth(context, ARRANGE_EDGE_WIDTH);
+	CGContextStrokeRect(context, edge);
+
+	CGContextRestoreGState(context);
+
+}//end drawArrangeEdgeInContext:viewSize:
 
 
 //========== drawArrow:ofBox:inContext: ========================================
@@ -937,5 +1227,99 @@ static LDrawStepFont ReturnButtonFontCreate(void)
 	LDrawStepFontRelease(font);
 
 }//end drawReturnButtonInContext:viewSize:
+
+
+// MARK: - THE TURNED VIEW -
+
+
+//========== turnedViewStripLayoutForViewSize: =================================
+///
+/// @abstract	Lays the strip out across the middle of the view's top: its
+///				text, then its two buttons, each the size of the button that
+///				leads back.
+///
+//==============================================================================
+- (TurnedViewStripLayout) turnedViewStripLayoutForViewSize:(Size2)viewSize
+{
+	TurnedViewStripLayout layout = { CGRectZero, CGRectZero, CGRectZero, CGRectZero };
+
+	if (self.turnedViewText.length == 0) {
+		return layout;
+	}
+
+	LDrawStepFont	font		= ReturnButtonFontCreate();
+	CGSize			textSize	= LDrawStepTextSize(self.turnedViewText, font);
+	CGSize			useSize		= LDrawStepTextSize(self.useAngleTitle ?: @"", font);
+	CGSize			stepSize	= LDrawStepTextSize(self.stepAngleTitle ?: @"", font);
+
+	LDrawStepFontRelease(font);
+
+	CGFloat	buttonHeight	= ceil(MAX(textSize.height, MAX(useSize.height, stepSize.height)))
+							+ 2.0 * RETURN_BUTTON_PADDING_Y;
+	CGFloat	textWidth		= ceil(textSize.width);
+	CGFloat	useWidth		= ceil(useSize.width) + 2.0 * RETURN_BUTTON_PADDING_X;
+	CGFloat	stepWidth		= ceil(stepSize.width) + 2.0 * RETURN_BUTTON_PADDING_X;
+	CGFloat	width			= TURNED_STRIP_TEXT_INSET + textWidth + TURNED_STRIP_TEXT_GAP
+							+ useWidth + TURNED_STRIP_BUTTON_GAP + stepWidth + TURNED_STRIP_INSET;
+	CGFloat	height			= buttonHeight + 2.0 * TURNED_STRIP_INSET;
+	CGFloat	left			= floor((viewSize.width - width) / 2.0);
+	CGFloat	top				= [LDrawStepPartListPolicy frameInsetForPointsPerPageInch:0.0];
+	CGFloat	buttonTop		= top + TURNED_STRIP_INSET;
+
+	layout.strip		= CGRectMake(left, top, width, height);
+	layout.text			= CGRectMake(left + TURNED_STRIP_TEXT_INSET, buttonTop, textWidth, buttonHeight);
+	layout.useAngle		= CGRectMake(CGRectGetMaxX(layout.text) + TURNED_STRIP_TEXT_GAP, buttonTop,
+									 useWidth, buttonHeight);
+	layout.stepAngle	= CGRectMake(CGRectGetMaxX(layout.useAngle) + TURNED_STRIP_BUTTON_GAP, buttonTop,
+									 stepWidth, buttonHeight);
+
+	return layout;
+
+}//end turnedViewStripLayoutForViewSize:
+
+
+//========== turnedViewStripRectForViewSize: ===================================
+- (Box2) turnedViewStripRectForViewSize:(Size2)viewSize
+{
+	return LDrawStepBoxFromRect([self turnedViewStripLayoutForViewSize:viewSize].strip);
+
+}//end turnedViewStripRectForViewSize:
+
+
+//========== rectOfTurnedViewButton:forViewSize: ===============================
+- (Box2) rectOfTurnedViewButton:(LDrawStepTurnedViewButton)button forViewSize:(Size2)viewSize
+{
+	TurnedViewStripLayout layout = [self turnedViewStripLayoutForViewSize:viewSize];
+
+	return LDrawStepBoxFromRect((button == LDrawStepTurnedViewButtonUseAngle) ? layout.useAngle : layout.stepAngle);
+
+}//end rectOfTurnedViewButton:forViewSize:
+
+
+//========== drawTurnedViewStripInContext:viewSize: ============================
+///
+/// @abstract	Draws the strip that says the view is turned away from the
+///				step's angle, in the colors of the button that leads back.
+///
+//==============================================================================
+- (void) drawTurnedViewStripInContext:(CGContextRef)context viewSize:(Size2)viewSize
+{
+	TurnedViewStripLayout layout = [self turnedViewStripLayoutForViewSize:viewSize];
+
+	if (CGRectIsEmpty(layout.strip)) {
+		return;
+	}
+
+	LDrawStepPartListChrome	chrome	= [LDrawStepPartListPolicy defaultChrome];
+	LDrawStepFont			font	= ReturnButtonFontCreate();
+
+	DrawPill(context, layout.strip, @"", font, self.listBackgroundColor, chrome.borderRGBA, chrome.labelRGBA);
+	LDrawStepDrawTextCentered(context, self.turnedViewText, layout.text, font, chrome.labelRGBA);
+	DrawPill(context, layout.useAngle, self.useAngleTitle ?: @"", font, NULL, chrome.borderRGBA, chrome.labelRGBA);
+	DrawPill(context, layout.stepAngle, self.stepAngleTitle ?: @"", font, NULL, chrome.borderRGBA, chrome.labelRGBA);
+
+	LDrawStepFontRelease(font);
+
+}//end drawTurnedViewStripInContext:viewSize:
 
 @end

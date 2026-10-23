@@ -22,6 +22,22 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
+/// @enum       LDrawStepTurnedViewButton
+///
+/// @abstract   A button of the strip shown while the view is turned away from
+///             the step's angle.
+///
+//------------------------------------------------------------------------------
+typedef NS_ENUM(NSInteger, LDrawStepTurnedViewButton) {
+	/// Writes the view's angle as the step's.
+	LDrawStepTurnedViewButtonUseAngle	= 0,
+	/// Turns the view back to the step's angle.
+	LDrawStepTurnedViewButtonStepAngle	= 1
+};
+
+
+//------------------------------------------------------------------------------
+///
 /// @class      LDrawStepOverlayRenderer
 ///
 /// @abstract   Draws what a step shows over the model: LPub3D's page and its
@@ -56,6 +72,36 @@ NS_ASSUME_NONNULL_BEGIN
 /// The fill of a pin on the list's frame. Nil draws no pins.
 @property (nonatomic, nullable) CGColorRef pinColor;
 
+/// The color of the dashed frame around the arranged step, with its handles,
+/// and of the line around the page. Nil draws neither.
+@property (nonatomic, nullable) CGColorRef arrangeFrameColor;
+
+/// The part of the view the viewport's scroll bars leave uncovered. The line
+/// around the page stays inside it. An empty box is the whole view.
+@property (nonatomic) Box2 unobscuredRect;
+
+/// Guides on the page: Box2 lines with no width or no height, such as the
+/// page's middle lines and margins that the arranged step or a dragged list
+/// meets. Drawn in `guideColor`, and not at all with none.
+@property (nonatomic, copy, nullable) NSData *guides;
+@property (nonatomic, nullable) CGColorRef guideColor;
+
+/// Where the previous step's assembly sat on its page: an outline of Point2
+/// values in the view, filled in `ghostColor` on the paper. Not drawn with
+/// fewer than 3 points or no color.
+@property (nonatomic, copy, nullable) NSData *ghostOutline;
+@property (nonatomic, nullable) CGColorRef ghostColor;
+
+/// A picture of the previous step's assembly, drawn faintly in `ghostRect` in
+/// place of the outline's fill. NULL draws the outline.
+@property (nonatomic, nullable) CGImageRef ghostImage;
+@property (nonatomic) Box2 ghostRect;
+
+/// The frame of the item the arrow keys move, the parts list or a callout's
+/// box, in the view. Outlined in `selectionColor`. An empty box draws nothing.
+@property (nonatomic) Box2 selectionRect;
+@property (nonatomic, nullable) CGColorRef selectionColor;
+
 /// Formats the host has localized. Each takes one unsigned long: how many parts
 /// a list cut short leaves out, and how many steps build a callout's submodels.
 @property (nonatomic, copy) NSString *overflowFormat;
@@ -64,19 +110,35 @@ NS_ASSUME_NONNULL_BEGIN
 /// What the button that leads back says. Nil or empty shows no button.
 @property (nonatomic, copy, nullable) NSString *returnTitle;
 
-/// The bottom layer: the dimming around the page, the page's number, and the
-/// list's frame with its pins.
+/// The strip at the top of the view that says the view is turned away from
+/// the angle LPub3D prints the step at: what it says, and the titles of its
+/// two buttons. No strip while the text is nil or empty.
+@property (nonatomic, copy, nullable) NSString *turnedViewText;
+@property (nonatomic, copy, nullable) NSString *useAngleTitle;
+@property (nonatomic, copy, nullable) NSString *stepAngleTitle;
+
+/// The bottom layer: the dimming around the page, the previous step's
+/// outline, the page's number, and the list's frame with its pins.
 - (void) drawPageAndFrameInContext:(CGContextRef)context viewSize:(Size2)viewSize
 	NS_SWIFT_NAME(drawPageAndFrame(in:viewSize:));
 
-/// The top layer: each callout's arrows and box, and the button that leads
-/// back.
+/// The top layer: each callout's arrows and box, the selected item's outline,
+/// the guides, the frame of a step being arranged and the view's edge, the
+/// button that leads back, and the strip of a turned view.
 - (void) drawCalloutsInContext:(CGContextRef)context viewSize:(Size2)viewSize
 	NS_SWIFT_NAME(drawCallouts(in:viewSize:));
 
 /// Where the button is in a view of this size: its bottom left corner, as far
 /// in as the list is from the top. An empty box when there is no title.
 - (Box2) returnButtonRectForViewSize:(Size2)viewSize NS_SWIFT_NAME(returnButtonRect(forViewSize:));
+
+/// Where that strip is in a view of this size: across the middle of its top.
+/// An empty box when there is no strip.
+- (Box2) turnedViewStripRectForViewSize:(Size2)viewSize NS_SWIFT_NAME(turnedViewStripRect(forViewSize:));
+
+/// Where one of the strip's buttons is, or an empty box when there is no strip.
+- (Box2) rectOfTurnedViewButton:(LDrawStepTurnedViewButton)button forViewSize:(Size2)viewSize
+	NS_SWIFT_NAME(rect(ofTurnedViewButton:forViewSize:));
 
 /// The middle layer, for one packed list: the counts, the size badges, a box
 /// for each part that is missing, and the notice of a list cut short. The

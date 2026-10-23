@@ -81,6 +81,9 @@
 			_horizontalScroller = nil;
 			_verticalScroller = nil;
 		}
+
+		// The 3D view makes room for the scroll bars, or takes it back.
+		[self setNeedsLayout:YES];
 	}
 }
 
@@ -100,6 +103,7 @@
 	
 	// Add to view hierarchy and re-layout.
 	[self addSubview:newPlacard];
+	[self setNeedsLayout:YES];
 	
 }//end setVerticalPlacard:
 
@@ -148,16 +152,40 @@
 			// this is a nonsense case
 			placardFrame.origin.x = NSMaxX(self.bounds) - NSWidth(placardFrame);
 			placardFrame.origin.y = NSMaxY(self.bounds) - NSHeight(placardFrame);
-			
-			viewerFrame.size.width -= NSWidth(placardFrame);
 		}
 		_verticalPlacard.frame = placardFrame;
 	}
 
-	_glView.frame = viewerFrame;
+	_glView.frame = [self contentRect];
 	
 	[_glView setFocusRingVisible:self.focusRingType != NSFocusRingTypeNone];
 }
+
+
+//========== contentRect =======================================================
+///
+/// @abstract	The part of the container the 3D view fills: all of it but the
+///				scroll bars, or the placard when there are none.
+///
+//==============================================================================
+- (NSRect) contentRect
+{
+	NSRect content	= self.bounds;
+	NSRect edge		= NSZeroRect;
+
+	if(self.showsScrollbars)
+	{
+		NSDivideRect(content, &edge, &content, NSHeight(_horizontalScroller.frame), NSMinYEdge);
+		NSDivideRect(content, &edge, &content, NSWidth(_verticalScroller.frame), NSMaxXEdge);
+	}
+	else if(self.verticalPlacard != nil)
+	{
+		content.size.width -= NSWidth(_verticalPlacard.frame);
+	}
+
+	return content;
+
+}//end contentRect
 
 
 //========== reflectLogicalDocumentRect:visibleRect: ===========================

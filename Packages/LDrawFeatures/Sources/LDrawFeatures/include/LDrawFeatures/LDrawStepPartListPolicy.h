@@ -15,6 +15,7 @@
 
 @class LDrawDirective;
 @class LDrawStep;
+@class LPubPliCameraAngles;
 @class LPubPlacement;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -43,11 +44,12 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListHandle) {
 ///
 //------------------------------------------------------------------------------
 typedef NS_ENUM(NSInteger, LDrawStepPartListControl) {
-	LDrawStepPartListControlNone		= 0,
-	LDrawStepPartListControlWidthEdge	= 1,
-	LDrawStepPartListControlHeightEdge	= 2,
-	LDrawStepPartListControlWidthPin	= 3,
-	LDrawStepPartListControlHeightPin	= 4
+	LDrawStepPartListControlNone			= 0,
+	LDrawStepPartListControlWidthEdge		= 1,
+	LDrawStepPartListControlHeightEdge		= 2,
+	LDrawStepPartListControlWidthPin		= 3,
+	LDrawStepPartListControlHeightPin		= 4,
+	LDrawStepPartListControlPlacementPin	= 5
 };
 
 
@@ -232,6 +234,10 @@ typedef struct LDrawStepPartListBadgeStyle
 + (Box2) pinRectForAxis:(LPubPliAxis)axis inFrame:(Box2)frame
 	NS_SWIFT_NAME(pinRect(forAxis:inFrame:));
 
+/// Where the pin of the step's own placement sits: the frame's top left
+/// corner, which is the corner that stays put in this space.
++ (Box2) placementPinRectInFrame:(Box2)frame NS_SWIFT_NAME(placementPinRect(inFrame:));
+
 /// The control under this point. A drawn pin beats the edge it sits on, and
 /// only a pinned axis has a pin to click.
 + (LDrawStepPartListControl) controlAtPoint:(Point2)point
@@ -338,6 +344,67 @@ typedef struct LDrawStepPartListBadgeStyle
 + (Matrix4) viewTransformForVisibleStepOfModel:(nullable LDrawModel *)model
 	NS_SWIFT_NAME(viewTransform(forVisibleStepOfModel:));
 
+/// The angle the visible step is seen at: on LPub3D's page the angle LPub3D
+/// prints it at, else the step's own rotation.
++ (Tuple3) viewingAngleForVisibleStepOfModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(viewingAngle(forVisibleStepOf:));
+
+/// The angle LPub3D draws a step's assembly at, in degrees, as a viewport's
+/// viewing angle: the step's ROTSTEP, then the `ASSEM CAMERA_ANGLES` in force
+/// for the step in place of Bricksmith's 3D view. With no such line it is the
+/// model's own angle. An ABS rotation keeps no camera angles unless they name
+/// a custom viewpoint.
++ (Tuple3) assemblyViewingAngleForStepAtIndex:(NSUInteger)stepIndex inModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(assemblyViewingAngle(forStepAt:inModel:));
+
+/// Whether the rotation a step is seen at comes from an ABS ROTSTEP: the last
+/// REL, ABS or END up to the step is an ABS.
++ (BOOL) isAbsoluteRotationAtStepIndex:(NSUInteger)stepIndex inModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(isAbsoluteRotation(atStep:inModel:));
+
+/// The turn a step's ROTSTEP gives the parts, with no view after it. The
+/// identity for a step with no rotation.
++ (Matrix4) assemblyRotationForStepAtIndex:(NSUInteger)stepIndex inModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(assemblyRotation(forStepAt:inModel:));
+
+/// The view a camera line puts after the rotation. With no line it is
+/// Bricksmith's 3D view, LPub3D's default of 23, 45.
++ (Matrix4) assemblyCameraForAngles:(nullable LPubPliCameraAngles *)angles
+	NS_SWIFT_NAME(assemblyCamera(for:));
+
+/// The `ASSEM CAMERA_ANGLES` line in force for a step, reading the lines in
+/// `excluded` as if they were not there.
++ (nullable LPubPliCameraAngles *) assemblyCameraAnglesForStepAtIndex:(NSUInteger)stepIndex
+															  inModel:(nullable LDrawModel *)model
+															excluding:(nullable NSArray<LDrawDirective *> *)excluded
+	NS_SWIFT_NAME(assemblyCameraAngles(forStepAt:inModel:excluding:));
+
+/// What LPub3D's camera sees: the parts turned, then the camera. Under an ABS
+/// rotation the camera looks straight on, unless the line names a custom
+/// viewpoint.
++ (Matrix4) assemblyViewWithRotation:(Matrix4)rotation
+							  camera:(nullable LPubPliCameraAngles *)angles
+						  isAbsolute:(BOOL)isAbsolute
+	NS_SWIFT_NAME(assemblyView(rotation:camera:isAbsolute:));
+
+/// A rotation as a viewport's viewing angle, in degrees.
++ (Tuple3) viewingAngleForView:(Matrix4)view NS_SWIFT_NAME(viewingAngle(forView:));
+
+/// A viewing angle as LPub3D's camera angles after the visible step's
+/// rotation, in degrees. NO when the view is tilted to one side.
++ (BOOL) getAssemblyLatitude:(double *)latitude
+				   longitude:(double *)longitude
+			 forViewingAngle:(Tuple3)angle
+					 inModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(getAssemblyLatitude(_:longitude:forViewingAngle:inModel:));
+
+/// The viewing angle of LPub3D's camera at these angles after the visible
+/// step's rotation.
++ (Tuple3) assemblyViewingAngleForLatitude:(double)latitude
+								 longitude:(double)longitude
+								   inModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(assemblyViewingAngle(latitude:longitude:inModel:));
+
 /// The page LPub3D would print this document on, in inches, with `PAGE
 /// ORIENTATION` applied. The orientation says which measurement is the long
 /// side. Zero when the document names its page instead of measuring it.
@@ -384,6 +451,12 @@ typedef struct LDrawStepPartListBadgeStyle
 + (double) assemblyScaleFittingPageInHostSize:(Size2)hostSize inModel:(nullable LDrawModel *)model
 	NS_SWIFT_NAME(assemblyScaleFittingPage(inHostSize:inModel:));
 
+/// How many points an inch of the page covers when the whole page fits in the
+/// host, less a 6 point margin. Zero when the document does not measure its
+/// page.
++ (double) pointsPerPageInchFittingPageInHostSize:(Size2)hostSize inModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(pointsPerPageInchFittingPage(inHostSize:inModel:));
+
 /// The model point the page is centered on: the middle of every step, leaving
 /// out groups removed by the step on display. Taken from the steps on display
 /// only, the page would slide across the window as the model grows.
@@ -402,6 +475,11 @@ typedef struct LDrawStepPartListBadgeStyle
 /// catalog.
 + (nullable NSData *) assemblyOutlinePointsInModel:(nullable LDrawModel *)model
 	NS_SWIFT_NAME(assemblyOutlinePoints(inModel:));
+
+/// The points the parts of the steps before the one on display reach furthest
+/// out to, in the model's coordinates. Nil with none, or with no catalog.
++ (nullable NSData *) earlierAssemblyOutlinePointsInModel:(nullable LDrawModel *)model
+	NS_SWIFT_NAME(earlierAssemblyOutlinePoints(inModel:));
 
 /// Whether the step on display is drawn on LPub3D's page: Steps mode, the list
 /// and the page preference are on, and the file measures its page. A step that
@@ -459,6 +537,10 @@ typedef struct LDrawStepPartListBadgeStyle
 /// clicking one clears it.
 + (BOOL) isAxis:(LPubPliAxis)axis pinnedInStep:(nullable LDrawStep *)step
 	NS_SWIFT_NAME(isAxis(_:pinnedInStep:));
+
+/// Whether the step places its list itself: it has a `LOCAL` `PLI PLACEMENT`
+/// line. The frame's corner pin shows this and clicking it clears it.
++ (BOOL) isPlacementPinnedInStep:(nullable LDrawStep *)step NS_SWIFT_NAME(isPlacementPinned(inStep:));
 
 @end
 

@@ -22,8 +22,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Makes an AppKit color from the four sRGB floats a policy color uses.
 extern NSColor *StepPartListColorFromRGBA(const double *rgba);
 
-/// Makes an AppKit rect from a layout box.
+/// Makes an AppKit rect from a layout box, and back.
 extern NSRect StepPartListRectFromBox(Box2 box);
+extern Box2 StepPartListBoxFromRect(NSRect rect);
 
 ////////////////////////////////////////////////////////////////////////////////
 //

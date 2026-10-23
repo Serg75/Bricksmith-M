@@ -15,6 +15,7 @@ import Foundation
 import CoreGraphics
 import LDrawCore
 import LDrawFeatures
+import LDrawStepEditing
 import LDrawTestSupport
 
 /// Holds every suite of this target, so they run one test at a time. A layout
@@ -106,6 +107,13 @@ final class Canvas {
         context.scaleBy(x: 1, y: -1)
     }
 
+    /// Whether the pixel at this column and row, from the top left, was drawn on.
+    func isInked(_ x: Int, _ y: Int) -> Bool {
+        let pixels = context.data!.bindMemory(to: UInt8.self, capacity: width * height * 4)
+
+        return pixels[(y * width + x) * 4 + 3] != 0
+    }
+
     /// The box around every pixel that was drawn on, or nil when none was.
     var inkBounds: Box2? {
         let pixels = context.data!.bindMemory(to: UInt8.self, capacity: width * height * 4)
@@ -131,4 +139,19 @@ func box(_ outer: Box2, holds inner: Box2) -> Bool {
         && inner.origin.y >= outer.origin.y - 1
         && inner.origin.x + inner.size.width <= outer.origin.x + outer.size.width + 1
         && inner.origin.y + inner.size.height <= outer.origin.y + outer.size.height + 1
+}
+
+/// Makes an edit's changes, without the undo.
+final class ApplyingHost: NSObject, LDrawStepCalloutEditHost {
+
+    func add(_ newDirective: LDrawDirective, toParent parent: LDrawContainer, at index: Int) {
+        parent.insert(newDirective, at: index)
+    }
+
+    func delete(_ doomedDirective: LDrawDirective) {
+        doomedDirective.enclosingDirective()?.remove(doomedDirective)
+    }
+
+    func preserveDirectiveState(_ directive: LDrawDirective) {
+    }
 }

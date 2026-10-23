@@ -342,6 +342,8 @@ extern void		Matrix4Adjoint( Matrix4 *, Matrix4 * );
 extern double	Matrix4x4Determinant( Matrix4 * );
 extern void		Matrix4Print(Matrix4 *matrix);
 extern bool		Matrix4EqualMatrices(Matrix4 *matrix1, Matrix4 *matrix2);
+extern bool		Matrix4RotationsWithinTolerance(Matrix4 matrix1, Matrix4 matrix2, double tolerance);
+extern bool		Matrix4AnglesWithinTolerance(Tuple3 angles1, Tuple3 angles2, double tolerance);
 
 extern bool		DepthOnTriangle(
 						Point3		vert0,

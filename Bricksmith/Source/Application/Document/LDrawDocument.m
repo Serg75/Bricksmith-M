@@ -44,6 +44,7 @@
 #import <LDrawCore/LDrawTriangle.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCommand.h>
+#import <LDrawCore/LPubPliCameraAngles.h>
 #import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/LPubRemoveGroup.h>
 
@@ -98,6 +99,30 @@
 #import "WindowCategory.h"
 
 
+/// How many points an inch of the screen covers: the size an inch of LPub3D's
+/// page is drawn at 100%, the size it prints.
+static const CGFloat SCREEN_POINTS_PER_INCH = 72.0;
+
+/// The zooms the toolbar's zoom field takes, in percent.
+static const CGFloat ZOOM_MINIMUM_PERCENT = 1.0;
+static const CGFloat ZOOM_MAXIMUM_PERCENT = 10000.0;
+
+// The arranging controls in the scope bar, in points.
+static const CGFloat ARRANGE_SWITCH_GAP		= 6.0;	// after the Page View switch
+static const CGFloat ARRANGE_LABEL_GAP		= 4.0;	// after the Scope label
+static const CGFloat ARRANGE_ROW_GAP		= 2.0;	// between the controls of a group
+static const CGFloat ARRANGE_GROUP_GAP		= 14.0;	// between groups of the bar's controls
+static const CGFloat ARRANGE_DONE_GAP		= 6.0;	// between Cancel and Done
+static const CGFloat ARRANGE_POPUP_PADDING	= 26.0;	// the scope pop-up beyond its title
+
+// Each control of the arranging row in order, by how long it stays as the
+// room runs out: the labels (0) first, then the named views, the rotation and
+// the offset. The size stays. And the group of each: angle, size or offset.
+static const NSInteger ARRANGE_ROW_STAYS[]	= { 1, 2, 2, 2, 0, 4, 0, 3, 3 };
+static const NSInteger ARRANGE_ROW_GROUPS[]	= { 0, 0, 0, 0, 1, 1, 2, 2, 2 };
+static const NSInteger ARRANGE_LAST_LEVEL	= 4;
+
+
 //---------- AppendChoicesToNewItem --------------------------------------------
 //
 // Purpose:		Appends related-part choices to a parent menu. The host still
@@ -148,11 +173,30 @@ void AppendChoicesToNewItem(
 
 
 // The document already has the three changes a callout's edit is made of.
-@interface LDrawDocument () <StepPartListControllerDelegate, LDrawStepCalloutEditHost>
+@interface LDrawDocument () <StepPartListControllerDelegate, LDrawStepCalloutEditHost, NSMenuDelegate>
+- (CGFloat) zoomPercentageInViewport:(LDrawView *)viewport;
+- (void) setZoomPercentage:(CGFloat)newPercentage inViewport:(LDrawView *)viewport;
+- (void) noteZoomPercentageChanged;
+
+- (double) pointsPerPageInchInViewport:(LDrawView *)viewport;
+- (void) centerLPubPageOnStepOfModel:(LDrawModel *)model;
 - (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change;
 - (void) holdLPubPageDuringChange:(void (NS_NOESCAPE ^)(void))change pageScale:(double)pageScale;
 - (void) holdLPubPageDuringModelChange:(void (NS_NOESCAPE ^)(void))change;
-- (void) centerLPubPageOnStepOfModel:(LDrawModel *)model;
+- (void) followLPubStepAngle;
+
+- (BOOL) canArrangeAssembly;
+- (BOOL) isArrangingInViewport:(LDrawView *)viewport;
+- (void) startArrangingAssembly;
+- (void) finishArrangingAssembly;
+- (void) doneArrangingAssembly;
+- (void) finishArrangingAssemblyInScope:(LDrawStepAssemblyScope)scope;
+- (void) cancelArrangingAssembly;
+- (void) showStepAfterArrangingWithPageScale:(double)pageScale;
+- (void) turnArrangedStep:(LDrawStepQuickTurn)turn;
+- (void) updateArrangeFields;
+- (void) endArrangeFieldEditing;
+- (void) updateArrangeControls;
 @end
 
 
@@ -657,6 +701,8 @@ void AppendChoicesToNewItem(
 	
 	if(newActiveModel != oldActiveModel)
 	{
+		[self finishArrangingAssembly];
+
 		// The new model's page goes where the old one's was.
 		[self holdLPubPageDuringModelChange:^{
 			// Allow the old model to draw in its entirety if it is referenced by the 
@@ -681,6 +727,8 @@ void AppendChoicesToNewItem(
 //
 // Notes:		This does not activate step display if it isn't on.
 //				This also does not do anything if the step is not changing.
+//				While arranging, what was arranged is written, and the new
+//				step is arranged next.
 //
 // Parameters:	requestedStep	- the 0-relative step number. Does not do 
 //								  bounds-checking. 
@@ -694,6 +742,12 @@ void AppendChoicesToNewItem(
 	
 	if(currentStepIndex != requestedStepIndex)
 	{
+		// What was arranged belongs to the step being left. Arranging goes on
+		// with the new step.
+		BOOL wasArranging = [self->stepPartListController isArranging];
+
+		[self finishArrangingAssembly];
+
 		// Read on the old step, so leaving a step with a page holds too.
 		double pageScale = [self drawnLPubPageScale];
 
@@ -725,6 +779,9 @@ void AppendChoicesToNewItem(
 		// After the hold, so the new step's list is laid out for the final
 		// camera.
 		[self updateStepPartList];
+
+		if(wasArranging)
+			[self startArrangingAssembly];
 	}
 	
 }//end setCurrentStep:
@@ -834,9 +891,12 @@ void AppendChoicesToNewItem(
 - (void) setStepDisplay:(BOOL)showStepsFlag
 {
 	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	BOOL			 startsSteps	= (showStepsFlag && [activeModel stepDisplay] == NO);
 	
 	if(showStepsFlag != [activeModel stepDisplay])
 	{
+		[self finishArrangingAssembly];
+
 		// Each Steps session measures the model again.
 		[self->pageAnchor invalidate];
 
@@ -866,6 +926,13 @@ void AppendChoicesToNewItem(
 	// The list belongs to Steps mode, so it comes and goes with it.
 	[self updateStepPartList];
 
+	// Steps starts with the whole page in view, as the Page View switch does.
+	// A change of model keeps the page where it was.
+	if(		startsSteps
+	   &&	self->isHoldingPageForModel == NO
+	   &&	[self drawsLPubPageInViewport:[self main3DViewport]] )
+		[self fitLPubPageInViewport:[self main3DViewport] keepingMagnification:NO];
+
 	// Set scope button state no matter what. The scope buttons are really 
 	// toggle buttons which call this method; if you click "Steps" and step 
 	// display is already on, you want the button to *stay* selected. This makes 
@@ -873,9 +940,9 @@ void AppendChoicesToNewItem(
 	[self->viewAllButton   setState:(showStepsFlag == NO)];
 	[self->viewStepsButton setState:(showStepsFlag == YES)];
 	
-	[self->scopeStepControlsContainer setHidden:(showStepsFlag == NO)];
-	[self->lpubPageCheckbox setHidden:(showStepsFlag == NO)];
-	[self->lpubPageCheckbox setState:[LDrawStepPartList usesLPubScale]];
+	// The step controls and the Page View switch are shown by
+	// -updateStepPartList.
+	[self->lpubPageSwitch setState:[LDrawStepPartList usesLPubScale]];
 	[self->stepField setIntegerValue:[activeModel maximumStepIndexForStepDisplay] + 1];
 	
 }//end setStepDisplay:
@@ -1165,16 +1232,87 @@ void AppendChoicesToNewItem(
 }//end setSelectionToHidden:
 
 
+//========== zoomPercentage ====================================================
+//
+// Purpose:		The zoom the toolbar shows for the selected view. On LPub3D's
+//				page it is the page's: at 100% an inch of the page is an inch of
+//				the screen, the size it prints.
+//
+//==============================================================================
+- (CGFloat) zoomPercentage
+{
+	return [self zoomPercentageInViewport:self->mostRecentLDrawView];
+
+}//end zoomPercentage
+
+
+//========== zoomPercentageInViewport: =========================================
+- (CGFloat) zoomPercentageInViewport:(LDrawView *)viewport
+{
+	double pageInch = [self pointsPerPageInchInViewport:viewport];
+
+	if(pageInch > 0.0)
+		return pageInch / SCREEN_POINTS_PER_INCH * 100.0;
+
+	return [viewport zoomPercentage];
+
+}//end zoomPercentageInViewport:
+
+
+//========== keyPathsForValuesAffectingZoomPercentage ==========================
++ (NSSet<NSString *> *) keyPathsForValuesAffectingZoomPercentage
+{
+	return [NSSet setWithObject:@"mostRecentLDrawView.zoomPercentage"];
+
+}//end keyPathsForValuesAffectingZoomPercentage
+
+
 //========== setZoomPercentage: ================================================
 //
-// Purpose:		Zooms the selected LDraw view to the specified percentage.
+// Purpose:		Zooms the selected view to the zoom the toolbar shows. On the
+//				page the view zooms by as much as the page's zoom changes.
 //
 //==============================================================================
 - (void) setZoomPercentage:(CGFloat)newPercentage
 {
-	[self->mostRecentLDrawView setZoomPercentage:newPercentage];
-	
+	[self setZoomPercentage:newPercentage inViewport:self->mostRecentLDrawView];
+
 }//end setZoomPercentage:
+
+
+//========== setZoomPercentage:inViewport: =====================================
+- (void) setZoomPercentage:(CGFloat)newPercentage inViewport:(LDrawView *)viewport
+{
+	double pageInch = [self pointsPerPageInchInViewport:viewport];
+
+	if(pageInch > 0.0)
+		newPercentage = [viewport zoomPercentage] * newPercentage / 100.0 * SCREEN_POINTS_PER_INCH / pageInch;
+
+	[viewport setZoomPercentage:newPercentage];
+
+	// While arranging the page and the model grow together.
+	if([self isArrangingInViewport:viewport])
+	{
+		[self->stepPartListController holdArrangedPage];
+		[self noteZoomPercentageChanged];
+	}
+
+}//end setZoomPercentage:inViewport:
+
+
+//========== noteZoomPercentageChanged =========================================
+//
+// Purpose:		Tells the toolbar to show the zoom again. While arranging the
+//				page's inch is held after the view zooms, so the view's own
+//				change comes too early.
+//
+//==============================================================================
+- (void) noteZoomPercentageChanged
+{
+	[self willChangeValueForKey:@"zoomPercentage"];
+	[self didChangeValueForKey:@"zoomPercentage"];
+
+}//end noteZoomPercentageChanged
 
 
 //========== showStepOfSelection ===============================================
@@ -1485,18 +1623,234 @@ void AppendChoicesToNewItem(
 }//end viewSteps:
 
 
-//========== lpubPageCheckboxClicked: ==========================================
+//========== lpubPageSwitchClicked: ============================================
 //
-// Purpose:		Switches the Draw on LPub3D's page preference.
+// Purpose:		The Page View switch sets the Draw on LPub3D's page preference.
 //
 //==============================================================================
-- (IBAction) lpubPageCheckboxClicked:(id)sender
+- (IBAction) lpubPageSwitchClicked:(id)sender
 {
 	BOOL on = ([sender state] == NSControlStateValueOn);
 
 	[PreferencesDialogController storeStepPartListFlag:on forKey:STEP_PART_LIST_LPUB_SCALE_KEY];
 
-}//end lpubPageCheckboxClicked:
+}//end lpubPageSwitchClicked:
+
+
+//========== arrangeAssembly: ==================================================
+//
+// Purpose:		Starts arranging the step's assembly on LPub3D's page. The
+//				Arrange button and the View menu's item send it. Cancel and
+//				Done end it.
+//
+//==============================================================================
+- (IBAction) arrangeAssembly:(id)sender
+{
+	if([self->stepPartListController isArranging])
+		return;
+
+	[self startArrangingAssembly];
+
+}//end arrangeAssembly:
+
+
+//========== arrangeDoneClicked: ===============================================
+//
+// Purpose:		The scope bar's Done: writes what was arranged and ends
+//				arranging, as Return does.
+//
+//==============================================================================
+- (IBAction) arrangeDoneClicked:(id)sender
+{
+	[self doneArrangingAssembly];
+
+}//end arrangeDoneClicked:
+
+
+//========== arrangeCancelClicked: =============================================
+//
+// Purpose:		The scope bar's Cancel: ends arranging and drops what was
+//				arranged, as Escape does.
+//
+//==============================================================================
+- (IBAction) arrangeCancelClicked:(id)sender
+{
+	[self cancelArrangingAssembly];
+
+}//end arrangeCancelClicked:
+
+
+//========== arrangeScopeChosen: ===============================================
+//
+// Purpose:		The scope bar's pop-up chose which steps arranging writes for:
+//				this step, this and later steps, or the whole model. Kept for
+//				the document.
+//
+//==============================================================================
+- (IBAction) arrangeScopeChosen:(id)sender
+{
+	NSInteger scope = [[sender selectedItem] tag] - LDrawArrangeScopeStepMenuTag;
+
+	self->arrangeScope = MAX(LDrawStepAssemblyScopeStep, MIN(LDrawStepAssemblyScopeModel, scope));
+
+	// The pop-up is as wide as the choice it shows.
+	[self layoutArrangeControls];
+
+}//end arrangeScopeChosen:
+
+
+//========== arrangePreviousStepClicked: =======================================
+//
+// Purpose:		Shows or hides the previous step faintly while arranging.
+//
+//==============================================================================
+- (IBAction) arrangePreviousStepClicked:(id)sender
+{
+	[self->stepPartListController setShowsPreviousStep:([sender state] == NSControlStateValueOn)];
+
+}//end arrangePreviousStepClicked:
+
+
+//========== arrangeFieldChanged: ==============================================
+//
+// Purpose:		A value was typed into one of the scope bar's fields while
+//				arranging: the angle, the size or the offset. The model moves
+//				to it at once. A value that cannot be used is put back.
+//
+//==============================================================================
+- (IBAction) arrangeFieldChanged:(id)sender
+{
+	StepPartListController	*controller	= self->stepPartListController;
+	double					 value		= [sender doubleValue];
+
+	// An emptied field shows its value again.
+	if([[sender stringValue] length] == 0)
+	{
+		[self updateArrangeFields];
+		return;
+	}
+
+	// Only the typed axis changes, so the others keep all their digits.
+	if(	sender == self->arrangeRotationXField
+	   || sender == self->arrangeRotationYField
+	   || sender == self->arrangeRotationZField )
+	{
+		Tuple3 rotation = [controller arrangedRotation];
+
+		if(sender == self->arrangeRotationXField)
+			rotation.x = value;
+		else if(sender == self->arrangeRotationYField)
+			rotation.y = value;
+		else
+			rotation.z = value;
+
+		[controller setArrangedRotation:rotation];
+	}
+	else if(sender == self->arrangeScaleField)
+	{
+		if(value > 0.0)
+			[controller setArrangedScale:value];
+	}
+	else if(sender == self->arrangeOffsetXField || sender == self->arrangeOffsetYField)
+	{
+		Vector2 offset = [controller arrangedOffsetInches];
+
+		if(sender == self->arrangeOffsetXField)
+			offset.x = value;
+		else
+			offset.y = value;
+
+		[controller setArrangedOffsetInches:offset];
+	}
+
+	[self updateArrangeFields];
+
+}//end arrangeFieldChanged:
+
+
+//========== arrangeNamedViewChosen: ===========================================
+//
+// Purpose:		The Angle pull-down turns the arranged step to a view used in
+//				instructions: a corner seen from LPub3D's default height, a
+//				quick turn from where it is, or one of LPub3D's named views
+//				straight on. Done writes it as a ROTSTEP.
+//
+//==============================================================================
+- (IBAction) arrangeNamedViewChosen:(id)sender
+{
+	NSString	*name		= nil;
+	double		 latitude	= 0.0;
+	double		 longitude	= 0.0;
+
+	// The corners are LPub3D's default view, mirrored or turned around.
+	[LPubPliCameraAngles getLatitude:&latitude
+						   longitude:&longitude
+						 ofNamedView:@"LAT_LON"
+							  branch:LPubCameraAnglesBranchAssembly];
+
+	switch([[sender selectedItem] tag])
+	{
+		case LDrawArrangeViewDefaultMenuTag:											break;
+		case LDrawArrangeViewFrontRightMenuTag:	longitude = -longitude;					break;
+		case LDrawArrangeViewBackLeftMenuTag:	longitude = 180.0 - longitude;			break;
+		case LDrawArrangeViewBackRightMenuTag:	longitude = longitude - 180.0;			break;
+		case LDrawArrangeViewFrontMenuTag:		name = @"FRONT";						break;
+		case LDrawArrangeViewBackMenuTag:		name = @"BACK";							break;
+		case LDrawArrangeViewLeftMenuTag:		name = @"LEFT";							break;
+		case LDrawArrangeViewRightMenuTag:		name = @"RIGHT";						break;
+		case LDrawArrangeViewTopMenuTag:		name = @"TOP";							break;
+		case LDrawArrangeViewBottomMenuTag:		name = @"BOTTOM";						break;
+		case LDrawArrangeTurnLeftMenuTag:		[self turnArrangedStep:LDrawStepQuickTurnLeft];			return;
+		case LDrawArrangeTurnRightMenuTag:		[self turnArrangedStep:LDrawStepQuickTurnRight];		return;
+		case LDrawArrangeTurnAroundMenuTag:		[self turnArrangedStep:LDrawStepQuickTurnAround];		return;
+		case LDrawArrangeTurnUpsideDownMenuTag:	[self turnArrangedStep:LDrawStepQuickTurnUpsideDown];	return;
+		default:																		return;
+	}
+
+	if(		name != nil
+	   &&	[LPubPliCameraAngles getLatitude:&latitude
+								   longitude:&longitude
+								 ofNamedView:name
+									  branch:LPubCameraAnglesBranchAssembly] == NO)
+		return;
+
+	[self->stepPartListController setArrangedViewingAngle:[LDrawStepAssemblyEdit viewingAngleForLatitude:latitude
+																							   longitude:longitude]];
+
+}//end arrangeNamedViewChosen:
+
+
+//========== arrangeResetChosen: ===============================================
+//
+// Purpose:		The scope bar's Reset pull-down puts back the step's angle,
+//				size, place, or all three: for one step or later steps what it
+//				has without its own lines, which Done then takes out, and for
+//				the whole model what it had when arranging started. Below
+//				those, it lines the step up with the previous step, or centers
+//				it on the page.
+//
+//==============================================================================
+- (IBAction) arrangeResetChosen:(id)sender
+{
+	StepPartListController	*controller	= self->stepPartListController;
+	NSInteger				 tag		= [[sender selectedItem] tag];
+
+	if(tag == LDrawArrangeResetAngleMenuTag || tag == LDrawArrangeResetAllMenuTag)
+		[controller resetArrangedViewingAngleForScope:self->arrangeScope];
+
+	if(tag == LDrawArrangeResetScaleMenuTag || tag == LDrawArrangeResetAllMenuTag)
+		[controller resetArrangedScaleForScope:self->arrangeScope];
+
+	if(tag == LDrawArrangeResetPositionMenuTag || tag == LDrawArrangeResetAllMenuTag)
+		[controller resetArrangedOffsetForScope:self->arrangeScope];
+
+	if(tag == LDrawArrangeAlignPreviousMenuTag)
+		[controller alignArrangedStepWithPreviousStep];
+
+	if(tag == LDrawArrangeCenterOnPageMenuTag)
+		[controller centerArrangedStepOnPage];
+
+}//end arrangeResetChosen:
 
 
 //========== stepFieldChanged: =================================================
@@ -2216,79 +2570,15 @@ void AppendChoicesToNewItem(
 
 //========== zoomActual: =======================================================
 //
-// Purpose:		Zoom to 100%.
+// Purpose:		Zoom to 100%. On LPub3D's page that shows the page at the size
+//				it prints.
 //
 //==============================================================================
 - (IBAction) zoomActual:(id)sender
 {
-	[mostRecentLDrawView setZoomPercentage:100];
-	
+	[self setZoomPercentage:100];
+
 }//end zoomActual:
-
-
-//========== fitLPubPageInViewport:keepingMagnification: =======================
-//
-// Purpose:		Fits the whole page in the viewport, with the page's middle in
-//				the viewport's.
-//
-// Notes:		Keeping the magnification is for a resize: everything stays
-//				where it was on the page.
-//
-//==============================================================================
-- (void) fitLPubPageInViewport:(LDrawView *)viewport keepingMagnification:(BOOL)keepsMagnification
-{
-	if(viewport == nil)
-		return;
-
-	// The camera's distance decides how big perspective draws the anchor.
-	[self updateLPubPageCamera];
-
-	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
-	BOOL			isFitted		= [self->pageFitter fitPageOfModel:activeModel
-																inView:viewport
-															  viewSize:[self visibleSizeOfViewport:viewport]
-												  keepingMagnification:keepsMagnification];
-
-	// A fit measures the model again, so the step is put in its place on the
-	// page again before the page goes in the middle.
-	if(isFitted && keepsMagnification == NO)
-	{
-		[self centerLPubPageOnStepOfModel:activeModel];
-		[viewport scrollCenterToModelPoint:[self->pageAnchor pageCenterForModel:activeModel]];
-	}
-
-}//end fitLPubPageInViewport:keepingMagnification:
-
-
-//========== centerLPubPageOnStepOfModel: ======================================
-//
-// Purpose:		Puts the model's visible step in its place on the page again.
-//
-// Notes:		The overlay measures the step, so nothing happens while it is
-//				showing another model.
-//
-//==============================================================================
-- (void) centerLPubPageOnStepOfModel:(LDrawModel *)model
-{
-	if([self->stepPartListController model] == model)
-		[self->stepPartListController centerPageOnStep];
-
-}//end centerLPubPageOnStepOfModel:
-
-
-//========== visibleSizeOfViewport: ============================================
-//
-// Purpose:		The part of the viewport on screen, as the page fitter measures
-//				it.
-//
-//==============================================================================
-- (Size2) visibleSizeOfViewport:(LDrawView *)viewport
-{
-	NSSize size = [viewport visibleRect].size;
-
-	return V2MakeSize(size.width, size.height);
-
-}//end visibleSizeOfViewport:
 
 
 //========== zoomIn: ===========================================================
@@ -3930,22 +4220,26 @@ void AppendChoicesToNewItem(
 }//end LDrawViewZoomToFit:
 
 
-//========== drawsLPubPageInViewport: =========================================
+//**** LDrawView ****
+//========== LDrawView:zoomByFactor: ===========================================
 //
-// Purpose:		Whether this viewport is showing the document on its page.
-//
-// Notes:		The parts list overlay draws the page, so only the viewport it is
-//				on can show one. The overlay stays for the page on a step that
-//				hides its list.
+// Purpose:		Zoom In and Zoom Out: the view zooms by the square root of the
+//				view's factor, a finer step. On LPub3D's page it is the page's
+//				zoom, and a step being arranged keeps its size on the page.
 //
 //==============================================================================
-- (BOOL) drawsLPubPageInViewport:(LDrawView *)view
+- (BOOL) LDrawView:(LDrawView *)view zoomByFactor:(CGFloat)factor
 {
-	return view != nil
-		&& view == self->pageFitViewport
-		&& [LDrawStepPartListPolicy drawsPageInModel:[[self documentContents] activeModel]];
+	CGFloat zoom = [self zoomPercentageInViewport:view] * sqrt(factor);
 
-}//end drawsLPubPageInViewport:
+	// Kept to what the zoom field takes, since the field sets its own value
+	// back when it ends editing.
+	zoom = MIN(MAX(zoom, ZOOM_MINIMUM_PERCENT), ZOOM_MAXIMUM_PERCENT);
+
+	[self setZoomPercentage:zoom inViewport:view];
+	return YES;
+
+}//end LDrawView:zoomByFactor:
 
 
 //**** LDrawView ****
@@ -4433,6 +4727,8 @@ void AppendChoicesToNewItem(
 	// may grow or shrink.
 	[self updateLPubPageCamera];
 
+	[self followLPubStepAngle];
+
 	// A PLI SHOW or PAGE SIZE added or removed can add or remove the overlay.
 	// Other edits reach the list through its own observers.
 	if([self wantsStepPartList] != ([self->stepPartListController hostView] != nil))
@@ -4527,11 +4823,13 @@ void AppendChoicesToNewItem(
 	BOOL pageWasSwitchedOn	= (usesLPubScale && usesLPubScale != self->usedLPubScale);
 
 	self->usedLPubScale = usesLPubScale;
-	[self->lpubPageCheckbox setState:usesLPubScale];
+	[self->lpubPageSwitch setState:usesLPubScale];
 
 	// First, so the overlay and its page exist before anything asks for
 	// them.
 	[self updateStepPartList];
+
+	[self followLPubStepAngle];
 
 	// Fit the page only when it is switched on. Every parts list preference
 	// posts this, and refitting each time would lose the user's zoom.
@@ -4604,6 +4902,23 @@ void AppendChoicesToNewItem(
 
 
 //**** NSWindow ****
+//========== windowWillReturnUndoManager: ======================================
+//
+// Purpose:		The undo manager the window's Undo and Redo use: while
+//				arranging, one whose only action cancels arranging, else the
+//				document's.
+//
+//==============================================================================
+- (NSUndoManager *) windowWillReturnUndoManager:(NSWindow *)window
+{
+	if([self->stepPartListController isArranging] && self->arrangeUndoManager != nil)
+		return self->arrangeUndoManager;
+
+	return [self undoManager];
+
+}//end windowWillReturnUndoManager:
+
+
 //========== windowWillClose: ==================================================
 //
 // Purpose:		The window is about to close; let's save some state info.
@@ -4812,6 +5127,10 @@ void AppendChoicesToNewItem(
 		case LDrawPreviousStepMenuTag:
 			enable = [activeModel stepDisplay];
 			break;
+
+		case LDrawArrangeAssemblyMenuTag:
+			enable = [self canArrangeAssembly] && [self->stepPartListController isArranging] == NO;
+			break;
 		
 		
 		////////////////////////////////////////
@@ -4959,6 +5278,41 @@ void AppendChoicesToNewItem(
 	return enabled;
 	
 }//end validateToolbarItem:
+
+
+//**** NSMenu ****
+//========== menuNeedsUpdate: ==================================================
+//
+// Purpose:		Just before the scope pop-up opens, Whole Model is offered only
+//				when the whole model can take the arranged angle. Before the
+//				Reset pull-down opens, Angle is offered only when it would turn
+//				the step, Position only when an offset can put the step back,
+//				and Align with Previous Step only when where the previous step
+//				sat is known.
+//
+//==============================================================================
+- (void) menuNeedsUpdate:(NSMenu *)menu
+{
+	StepPartListController *controller = self->stepPartListController;
+
+	if(menu == [self->arrangeScopePopUp menu])
+	{
+		BOOL canWrite = [controller canWriteArrangedScope:LDrawStepAssemblyScopeModel];
+
+		[[menu itemWithTag:LDrawArrangeScopeModelMenuTag] setEnabled:canWrite];
+	}
+	else if(menu == [self->arrangeResetPopUp menu])
+	{
+		BOOL canAlign = [controller canAlignArrangedStepWithPreviousStep];
+		BOOL canTurn  = [controller canResetArrangedViewingAngleForScope:self->arrangeScope];
+		BOOL canMove  = [controller canResetArrangedOffsetForScope:self->arrangeScope];
+
+		[[menu itemWithTag:LDrawArrangeResetAngleMenuTag] setEnabled:canTurn];
+		[[menu itemWithTag:LDrawArrangeResetPositionMenuTag] setEnabled:canMove];
+		[[menu itemWithTag:LDrawArrangeAlignPreviousMenuTag] setEnabled:canAlign];
+	}
+
+}//end menuNeedsUpdate:
 
 
 #pragma mark -
@@ -5181,12 +5535,19 @@ void AppendChoicesToNewItem(
 {
 	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
 
+	// What was arranged is written before the page goes, or moves to another
+	// viewport, which would end arranging without writing it. The page is not
+	// drawn for arranging once the main viewport is not the one it is on.
+	if([self->stepPartListController isArranging] && [self canArrangeAssembly] == NO)
+		[self finishArrangingAssembly];
+
 	[self updateLPubPageCamera];
 
 	if([self wantsStepPartList] == NO)
 	{
 		[self->stepPartListController detach];
 		[self watchViewportForPageFit:nil];
+		[self updateArrangeControls];
 		return;
 	}
 
@@ -5204,6 +5565,8 @@ void AppendChoicesToNewItem(
 	[self->stepPartListController setModel:activeModel];
 	[self->stepPartListController setReturnTitle:[self calloutReturnTitle]];
 	[self->stepPartListController attachToView:[self main3DViewport]];
+
+	[self updateArrangeControls];
 
 }//end updateStepPartList
 
@@ -5432,6 +5795,106 @@ void AppendChoicesToNewItem(
 	[self showModel:(LDrawMPDModel *)model atStepIndexOnCalloutPath:stepIndex];
 
 }//end stepPartListControllerDidChooseReturn:
+
+
+//========== stepPartListControllerDidFinishArranging: =========================
+//
+// Purpose:		Return was pressed while arranging: Done.
+//
+//==============================================================================
+- (void) stepPartListControllerDidFinishArranging:(StepPartListController *)controller
+{
+	[self doneArrangingAssembly];
+
+}//end stepPartListControllerDidFinishArranging:
+
+
+//========== stepPartListControllerDidCancelArranging: =========================
+//
+// Purpose:		Escape was pressed while arranging: Cancel.
+//
+//==============================================================================
+- (void) stepPartListControllerDidCancelArranging:(StepPartListController *)controller
+{
+	[self cancelArrangingAssembly];
+
+}//end stepPartListControllerDidCancelArranging:
+
+
+//========== stepPartListControllerDidAskToArrange: ============================
+//
+// Purpose:		The page was Command-clicked: start arranging the step.
+//
+//==============================================================================
+- (void) stepPartListControllerDidAskToArrange:(StepPartListController *)controller
+{
+	[self startArrangingAssembly];
+
+}//end stepPartListControllerDidAskToArrange:
+
+
+//========== stepPartListController:applyAssemblyEdit: =========================
+//
+// Purpose:		Writes the parts list's new place, dragged or chosen from its
+//				menu, or the angle of a turned view, as one undoable edit.
+//
+//==============================================================================
+- (void) stepPartListController:(StepPartListController *)controller
+			  applyAssemblyEdit:(LDrawStepAssemblyEdit *)edit
+{
+	if([edit applyWithHost:self] == NO)
+		return;
+
+	[[self undoManager] setActionName:NSLocalizedString([edit undoActionKey], nil)];
+	[[self documentContents] noteNeedsDisplay];
+
+}//end stepPartListController:applyAssemblyEdit:
+
+
+//========== stepPartListControllerDidAskForStepAngle: =========================
+//
+// Purpose:		The turned view's strip asked to turn back: the step is seen at
+//				the angle LPub3D prints it at again, with the page held.
+//
+//==============================================================================
+- (void) stepPartListControllerDidAskForStepAngle:(StepPartListController *)controller
+{
+	[self holdLPubPageDuringChange:^{
+		[self updateViewingAngleToMatchStep];
+	}];
+
+}//end stepPartListControllerDidAskForStepAngle:
+
+
+//========== stepPartListControllerDidArrange: =================================
+//
+// Purpose:		The step was laid out while arranging: the scope bar's fields
+//				show the angle, size and offset as they are now.
+//
+//==============================================================================
+- (void) stepPartListControllerDidArrange:(StepPartListController *)controller
+{
+	[self updateArrangeFields];
+
+}//end stepPartListControllerDidArrange:
+
+
+//========== stepPartListController:didStopArrangingWithPageScale: =============
+//
+// Purpose:		An edit put another step on display while arranging, so
+//				arranging ended. What was arranged was for a step no longer
+//				shown, and is dropped. As Cancel does, the page keeps the size
+//				it had while arranging, the view goes back to the step's angle,
+//				and the scope bar to its View controls.
+//
+//==============================================================================
+- (void) stepPartListController:(StepPartListController *)controller
+  didStopArrangingWithPageScale:(double)pageScale
+{
+	[self endArrangeFieldEditing];
+	[self showStepAfterArrangingWithPageScale:pageScale];
+
+}//end stepPartListController:didStopArrangingWithPageScale:
 
 
 //========== showModel:atStepIndexOnCalloutPath: ===============================
@@ -6181,6 +6644,130 @@ void AppendChoicesToNewItem(
 }//end updateInspector
 
 
+#pragma mark -
+#pragma mark LPub3D Page
+
+//========== drawsLPubPageInViewport: =========================================
+//
+// Purpose:		Whether this viewport is showing the document on its page.
+//
+// Notes:		The parts list overlay draws the page, so only the viewport it is
+//				on can show one. The overlay stays for the page on a step that
+//				hides its list.
+//
+//==============================================================================
+- (BOOL) drawsLPubPageInViewport:(LDrawView *)view
+{
+	return view != nil
+		&& view == self->pageFitViewport
+		&& [LDrawStepPartListPolicy drawsPageInModel:[[self documentContents] activeModel]];
+
+}//end drawsLPubPageInViewport:
+
+
+//========== pointsPerPageInchInViewport: ======================================
+//
+// Purpose:		How many points an inch of LPub3D's page covers in a viewport,
+//				or 0 when the page is not drawn there. While arranging it is
+//				the inch the page is held at.
+//
+//==============================================================================
+- (double) pointsPerPageInchInViewport:(LDrawView *)viewport
+{
+	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
+
+	if([self isArrangingInViewport:viewport])
+		return [self->stepPartListController arrangedPointsPerPageInch];
+
+	if([self drawsLPubPageInViewport:viewport] == NO)
+		return 0.0;
+
+	return [self->pageFitter pointsPerPageInchOfModel:activeModel inView:viewport];
+
+}//end pointsPerPageInchInViewport:
+
+
+//========== fitLPubPageInViewport:keepingMagnification: =======================
+//
+// Purpose:		Fits the whole page in the viewport, with the page's middle in
+//				the viewport's.
+//
+// Notes:		Keeping the magnification is for a resize: everything stays
+//				where it was on the page.
+//
+//==============================================================================
+- (void) fitLPubPageInViewport:(LDrawView *)viewport keepingMagnification:(BOOL)keepsMagnification
+{
+	if(viewport == nil)
+		return;
+
+	// While arranging the page is fitted as it is arranged, so nothing that
+	// was arranged changes.
+	if([self isArrangingInViewport:viewport] && keepsMagnification == NO)
+	{
+		[self->stepPartListController fitArrangedPage];
+		[self noteZoomPercentageChanged];
+		return;
+	}
+
+	// The camera's distance decides how big perspective draws the anchor.
+	[self updateLPubPageCamera];
+
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	BOOL			isFitted		= [self->pageFitter fitPageOfModel:activeModel
+																inView:viewport
+															  viewSize:[self visibleSizeOfViewport:viewport]
+												  keepingMagnification:keepsMagnification];
+
+	// A fit measures the model again, so the step is put in its place on the
+	// page again before the page goes in the middle.
+	if(isFitted && keepsMagnification == NO)
+	{
+		[self centerLPubPageOnStepOfModel:activeModel];
+		[viewport scrollCenterToModelPoint:[self->pageAnchor pageCenterForModel:activeModel]];
+	}
+
+	// A refit after a resize grows the page and the model together.
+	if(isFitted && [self isArrangingInViewport:viewport])
+	{
+		[self->stepPartListController holdArrangedPage];
+		[self noteZoomPercentageChanged];
+	}
+
+}//end fitLPubPageInViewport:keepingMagnification:
+
+
+//========== centerLPubPageOnStepOfModel: ======================================
+//
+// Purpose:		Puts the model's visible step in its place on the page again.
+//
+// Notes:		The overlay measures the step, so nothing happens while it is
+//				showing another model.
+//
+//==============================================================================
+- (void) centerLPubPageOnStepOfModel:(LDrawModel *)model
+{
+	if([self->stepPartListController model] == model)
+		[self->stepPartListController centerPageOnStep];
+
+}//end centerLPubPageOnStepOfModel:
+
+
+//========== visibleSizeOfViewport: ============================================
+//
+// Purpose:		The part of the viewport on screen, as the page fitter measures
+//				it.
+//
+//==============================================================================
+- (Size2) visibleSizeOfViewport:(LDrawView *)viewport
+{
+	NSSize size = [viewport visibleRect].size;
+
+	return V2MakeSize(size.width, size.height);
+
+}//end visibleSizeOfViewport:
+
+
 //========== holdLPubPageDuringChange: =========================================
 //
 // Purpose:		Runs a change that moves the camera or changes what the step
@@ -6389,11 +6976,12 @@ void AppendChoicesToNewItem(
 - (void) updateViewingAngleToMatchStep
 {
 	LDrawMPDModel        *activeModel        = [[self documentContents] activeModel];
-	NSInteger            requestedStep       = [activeModel maximumStepIndexForStepDisplay];
-	Tuple3               viewingAngle        = [activeModel rotationAngleForStepAtIndex:requestedStep];
+	Tuple3               viewingAngle        = [LDrawStepPartListPolicy viewingAngleForVisibleStepOfModel:activeModel];
 	LDrawViewOrientation viewOrientation     = [LDrawUtilities viewOrientationForAngle:viewingAngle];
 	LDrawView            *affectedViewport   = [self main3DViewport];
 	
+	self->stepViewingAngle = viewingAngle;
+
 	// Set the Viewing angle
 	[affectedViewport setProjectionMode:[LDrawViewportPolicy projectionModeForViewOrientation:viewOrientation]];
 	
@@ -6403,6 +6991,543 @@ void AppendChoicesToNewItem(
 	
 }//end updateViewingAngleToMatchStep
 
+
+//========== followLPubStepAngle ===============================================
+//
+// Purpose:		Turns the step on LPub3D's page to its angle again when that
+//				angle changed: an ASSEM CAMERA_ANGLES line was edited, or the
+//				page came on.
+//
+// Notes:		A turn the user made by hand is kept while the angle the file
+//				asks for stays the same.
+//
+//==============================================================================
+- (void) followLPubStepAngle
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	Tuple3			 angle			= ZeroPoint3;
+
+	if([LDrawStepPartListPolicy drawsPageInModel:activeModel] == NO)
+		return;
+
+	angle = [LDrawStepPartListPolicy viewingAngleForVisibleStepOfModel:activeModel];
+
+	if(V3PointsWithinTolerance(angle, self->stepViewingAngle))
+		return;
+
+	[self holdLPubPageDuringChange:^{
+		[self updateViewingAngleToMatchStep];
+	}];
+
+}//end followLPubStepAngle
+
+
+#pragma mark -
+#pragma mark Arranging
+
+//========== canArrangeAssembly ================================================
+//
+// Purpose:		Whether the step's assembly can be arranged: in Steps mode, on
+//				LPub3D's page in the main viewport.
+//
+//==============================================================================
+- (BOOL) canArrangeAssembly
+{
+	LDrawMPDModel *activeModel = [[self documentContents] activeModel];
+
+	return [activeModel stepDisplay]
+		&& [self->stepPartListController hostView] != nil
+		&& [self drawsLPubPageInViewport:[self main3DViewport]];
+
+}//end canArrangeAssembly
+
+
+//========== isArrangingInViewport: ============================================
+//
+// Purpose:		Whether the step is being arranged on the page in this viewport.
+//
+//==============================================================================
+- (BOOL) isArrangingInViewport:(LDrawView *)viewport
+{
+	StepPartListController *controller = self->stepPartListController;
+
+	return viewport != nil && [controller isArranging] && [controller hostView] == viewport;
+
+}//end isArrangingInViewport:
+
+
+//========== startArrangingAssembly ============================================
+//
+// Purpose:		From now on a turn, a zoom and a pan change the step's assembly
+//				on the page, which stays where it is.
+//
+//==============================================================================
+- (void) startArrangingAssembly
+{
+	if([self canArrangeAssembly] == NO)
+		return;
+
+	if([self->stepPartListController beginArranging] == NO)
+		return;
+
+	// Command-Z and Edit > Undo cancel. Nothing goes on the document's own
+	// stack, so its edited state does not change.
+	NSUndoManager *undoManager = [[NSUndoManager alloc] init];
+
+	[undoManager setGroupsByEvent:NO];
+	[undoManager beginUndoGrouping];
+	[undoManager registerUndoWithTarget:self handler:^(LDrawDocument *document) {
+		[document cancelArrangingAssembly];
+	}];
+	[undoManager setActionName:NSLocalizedString(@"UndoStepAssemblyArrange", nil)];
+	[undoManager endUndoGrouping];
+
+	self->arrangeUndoManager = undoManager;
+
+	[self updateArrangeControls];
+
+}//end startArrangingAssembly
+
+
+//========== finishArrangingAssembly ===========================================
+//
+// Purpose:		Ends arranging because the step, the model or the mode is
+//				changing, and writes what was arranged.
+//
+// Notes:		The change cannot wait for another choice of scope, so what
+//				the whole model cannot take is written for this step.
+//
+//==============================================================================
+- (void) finishArrangingAssembly
+{
+	LDrawStepAssemblyScope scope = self->arrangeScope;
+
+	if([self->stepPartListController isArranging] == NO)
+		return;
+
+	[self endArrangeFieldEditing];
+
+	if([self->stepPartListController canWriteArrangedScope:scope] == NO)
+		scope = LDrawStepAssemblyScopeStep;
+
+	[self finishArrangingAssemblyInScope:scope];
+
+}//end finishArrangingAssembly
+
+
+//========== doneArrangingAssembly =============================================
+//
+// Purpose:		Done: writes what was arranged for the steps the scope bar
+//				chose, and ends arranging.
+//
+// Notes:		The whole model cannot take a new angle, since a turn is a
+//				ROTSTEP. An alert says so and arranging goes on, so another
+//				scope can be chosen or the angle reset.
+//
+//==============================================================================
+- (void) doneArrangingAssembly
+{
+	LDrawStepAssemblyScope scope = self->arrangeScope;
+
+	if([self->stepPartListController isArranging] == NO)
+		return;
+
+	[self endArrangeFieldEditing];
+
+	if([self->stepPartListController canWriteArrangedScope:scope] == NO)
+	{
+		NSAlert *alert = [[NSAlert alloc] init];
+
+		[alert     setMessageText:NSLocalizedString(@"ArrangeModelScopeMessage", nil)];
+		[alert setInformativeText:NSLocalizedString(@"ArrangeModelScopeInformative", nil)];
+		[alert addButtonWithTitle:NSLocalizedString([LDrawEditorStrings okButtonNameKey], nil)];
+
+		[alert beginSheetModalForWindow:[self windowForSheet] completionHandler:nil];
+		return;
+	}
+
+	[self finishArrangingAssemblyInScope:scope];
+
+}//end doneArrangingAssembly
+
+
+//========== finishArrangingAssemblyInScope: ===================================
+//
+// Purpose:		Ends arranging, and writes the assembly's scale, place and
+//				angle as one undoable edit, for the steps of the scope.
+//
+// Notes:		Arranging ends first, so the step is laid out from the lines
+//				the edit writes. The page is held at the size it had while
+//				arranging: its inch then came from the arranged scale, not the
+//				file's.
+//
+//==============================================================================
+- (void) finishArrangingAssemblyInScope:(LDrawStepAssemblyScope)scope
+{
+	StepPartListController	*controller		= self->stepPartListController;
+	LDrawMPDModel			*activeModel	= [[self documentContents] activeModel];
+
+	if([controller isArranging] == NO)
+		return;
+
+	LDrawStepAssemblyEdit	*edit		= [controller arrangedEditWithScope:scope];
+	double					 pageScale	= [controller arrangedPointsPerPageInch];
+
+	[controller endArranging];
+
+	if(edit != nil && [edit isEmpty] == NO)
+	{
+		if([LDrawStepPartListPolicy drawsPageInModel:activeModel])
+		{
+			[self holdLPubPageDuringChange:^{
+				[edit applyWithHost:self];
+			} pageScale:pageScale];
+		}
+		else
+			[edit applyWithHost:self];
+
+		[[self undoManager] setActionName:NSLocalizedString([edit undoActionKey], nil)];
+		[[self documentContents] noteNeedsDisplay];
+	}
+
+	[self updateArrangeControls];
+
+}//end finishArrangingAssemblyInScope:
+
+
+//========== cancelArrangingAssembly ===========================================
+//
+// Purpose:		Ends arranging and writes nothing. The step goes back to the
+//				angle, size and place its lines give it, on the page as it is
+//				drawn.
+//
+// Notes:		The page is held at the size it had while arranging, and the
+//				zoom then follows the file's scale, so the model shrinks or
+//				grows back on the paper.
+//
+//==============================================================================
+- (void) cancelArrangingAssembly
+{
+	StepPartListController *controller = self->stepPartListController;
+
+	if([controller isArranging] == NO)
+		return;
+
+	[self endArrangeFieldEditing];
+
+	double pageScale = [controller arrangedPointsPerPageInch];
+
+	[controller endArranging];
+	[self showStepAfterArrangingWithPageScale:pageScale];
+
+}//end cancelArrangingAssembly
+
+
+//========== showStepAfterArrangingWithPageScale: ==============================
+//
+// Purpose:		After arranging ended with nothing written, turns the view back
+//				to the step's angle and puts the View controls back. The page
+//				keeps the size it had while arranging.
+//
+//==============================================================================
+- (void) showStepAfterArrangingWithPageScale:(double)pageScale
+{
+	[self holdLPubPageDuringChange:^{
+		[self updateViewingAngleToMatchStep];
+	} pageScale:pageScale];
+
+	[self updateArrangeControls];
+
+}//end showStepAfterArrangingWithPageScale:
+
+
+//========== turnArrangedStep: =================================================
+//
+// Purpose:		Turns the arranged step from where it is, as an instruction's
+//				arrow shows: a quarter turn either way, a half turn, or over.
+//
+//==============================================================================
+- (void) turnArrangedStep:(LDrawStepQuickTurn)turn
+{
+	StepPartListController *controller = self->stepPartListController;
+
+	[controller setArrangedViewingAngle:[LDrawStepAssemblyEdit viewingAngle:[controller arrangedViewingAngle]
+																  afterTurn:turn]];
+
+}//end turnArrangedStep:
+
+
+//========== layoutArrangeControls =============================================
+//
+// Purpose:		Fits the arranging controls into the scope bar before the step
+//				controls: the scope, after its label, since every value is
+//				written for it, then the row of fields, Reset, Cancel and Done,
+//				and the Previous Step checkbox.
+//
+// Notes:		As the room runs out the row gives up its least needed controls
+//				first: the labels, then the named views, the angles and the
+//				offset. The size stays. A field's tooltip still says what it is.
+//
+//==============================================================================
+- (void) layoutArrangeControls
+{
+	NSPopUpButton	*scopePopUp	= self->arrangeScopePopUp;
+	NSTextField		*scopeLabel	= self->arrangeScopeLabel;
+	NSView			*bar		= [self->arrangeFieldsContainer superview];
+	NSRect			 scope		= [scopePopUp frame];
+	NSRect			 reset		= [self->arrangeResetPopUp frame];
+	NSDictionary	*attributes	= @{NSFontAttributeName: [scopePopUp font]};
+	NSString		*title		= [[scopePopUp selectedItem] title] ?: @"";
+
+	// The labels are as wide as their text, so the gaps before them show.
+	for(NSTextField *label in @[scopeLabel, self->arrangeSizeLabel, self->arrangeOffsetLabel])
+		[label setFrameSize:NSMakeSize(ceil([[label cell] cellSize].width), NSHeight([label frame]))];
+
+	// The scope pop-up is as wide as its choice.
+	scope.size.width	= ceil([title sizeWithAttributes:attributes].width) + ARRANGE_POPUP_PADDING;
+	scope.origin.x		= NSMaxX([scopeLabel frame]) + ARRANGE_LABEL_GAP;
+	[scopePopUp setFrame:scope];
+
+	NSArray<NSView *>	*row		= @[self->arrangeNamedViewPopUp, self->arrangeRotationXField,
+										self->arrangeRotationYField, self->arrangeRotationZField,
+										self->arrangeSizeLabel, self->arrangeScaleField,
+										self->arrangeOffsetLabel, self->arrangeOffsetXField,
+										self->arrangeOffsetYField];
+	NSRect				 container	= [self->arrangeFieldsContainer frame];
+	NSRect				 previous	= [self->arrangePreviousStepCheckbox frame];
+	NSRect				 cancel		= [self->arrangeCancelButton frame];
+	NSRect				 done		= [self->arrangeDoneButton frame];
+	CGFloat				 after		= ARRANGE_GROUP_GAP + NSWidth(reset)
+									+ ARRANGE_GROUP_GAP + NSWidth(cancel) + ARRANGE_DONE_GAP + NSWidth(done)
+									+ ARRANGE_GROUP_GAP + NSWidth(previous);
+	CGFloat				 room		= 0.0;
+	NSInteger			 level		= 0;
+
+	// The step controls stay at the bar's end, since a step change goes on
+	// arranging.
+	container.origin.x	= NSMaxX(scope) + ARRANGE_GROUP_GAP;
+	room				= NSMinX([self->scopeStepControlsContainer frame]) - ARRANGE_GROUP_GAP - after
+						- NSMinX(container);
+
+	// The first level whose row fits, or the last one.
+	while(level < ARRANGE_LAST_LEVEL && [self layOutArrangeRow:row atLevel:level placing:NO] > room)
+		level++;
+
+	container.size.width = [self layOutArrangeRow:row atLevel:level placing:YES];
+	[self->arrangeFieldsContainer setFrame:container];
+
+	// Reset, Cancel and Done, and the Previous Step checkbox follow the row.
+	reset.origin.x		= NSMaxX(container) + ARRANGE_GROUP_GAP;
+	cancel.origin.x		= NSMaxX(reset) + ARRANGE_GROUP_GAP;
+	done.origin.x		= NSMaxX(cancel) + ARRANGE_DONE_GAP;
+	previous.origin.x	= NSMaxX(done) + ARRANGE_GROUP_GAP;
+
+	[self->arrangeResetPopUp setFrame:reset];
+	[self->arrangePreviousStepCheckbox setFrame:previous];
+	[self->arrangeCancelButton setFrame:cancel];
+	[self->arrangeDoneButton setFrame:done];
+
+	self->arrangeBarWidth = NSWidth([bar bounds]);
+
+}//end layoutArrangeControls
+
+
+//========== layOutArrangeRow:atLevel:placing: =================================
+//
+// Purpose:		How wide the arranging row is with the controls that stay at
+//				this level, and with `placing`, puts them there and hides the
+//				rest. A narrow gap comes before a control of the same group,
+//				and a wider one before the next group.
+//
+//==============================================================================
+- (CGFloat) layOutArrangeRow:(NSArray<NSView *> *)row atLevel:(NSInteger)level placing:(BOOL)placing
+{
+	CGFloat		x		= 0.0;
+	NSInteger	last	= -1;
+
+	for(NSUInteger index = 0; index < row.count; index++)
+	{
+		NSView	*view		= row[index];
+		BOOL	 isShown	= (ARRANGE_ROW_STAYS[index] >= level);
+
+		if(placing)
+			[view setHidden:(isShown == NO)];
+
+		if(isShown == NO)
+			continue;
+
+		if(last >= 0)
+			x += (ARRANGE_ROW_GROUPS[index] == ARRANGE_ROW_GROUPS[last]) ? ARRANGE_ROW_GAP : ARRANGE_GROUP_GAP;
+
+		if(placing)
+			[view setFrameOrigin:NSMakePoint(x, NSMinY([view frame]))];
+
+		x		+= NSWidth([view frame]);
+		last	= index;
+	}
+
+	return x;
+
+}//end layOutArrangeRow:atLevel:placing:
+
+
+//========== updateArrangeFields ===============================================
+//
+// Purpose:		Shows the arranged angle, as the step's REL ROTSTEP, the size
+//				and the offset in the scope bar. A value that differs from what
+//				the step inherits is bold, as it is what Done writes.
+//
+// Notes:		A field that is being typed in is left alone.
+//
+//==============================================================================
+- (void) updateArrangeFields
+{
+	StepPartListController	*controller	= self->stepPartListController;
+	Vector2					 inherited	= ZeroPoint2;
+
+	[self->arrangeFieldsContainer setHidden:([controller isArranging] == NO)];
+
+	if([controller isArranging] == NO)
+		return;
+
+	// A change of scope or of mode lays the bar out itself.
+	if(NSWidth([[self->arrangeFieldsContainer superview] bounds]) != self->arrangeBarWidth)
+		[self layoutArrangeControls];
+
+	// Checked while P is held, too. The first step has no step before it, so
+	// the box is off there, and the setting waits for the next step.
+	BOOL hasPrevious = [controller hasPreviousStep];
+
+	[self->arrangePreviousStepCheckbox setEnabled:hasPrevious];
+	[self->arrangePreviousStepCheckbox setState:(hasPrevious && [controller isShowingPreviousStep])];
+
+	double	scale			= [controller arrangedScale];
+	double	inheritedScale	= [controller inheritedScale];
+	Vector2	offset			= [controller arrangedOffsetInches];
+	Tuple3	rotation		= [controller arrangedRotation];
+	BOOL	inheritsOffset	= [controller getInheritedOffsetInches:&inherited];
+
+	// The rotation is the step's own when Reset Angle would turn it.
+	BOOL isTurned = [controller canResetArrangedViewingAngleForScope:LDrawStepAssemblyScopeStep];
+
+	BOOL	isScaled	= fabs(scale - inheritedScale) >= 0.0005;
+	BOOL	isMovedX	= inheritsOffset == NO || fabs(offset.x - inherited.x) >= 0.005;
+	BOOL	isMovedY	= inheritsOffset == NO || fabs(offset.y - inherited.y) >= 0.005;
+
+	[self showArrangeValue:rotation.x inField:self->arrangeRotationXField decimals:1 isChanged:isTurned];
+	[self showArrangeValue:rotation.y inField:self->arrangeRotationYField decimals:1 isChanged:isTurned];
+	[self showArrangeValue:rotation.z inField:self->arrangeRotationZField decimals:1 isChanged:isTurned];
+	[self showArrangeValue:scale inField:self->arrangeScaleField decimals:3 isChanged:isScaled];
+	[self showArrangeValue:offset.x inField:self->arrangeOffsetXField decimals:2 isChanged:isMovedX];
+	[self showArrangeValue:offset.y inField:self->arrangeOffsetYField decimals:2 isChanged:isMovedY];
+
+}//end updateArrangeFields
+
+
+//========== endArrangeFieldEditing ============================================
+//
+// Purpose:		Ends typing in one of the scope bar's fields, which takes the
+//				typed value, before arranging ends and the fields go.
+//
+//==============================================================================
+- (void) endArrangeFieldEditing
+{
+	NSWindow	*window		= [self windowForSheet];
+	NSResponder	*responder	= [window firstResponder];
+	id			 edited		= [responder isKindOfClass:[NSText class]] ? [(NSText *)responder delegate] : nil;
+
+	if([edited isKindOfClass:[NSView class]] && [(NSView *)edited isDescendantOf:self->arrangeFieldsContainer])
+		[window makeFirstResponder:[self main3DViewport]];
+
+}//end endArrangeFieldEditing
+
+
+//========== showArrangeValue:inField:decimals:isChanged: ======================
+//
+// Purpose:		Writes one value into a field of the scope bar, rounded to the
+//				decimals it shows, and bold when it is the step's own. A value
+//				that rounds to zero has no minus sign.
+//
+//==============================================================================
+- (void) showArrangeValue:(double)value
+				  inField:(NSTextField *)field
+				 decimals:(int)decimals
+				isChanged:(BOOL)isChanged
+{
+	CGFloat		 size	= [NSFont smallSystemFontSize];
+	double		 scale	= pow(10.0, decimals);
+	NSString	*text	= [NSString stringWithFormat:@"%.*f", decimals, round(value * scale) / scale + 0.0];
+	NSFont		*font	= isChanged ? [NSFont boldSystemFontOfSize:size] : [NSFont systemFontOfSize:size];
+
+	// Not while it is typed in. Each layout calls this, so a field is only
+	// touched when what it shows changes.
+	if([field currentEditor] != nil)
+		return;
+
+	if([[field stringValue] isEqualToString:text] == NO)
+		[field setStringValue:text];
+
+	if([[field font] isEqual:font] == NO)
+		[field setFont:font];
+
+}//end showArrangeValue:inField:decimals:isChanged:
+
+
+//========== updateArrangeControls =============================================
+//
+// Purpose:		Shows the Arrange button where the step can be arranged, and
+//				Cancel and Done in its place while it is. While arranging, the
+//				scope takes the View choice's place, and the fields the model
+//				menu's. The step controls stay.
+//
+//==============================================================================
+- (void) updateArrangeControls
+{
+	BOOL isArranging = [self->stepPartListController isArranging];
+	BOOL stepDisplay = [[[self documentContents] activeModel] stepDisplay];
+
+	[self->arrangeButton setHidden:([self canArrangeAssembly] == NO || isArranging)];
+	[self->arrangeCancelButton setHidden:(isArranging == NO)];
+	[self->arrangeDoneButton setHidden:(isArranging == NO)];
+
+	// While arranging the scope, with its label, takes the View choice's
+	// place.
+	[self->arrangeScopeLabel setHidden:(isArranging == NO)];
+	[self->viewLabel setHidden:isArranging];
+	[self->viewAllButton setHidden:isArranging];
+	[self->viewStepsButton setHidden:isArranging];
+
+	// The zoom shown is the page's while it is drawn, so it changes with the
+	// page and with arranging, even with the view's zoom the same.
+	[self noteZoomPercentageChanged];
+
+	// The button follows the Page View switch.
+	NSRect button = [self->arrangeButton frame];
+
+	button.origin.x = NSMaxX([self->lpubPageSwitch frame]) + ARRANGE_SWITCH_GAP;
+	[self->arrangeButton setFrame:button];
+
+	// The fields take the model menu's place. The Page View switch hides, but
+	// the page stays shown.
+	BOOL hidesPageSwitch = (stepDisplay == NO || isArranging);
+
+	[self->submodelPopUpMenu setHidden:isArranging];
+	[self->lpubPageLabel setHidden:hidesPageSwitch];
+	[self->lpubPageSwitch setHidden:hidesPageSwitch];
+
+	// The scope is chosen first, since the layout fits the pop-up to it.
+	[self->arrangeScopePopUp selectItemWithTag:LDrawArrangeScopeStepMenuTag + self->arrangeScope];
+	[self layoutArrangeControls];
+	[self updateArrangeFields];
+	[self->arrangeScopePopUp setHidden:(isArranging == NO)];
+	[self->arrangeResetPopUp setHidden:(isArranging == NO)];
+	[self->arrangePreviousStepCheckbox setHidden:(isArranging == NO)];
+	[self->scopeStepControlsContainer setHidden:(stepDisplay == NO)];
+
+}//end updateArrangeControls
+
+
+#pragma mark -
 
 //========== writeDirectives:toPasteboard: =====================================
 //

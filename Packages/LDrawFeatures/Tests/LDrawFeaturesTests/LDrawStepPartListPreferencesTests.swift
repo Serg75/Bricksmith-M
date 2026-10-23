@@ -284,6 +284,22 @@ extension StepPartListStaticSettings {
             return host
         }
 
+        @Test("The same list laid out again has the same icon key, and one drawn bigger has another")
+        func iconKeyFollowsWhatTheIconsShow() throws {
+            LDrawStepPartList.setEnabled(true)
+            LDrawStepPartList.setUsesLPubScale(true)
+            let model = steppedModel(firstStep: [pageSize(8.5, 11)])
+
+            let first = LDrawStepPartListPresentation(model: model, host: host(assemblyScale: 1))
+            let again = LDrawStepPartListPresentation(model: model, host: host(assemblyScale: 1))
+            let bigger = LDrawStepPartListPresentation(model: model, host: host(assemblyScale: 2))
+            let key = try #require(first.iconKey)
+
+            #expect(again.iconKey == key)
+            #expect(bigger.iconKey != key)
+            #expect(first.iconModel != nil)
+        }
+
         @Test("Off the page the list takes four tenths of the view, with no page and no pins")
         func offThePageTheListFitsTheView() throws {
             LDrawStepPartList.setEnabled(true)

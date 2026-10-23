@@ -2678,6 +2678,43 @@ bool Matrix4EqualMatrices(Matrix4 *matrix1, Matrix4 *matrix2)
 }//end Matrix4EqualMatrices
 
 
+//========== Matrix4RotationsWithinTolerance() =================================
+///
+/// @abstract	Whether two matrices turn alike: no element of their 3-by-3
+///				parts differs by more than `tolerance`. Translation is ignored.
+///
+//==============================================================================
+bool Matrix4RotationsWithinTolerance(Matrix4 matrix1, Matrix4 matrix2, double tolerance)
+{
+	for (int row = 0; row < 3; row++) {
+		for (int column = 0; column < 3; column++) {
+			if (fabs(matrix1.element[row][column] - matrix2.element[row][column]) > tolerance) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+
+}//end Matrix4RotationsWithinTolerance
+
+
+//========== Matrix4AnglesWithinTolerance() ====================================
+///
+/// @abstract	Whether two sets of angles in degrees, as Matrix4Rotate takes
+///				them, turn alike. One turn can be written as different angles,
+///				so the turns are compared.
+///
+//==============================================================================
+bool Matrix4AnglesWithinTolerance(Tuple3 angles1, Tuple3 angles2, double tolerance)
+{
+	return Matrix4RotationsWithinTolerance(Matrix4Rotate(IdentityMatrix4, angles1),
+										   Matrix4Rotate(IdentityMatrix4, angles2),
+										   tolerance);
+
+}//end Matrix4AnglesWithinTolerance
+
+
 //========== VolumeCanIntersectBox() ===========================================
 //
 // Purpose:		Checks whether a bounding box in model view space may intersect

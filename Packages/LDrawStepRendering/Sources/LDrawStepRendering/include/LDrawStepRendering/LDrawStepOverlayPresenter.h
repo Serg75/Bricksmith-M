@@ -15,6 +15,7 @@
 #import <LDrawFeatures/LDrawStepPartListPageFitter.h>
 
 @class LDrawModel;
+@class LDrawStepCalloutPicture;
 @class LDrawStepLayoutCache;
 @class LDrawStepPartListPageAnchor;
 @class LDrawStepPartListPresentation;
@@ -52,6 +53,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Scrolls so that a model point lands on a point of the view.
 - (void) scrollModelPoint:(Point3)modelPoint toViewPoint:(CGPoint)viewPoint;
+
+@optional
+
+/// Turns the camera to a viewing angle, in degrees. A turn that snaps while
+/// arranging is made with it.
+- (void) setViewingAngle:(Tuple3)angle;
 
 @end
 
@@ -124,6 +131,11 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 @property (nonatomic) NSUInteger calloutPreviewBox;
 @property (nonatomic) Point2 calloutPreviewPoint;
 
+/// A drag of the parts list in progress, and where its frame's top left
+/// corner is held, in the view.
+@property (nonatomic) BOOL hasListPreview;
+@property (nonatomic) Point2 listPreviewOrigin;
+
 /// Collects, packs and places the visible step again.
 - (void) reload;
 
@@ -150,7 +162,7 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 
 /// Call when the camera zoomed, scrolled or turned. On the page everything
 /// follows the camera. Off it only the arrows do, since they point into the
-/// model.
+/// model. A move the presenter made in its own reload changes nothing.
 - (LDrawStepOverlayChange) changeForCameraMove;
 
 /// Call when something a step shows may have changed. `object` is what
@@ -160,6 +172,113 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 
 /// Forgets what was laid out. Call it when the overlay is taken off its view.
 - (void) reset;
+
+/// Whether the view looks at the step from another angle than LPub3D prints
+/// it at, after a turn. Only on the page, and never while arranging, where
+/// the angle is the one being arranged.
+@property (nonatomic, readonly) BOOL isTurnedFromStepAngle;
+
+// MARK: Arranging
+
+/// Whether the camera's moves change the step's picture instead of the view.
+/// The page stays where it is drawn, at its size, and the model turns, grows
+/// and moves on it.
+@property (nonatomic, readonly) BOOL isArranging;
+
+/// Starts arranging the visible step. The step is first put where its lines
+/// say, and the page is held where it is drawn then. NO with no page or no
+/// camera.
+- (BOOL) beginArranging;
+
+/// Stops arranging. Nothing is written: the host makes an edit of the
+/// arranged values first, or drops them. The next reload puts the step where
+/// its lines say again.
+- (void) endArranging;
+
+/// The step as arranged: the assembly's MODEL_SCALE, its offset from where it
+/// is centered on the page as shares of the page, and the camera's angle.
+/// Setting the scale or the offset while arranging, as a reset does, moves
+/// the model to it on the next reload. The angle is set by turning the camera,
+/// by a gesture or by -turnArrangedStepToViewingAngle:.
+@property (nonatomic) double arrangedScale;
+@property (nonatomic) Point2 arrangedOffset;
+@property (nonatomic, readonly) Tuple3 arrangedViewingAngle;
+
+/// Turns the camera to an angle the host chose, such as a typed or a reset
+/// one, while arranging. Unlike a turn by a gesture, it does not snap.
+- (void) turnArrangedStepToViewingAngle:(Tuple3)angle NS_SWIFT_NAME(turnArrangedStep(toViewingAngle:));
+
+/// Moves the arranged step on the page, in page inches, as the arrow keys do.
+/// The model moves under the page on the next reload.
+- (void) moveArrangedStepByInches:(Vector2)distance NS_SWIFT_NAME(moveArrangedStep(byInches:));
+
+/// Sets the arranged scale as a zoom or a frame handle does: it snaps to the
+/// scale the step inherits, or to a step of 0.05, when near one. The model is
+/// zoomed to it on the next reload and keeps its place.
+- (void) zoomArrangedStepToScale:(double)scale NS_SWIFT_NAME(zoomArrangedStep(toScale:));
+
+/// How many points an inch of the page covers while arranging, as it is held.
+/// It changes only when the host zooms the page. 0 when not arranging.
+@property (nonatomic, readonly) double arrangedPointsPerInch;
+
+/// Holds the page where it is drawn now, and at its size, after the host
+/// zoomed or scrolled the page and the model together, as Actual Size or a
+/// refit after a resize does. What was arranged stays.
+- (void) holdArrangedPage;
+
+/// Zoom to Fit while arranging: the page and the model grow together until
+/// the page fits the view, with its middle in the view's middle. What was
+/// arranged stays.
+- (void) fitArrangedPage;
+
+// MARK: Snapping while arranging
+
+/// What the step snaps to while arranging, besides the page's middle lines and
+/// margins: the scale and the camera angles the step inherits. The host sets
+/// them when arranging starts. A scale of 0, and NO for the angles, add none.
+@property (nonatomic) double arrangedSnapScale;
+@property (nonatomic) BOOL hasArrangedSnapAngles;
+@property (nonatomic) double arrangedSnapLatitude;
+@property (nonatomic) double arrangedSnapLongitude;
+
+/// A turn snaps to steps of 15°, as while Shift is held.
+@property (nonatomic) BOOL snapsTurnsToSteps;
+
+/// The page's guides the arranged step lines up with in the last layout, in
+/// the view: Box2 lines with no width or no height. Empty when not arranging.
+@property (nonatomic, readonly, copy) NSData *arrangedGuides;
+
+// MARK: The previous step
+
+/// Whether the previous step is shown while arranging, as its picture or its
+/// outline. NO to begin with. Lining the step up with it works either way.
+@property (nonatomic) BOOL showsPreviousStep;
+
+/// Where the previous step's assembly sat on its page, while arranging: the
+/// outline around it, as Point2 values in the view. Empty when not arranging,
+/// and when that step has not been laid out on its page since it or an earlier
+/// step last changed.
+@property (nonatomic, readonly, copy) NSData *previousStepOutline;
+
+/// A picture of the previous step's assembly, while arranging: the parts of
+/// the earlier steps at that step's angle, at the size it drew them, in the
+/// middle of where it sat. Nil when that is not known, or nothing could be
+/// measured.
+@property (nonatomic, readonly, nullable) LDrawStepCalloutPicture *previousStepPicture;
+
+/// Whether the arranged step can be lined up with the previous one: where that
+/// one sat is known, and this step shows parts from earlier steps.
+@property (nonatomic, readonly) BOOL canAlignArrangedStepWithPreviousStep;
+
+/// Moves the arranged step so the parts it has from earlier steps sit where
+/// the previous step had them: the middle of the box around them on the
+/// middle of the box around the previous step's assembly. The model moves on
+/// the next reload.
+- (void) alignArrangedStepWithPreviousStep;
+
+/// Moves the arranged step so the middle of its box is on the middle of the
+/// page. The model moves on the next reload.
+- (void) centerArrangedStepOnPage;
 
 @end
 

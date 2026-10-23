@@ -104,6 +104,47 @@
 }//end modelForLayout:viewTransform:submodelsFromFile:
 
 
+//---------- iconKeyForLayout:viewTransform: -------------------------[static]--
+///
+/// @abstract	Each drawable placement's name, kind, color and transform, then
+/// 			the camera's zoom and center: all the icon model is built from.
+///
+//------------------------------------------------------------------------------
++ (NSData *) iconKeyForLayout:(LDrawStepPartListLayout *)layout viewTransform:(Matrix4)viewTransform
+{
+	NSMutableData *key = [NSMutableData data];
+
+	for (LDrawStepPartListPlacement *placement in layout.placements) {
+		if ([self isDrawablePlacement:placement] == NO) {
+			continue;
+		}
+
+		LDrawStepPartListEntry	*entry		= placement.entry;
+		NSData					*name		= [entry.partName dataUsingEncoding:NSUTF8StringEncoding] ?: [NSData data];
+		LDrawColorT				 colorCode	= (entry.color != nil) ? [entry.color colorCode] : LDrawColorBogus;
+		BOOL					 isSubmodel	= entry.isSubmodel;
+		Matrix4					 transform	= [self transformForPlacement:placement
+																 layout:layout
+														  viewTransform:viewTransform];
+
+		[key appendData:name];
+		[key appendBytes:"" length:1];
+		[key appendBytes:&isSubmodel length:sizeof(isSubmodel)];
+		[key appendBytes:&colorCode length:sizeof(colorCode)];
+		[key appendBytes:&transform length:sizeof(transform)];
+	}
+
+	double	zoom	= [self zoomPercentageForLayout:layout];
+	Point3	center	= [self centerPointForLayout:layout];
+
+	[key appendBytes:&zoom length:sizeof(zoom)];
+	[key appendBytes:&center length:sizeof(center)];
+
+	return key;
+
+}//end iconKeyForLayout:viewTransform:
+
+
 //---------- modelForModel:throughStep:viewTransform:color: ----------[static]--
 ///
 /// @abstract	A model of what `model` has built up to and including a step,

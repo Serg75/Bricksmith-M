@@ -87,6 +87,10 @@ typedef NS_ENUM(NSInteger, LPubPlacementBranch) {
 /// YES for INSIDE, NO for OUTSIDE.
 @property (nonatomic, readonly) BOOL					isInside;
 
+/// YES for a place inside the page, the only kind Bricksmith reads for the
+/// assembly.
+@property (nonatomic, readonly) BOOL					isInsidePage;
+
 /// How far the box is moved from that place, as fractions of the size of what
 /// it is placed against. Zero when the line has none.
 @property (nonatomic, readonly) Point2					offset;

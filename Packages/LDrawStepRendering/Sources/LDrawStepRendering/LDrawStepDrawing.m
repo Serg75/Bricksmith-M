@@ -38,6 +38,14 @@ CGRect LDrawStepRectFromBox(Box2 box)
 }//end LDrawStepRectFromBox
 
 
+//========== LDrawStepBoxFromRect ==============================================
+Box2 LDrawStepBoxFromRect(CGRect rect)
+{
+	return V2MakeBox(CGRectGetMinX(rect), CGRectGetMinY(rect), CGRectGetWidth(rect), CGRectGetHeight(rect));
+
+}//end LDrawStepBoxFromRect
+
+
 //========== LDrawStepColorCreateRGBA ==========================================
 CGColorRef LDrawStepColorCreateRGBA(const double *rgba)
 {

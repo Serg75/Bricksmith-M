@@ -1038,6 +1038,12 @@ extension StepPartListStaticSettings {
             angles.lPubCommandString = "PLI CAMERA_ANGLES GLOBAL 0 0"
             let front = sample(LDrawStepPartListPolicy.partListViewTransform(inModel: model([[angles]])))
             #expect(abs(front.x - 40) < 0.001 && abs(front.y - 10) < 0.001, "FRONT is no rotation")
+
+            let assembly = LPubPliCameraAngles()
+            assembly.lPubCommandString = "ASSEM CAMERA_ANGLES GLOBAL 0 0"
+            let unturned = sample(LDrawStepPartListPolicy.partListViewTransform(inModel: model([[assembly]])))
+            #expect(abs(unturned.x - lpubDefault.x) < 0.001 && abs(unturned.y - lpubDefault.y) < 0.001,
+                    "The assembly's angles do not turn the parts list")
         }
 
         /// The part turns first, then the camera looks at it. ABS replaces the
@@ -1077,6 +1083,102 @@ extension StepPartListStaticSettings {
             let custom = V3MulPointByProjMatrix(alongX, view([meta(LPubPliCameraAngles.self, "PLI CAMERA_ANGLES LAT_LON 23 -45"),
                                                               meta(LPubPliPartRotation.self, "PLI PART_ROTATION 0 90 0 ABS")]))
             #expect(close(custom, V3MulPointByProjMatrix(turnedX, camera)))
+        }
+
+        // MARK: - LPub3D's assembly angle
+
+        /// The step's ROTSTEP turns the model, then the ASSEM camera angles look
+        /// at it in place of Bricksmith's 3D view. ABS drops the camera, unless
+        /// the angles name a custom viewpoint.
+        @Test("The assembly is seen through ASSEM CAMERA_ANGLES after its ROTSTEP")
+        func assemblyAngleCombinesRotstepAndCamera() {
+            func angles(_ text: String) -> LPubPliCameraAngles {
+                let command = LPubPliCameraAngles()
+                command.lPubCommandString = text
+                return command
+            }
+            func rotated(_ type: LDrawStepRotationT, _ angle: Tuple3, _ directives: [LDrawDirective] = []) -> LDrawModel {
+                let document = model([directives])
+                let step = document.steps().first as! LDrawStep
+                step.setStepRotationType(type)
+                step.setRotationAngle(angle)
+                return document
+            }
+            func seen(_ point: Point3, _ document: LDrawModel, step: UInt = 0) -> Point3 {
+                let angle = LDrawStepPartListPolicy.assemblyViewingAngle(forStepAt: step, inModel: document)
+                return V3MulPointByProjMatrix(point, Matrix4Rotate(IdentityMatrix4, angle))
+            }
+            func close(_ a: Point3, _ b: Point3, _ tolerance: Double = 0.001) -> Bool {
+                abs(a.x - b.x) < tolerance && abs(a.y - b.y) < tolerance && abs(a.z - b.z) < tolerance
+            }
+
+            let point = Point3(x: 40, y: 10, z: 20)
+            let quarterTurn = Tuple3(x: 0, y: 90, z: 0)
+            let turned = V3MulPointByProjMatrix(point, Matrix4Rotate(IdentityMatrix4, quarterTurn))
+
+            // No line: the model's own angle.
+            let silent = model([[]])
+            let own = silent.rotationAngleForStep(at: 0)
+            let silentAngle = LDrawStepPartListPolicy.assemblyViewingAngle(forStepAt: 0, inModel: silent)
+            #expect(silentAngle.x == own.x && silentAngle.y == own.y && silentAngle.z == own.z)
+
+            // LPub3D's default is Bricksmith's 3D view, to MLCad's rounding.
+            let lpubDefault = seen(point, model([[angles("ASSEM CAMERA_ANGLES 23 45")]]))
+            #expect(close(lpubDefault, seen(point, silent), 0.05))
+
+            // FRONT and no rotation: nothing turns.
+            #expect(close(seen(point, model([[angles("ASSEM CAMERA_ANGLES FRONT")]])), point))
+
+            // REL, then the camera: FRONT leaves only the rotation.
+            #expect(close(seen(point, rotated(.relative, quarterTurn, [angles("ASSEM CAMERA_ANGLES FRONT")])), turned))
+
+            // REL, then a camera from the top.
+            let top = LDrawStepPartListLayout.viewTransform(latitude: 90, longitude: 0)
+            #expect(close(seen(point, rotated(.relative, quarterTurn, [angles("ASSEM CAMERA_ANGLES TOP")])),
+                          V3MulPointByProjMatrix(turned, top)))
+
+            // ABS: the camera looks straight on.
+            #expect(close(seen(point, rotated(.absolute, quarterTurn, [angles("ASSEM CAMERA_ANGLES 30 60")])), turned))
+
+            // ABS under a custom viewpoint keeps it.
+            let custom = LDrawStepPartListLayout.viewTransform(latitude: 30, longitude: 60)
+            #expect(close(seen(point, rotated(.absolute, quarterTurn, [angles("ASSEM CAMERA_ANGLES LAT_LON 30 60")])),
+                          V3MulPointByProjMatrix(turned, custom)))
+
+            // A LOCAL line ends with its step.
+            let local = model([[angles("ASSEM CAMERA_ANGLES LOCAL 0 0")], []])
+            #expect(close(seen(point, local, step: 0), point))
+            #expect(close(seen(point, local, step: 1), seen(point, silent), 0.05))
+
+            // The parts list's angles do not turn the assembly.
+            #expect(close(seen(point, model([[angles("PLI CAMERA_ANGLES 0 0")]])), seen(point, silent)))
+        }
+
+        @Test("A view reads back as LPub3D's angles, from straight above and below too")
+        func latitudeAndLongitudeOfAView() {
+            func sees(_ a: Matrix4, as b: Matrix4) -> Bool {
+                [Point3(x: 40, y: 10, z: 20), Point3(x: -5, y: 30, z: 7)].allSatisfy { point in
+                    let p = V3MulPointByProjMatrix(point, a)
+                    let q = V3MulPointByProjMatrix(point, b)
+                    return abs(p.x - q.x) < 0.01 && abs(p.y - q.y) < 0.01 && abs(p.z - q.z) < 0.01
+                }
+            }
+
+            for (latitude, longitude) in [(23.0, 45.0), (0, 0), (0, 180), (90, 0), (-90, 0), (90, 30), (-90, -60), (45, -120)] {
+                let view = LDrawStepPartListLayout.viewTransform(latitude: latitude, longitude: longitude)
+                var readLatitude = 0.0
+                var readLongitude = 0.0
+
+                #expect(LDrawStepPartListLayout.getLatitude(&readLatitude, longitude: &readLongitude, ofViewTransform: view))
+                #expect(sees(LDrawStepPartListLayout.viewTransform(latitude: readLatitude, longitude: readLongitude), as: view),
+                        "\(latitude), \(longitude)")
+            }
+
+            var latitude = 0.0
+            var longitude = 0.0
+            let tilted = Matrix4Rotate(IdentityMatrix4, Tuple3(x: 10, y: 20, z: 30))
+
+            #expect(LDrawStepPartListLayout.getLatitude(&latitude, longitude: &longitude, ofViewTransform: tilted) == false)
         }
 
         // MARK: - LPub3D's page

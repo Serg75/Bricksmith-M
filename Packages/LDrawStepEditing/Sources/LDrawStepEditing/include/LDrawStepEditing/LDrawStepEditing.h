@@ -15,6 +15,9 @@
 //
 //==============================================================================
 
+#import <LDrawStepEditing/LDrawStepAssemblyEdit.h>
+#import <LDrawStepEditing/LDrawStepAssemblyScaleTracker.h>
 #import <LDrawStepEditing/LDrawStepCalloutEdit.h>
 #import <LDrawStepEditing/LDrawStepCalloutMenuItem.h>
 #import <LDrawStepEditing/LDrawStepCalloutTracker.h>
+#import <LDrawStepEditing/LDrawStepPartListMoveTracker.h>

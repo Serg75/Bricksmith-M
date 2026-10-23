@@ -38,6 +38,7 @@ typedef struct LDrawStepFont
 
 // Geometry and color
 extern CGRect LDrawStepRectFromBox(Box2 box);
+extern Box2 LDrawStepBoxFromRect(CGRect rect);
 
 /// A color from four sRGB values. The caller releases it.
 extern CGColorRef LDrawStepColorCreateRGBA(const double *rgba) CF_RETURNS_RETAINED;

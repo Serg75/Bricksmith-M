@@ -28,6 +28,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, weak, readonly) LDrawView* glView;
 @property (nonatomic) BOOL showsScrollbars;
 
+/// The part of the container the 3D view fills: all of it but the scroll bars,
+/// or the placard when there are none.
+@property (nonatomic, readonly) NSRect contentRect;
+
 - (void) setVerticalPlacard:(NSView *)placardView;
 - (void) reflectLogicalDocumentRect:(Box2)newDocumentRect visibleRect:(Box2)visibleRect;
 

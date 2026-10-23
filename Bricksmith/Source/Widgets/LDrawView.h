@@ -87,6 +87,26 @@
 /// the usual edge lines.
 @property (nonatomic) CGFloat outlineWidth;
 
+/// A plain drag pans, as the hand tool does, and selects nothing. Set while
+/// the step's assembly is arranged on LPub3D's page, where parts are not
+/// edited.
+@property (nonatomic) BOOL plainDragPans;
+
+/// Parts can be selected but not moved: a drag on them, a drag handle and the
+/// arrow keys leave them where they are. Set on LPub3D's page.
+@property (nonatomic) BOOL locksParts;
+
+/// The view does not turn by the mouse, the trackpad, the orientation keys or
+/// the orientation menu. Set on LPub3D's page while the step is not arranged.
+@property (nonatomic) BOOL locksTurning;
+
+/// While turning is locked, the cursor the Spin tool shows over a rect of the
+/// view instead of the arrow, such as one that says a Command-click on the page
+/// starts arranging. Nil shows the arrow everywhere.
+@property (nonatomic, readonly, nullable) NSCursor *lockedTurnCursor;
+@property (nonatomic, readonly) NSRect lockedTurnCursorRect;
+- (void) setLockedTurnCursor:(nullable NSCursor *)cursor inRect:(NSRect)rect;
+
 // Accessors
 - (LDrawDirective *) LDrawDirective;
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix;
@@ -182,6 +202,10 @@ extern NSString * const LDrawViewCameraDidChangeNotification;
 /// Return YES if the delegate did the Zoom to Fit itself, NO to let the view
 /// fit the model as usual.
 - (BOOL) LDrawViewZoomToFit:(LDrawView *)view;
+
+/// Return YES if the delegate did Zoom In or Zoom Out itself, NO to let the
+/// view zoom by the factor as usual.
+- (BOOL) LDrawView:(LDrawView *)view zoomByFactor:(CGFloat)factor;
 
 - (BOOL) LDrawView:(LDrawView *)glView writeDirectivesToPasteboard:(NSPasteboard *)pasteboard asCopy:(BOOL)copyFlag;
 - (void) LDrawView:(LDrawView *)glView acceptDrop:(id < NSDraggingInfo >)info directives:(NSArray *)directives;

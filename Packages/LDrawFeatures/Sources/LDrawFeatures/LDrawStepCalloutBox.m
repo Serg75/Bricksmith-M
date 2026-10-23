@@ -180,6 +180,24 @@ static NSUInteger ConvexOutline(const Point2 *points, NSUInteger count, Point2 *
 }//end ConvexOutline
 
 
+//========== LDrawStepConvexOutline() ==========================================
+NSData *LDrawStepConvexOutline(NSData *points)
+{
+	NSUInteger		 count		= points.length / sizeof(Point2);
+	NSMutableData	*corners	= [NSMutableData dataWithLength:2 * count * sizeof(Point2)];
+
+	if (count < 3) {
+		return [NSData data];
+	}
+
+	NSUInteger cornerCount = ConvexOutline(points.bytes, count, corners.mutableBytes);
+
+	corners.length = (cornerCount >= 3) ? cornerCount * sizeof(Point2) : 0;
+	return corners;
+
+}//end LDrawStepConvexOutline
+
+
 //========== IsInsideOutline() =================================================
 ///
 /// @abstract	Whether a point is inside an outline with no dents. Its corners
@@ -459,6 +477,27 @@ static BOOL BoxHasArea(Box2 box)
 	return self;
 
 }//end initWithRect:assembly:throughStep:viewTransform:color:...
+
+
+//---------- pictureOfModel:throughStep:viewTransform:rect:... -------[static]--
++ (instancetype) pictureOfModel:(LDrawModel *)model
+					throughStep:(NSUInteger)stepIndex
+				  viewTransform:(Matrix4)viewTransform
+						   rect:(Box2)rect
+				 zoomPercentage:(double)zoomPercentage
+						 center:(Point3)center
+					 subjectKey:(NSString *)subjectKey
+{
+	return [[self alloc] initWithRect:rect
+							 assembly:model
+						  throughStep:stepIndex
+						viewTransform:viewTransform
+								color:nil
+					   zoomPercentage:zoomPercentage
+							   center:center
+						   subjectKey:subjectKey];
+
+}//end pictureOfModel:throughStep:viewTransform:rect:...
 
 
 //========== initWithLayout:viewTransform:file:origin:isPartsList: =============

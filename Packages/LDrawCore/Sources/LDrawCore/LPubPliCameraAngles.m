@@ -3,10 +3,12 @@
 //  File:       LPubPliCameraAngles.m
 //  Package:    LDrawCore
 //
-//  Purpose:    The angle LPub3D draws the parts list icons from.
+//  Purpose:    The angle LPub3D draws the parts list icons or the step's
+//              assembly from.
 //
 //              Line format:
-//              0 !LPUB PLI (CAMERA_ANGLES | VIEW_ANGLE) [GLOBAL|LOCAL]
+//              0 !LPUB (PLI | ASSEM) (CAMERA_ANGLES | VIEW_ANGLE)
+//                  [GLOBAL|LOCAL]
 //                  ( <latitude> <longitude>
 //                  | FRONT|BACK|TOP|BOTTOM|LEFT|RIGHT|HOME|LAT_LON
 //                  | (HOME|LAT_LON) <latitude> <longitude> )
@@ -23,11 +25,27 @@
 #import <LDrawCore/LDrawKeywords.h>
 
 
-static NSString * const	LPUB_CAMERA_ANGLES	= @"CAMERA_ANGLES";
-static NSString * const	LPUB_VIEW_ANGLE		= @"VIEW_ANGLE";
+static const double		DEFAULT_LATITUDE			= 23.0;
+static const double		DEFAULT_LONGITUDE			= -45.0;
+static const double		DEFAULT_ASSEMBLY_LONGITUDE	= 45.0;
 
-static const double		DEFAULT_LATITUDE	= 23.0;
-static const double		DEFAULT_LONGITUDE	= -45.0;
+
+//========== BranchForKeyword() ================================================
+static BOOL BranchForKeyword(NSString *keyword, LPubCameraAnglesBranch *outBranch)
+{
+	if ([keyword isEqualToString:LPUB_PLI]) {
+		*outBranch = LPubCameraAnglesBranchPli;
+	}
+	else if ([keyword isEqualToString:LPUB_ASSEM]) {
+		*outBranch = LPubCameraAnglesBranchAssembly;
+	}
+	else {
+		return NO;
+	}
+
+	return YES;
+
+}//end BranchForKeyword
 
 
 //========== AnglesForView() ===================================================
@@ -35,9 +53,14 @@ static const double		DEFAULT_LONGITUDE	= -45.0;
 /// @abstract	Gives the latitude and longitude for a named view. Returns NO
 /// 			for a name it does not know.
 ///
+/// @discussion	LAT_LON is the branch's own default.
+///
 //==============================================================================
-static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
+static BOOL AnglesForView(NSString *name, LPubCameraAnglesBranch branch, double *latitude, double *longitude)
 {
+	BOOL	isAssembly			= (branch == LPubCameraAnglesBranchAssembly);
+	double	defaultLongitude	= isAssembly ? DEFAULT_ASSEMBLY_LONGITUDE : DEFAULT_LONGITUDE;
+
 	NSDictionary<NSString *, NSArray<NSNumber *> *> *views =
 		@{ @"FRONT":	@[@0.0,   @0.0],
 		   @"BACK":		@[@0.0,   @180.0],
@@ -46,7 +69,7 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 		   @"LEFT":		@[@0.0,   @90.0],
 		   @"RIGHT":	@[@0.0,   @-90.0],
 		   @"HOME":		@[@30.0,  @45.0],
-		   @"LAT_LON":	@[@(DEFAULT_LATITUDE), @(DEFAULT_LONGITUDE)] };
+		   @"LAT_LON":	@[@(DEFAULT_LATITUDE), @(defaultLongitude)] };
 
 	NSArray<NSNumber *> *angles = views[name];
 
@@ -87,8 +110,10 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 //---------- lpubCommandInstance: ------------------------------------[static]--
 + (LPubCommand *) lpubCommandInstance:(NSArray<NSString *> *)parameters
 {
+	LPubCameraAnglesBranch branch = LPubCameraAnglesBranchPli;
+
 	if (parameters.count < 3
-		|| [parameters[0] isEqualToString:LPUB_PLI] == NO
+		|| BranchForKeyword(parameters[0], &branch) == NO
 		|| ([parameters[1] isEqualToString:LPUB_CAMERA_ANGLES] == NO
 			&& [parameters[1] isEqualToString:LPUB_VIEW_ANGLE] == NO)) {
 		return nil;
@@ -109,7 +134,7 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 		}
 	}
 	else if (remaining == 1) {
-		if (AnglesForView(parameters[index], &latitude, &longitude) == NO) {
+		if (AnglesForView(parameters[index], branch, &latitude, &longitude) == NO) {
 			return nil;
 		}
 	}
@@ -130,7 +155,8 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 
 	LPubPliCameraAngles *command = [LPubPliCameraAngles new];
 
-	command->_scope		= scope;
+	command->_branch			= branch;
+	command->_scope				= scope;
 	command->_latitude			= latitude;
 	command->_longitude			= longitude;
 	command->_customViewpoint	= customViewpoint;
@@ -146,7 +172,9 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 
 - (NSString *) browsingDescription
 {
-	return [NSString stringWithFormat:@"%@ %@ [%g %g]", LPUB_PLI, LPUB_CAMERA_ANGLES, self.latitude, self.longitude];
+	NSString *keyword = (self.branch == LPubCameraAnglesBranchAssembly) ? LPUB_ASSEM : LPUB_PLI;
+
+	return [NSString stringWithFormat:@"%@ %@ [%g %g]", keyword, LPUB_CAMERA_ANGLES, self.latitude, self.longitude];
 }
 
 
@@ -164,6 +192,17 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 }
 
 
+//---------- getLatitude:longitude:ofNamedView:branch: ---------------[static]--
++ (BOOL) getLatitude:(double *)latitude
+		   longitude:(double *)longitude
+		 ofNamedView:(NSString *)name
+			  branch:(LPubCameraAnglesBranch)branch
+{
+	return AnglesForView(name, branch, latitude, longitude);
+
+}//end getLatitude:longitude:ofNamedView:branch:
+
+
 //========== adoptPropertiesFromCommand: =======================================
 ///
 /// @abstract	Takes the properties the parser derived from new text.
@@ -173,6 +212,7 @@ static BOOL AnglesForView(NSString *name, double *latitude, double *longitude)
 {
 	LPubPliCameraAngles *other = (LPubPliCameraAngles *)command;
 
+	self->_branch			= other->_branch;
 	self->_scope			= other->_scope;
 	self->_latitude			= other->_latitude;
 	self->_longitude		= other->_longitude;

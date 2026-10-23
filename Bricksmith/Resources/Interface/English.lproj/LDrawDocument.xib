@@ -8,6 +8,23 @@
         <customObject id="-2" userLabel="File's Owner" customClass="LDrawDocument">
             <connections>
                 <outlet property="addReferenceButton" destination="996" id="1016"/>
+                <outlet property="arrangeButton" destination="Arr-Bt-Bx1" id="Arr-Bt-Ot1"/>
+                <outlet property="arrangeCancelButton" destination="Arr-Cn-Btn" id="Arr-Cn-Ot1"/>
+                <outlet property="arrangeDoneButton" destination="Arr-Dn-Btn" id="Arr-Dn-Ot1"/>
+                <outlet property="arrangeFieldsContainer" destination="Arr-Fd-Box" id="Arr-Fd-Ot0"/>
+                <outlet property="arrangeScopeLabel" destination="Arr-Lb-Scp" id="Arr-Lb-Ot3"/>
+                <outlet property="arrangeOffsetXField" destination="Arr-Fd-OfX" id="Arr-Fd-Ot4"/>
+                <outlet property="arrangeOffsetYField" destination="Arr-Fd-OfY" id="Arr-Fd-Ot5"/>
+                <outlet property="arrangeResetPopUp" destination="Arr-Rs-Pop" id="Arr-Rs-Ot1"/>
+                <outlet property="arrangeRotationXField" destination="Arr-Fd-RtX" id="Arr-Fd-Ot1"/>
+                <outlet property="arrangeRotationYField" destination="Arr-Fd-RtY" id="Arr-Fd-Ot2"/>
+                <outlet property="arrangeRotationZField" destination="Arr-Fd-RtZ" id="Arr-Fd-Ot6"/>
+                <outlet property="arrangeNamedViewPopUp" destination="Arr-Nv-Pop" id="Arr-Nv-Ot1"/>
+                <outlet property="arrangeSizeLabel" destination="Arr-Lb-Siz" id="Arr-Lb-Ot1"/>
+                <outlet property="arrangeOffsetLabel" destination="Arr-Lb-Off" id="Arr-Lb-Ot2"/>
+                <outlet property="arrangePreviousStepCheckbox" destination="Arr-Pv-Bx1" id="Arr-Pv-Ot1"/>
+                <outlet property="arrangeScaleField" destination="Arr-Fd-Scl" id="Arr-Fd-Ot3"/>
+                <outlet property="arrangeScopePopUp" destination="Arr-Sc-Pop" id="Arr-Sc-Ot1"/>
                 <outlet property="bindingsController" destination="300" id="303"/>
                 <outlet property="coordinateFieldX" destination="1062" id="1072"/>
                 <outlet property="coordinateFieldY" destination="1065" id="1073"/>
@@ -17,7 +34,8 @@
                 <outlet property="coordinateLabelZ" destination="1068" id="1077"/>
                 <outlet property="fileContentsOutline" destination="56" id="60"/>
                 <outlet property="fileContentsSplitView" destination="630" id="681"/>
-                <outlet property="lpubPageCheckbox" destination="LPg-Ck-Bx1" id="LPg-Ck-Ot1"/>
+                <outlet property="lpubPageLabel" destination="LPg-Lb-Txt" id="LPg-Lb-Ot1"/>
+                <outlet property="lpubPageSwitch" destination="LPg-Sw-Sw1" id="LPg-Sw-Ot1"/>
                 <outlet property="partsBrowser" destination="37" id="75"/>
                 <outlet property="scopeStepControlsContainer" destination="568" id="569"/>
                 <outlet property="stepField" destination="534" id="576"/>
@@ -25,6 +43,7 @@
                 <outlet property="submodelPopUpMenu" destination="542" id="559"/>
                 <outlet property="toolbarController" destination="132" id="136"/>
                 <outlet property="viewAllButton" destination="478" id="566"/>
+                <outlet property="viewLabel" destination="540" id="Arr-Vw-Ot1"/>
                 <outlet property="viewStepsButton" destination="480" id="567"/>
                 <outlet property="viewportArranger" destination="964" id="967"/>
                 <outlet property="window" destination="5" id="18"/>
@@ -247,7 +266,7 @@
                                                 </subviews>
                                             </customView>
                                             <popUpButton verticalHuggingPriority="750" id="542">
-                                                <rect key="frame" x="269" y="0.0" width="289" height="26"/>
+                                                <rect key="frame" x="324" y="0.0" width="270" height="26"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                 <popUpButtonCell key="cell" type="roundRect" title="Model Name" bezelStyle="roundedRect" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="545" id="847">
                                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -265,6 +284,15 @@
                                                 <rect key="frame" x="5" y="5" width="40" height="17"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="View:" id="846">
+                                                    <font key="font" metaFont="systemBold"/>
+                                                    <color key="textColor" white="0.40000001000000002" alpha="1" colorSpace="calibratedWhite"/>
+                                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                                </textFieldCell>
+                                            </textField>
+                                            <textField hidden="YES" focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Lb-Scp">
+                                                <rect key="frame" x="5" y="5" width="80" height="17"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="left" title="Scope:" id="Arr-Lc-Scp">
                                                     <font key="font" metaFont="systemBold"/>
                                                     <color key="textColor" white="0.40000001000000002" alpha="1" colorSpace="calibratedWhite"/>
                                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -292,18 +320,257 @@
                                                     <action selector="viewAll:" target="-2" id="564"/>
                                                 </connections>
                                             </button>
-                                            <button hidden="YES" verticalHuggingPriority="750" id="LPg-Ck-Bx1">
-                                                <rect key="frame" x="146" y="4" width="100" height="18"/>
+                                            <textField hidden="YES" focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="LPg-Lb-Txt">
+                                                <rect key="frame" x="146" y="6" width="56" height="14"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                 <string key="toolTip">Draw on LPub3D's page</string>
-                                                <buttonCell key="cell" type="check" title="LPub3D Page" bezelStyle="regularSquare" imagePosition="left" controlSize="small" inset="2" id="LPg-Ck-Cl1">
+                                                <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Page View" id="LPg-Lc-Txt">
+                                                    <font key="font" metaFont="smallSystem"/>
+                                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                </textFieldCell>
+                                            </textField>
+                                            <switch hidden="YES" horizontalHuggingPriority="750" verticalHuggingPriority="750" baseWritingDirection="leftToRight" alignment="left" controlSize="small" id="LPg-Sw-Sw1">
+                                                <rect key="frame" x="206" y="2" width="36" height="21"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Draw on LPub3D's page</string>
+                                                <connections>
+                                                    <action selector="lpubPageSwitchClicked:" target="-2" id="LPg-Sw-Ac1"/>
+                                                </connections>
+                                            </switch>
+                                            <button hidden="YES" verticalHuggingPriority="750" id="Arr-Bt-Bx1">
+                                                <rect key="frame" x="252" y="4" width="64" height="17"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Turn, zoom and pan to change the step's assembly on the page. Done or Return writes it into the step, and Cancel or Escape drops it.</string>
+                                                <buttonCell key="cell" type="recessed" title="Arrange" bezelStyle="recessed" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Arr-Bt-Cl1">
+                                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                    <font key="font" metaFont="systemBold" size="12"/>
+                                                </buttonCell>
+                                                <connections>
+                                                    <action selector="arrangeAssembly:" target="-2" id="Arr-Bt-Ac1"/>
+                                                </connections>
+                                            </button>
+                                            <customView hidden="YES" id="Arr-Fd-Box">
+                                                <rect key="frame" x="322" y="-1" width="416" height="27"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <subviews>
+                                                    <popUpButton verticalHuggingPriority="750" id="Arr-Nv-Pop">
+                                                        <rect key="frame" x="0.0" y="2.5" width="62" height="22"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">Turn the step to a view for instructions, or turn it from where it is</string>
+                                                        <popUpButtonCell key="cell" type="roundRect" title="Angle" bezelStyle="roundedRect" alignment="left" controlSize="small" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" pullsDown="YES" id="Arr-Nv-Cel">
+                                                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <menu key="menu" title="Angle" autoenablesItems="NO" id="Arr-Nv-Mnu">
+                                                                <items>
+                                                                <menuItem title="Angle" hidden="YES" id="Arr-Nv-I0"/>
+                                                                <menuItem title="Front Left (Default)" tag="424" id="Arr-Nv-I424"/>
+                                                                <menuItem title="Front Right" tag="427" id="Arr-Nv-I427"/>
+                                                                <menuItem title="Back Left" tag="428" id="Arr-Nv-I428"/>
+                                                                <menuItem title="Back Right" tag="429" id="Arr-Nv-I429"/>
+                                                                <menuItem isSeparatorItem="YES" id="Arr-Nv-Sp1"/>
+                                                                <menuItem title="Turn 90° Left" tag="430" id="Arr-Nv-I430"/>
+                                                                <menuItem title="Turn 90° Right" tag="431" id="Arr-Nv-I431"/>
+                                                                <menuItem title="Turn Around" tag="432" id="Arr-Nv-I432"/>
+                                                                <menuItem title="Flip Upside Down" tag="433" id="Arr-Nv-I433"/>
+                                                                <menuItem isSeparatorItem="YES" id="Arr-Nv-Sp2"/>
+                                                                <menuItem title="Front" tag="418" id="Arr-Nv-I418"/>
+                                                                <menuItem title="Back" tag="419" id="Arr-Nv-I419"/>
+                                                                <menuItem title="Left" tag="420" id="Arr-Nv-I420"/>
+                                                                <menuItem title="Right" tag="421" id="Arr-Nv-I421"/>
+                                                                <menuItem title="Top" tag="422" id="Arr-Nv-I422"/>
+                                                                <menuItem title="Bottom" tag="423" id="Arr-Nv-I423"/>
+                                                                </items>
+                                                            </menu>
+                                                        </popUpButtonCell>
+                                                        <connections>
+                                                            <action selector="arrangeNamedViewChosen:" target="-2" id="Arr-Nv-Ac1"/>
+                                                        </connections>
+                                                    </popUpButton>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Fd-RtX">
+                                                        <rect key="frame" x="64" y="5" width="44" height="19"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">ROTSTEP X: the step's turn about X, in degrees, written as REL</string>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" id="Arr-Fc-RtX">
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                        <connections>
+                                                            <action selector="arrangeFieldChanged:" target="-2" id="Arr-Fa-RtX"/>
+                                                        </connections>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Fd-RtY">
+                                                        <rect key="frame" x="110" y="5" width="44" height="19"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">ROTSTEP Y: the step's turn about Y, in degrees, written as REL</string>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" id="Arr-Fc-RtY">
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                        <connections>
+                                                            <action selector="arrangeFieldChanged:" target="-2" id="Arr-Fa-RtY"/>
+                                                        </connections>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Fd-RtZ">
+                                                        <rect key="frame" x="156" y="5" width="44" height="19"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">ROTSTEP Z: the step's turn about Z, in degrees, written as REL</string>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" id="Arr-Fc-RtZ">
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                        <connections>
+                                                            <action selector="arrangeFieldChanged:" target="-2" id="Arr-Fa-RtZ"/>
+                                                        </connections>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Lb-Siz">
+                                                        <rect key="frame" x="202" y="7" width="34" height="14"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Size:" id="Arr-Lc-Siz">
+                                                            <font key="font" metaFont="smallSystemBold"/>
+                                                            <color key="textColor" red="0.40000001000000002" green="0.40000001000000002" blue="0.40000001000000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                            <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Fd-Scl">
+                                                        <rect key="frame" x="238" y="5" width="42" height="19"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">ASSEM MODEL_SCALE: the size the assembly is printed at, times life size</string>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" id="Arr-Fc-Scl">
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                        <connections>
+                                                            <action selector="arrangeFieldChanged:" target="-2" id="Arr-Fa-Scl"/>
+                                                        </connections>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Lb-Off">
+                                                        <rect key="frame" x="282" y="7" width="46" height="14"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Offset:" id="Arr-Lc-Off">
+                                                            <font key="font" metaFont="smallSystemBold"/>
+                                                            <color key="textColor" red="0.40000001000000002" green="0.40000001000000002" blue="0.40000001000000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                            <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Fd-OfX">
+                                                        <rect key="frame" x="330" y="5" width="42" height="19"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">How far right of where it is centered the step is, in page inches</string>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" id="Arr-Fc-OfX">
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                        <connections>
+                                                            <action selector="arrangeFieldChanged:" target="-2" id="Arr-Fa-OfX"/>
+                                                        </connections>
+                                                    </textField>
+                                                    <textField focusRingType="none" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="Arr-Fd-OfY">
+                                                        <rect key="frame" x="374" y="5" width="42" height="19"/>
+                                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                        <string key="toolTip">How far down from where it is centered the step is, in page inches</string>
+                                                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" id="Arr-Fc-OfY">
+                                                            <font key="font" metaFont="smallSystem"/>
+                                                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                        </textFieldCell>
+                                                        <connections>
+                                                            <action selector="arrangeFieldChanged:" target="-2" id="Arr-Fa-OfY"/>
+                                                        </connections>
+                                                    </textField>
+                                                </subviews>
+                                            </customView>
+                                            <popUpButton hidden="YES" verticalHuggingPriority="750" id="Arr-Rs-Pop">
+                                                <rect key="frame" x="630" y="1.5" width="62" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Put back what the step has without its own lines, or line the step up</string>
+                                                <popUpButtonCell key="cell" type="roundRect" title="Reset" bezelStyle="roundedRect" alignment="left" controlSize="small" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" pullsDown="YES" id="Arr-Rs-Cel">
+                                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                    <font key="font" metaFont="smallSystem"/>
+                                                    <menu key="menu" title="Reset" autoenablesItems="NO" id="Arr-Rs-Mnu">
+                                                        <items>
+                                                            <menuItem title="Reset" hidden="YES" id="Arr-Rs-It0"/>
+                                                            <menuItem title="Angle" tag="414" id="Arr-Rs-It1"/>
+                                                            <menuItem title="Size" tag="415" id="Arr-Rs-It2"/>
+                                                            <menuItem title="Position" tag="416" id="Arr-Rs-It3"/>
+                                                            <menuItem isSeparatorItem="YES" id="Arr-Rs-Sp1"/>
+                                                            <menuItem title="All" tag="417" id="Arr-Rs-It4"/>
+                                                            <menuItem isSeparatorItem="YES" id="Arr-Rs-Sp2"/>
+                                                            <menuItem title="Align with Previous Step" tag="425" id="Arr-Rs-It5"/>
+                                                            <menuItem title="Center on Page" tag="426" id="Arr-Rs-It6"/>
+                                                        </items>
+                                                        <connections>
+                                                            <outlet property="delegate" destination="-2" id="Arr-Rs-Dlg"/>
+                                                        </connections>
+                                                    </menu>
+                                                </popUpButtonCell>
+                                                <connections>
+                                                    <action selector="arrangeResetChosen:" target="-2" id="Arr-Rs-Ac1"/>
+                                                </connections>
+                                            </popUpButton>
+                                            <button hidden="YES" verticalHuggingPriority="750" id="Arr-Pv-Bx1">
+                                                <rect key="frame" x="600" y="4" width="102" height="18"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Show the previous step faintly where it sat on its page. Hold P to see it for a moment, or press P to switch it on or off.</string>
+                                                <buttonCell key="cell" type="check" title="Previous Step" bezelStyle="regularSquare" imagePosition="left" controlSize="small" inset="2" id="Arr-Pv-Cl1">
                                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                     <font key="font" metaFont="smallSystem"/>
                                                 </buttonCell>
                                                 <connections>
-                                                    <action selector="lpubPageCheckboxClicked:" target="-2" id="LPg-Ck-Ac1"/>
+                                                    <action selector="arrangePreviousStepClicked:" target="-2" id="Arr-Pv-Ac1"/>
                                                 </connections>
                                             </button>
+                                            <button hidden="YES" verticalHuggingPriority="750" id="Arr-Cn-Btn">
+                                                <rect key="frame" x="716" y="1.5" width="56" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Esc: drop what was arranged</string>
+                                                <buttonCell key="cell" type="roundRect" title="Cancel" bezelStyle="roundedRect" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Arr-Cn-Cel">
+                                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                    <font key="font" metaFont="smallSystem"/>
+                                                </buttonCell>
+                                                <connections>
+                                                    <action selector="arrangeCancelClicked:" target="-2" id="Arr-Cn-Act"/>
+                                                </connections>
+                                            </button>
+                                            <button hidden="YES" verticalHuggingPriority="750" id="Arr-Dn-Btn">
+                                                <rect key="frame" x="778" y="1.5" width="50" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Return: write what was arranged into the file, for the steps the scope pop-up chooses</string>
+                                                <buttonCell key="cell" type="roundRect" title="Done" bezelStyle="roundedRect" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Arr-Dn-Cel">
+                                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                    <font key="font" metaFont="smallSystem"/>
+                                                </buttonCell>
+                                                <connections>
+                                                    <action selector="arrangeDoneClicked:" target="-2" id="Arr-Dn-Act"/>
+                                                </connections>
+                                            </button>
+                                            <popUpButton hidden="YES" verticalHuggingPriority="750" id="Arr-Sc-Pop">
+                                                <rect key="frame" x="695" y="1.5" width="132" height="22"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                <string key="toolTip">Which steps Done writes the arranged angle, size and offset for, and what Reset puts back</string>
+                                                <popUpButtonCell key="cell" type="roundRect" title="This Step" bezelStyle="roundedRect" alignment="left" controlSize="small" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" tag="411" imageScaling="proportionallyDown" inset="2" selectedItem="Arr-Sc-It1" id="Arr-Sc-Cel">
+                                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                    <font key="font" metaFont="smallSystem"/>
+                                                    <menu key="menu" title="Scope" autoenablesItems="NO" id="Arr-Sc-Mnu">
+                                                        <items>
+                                                            <menuItem title="This Step" state="on" tag="411" id="Arr-Sc-It1"/>
+                                                            <menuItem title="This and Later Steps" tag="412" id="Arr-Sc-It2"/>
+                                                            <menuItem title="Whole Model" tag="413" id="Arr-Sc-It3"/>
+                                                        </items>
+                                                        <connections>
+                                                            <outlet property="delegate" destination="-2" id="Arr-Sc-Dlg"/>
+                                                        </connections>
+                                                    </menu>
+                                                </popUpButtonCell>
+                                                <connections>
+                                                    <action selector="arrangeScopeChosen:" target="-2" id="Arr-Sc-Ac1"/>
+                                                </connections>
+                                            </popUpButton>
                                         </subviews>
                                     </customView>
                                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="964" customClass="ViewportArranger">
@@ -866,17 +1133,17 @@
                     </textFieldCell>
                 </textField>
                 <customView id="969">
-                    <rect key="frame" x="20" y="42" width="112" height="32"/>
+                    <rect key="frame" x="20" y="42" width="124" height="32"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                     <subviews>
                         <segmentedControl verticalHuggingPriority="750" id="972">
-                            <rect key="frame" x="0.0" y="3" width="112" height="25"/>
+                            <rect key="frame" x="0.0" y="3" width="124" height="25"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                             <segmentedCell key="cell" borderStyle="border" alignment="left" style="texturedRounded" trackingMode="momentary" id="973">
                                 <font key="font" metaFont="system"/>
                                 <segments>
                                     <segment image="ZoomOut" width="30"/>
-                                    <segment width="44" enabled="NO"/>
+                                    <segment width="56" enabled="NO"/>
                                     <segment image="ZoomIn" width="30" tag="1">
                                         <nil key="label"/>
                                     </segment>
@@ -887,15 +1154,15 @@
                             </connections>
                         </segmentedControl>
                         <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" id="206">
-                            <rect key="frame" x="34" y="6" width="44" height="20"/>
+                            <rect key="frame" x="34" y="6" width="56" height="20"/>
                             <autoresizingMask key="autoresizingMask"/>
-                            <textFieldCell key="cell" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" focusRingType="none" alignment="center" title="800%" drawsBackground="YES" id="862">
+                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" focusRingType="none" alignment="center" title="800%" drawsBackground="YES" id="862">
                                 <numberFormatter key="formatter" formatterBehavior="10_0" positiveFormat="0%" negativeFormat="-0%" localizesFormat="NO" hasThousandSeparators="NO" thousandSeparator="," id="207">
                                     <attributedString key="attributedStringForZero">
                                         <fragment content="0%"/>
                                     </attributedString>
                                     <decimal key="minimum" value="1"/>
-                                    <decimal key="maximum" value="3200"/>
+                                    <decimal key="maximum" value="10000"/>
                                 </numberFormatter>
                                 <font key="font" metaFont="system"/>
                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -903,7 +1170,7 @@
                             </textFieldCell>
                             <connections>
                                 <action selector="zoomScaleChanged:" target="132" id="210"/>
-                                <binding destination="300" name="value" keyPath="selection.mostRecentLDrawView.zoomPercentage" id="302"/>
+                                <binding destination="300" name="value" keyPath="selection.zoomPercentage" id="302"/>
                             </connections>
                         </textField>
                     </subviews>

@@ -61,7 +61,26 @@
 	// Scope bar
 	__weak IBOutlet NSButton					*viewAllButton;
 	__weak IBOutlet NSButton					*viewStepsButton;
-	__weak IBOutlet NSButton					*lpubPageCheckbox;
+	__weak IBOutlet NSTextField					*viewLabel;
+	__weak IBOutlet NSTextField					*arrangeScopeLabel;
+	__weak IBOutlet NSSwitch					*lpubPageSwitch;
+	__weak IBOutlet NSTextField					*lpubPageLabel;
+	__weak IBOutlet NSButton					*arrangeButton;
+	__weak IBOutlet NSPopUpButton				*arrangeScopePopUp;
+	__weak IBOutlet NSPopUpButton				*arrangeResetPopUp;
+	__weak IBOutlet NSView						*arrangeFieldsContainer;
+	__weak IBOutlet NSPopUpButton				*arrangeNamedViewPopUp;
+	__weak IBOutlet NSTextField					*arrangeSizeLabel;
+	__weak IBOutlet NSTextField					*arrangeOffsetLabel;
+	__weak IBOutlet NSButton					*arrangePreviousStepCheckbox;
+	__weak IBOutlet NSButton					*arrangeCancelButton;
+	__weak IBOutlet NSButton					*arrangeDoneButton;
+	__weak IBOutlet NSTextField					*arrangeRotationXField;
+	__weak IBOutlet NSTextField					*arrangeRotationYField;
+	__weak IBOutlet NSTextField					*arrangeRotationZField;
+	__weak IBOutlet NSTextField					*arrangeScaleField;
+	__weak IBOutlet NSTextField					*arrangeOffsetXField;
+	__weak IBOutlet NSTextField					*arrangeOffsetYField;
 	__weak IBOutlet NSPopUpButton				*submodelPopUpMenu;
 	__weak IBOutlet NSView						*scopeStepControlsContainer;
 	__weak IBOutlet NSTextField					*stepField;
@@ -98,6 +117,10 @@
 		LDrawGridOrientationMode gridOrientation;
 		NSArray				*markedSelection;		// if we are mid-marquee selection, this is an array of the previously selected directives before drag started
 		BOOL				usedLPubScale;			// last seen state of the LPub3D page preference, to catch it being switched on
+		Tuple3				stepViewingAngle;		// the angle the step on display was last turned to
+		NSInteger			arrangeScope;			// the steps arranging writes for, an LDrawStepAssemblyScope
+		NSUndoManager		*arrangeUndoManager;	// the window's while arranging: its one action cancels
+		CGFloat				arrangeBarWidth;		// the scope bar's width the arranging controls fit
 }
 
 // Accessors
@@ -124,6 +147,7 @@
 - (void) selectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL)shouldExtend;
 - (void) selectDirectives:(NSArray *)directivesToSelect;
 - (void) setSelectionToHidden:(BOOL)hideFlag;
+- (CGFloat) zoomPercentage;
 - (void) setZoomPercentage:(CGFloat)newPercentage;
 - (void) showStepOfSelection;
 
@@ -141,7 +165,15 @@
 // - Scope bar
 - (IBAction) viewAll:(id)sender;
 - (IBAction) viewSteps:(id)sender;
-- (IBAction) lpubPageCheckboxClicked:(id)sender;
+- (IBAction) lpubPageSwitchClicked:(id)sender;
+- (IBAction) arrangeAssembly:(id)sender;
+- (IBAction) arrangeDoneClicked:(id)sender;
+- (IBAction) arrangeCancelClicked:(id)sender;
+- (IBAction) arrangeScopeChosen:(id)sender;
+- (IBAction) arrangeResetChosen:(id)sender;
+- (IBAction) arrangeFieldChanged:(id)sender;
+- (IBAction) arrangePreviousStepClicked:(id)sender;
+- (IBAction) arrangeNamedViewChosen:(id)sender;
 - (IBAction) stepFieldChanged:(id)sender;
 - (IBAction) stepNavigatorClicked:(id)sender;
 

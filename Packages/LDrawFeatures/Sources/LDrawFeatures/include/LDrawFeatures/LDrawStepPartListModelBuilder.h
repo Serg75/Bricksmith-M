@@ -50,6 +50,11 @@ NS_ASSUME_NONNULL_BEGIN
 			  submodelsFromFile:(nullable LDrawFile *)file
 	NS_SWIFT_NAME(model(forLayout:viewTransform:submodelsFrom:));
 
+/// What that model draws, and the camera it needs, as bytes. Two layouts with
+/// the same key draw the same icons, so a host may keep the model it has.
++ (NSData *) iconKeyForLayout:(LDrawStepPartListLayout *)layout viewTransform:(Matrix4)viewTransform
+	NS_SWIFT_NAME(iconKey(forLayout:viewTransform:));
+
 /// A model of what `model` has built up to and including one of its steps,
 /// turned by `viewTransform` for a camera that is not rotated. Its parts in the
 /// main color take `color`. `model` itself is not changed.

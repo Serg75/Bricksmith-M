@@ -308,10 +308,10 @@ static const double NEW_POINTER_LOCATION = 0.5;
 ///
 /// @abstract	The text of an arrow to the middle of each placement.
 ///
-/// @discussion	The tips are measured on the step's assembly as its own angle
-/// 			shows it, so they do not depend on how a view is turned. LPub3D
-/// 			draws the assembly a little differently, so they are close, not
-/// 			exact.
+/// @discussion	The tips are measured on the step's assembly at the angle
+/// 			LPub3D prints it at, so they do not depend on how a view is
+/// 			turned. LPub3D draws the assembly a little differently, so they
+/// 			are close, not exact.
 ///
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *) pointerTextsForPlacements:(NSArray<LDrawPart *> *)placements
@@ -320,7 +320,8 @@ static const double NEW_POINTER_LOCATION = 0.5;
 	NSMutableArray<NSString *>	*texts		= [NSMutableArray arrayWithCapacity:placements.count];
 	NSData						*outline	= [LDrawStepPartListPolicy assemblyOutlinePointsInModel:model];
 	NSUInteger					 stepIndex	= [model maximumStepIndexForStepDisplay];
-	Tuple3						 angle		= [model rotationAngleForStepAtIndex:stepIndex];
+	Tuple3						 angle		= [LDrawStepPartListPolicy assemblyViewingAngleForStepAtIndex:stepIndex
+																								  inModel:model];
 	Matrix4						 view		= [LDrawStepPartListLayout viewTransformForAngle:angle];
 
 	for (LDrawPart *part in placements) {

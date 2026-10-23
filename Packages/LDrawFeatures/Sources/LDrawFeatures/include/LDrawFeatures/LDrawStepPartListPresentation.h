@@ -10,6 +10,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/LPubColor.h>
+#import <LDrawCore/LPubPlacement.h>
 #import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/MatrixMath.h>
 
@@ -24,6 +25,23 @@
 @class LDrawStepPartListLayout;
 
 NS_ASSUME_NONNULL_BEGIN
+
+//------------------------------------------------------------------------------
+///
+/// @enum       LDrawStepArrangeHandle
+///
+/// @abstract   A corner handle of the frame drawn around the step while it is
+///             arranged. Dragging one scales the assembly.
+///
+//------------------------------------------------------------------------------
+typedef NS_ENUM(NSInteger, LDrawStepArrangeHandle) {
+	LDrawStepArrangeHandleNone			= 0,
+	LDrawStepArrangeHandleTopLeft		= 1,
+	LDrawStepArrangeHandleTopRight		= 2,
+	LDrawStepArrangeHandleBottomRight	= 3,
+	LDrawStepArrangeHandleBottomLeft	= 4
+};
+
 
 //------------------------------------------------------------------------------
 ///
@@ -55,6 +73,10 @@ typedef struct LDrawStepPartListHostState {
 	BOOL		hasCalloutPreview;
 	NSUInteger	calloutPreviewBox;
 	Point2		calloutPreviewPoint;
+	/// A drag of the parts list in progress: where its frame's top left
+	/// corner is held, in the view.
+	BOOL		hasListPreview;
+	Point2		listPreviewOrigin;
 } LDrawStepPartListHostState;
 
 
@@ -102,6 +124,35 @@ typedef struct LDrawStepPartListHostState {
 /// is to be centered. NO off the page, and with no assembly measured.
 @property (nonatomic, readonly) BOOL hasStepCenter;
 @property (nonatomic, readonly) Point2 stepCenterInView;
+
+/// That box around the assembly and what is centered with it, in the view. An
+/// empty box when there is no step center.
+@property (nonatomic, readonly) Box2 stepRect;
+
+/// The point of that box that stays put on the page as the assembly grows: its
+/// middle, or the corner or side its `ASSEM PLACEMENT` places it by.
+@property (nonatomic, readonly) Point2 stepAnchorInView;
+
+/// Where the dashed line runs while the step is arranged: that box, a few
+/// points larger all round. `ZeroBox2` when there is no step center.
+@property (nonatomic, readonly) Box2 arrangeFrameRect;
+
+/// The square drawn for a handle on a corner of `arrangeFrameRect`. Only the
+/// corners that move as the step grows have one: `ZeroBox2` for the others.
+- (Box2) rectOfArrangeHandle:(LDrawStepArrangeHandle)handle NS_SWIFT_NAME(rect(ofArrangeHandle:));
+
+/// The handle under a point of the view, taken a little wider than drawn.
+- (LDrawStepArrangeHandle) arrangeHandleAtPoint:(Point2)point NS_SWIFT_NAME(arrangeHandle(at:));
+
+/// How far in from the page's edges the step is kept, in page inches: the
+/// file's `PAGE MARGINS`, else LPub3D's 0.05.
+- (Size2) pageMargins;
+
+/// Where the list's frame goes, at its size, at one of the page's nine places
+/// with no offset: its top left corner in the view, kept as far in from the
+/// page's edges as LPub3D keeps it. Zero off the page, or with no list.
+- (Point2) listOriginAtPagePosition:(LPubPlacementPosition)position
+	NS_SWIFT_NAME(listOrigin(atPagePosition:));
 
 /// The text of the PLACEMENT lines that say where the step's assembly and
 /// callouts go on the page, with the way each callout's steps run, which of
@@ -164,10 +215,15 @@ typedef struct LDrawStepPartListHostState {
 - (nullable LDrawStepPartListEntry *) entryAtPoint:(Point2)point NS_SWIFT_NAME(entry(at:));
 
 /// The parts placed as the layout says, for the icon view to draw, and the
-/// camera that view needs to show them where the layout put them.
+/// camera that view needs to show them where the layout put them. The model
+/// is built the first time it is asked for.
 @property (nonatomic, readonly, nullable) LDrawModel *iconModel;
 @property (nonatomic, readonly) double iconZoomPercentage;
 @property (nonatomic, readonly) Point3 iconCenter;
+
+/// What the icons show, as bytes. A host already showing icons of the same
+/// key can keep them and never ask for the model. Nil with no list.
+@property (nonatomic, readonly, copy, nullable) NSData *iconKey;
 
 /// One box per callout of the step, stacked under the frame. Empty when the
 /// step has none.
@@ -236,6 +292,10 @@ typedef struct LDrawStepPartListHostState {
 /// Where an axis's pin is drawn, on the edge that moves.
 - (Box2) pinRectForAxis:(LPubPliAxis)axis NS_SWIFT_NAME(pinRect(forAxis:));
 
+/// Where the pin of the step's own placement is drawn, on the corner that
+/// stays put as the frame grows.
+@property (nonatomic, readonly) Box2 placementPinRect;
+
 /// The most room the frame may take on each axis, in points: the page less
 /// the larger of its margins and the list's, or the policy's share of the view
 /// off the page. Packing and a resize drag both stop here.
@@ -249,6 +309,10 @@ typedef struct LDrawStepPartListHostState {
 /// drag would leave it.
 @property (nonatomic, readonly) BOOL widthPinned;
 @property (nonatomic, readonly) BOOL heightPinned;
+
+/// Whether the corner shows a pin: the step places the list with its own
+/// line. NO while the list is dragged.
+@property (nonatomic, readonly) BOOL placementPinned;
 
 /// The size the step has on this axis without its own line, which a drag
 /// snaps to. 0 for none, and always 0 off the page.

@@ -15,6 +15,7 @@ import Foundation
 import CoreGraphics
 import LDrawCore
 import LDrawFeatures
+import LDrawStepEditing
 import LDrawStepRendering
 
 /// A camera that draws the model flat: a model point lands at its x and y
@@ -31,6 +32,9 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
     /// The box it gives for the assembly, around where the origin is drawn.
     /// The fixtures' models place nothing a camera could measure.
     var assemblySize = CGSize.zero
+
+    /// How far that box is drawn off the origin, as when a part of it moves.
+    var assemblyShift = CGSize.zero
 
     /// How much bigger than the zoom it draws the model, as perspective draws
     /// a model that is nearer the camera.
@@ -57,6 +61,12 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
 
     func viewingAngle() -> Tuple3 { angle }
 
+    /// Takes the turn about the y axis, the only one this camera draws.
+    func setViewingAngle(_ newAngle: Tuple3) {
+        angle = newAngle
+        turn = newAngle.y * .pi / 180
+    }
+
     /// How far to the right of the origin a model point is drawn, in LDU.
     private func across(_ point: Point3) -> Double {
         point.x * cos(turn) + point.z * sin(turn)
@@ -80,7 +90,8 @@ private final class FlatCamera: NSObject, LDrawStepOverlayCamera {
 
         guard assemblySize != .zero else { return .zero }
 
-        return CGRect(x: origin.x - assemblySize.width / 2, y: origin.y - assemblySize.height / 2,
+        return CGRect(x: origin.x - assemblySize.width / 2 + assemblyShift.width,
+                      y: origin.y - assemblySize.height / 2 + assemblyShift.height,
                       width: assemblySize.width, height: assemblySize.height)
     }
 
@@ -739,6 +750,765 @@ extension StepOverlayTests {
             #expect(presentation.calloutBoxes.count == 1)
             #expect(shown.presenter.calloutArrows.count == 1)
             #expect(shown.presenter.changeForCameraMove() == .arrows)
+
+            LDrawStepPartList.setUsesLPubScale(true)
+        }
+
+        // MARK: - Arranging
+        //
+        // The fixture's page is 8.5 by 11 inches, its step has no MODEL_SCALE,
+        // and the camera draws one LDU at a point, so an inch of the page is
+        // 64 points when arranging starts.
+
+        /// A step laid out on its page, with an assembly the camera measures,
+        /// being arranged.
+        private func arranged() throws
+            -> (fixture: CalloutFixture, camera: FlatCamera, presenter: LDrawStepOverlayPresenter) {
+            let shown = shown(assembly: CGSize(width: 200, height: 100))
+
+            shown.presenter.reload()
+            try #require(shown.presenter.beginArranging())
+            shown.presenter.reload()
+
+            return shown
+        }
+
+        private func isSameBox(_ a: Box2, _ b: Box2) -> Bool {
+            isClose(a.origin, b.origin) && abs(a.size.width - b.size.width) < 0.01
+                && abs(a.size.height - b.size.height) < 0.01
+        }
+
+        @Test("Arranging holds the page where it is drawn through a pan, a zoom and a turn")
+        func arrangingHoldsThePage() throws {
+            let shown = try arranged()
+            let page = try #require(shown.presenter.presentation).pageRect
+
+            shown.camera.origin.x += 40
+            shown.camera.origin.y += 15
+            shown.presenter.reload()
+            #expect(isSameBox(try #require(shown.presenter.presentation).pageRect, page))
+
+            shown.camera.zoom = 150
+            shown.presenter.reload()
+            #expect(isSameBox(try #require(shown.presenter.presentation).pageRect, page))
+
+            shown.camera.turn(toDegrees: 30)
+            shown.presenter.reload()
+            #expect(isSameBox(try #require(shown.presenter.presentation).pageRect, page))
+        }
+
+        @Test("A pan moves the step on the page, by that share of the page")
+        func arrangingPanGivesAnOffset() throws {
+            let shown = try arranged()
+
+            #expect(isClose(shown.presenter.arrangedOffset, Point2(x: 0, y: 0)))
+            #expect(abs(shown.presenter.arrangedScale - 1) < 0.000001)
+
+            shown.camera.origin.x += 85
+            shown.camera.origin.y -= 22
+            shown.presenter.reload()
+
+            #expect(abs(shown.presenter.arrangedOffset.x - 85 / (8.5 * 64)) < 0.00001)
+            #expect(abs(shown.presenter.arrangedOffset.y + 22 / (11 * 64)) < 0.00001)
+            #expect(abs(shown.presenter.arrangedScale - 1) < 0.000001)
+        }
+
+        @Test("A zoom changes the assembly's scale, and the step keeps its offset")
+        func arrangingZoomGivesAScale() throws {
+            let shown = try arranged()
+
+            shown.camera.origin.x += 85
+            shown.presenter.reload()
+            let offset = shown.presenter.arrangedOffset
+
+            shown.camera.zoom = 150
+            shown.presenter.reload()
+
+            #expect(abs(shown.presenter.arrangedScale - 1.5) < 0.000001)
+            #expect(isClose(shown.presenter.arrangedOffset, offset))
+
+            // The page keeps its inch, so the list and the boxes keep their size.
+            #expect(abs(try #require(shown.presenter.presentation).pointsPerPageInch - 64) < 0.0001)
+        }
+
+        @Test("A turn keeps the scale and the offset, and zooms to keep the model's size beside the anchor")
+        func arrangingTurnKeepsScaleAndOffset() throws {
+            let shown = try arranged()
+
+            shown.camera.origin.x += 85
+            shown.presenter.reload()
+            let offset = shown.presenter.arrangedOffset
+
+            // Seen from here the anchor is nearer, so the model is drawn bigger.
+            shown.camera.nearness = 1.25
+            shown.camera.turn(toDegrees: 30)
+            shown.presenter.reload()
+
+            #expect(abs(shown.presenter.arrangedScale - 1) < 0.000001)
+            #expect(abs(shown.camera.zoom - 80) < 0.0001)
+            #expect(isClose(shown.presenter.arrangedOffset, offset))
+            #expect(shown.presenter.arrangedViewingAngle.y == 30)
+        }
+
+        @Test("Moving the arranged step by inches moves the model under the page")
+        func arrangingMoveByInches() throws {
+            let shown = try arranged()
+            let origin = shown.camera.origin
+
+            shown.presenter.moveArrangedStep(byInches: Vector2(x: 0.5, y: -0.25))
+            shown.presenter.reload()
+
+            #expect(abs(shown.presenter.arrangedOffset.x - 0.5 / 8.5) < 0.00001)
+            #expect(abs(shown.presenter.arrangedOffset.y + 0.25 / 11) < 0.00001)
+            #expect(abs(shown.camera.origin.x - origin.x - 32) < 0.01)
+            #expect(abs(shown.camera.origin.y - origin.y + 16) < 0.01)
+        }
+
+        @Test("A scale or an offset set while arranging moves the model to it, under the page")
+        func arrangingSetScaleAndOffset() throws {
+            let shown = try arranged()
+            let page = try #require(shown.presenter.presentation).pageRect
+
+            shown.camera.origin.x += 85
+            shown.presenter.reload()
+            let offset = shown.presenter.arrangedOffset
+
+            // The model is zoomed to the scale and keeps its place.
+            shown.presenter.arrangedScale = 2
+            shown.presenter.reload()
+
+            #expect(abs(shown.camera.zoom - 200) < 0.0001)
+            #expect(isClose(shown.presenter.arrangedOffset, offset))
+            #expect(isSameBox(try #require(shown.presenter.presentation).pageRect, page))
+
+            // Back to the middle of the page.
+            let origin = shown.camera.origin
+            shown.presenter.arrangedOffset = Point2(x: 0, y: 0)
+            shown.presenter.reload()
+
+            #expect(isClose(shown.presenter.arrangedOffset, Point2(x: 0, y: 0)))
+            #expect(abs(shown.camera.origin.x - origin.x + 85) < 0.01)
+        }
+
+        @Test("A pan snaps the step's middle to the page's middle, with a guide, and a pan on gets past it")
+        func arrangingPanSnapsToTheMiddle() throws {
+            let shown = try arranged()
+            let origin = shown.camera.origin
+
+            // Centered as it starts: both middle lines show.
+            #expect(shown.presenter.arrangedGuides.count == 2 * MemoryLayout<Box2>.size)
+
+            shown.camera.origin.x += 40
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedOffset.x - 40 / (8.5 * 64)) < 0.00001)
+            #expect(shown.presenter.arrangedGuides.count == MemoryLayout<Box2>.size, "Only the line across")
+
+            // Back to 3 points from the middle: it snaps there.
+            shown.camera.origin.x -= 37
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedOffset.x) < 0.00001)
+            #expect(abs(shown.camera.origin.x - origin.x) < 0.01)
+
+            // A few points more stays snapped, and then it gets past.
+            shown.camera.origin.x += 2
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedOffset.x) < 0.00001)
+
+            shown.camera.origin.x += 5
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedOffset.x - 10 / (8.5 * 64)) < 0.00001)
+            #expect(abs(shown.camera.origin.x - origin.x - 10) < 0.01)
+        }
+
+        @Test("A pan snaps the step's edge to the page's margin")
+        func arrangingPanSnapsToTheMargin() throws {
+            let shown = try arranged()
+            let presentation = try #require(shown.presenter.presentation)
+            let margin = presentation.pageRect.origin.x + presentation.pageMargins().width * 64
+            let left = presentation.stepRect.origin.x
+
+            // To 4 points right of the margin.
+            shown.camera.origin.x -= left - margin - 4
+            shown.presenter.reload()
+
+            let snapped = try #require(shown.presenter.presentation).stepRect
+            #expect(abs(snapped.origin.x - margin) < 0.01)
+        }
+
+        @Test("A zoom snaps to a step of 0.05")
+        func arrangingZoomSnaps() throws {
+            let shown = try arranged()
+
+            shown.camera.zoom = 100.6
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedScale - 1) < 0.000001)
+            #expect(abs(shown.camera.zoom - 100) < 0.0001)
+
+            // Zoomed on from there, the scale goes on from where the pinch
+            // was, 1.006, and the model jumps there off the snap.
+            shown.camera.zoom = 112.0
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedScale - 1.006 * 1.12) < 0.000001)
+            #expect(abs(shown.camera.zoom - 100.6 * 1.12) < 0.0001)
+
+            shown.camera.zoom = 114.5
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedScale - 1.15) < 0.000001)
+            #expect(abs(shown.camera.zoom - 115) < 0.0001)
+        }
+
+        @Test("With Shift a turn snaps to steps of 15 degrees")
+        func arrangingTurnSnapsToSteps() throws {
+            let shown = try arranged()
+
+            shown.presenter.snapsTurnsToSteps = true
+            shown.camera.turn(toDegrees: 31)
+            shown.presenter.reload()
+
+            #expect(abs(abs(shown.camera.angle.y) - 30) < 0.001)
+
+            // Without Shift the turn goes on from where it was, 31, so a
+            // further 7 degrees comes to 38.
+            shown.presenter.snapsTurnsToSteps = false
+            shown.camera.turn(toDegrees: 37)
+            shown.presenter.reload()
+
+            #expect(abs(abs(shown.camera.angle.y) - 38) < 0.001)
+        }
+
+        @Test("An angle the host sets is kept as it is, with Shift too")
+        func arrangingExactTurnDoesNotSnap() throws {
+            let shown = try arranged()
+
+            shown.presenter.snapsTurnsToSteps = true
+            shown.presenter.turnArrangedStep(toViewingAngle: Tuple3(x: 0, y: 31, z: 0))
+            shown.presenter.reload()
+
+            #expect(abs(shown.camera.angle.y - 31) < 0.001)
+
+            // A turn by a gesture after it snaps again.
+            shown.camera.turn(toDegrees: 44)
+            shown.presenter.reload()
+
+            #expect(abs(abs(shown.camera.angle.y) - 45) < 0.001)
+        }
+
+        @Test("Only a pan snaps the step: its box moving without one leaves the model where it is")
+        func arrangingSnapsOnlyOnAPan() throws {
+            let shown = try arranged()
+            let origin = shown.camera.origin
+
+            // 3 points off the page's middle, where a pan would snap back.
+            shown.camera.assemblyShift.width = 3
+            shown.presenter.reload()
+
+            #expect(abs(shown.camera.origin.x - origin.x) < 0.01)
+            #expect(abs(shown.presenter.arrangedOffset.x - 3 / (8.5 * 64)) < 0.00001)
+
+            // A pan from there snaps, from the offset the box was moved to.
+            shown.camera.origin.x += 1
+            shown.presenter.reload()
+
+            #expect(abs(shown.presenter.arrangedOffset.x) < 0.00001)
+            #expect(abs(shown.camera.origin.x - origin.x + 3) < 0.01)
+        }
+
+        @Test("Once arranging ends the step goes back where its lines put it, with the page held")
+        func arrangingEnds() throws {
+            let shown = try arranged()
+            let page = try #require(shown.presenter.presentation).pageRect
+
+            shown.camera.origin.x += 85
+            shown.presenter.reload()
+            shown.presenter.endArranging()
+            shown.presenter.reload()
+
+            let presentation = try #require(shown.presenter.presentation)
+
+            #expect(shown.presenter.isArranging == false)
+            #expect(isSameBox(presentation.pageRect, page))
+            #expect(isClose(presentation.stepCenterInView, middle(presentation.pageRect)))
+        }
+
+        @Test("Written and laid out from the file, the arranged step stays where it was arranged")
+        func arrangedStepWrittenStaysPut() throws {
+            let shown = try arranged()
+
+            shown.camera.origin.x += 85
+            shown.camera.origin.y -= 22
+            shown.presenter.reload()
+            shown.camera.zoom = 150
+            shown.presenter.reload()
+
+            let presenter = shown.presenter
+            let model = shown.fixture.main
+            let page = try #require(presenter.presentation).pageRect
+            let origin = shown.camera.origin
+            let edit = LDrawStepAssemblyEdit.edit(combining: [
+                LDrawStepAssemblyEdit.edit(settingScale: presenter.arrangedScale, scope: .step, inModel: model),
+                LDrawStepAssemblyEdit.edit(settingOffset: presenter.arrangedOffset, scope: .step, inModel: model),
+            ])
+
+            #expect(edit.apply(host: ApplyingHost()))
+            #expect(presenter.change(forChangedObject: shown.fixture.step) != [])
+
+            presenter.endArranging()
+            presenter.reload()
+
+            let presentation = try #require(presenter.presentation)
+
+            #expect(isSameBox(presentation.pageRect, page))
+            #expect(abs(shown.camera.origin.x - origin.x) < 0.05 && abs(shown.camera.origin.y - origin.y) < 0.05)
+        }
+
+        @Test("While arranging, a dashed line is drawn just outside the step, and a line just outside the page")
+        func arrangingDrawsTheFrame() throws {
+            let shown = try arranged()
+            let presentation = try #require(shown.presenter.presentation)
+            let step = presentation.stepRect
+            let size = Size2(width: 1000, height: 800)
+
+            #expect(abs(step.size.width - 200) < 0.01 && abs(step.size.height - 100) < 0.01)
+
+            let renderer = LDrawStepOverlayRenderer()
+            renderer.presentation = presentation
+
+            let plain = Canvas(width: 1000, height: 800)
+            renderer.drawCallouts(in: plain.context, viewSize: size)
+            #expect(plain.inkBounds == nil, "With no color there is no frame")
+
+            renderer.arrangeFrameColor = CGColor(srgbRed: 0, green: 0.4, blue: 1, alpha: 1)
+
+            let framed = Canvas(width: 1000, height: 800)
+            renderer.drawCallouts(in: framed.context, viewSize: size)
+
+            // The frame's top line, 6 points out, has a dash 20 points along,
+            // past the corner's handle.
+            let left = Int(step.origin.x) - 6
+            let top = Int(step.origin.y) - 6
+
+            #expect(framed.isInked(left + 22, top))
+            #expect(framed.isInked(left + 22, top - 4) == false, "Nothing just outside the frame")
+            #expect(framed.isInked(left + 22, top + 4) == false, "Nothing just inside it")
+
+            // The corner's handle is filled.
+            #expect(framed.isInked(left + 2, top + 2))
+            #expect(plain.isInked(left + 2, top + 2) == false)
+
+            // The page's edge, all round, and nothing just inside it or along
+            // the view's edge.
+            let page = presentation.pageRect
+            let minX = Int(page.origin.x), maxX = Int(page.origin.x + page.size.width)
+            let minY = Int(page.origin.y), maxY = Int(page.origin.y + page.size.height)
+            let midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
+
+            try #require(minX > 4 && minY > 4 && maxX < 996 && maxY < 796, "The page is inside the view")
+            #expect(framed.isInked(minX - 2, midY) && framed.isInked(maxX + 1, midY))
+            #expect(framed.isInked(midX, minY - 2) && framed.isInked(midX, maxY + 1))
+            #expect(framed.isInked(minX + 3, midY) == false && framed.isInked(minX - 5, midY) == false)
+            #expect(framed.isInked(1, 400) == false && framed.isInked(500, 1) == false)
+        }
+
+        @Test("While arranging, the line around the page stays out of the scroll bars")
+        func arrangingEdgeStaysUncovered() throws {
+            let shown = try arranged()
+            let presentation = try #require(shown.presenter.presentation)
+            let page = presentation.pageRect
+            let renderer = LDrawStepOverlayRenderer()
+            let canvas = Canvas(width: 1000, height: 800)
+            let midY = Int(page.origin.y + page.size.height / 2)
+            let cut = Int(page.origin.x + page.size.width / 2)
+
+            // Scroll bars that cover the view from the page's middle rightward.
+            renderer.presentation = presentation
+            renderer.arrangeFrameColor = CGColor(srgbRed: 0, green: 0.4, blue: 1, alpha: 1)
+            renderer.unobscuredRect = Box2(origin: Point2(x: 0, y: 0), size: Size2(width: Double(cut), height: 800))
+            renderer.drawCallouts(in: canvas.context, viewSize: Size2(width: 1000, height: 800))
+
+            #expect(canvas.isInked(cut - 2, midY))
+            #expect(canvas.isInked(cut + 1, midY) == false)
+            #expect(canvas.isInked(Int(page.origin.x + page.size.width) + 1, midY) == false)
+        }
+
+        @Test("While arranging, each corner of the step's frame has a handle, and a drag on one scales the step")
+        func arrangingHandlesScale() throws {
+            let shown = try arranged()
+            let presentation = try #require(shown.presenter.presentation)
+            let step = presentation.stepRect
+            let frame = presentation.arrangeFrameRect
+            let tracker = LDrawStepAssemblyScaleTracker()
+
+            #expect(isSameBox(frame, Box2(origin: Point2(x: step.origin.x - 6, y: step.origin.y - 6),
+                                          size: Size2(width: step.size.width + 12, height: step.size.height + 12))))
+            #expect([.topLeft, .topRight, .bottomRight, .bottomLeft].allSatisfy {
+                presentation.rect(ofArrangeHandle: $0).size.width > 0
+            })
+
+            // With no placement line the step grows from its middle.
+            let anchor = presentation.stepAnchorInView
+            let corner = Point2(x: frame.origin.x + frame.size.width, y: frame.origin.y + frame.size.height)
+
+            #expect(isClose(anchor, middle(step)))
+            #expect(presentation.arrangeHandle(at: Point2(x: corner.x + 4, y: corner.y - 4)) == .bottomRight)
+            #expect(presentation.arrangeHandle(at: middle(step)) == .none)
+            #expect(tracker.begin(at: middle(step), presentation: presentation, scale: 1) == false)
+
+            // Pressed off the corner, the drag keeps that grab.
+            let grab = Point2(x: corner.x + 2, y: corner.y - 1)
+            try #require(tracker.begin(at: grab, presentation: presentation, scale: 1))
+            #expect(tracker.handle == .bottomRight)
+
+            let twice = Point2(x: anchor.x + 2 * (corner.x - anchor.x) + 2, y: anchor.y + 2 * (corner.y - anchor.y) - 1)
+            #expect(abs(tracker.scaleForDrag(to: twice) - 2) < 0.000001)
+            #expect(abs(tracker.scaleForDrag(to: Point2(x: anchor.x - 50, y: anchor.y - 50)) - 0.05) < 0.000001)
+
+            // Given to the presenter, the scale snaps as a zoom does, and the
+            // model is zoomed to it.
+            shown.presenter.zoomArrangedStep(toScale: 2.004)
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedScale - 2) < 0.000001)
+            #expect(abs(shown.camera.zoom - 200) < 0.0001)
+
+            shown.presenter.zoomArrangedStep(toScale: 1.83)
+            shown.presenter.reload()
+            #expect(abs(shown.presenter.arrangedScale - 1.83) < 0.000001)
+
+            tracker.end()
+            #expect(tracker.isScaling == false && tracker.handle == .none)
+        }
+
+        @Test("A step placed by its corner grows from that corner, which has no handle")
+        func cornerPlacedStepHasNoHandleThere() throws {
+            let shown = shown(assembly: CGSize(width: 200, height: 100))
+            let step = shown.fixture.step
+
+            step.insert(lpub(LPubPlacement(), "ASSEM PLACEMENT LOCAL TOP_LEFT PAGE INSIDE"),
+                        at: step.subdirectives().count - 1)
+            shown.presenter.reload()
+
+            let presentation = try #require(shown.presenter.presentation)
+
+            #expect(isClose(presentation.stepAnchorInView, presentation.stepRect.origin))
+            #expect(presentation.rect(ofArrangeHandle: .topLeft).size.width == 0)
+            #expect(presentation.arrangeHandle(at: presentation.arrangeFrameRect.origin) == .none)
+            #expect(presentation.rect(ofArrangeHandle: .bottomRight).size.width > 0)
+        }
+
+        @Test("The guides the step lines up with are drawn across the page")
+        func arrangingDrawsTheGuides() throws {
+            let shown = try arranged()
+            let presentation = try #require(shown.presenter.presentation)
+            let page = presentation.pageRect
+            let renderer = LDrawStepOverlayRenderer()
+
+            renderer.presentation = presentation
+            renderer.guides = shown.presenter.arrangedGuides
+            renderer.guideColor = CGColor(srgbRed: 0, green: 0.4, blue: 1, alpha: 1)
+
+            let canvas = Canvas(width: 1000, height: 800)
+            renderer.drawCallouts(in: canvas.context, viewSize: Size2(width: 1000, height: 800))
+
+            // The page's middle lines, away from the step and its frame.
+            let middleX = Int(page.origin.x + page.size.width / 2)
+            let middleY = Int(page.origin.y + page.size.height / 2)
+
+            #expect(canvas.isInked(middleX, Int(page.origin.y) + 20))
+            #expect(canvas.isInked(Int(page.origin.x) + 20, middleY))
+            #expect(canvas.isInked(middleX + 30, Int(page.origin.y) + 20) == false)
+        }
+
+        /// A step laid out on its page, then a second step after it, being
+        /// arranged. The camera gives both the same assembly. The previous
+        /// step is shown unless `showsPrevious` is false.
+        private func arrangedAfterAStep(showsPrevious: Bool = true) throws
+            -> (fixture: CalloutFixture, camera: FlatCamera, presenter: LDrawStepOverlayPresenter) {
+            let shown = shown(assembly: CGSize(width: 200, height: 100))
+
+            let main = shown.fixture.main
+
+            main.addStep()
+            shown.presenter.reload()
+
+            main.setMaximumStepIndexForStepDisplay(UInt(main.steps().count - 1))
+            shown.presenter.reload()
+            shown.presenter.showsPreviousStep = showsPrevious
+            try #require(shown.presenter.beginArranging())
+            shown.presenter.reload()
+
+            return shown
+        }
+
+        @Test("The previous step is hidden to begin with, and the step still lines up with it")
+        func previousStepHiddenByDefault() throws {
+            #expect(LDrawStepOverlayPresenter().showsPreviousStep == false)
+
+            let shown = try arrangedAfterAStep(showsPrevious: false)
+            let presenter = shown.presenter
+
+            #expect(presenter.previousStepOutline.isEmpty)
+            #expect(presenter.previousStepPicture == nil)
+            #expect(presenter.canAlignArrangedStepWithPreviousStep)
+
+            presenter.showsPreviousStep = true
+            presenter.reload()
+            #expect(presenter.previousStepOutline.isEmpty == false)
+        }
+
+        private func boxAround(_ outline: Data) -> Box2 {
+            let points = outline.withUnsafeBytes { Array($0.bindMemory(to: Point2.self)) }
+            let xs = points.map(\.x)
+            let ys = points.map(\.y)
+
+            return Box2(origin: Point2(x: xs.min() ?? 0, y: ys.min() ?? 0),
+                        size: Size2(width: (xs.max() ?? 0) - (xs.min() ?? 0), height: (ys.max() ?? 0) - (ys.min() ?? 0)))
+        }
+
+        @Test("While arranging, the previous step's outline is where it sat on its page, and the step lines up with it")
+        func arrangingShowsThePreviousStep() throws {
+            let shown = try arrangedAfterAStep()
+            let presenter = shown.presenter
+            let step = try #require(presenter.presentation).stepRect
+            let ghost = boxAround(presenter.previousStepOutline)
+
+            // Both steps are centered alike, so it sat where this one is.
+            #expect(presenter.previousStepOutline.count == 4 * MemoryLayout<Point2>.size)
+            #expect(isSameBox(ghost, step))
+
+            // Moved on the page, the step leaves the outline where it was.
+            shown.camera.origin.x += 85
+            shown.camera.origin.y -= 22
+            presenter.reload()
+            #expect(isSameBox(boxAround(presenter.previousStepOutline), ghost))
+            #expect(abs(presenter.arrangedOffset.x - 85 / (8.5 * 64)) < 0.00001)
+
+            // Lined up, its earlier parts are back where the previous step had
+            // them.
+            #expect(presenter.canAlignArrangedStepWithPreviousStep)
+            presenter.alignArrangedStepWithPreviousStep()
+            presenter.reload()
+            #expect(isClose(presenter.arrangedOffset, Point2(x: 0, y: 0)))
+            #expect(isSameBox(try #require(presenter.presentation).stepRect, ghost))
+
+            // Centered, the middle of its box is on the middle of the page.
+            shown.camera.origin.x -= 40
+            presenter.reload()
+            presenter.centerArrangedStepOnPage()
+            presenter.reload()
+
+            let centered = try #require(presenter.presentation)
+            #expect(isClose(middle(centered.stepRect), middle(centered.pageRect)))
+            #expect(isClose(presenter.arrangedOffset, Point2(x: 0, y: 0)))
+
+            presenter.endArranging()
+            #expect(presenter.previousStepOutline.isEmpty)
+        }
+
+        @Test("A change to the previous step forgets where it sat, and a change to this one or to the file does not")
+        func previousStepIsForgottenWhenItChanges() throws {
+            let shown = try arrangedAfterAStep()
+            let presenter = shown.presenter
+            let steps = shown.fixture.main.steps() as! [LDrawStep]
+
+            _ = presenter.change(forChangedObject: steps[steps.count - 1])
+            presenter.reload()
+            #expect(presenter.previousStepOutline.isEmpty == false)
+            #expect(presenter.canAlignArrangedStepWithPreviousStep)
+
+            // A note for the whole file, as a change of step posts, is read
+            // as a change to the step on display.
+            _ = presenter.change(forChangedObject: shown.fixture.file)
+            presenter.reload()
+            #expect(presenter.previousStepOutline.isEmpty == false)
+
+            _ = presenter.change(forChangedObject: shown.fixture.step)
+            presenter.reload()
+            #expect(presenter.previousStepOutline.isEmpty)
+            #expect(presenter.canAlignArrangedStepWithPreviousStep == false)
+        }
+
+        @Test("With its previous step never laid out, a step has nothing to show or line up with")
+        func unseenPreviousStep() throws {
+            let shown = try arranged()
+
+            #expect(shown.presenter.previousStepOutline.isEmpty)
+            #expect(shown.presenter.canAlignArrangedStepWithPreviousStep == false)
+        }
+
+        @Test("The previous step's outline is filled on the paper in its color")
+        func previousStepOutlineIsDrawn() throws {
+            let shown = try arrangedAfterAStep()
+            let presentation = try #require(shown.presenter.presentation)
+            let center = middle(boxAround(shown.presenter.previousStepOutline))
+            let size = Size2(width: 1000, height: 800)
+            let renderer = LDrawStepOverlayRenderer()
+
+            renderer.presentation = presentation
+            renderer.ghostOutline = shown.presenter.previousStepOutline
+
+            let plain = Canvas(width: 1000, height: 800)
+            renderer.drawPageAndFrame(in: plain.context, viewSize: size)
+            #expect(plain.isInked(Int(center.x), Int(center.y)) == false, "With no color there is no outline")
+
+            renderer.ghostColor = CGColor(srgbRed: 0, green: 0.4, blue: 1, alpha: 0.2)
+
+            let tinted = Canvas(width: 1000, height: 800)
+            renderer.drawPageAndFrame(in: tinted.context, viewSize: size)
+            #expect(tinted.isInked(Int(center.x), Int(center.y)))
+        }
+
+        /// The angle LPub3D prints the visible step at.
+        private func stepAngle(of model: LDrawModel) -> Tuple3 {
+            let index = (model.steps() as NSArray).indexOfObjectIdentical(to: model.visibleStep() as Any)
+
+            return LDrawStepPartListPolicy.assemblyViewingAngle(forStepAt: UInt(index), inModel: model)
+        }
+
+        @Test("A view turned away from the step's angle is marked, and one written another way but turned the same is not")
+        func turnedViewIsMarked() throws {
+            let shown = shown(assembly: CGSize(width: 200, height: 100))
+            let presenter = shown.presenter
+            let angle = stepAngle(of: shown.fixture.main)
+
+            shown.camera.setViewingAngle(angle)
+            presenter.reload()
+            #expect(presenter.isTurnedFromStepAngle == false)
+
+            // The same turn, as other numbers. The middle turn is about z.
+            shown.camera.setViewingAngle(Tuple3(x: angle.x + 180, y: angle.y + 180, z: 180 - angle.z))
+            presenter.reload()
+            #expect(presenter.isTurnedFromStepAngle == false)
+
+            shown.camera.turn(toDegrees: 30)
+            presenter.reload()
+            #expect(presenter.isTurnedFromStepAngle)
+
+            // Arranging takes the view's angle as the step's.
+            try #require(presenter.beginArranging())
+            presenter.reload()
+            #expect(presenter.isTurnedFromStepAngle == false)
+        }
+
+        @Test("A turned view's strip is drawn across the top of the view, with its two buttons on it")
+        func turnedViewStrip() throws {
+            let renderer = LDrawStepOverlayRenderer()
+            let size = Size2(width: 1000, height: 800)
+
+            renderer.useAngleTitle = "Use This Angle"
+            renderer.stepAngleTitle = "Back to Step's Angle"
+            #expect(renderer.turnedViewStripRect(forViewSize: size).size.width == 0)
+
+            renderer.turnedViewText = "Turned view: not what LPub3D prints"
+
+            let strip = renderer.turnedViewStripRect(forViewSize: size)
+            let use = renderer.rect(ofTurnedViewButton: .useAngle, forViewSize: size)
+            let back = renderer.rect(ofTurnedViewButton: .stepAngle, forViewSize: size)
+
+            #expect(abs(middle(strip).x - 500) <= 1)
+            #expect(strip.origin.y > 0 && strip.origin.y < 40)
+
+            for button in [use, back] {
+                #expect(button.origin.x >= strip.origin.x && button.origin.y >= strip.origin.y)
+                #expect(button.origin.x + button.size.width <= strip.origin.x + strip.size.width)
+                #expect(button.origin.y + button.size.height <= strip.origin.y + strip.size.height)
+            }
+            #expect(use.origin.x + use.size.width < back.origin.x)
+
+            let canvas = Canvas(width: 1000, height: 800)
+            renderer.drawCallouts(in: canvas.context, viewSize: size)
+            let ink = try #require(canvas.inkBounds)
+            #expect(isSameBox(ink, strip))
+        }
+
+        @Test("Zoom to Fit while arranging fits the page, and keeps what was arranged")
+        func arrangingFitKeepsWhatWasArranged() throws {
+            let shown = try arranged()
+            let presenter = shown.presenter
+
+            shown.camera.origin.x += 85
+            presenter.reload()
+            shown.camera.zoom = 150
+            presenter.reload()
+
+            let scale = presenter.arrangedScale
+            let offset = presenter.arrangedOffset
+            let fit = LDrawStepPartListPolicy.pointsPerPageInchFittingPage(inHostSize: Size2(width: 1000, height: 800),
+                                                                           inModel: shown.fixture.main)
+
+            presenter.fitArrangedPage()
+            presenter.reload()
+
+            let presentation = try #require(presenter.presentation)
+
+            #expect(abs(presentation.pointsPerPageInch - fit) < 0.0001)
+            #expect(isClose(middle(presentation.pageRect), Point2(x: 500, y: 400)))
+            #expect(abs(presenter.arrangedScale - scale) < 0.000001)
+            #expect(isClose(presenter.arrangedOffset, offset))
+        }
+
+        @Test("A zoom the host makes to the page, held, changes the page's inch and not the step's scale")
+        func arrangingHoldsAZoomOfThePage() throws {
+            let shown = try arranged()
+            let presenter = shown.presenter
+
+            shown.camera.zoom = 150
+            presenter.reload()
+            #expect(abs(presenter.arrangedScale - 1.5) < 0.000001)
+
+            // As Actual Size does. The host reads the page's inch at once, for
+            // the zoom it shows.
+            shown.camera.zoom = 100
+            presenter.holdArrangedPage()
+            #expect(abs(presenter.arrangedPointsPerInch - 64 / 1.5) < 0.0001)
+
+            presenter.reload()
+
+            #expect(abs(presenter.arrangedScale - 1.5) < 0.000001)
+            #expect(abs(try #require(presenter.presentation).pointsPerPageInch - 64 / 1.5) < 0.0001)
+
+            presenter.endArranging()
+            #expect(presenter.arrangedPointsPerInch == 0)
+        }
+
+        @Test("With nothing to measure the previous step has no picture, and its outline still shows")
+        func noPictureWithoutParts() throws {
+            let shown = try arrangedAfterAStep()
+
+            #expect(shown.presenter.previousStepPicture == nil)
+            #expect(shown.presenter.previousStepOutline.isEmpty == false)
+        }
+
+        @Test("The previous step's picture is drawn faintly in its place, instead of the outline's fill")
+        func previousStepPictureIsDrawn() throws {
+            let renderer = LDrawStepOverlayRenderer()
+            let size = Size2(width: 400, height: 300)
+            let outline = [Point2(x: 50, y: 50), Point2(x: 350, y: 50), Point2(x: 350, y: 250), Point2(x: 50, y: 250)]
+            let red = CGContext(data: nil, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 16,
+                                space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+
+            red.setFillColor(CGColor(srgbRed: 1, green: 0, blue: 0, alpha: 1))
+            red.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+
+            renderer.ghostOutline = outline.withUnsafeBufferPointer { Data(buffer: $0) }
+            renderer.ghostColor = CGColor(srgbRed: 0, green: 0.4, blue: 1, alpha: 0.2)
+            renderer.ghostImage = red.makeImage()
+            renderer.ghostRect = Box2(origin: Point2(x: 100, y: 100), size: Size2(width: 40, height: 40))
+
+            let canvas = Canvas(width: 400, height: 300)
+            renderer.drawPageAndFrame(in: canvas.context, viewSize: size)
+
+            #expect(canvas.isInked(120, 120))
+            #expect(canvas.isInked(60, 60) == false, "The outline is not filled under a picture")
+        }
+
+        @Test("Arranging needs a page")
+        func arrangingNeedsAPage() throws {
+            LDrawStepPartList.setUsesLPubScale(false)
+
+            let shown = shown(assembly: CGSize(width: 200, height: 100))
+
+            #expect(shown.presenter.beginArranging() == false)
+            #expect(shown.presenter.isArranging == false)
 
             LDrawStepPartList.setUsesLPubScale(true)
         }

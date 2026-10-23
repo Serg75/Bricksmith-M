@@ -1112,6 +1112,49 @@ typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartL
 }//end viewTransformForLatitude:longitude:
 
 
+//---------- getLatitude:longitude:ofViewTransform: ------------------[static]--
+///
+/// @abstract	Reads a view transform as LPub3D's camera angles. NO when the
+/// 			camera is tilted to one side.
+///
+/// @discussion	The third column is the direction to the camera and the second
+/// 			its up, both negated. Straight above or below, the direction
+/// 			has no longitude, and the up gives it.
+///
+//------------------------------------------------------------------------------
++ (BOOL) getLatitude:(double *)outLatitude longitude:(double *)outLongitude ofViewTransform:(Matrix4)transform
+{
+	double toX			= -transform.element[0][2];
+	double toY			= -transform.element[1][2];
+	double toZ			= -transform.element[2][2];
+	double upX			= -transform.element[0][1];
+	double upZ			= -transform.element[2][1];
+	double latitude		= degrees(asin(MAX(-1.0, MIN(1.0, -toY))));
+	double longitude	= 0.0;
+
+	if (hypot(toX, toZ) > 0.0001) {
+		longitude = degrees(atan2(toX, -toZ));
+	}
+	else {
+		double sign = (latitude > 0.0) ? 1.0 : -1.0;
+
+		longitude = degrees(atan2(-upX * sign, upZ * sign));
+	}
+
+	// A view tilted to one side has no such angles.
+	if (Matrix4RotationsWithinTolerance([self viewTransformForLatitude:latitude longitude:longitude],
+										transform,
+										0.001) == false) {
+		return NO;
+	}
+
+	*outLatitude	= latitude;
+	*outLongitude	= longitude;
+	return YES;
+
+}//end getLatitude:longitude:ofViewTransform:
+
+
 // MARK: - LAYOUT -
 
 //---------- layoutForEntries:constraint:viewTransform:metrics: ------[static]--

@@ -90,6 +90,18 @@ typedef struct LDrawStepCalloutArrow
 
 - (instancetype) init NS_UNAVAILABLE;
 
+/// A picture of what `model` has built up to and including a step, seen from
+/// `viewTransform` at `zoomPercentage`, with `center`, a point of the turned
+/// model, in the middle of `rect`. `subjectKey` names what it shows.
++ (instancetype) pictureOfModel:(LDrawModel *)model
+					throughStep:(NSUInteger)stepIndex
+				  viewTransform:(Matrix4)viewTransform
+						   rect:(Box2)rect
+				 zoomPercentage:(double)zoomPercentage
+						 center:(Point3)center
+					 subjectKey:(NSString *)subjectKey
+	NS_SWIFT_NAME(init(model:throughStep:viewTransform:rect:zoomPercentage:center:subjectKey:));
+
 /// Where the picture goes, in the view.
 @property (nonatomic, readonly) Box2		rect;
 
@@ -299,5 +311,11 @@ typedef struct LDrawStepCalloutArrow
 	NS_SWIFT_NAME(getPlacementOffset(_:forOrigin:));
 
 @end
+
+
+/// The corners of the smallest outline with no dents around some Point2
+/// values, in order around it. Empty for points on one line or fewer than
+/// three.
+extern NSData *LDrawStepConvexOutline(NSData *points);
 
 NS_ASSUME_NONNULL_END

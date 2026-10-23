@@ -27,11 +27,6 @@
 #import <LDrawCore/LDrawKeywords.h>
 
 
-static NSString * const LPUB_PLACEMENT_INSIDE	= @"INSIDE";
-static NSString * const LPUB_PLACEMENT_OUTSIDE	= @"OUTSIDE";
-static NSString * const LPUB_PLACEMENT_OFFSET	= @"OFFSET";
-
-
 //========== PositionNames() ===================================================
 ///
 /// @abstract	The keyword of each position, in the order of the enum.
@@ -293,6 +288,14 @@ static NSString *OffsetText(double offset)
 
 
 // MARK: - DISPLAY -
+
+
+//========== isInsidePage ======================================================
+- (BOOL) isInsidePage
+{
+	return self.isInside && [self.relativeTo isEqualToString:LPUB_PAGE];
+
+}//end isInsidePage
 
 
 //========== browsingDescription ===============================================

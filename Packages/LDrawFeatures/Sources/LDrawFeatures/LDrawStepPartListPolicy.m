@@ -19,6 +19,7 @@
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
+#import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCalloutBorder.h>
 #import <LDrawCore/LPubCommand.h>
 #import <LDrawCore/LPubModelScale.h>
@@ -437,6 +438,14 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 	return V2SizeCenteredOnPoint(V2MakeSize(PIN_SIDE, PIN_SIDE), center);
 
 }//end pinRectForAxis:inFrame:
+
+
+//---------- placementPinRectInFrame: --------------------------------[static]--
++ (Box2) placementPinRectInFrame:(Box2)frame
+{
+	return V2SizeCenteredOnPoint(V2MakeSize(PIN_SIDE, PIN_SIDE), frame.origin);
+
+}//end placementPinRectInFrame:
 
 
 //---------- controlAtPoint:inFrame:widthPinned:heightPinned: --------[static]--
@@ -884,7 +893,8 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 	LPubPliCameraAngles *angles = [self directiveInForceForStep:step
 													  excluding:nil
 													   matching:^BOOL(LDrawDirective *directive) {
-		return [directive isKindOfClass:[LPubPliCameraAngles class]];
+		return [directive isKindOfClass:[LPubPliCameraAngles class]]
+			&& ((LPubPliCameraAngles *)directive).branch == LPubCameraAnglesBranchPli;
 	}];
 
 	LPubPliPartRotation *rotation = [self directiveInForceForStep:step
@@ -926,11 +936,220 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 		return [self partListViewTransformInModel:model];
 	}
 
-	Tuple3 angle = [model rotationAngleForStepAtIndex:[model maximumStepIndexForStepDisplay]];
-
-	return [LDrawStepPartListLayout viewTransformForAngle:angle];
+	return [LDrawStepPartListLayout viewTransformForAngle:[self viewingAngleForVisibleStepOfModel:model]];
 
 }//end viewTransformForVisibleStepOfModel:
+
+
+//---------- viewingAngleForVisibleStepOfModel: ----------------------[static]--
++ (Tuple3) viewingAngleForVisibleStepOfModel:(nullable LDrawModel *)model
+{
+	NSUInteger stepIndex = [model maximumStepIndexForStepDisplay];
+
+	if ([self drawsPageInModel:model]) {
+		return [self assemblyViewingAngleForStepAtIndex:stepIndex inModel:model];
+	}
+
+	return [model rotationAngleForStepAtIndex:stepIndex];
+
+}//end viewingAngleForVisibleStepOfModel:
+
+
+//---------- isAbsoluteRotationAtStepIndex:inModel: ------------------[static]--
+///
+/// @abstract	Whether the rotation a step is seen at comes from an ABS
+/// 			ROTSTEP, which has no view after it.
+///
+/// @discussion	An ADD turns the rotation before it, so the last REL, ABS or
+/// 			END up to the step decides.
+///
+//------------------------------------------------------------------------------
++ (BOOL) isAbsoluteRotationAtStepIndex:(NSUInteger)stepIndex inModel:(nullable LDrawModel *)model
+{
+	NSArray<LDrawStep *>	*steps		= [model steps];
+	BOOL					 isAbsolute	= NO;
+
+	for (NSUInteger index = 0; index <= stepIndex && index < steps.count; index++) {
+		switch ([steps[index] stepRotationType]) {
+			case LDrawStepRotationAbsolute:
+				isAbsolute = YES;
+				break;
+
+			case LDrawStepRotationRelative:
+			case LDrawStepRotationEnd:
+				isAbsolute = NO;
+				break;
+
+			case LDrawStepRotationNone:
+			case LDrawStepRotationAdditive:
+				break;
+		}
+	}
+
+	return isAbsolute;
+
+}//end isAbsoluteRotationAtStepIndex:inModel:
+
+
+//---------- assemblyRotationForStepAtIndex:inModel: -----------------[static]--
+///
+/// @abstract	The turn a step's ROTSTEP gives the parts, with no view after
+/// 			it.
+///
+/// @discussion	The model's own angle is MLCad's: the rotation, then
+/// 			Bricksmith's 3D view. An ABS rotation has no view after it.
+///
+//------------------------------------------------------------------------------
++ (Matrix4) assemblyRotationForStepAtIndex:(NSUInteger)stepIndex inModel:(nullable LDrawModel *)model
+{
+	Matrix4 seen = Matrix4Rotate(IdentityMatrix4, [model rotationAngleForStepAtIndex:stepIndex]);
+
+	if ([self isAbsoluteRotationAtStepIndex:stepIndex inModel:model]) {
+		return seen;
+	}
+
+	Tuple3 standard = [LDrawUtilities angleForViewOrientation:LDrawViewOrientation3D];
+
+	return Matrix4Multiply(seen, Matrix4Invert(Matrix4Rotate(IdentityMatrix4, standard)));
+
+}//end assemblyRotationForStepAtIndex:inModel:
+
+
+//---------- assemblyCameraForAngles: --------------------------------[static]--
+///
+/// @abstract	The view a camera line puts after the rotation. With no line it
+/// 			is Bricksmith's 3D view, LPub3D's default of 23, 45.
+///
+//------------------------------------------------------------------------------
++ (Matrix4) assemblyCameraForAngles:(nullable LPubPliCameraAngles *)angles
+{
+	if (angles == nil) {
+		return Matrix4Rotate(IdentityMatrix4, [LDrawUtilities angleForViewOrientation:LDrawViewOrientation3D]);
+	}
+
+	return [LDrawStepPartListLayout viewTransformForLatitude:angles.latitude longitude:angles.longitude];
+
+}//end assemblyCameraForAngles:
+
+
+//---------- assemblyCameraAnglesForStepAtIndex:inModel:excluding: ---[static]--
+///
+/// @abstract	The ASSEM CAMERA_ANGLES line in force for a step, reading the
+/// 			lines in `excluded` as if they were not there.
+///
+//------------------------------------------------------------------------------
++ (nullable LPubPliCameraAngles *) assemblyCameraAnglesForStepAtIndex:(NSUInteger)stepIndex
+															  inModel:(nullable LDrawModel *)model
+															excluding:(nullable NSArray<LDrawDirective *> *)excluded
+{
+	NSArray<LDrawStep *> *steps = [model steps];
+
+	if (steps.count == 0) {
+		return nil;
+	}
+
+	return [self directiveInForceForStep:steps[MIN(stepIndex, steps.count - 1)]
+							   excluding:nil
+								matching:^BOOL(LDrawDirective *directive) {
+		return [directive isKindOfClass:[LPubPliCameraAngles class]]
+			&& ((LPubPliCameraAngles *)directive).branch == LPubCameraAnglesBranchAssembly
+			&& (excluded == nil || [excluded indexOfObjectIdenticalTo:directive] == NSNotFound);
+	}];
+
+}//end assemblyCameraAnglesForStepAtIndex:inModel:excluding:
+
+
+//---------- assemblyViewWithRotation:camera:isAbsolute: -------------[static]--
+///
+/// @abstract	What LPub3D's camera sees: the parts turned, then the camera.
+///
+/// @discussion	Under an ABS rotation the camera looks straight on, unless the
+/// 			line names a custom viewpoint.
+///
+//------------------------------------------------------------------------------
++ (Matrix4) assemblyViewWithRotation:(Matrix4)rotation
+							  camera:(nullable LPubPliCameraAngles *)angles
+						  isAbsolute:(BOOL)isAbsolute
+{
+	if (isAbsolute && angles.isCustomViewpoint == NO) {
+		return rotation;
+	}
+
+	return Matrix4Multiply(rotation, [self assemblyCameraForAngles:angles]);
+
+}//end assemblyViewWithRotation:camera:isAbsolute:
+
+
+//---------- assemblyViewingAngleForStepAtIndex:inModel: -------------[static]--
+///
+/// @abstract	The angle LPub3D draws a step's assembly at: the step's
+/// 			rotation, then the ASSEM CAMERA_ANGLES in force.
+///
+/// @discussion	With no camera line it is the step's own rotation.
+///
+//------------------------------------------------------------------------------
++ (Tuple3) assemblyViewingAngleForStepAtIndex:(NSUInteger)stepIndex inModel:(nullable LDrawModel *)model
+{
+	LPubPliCameraAngles *angles = [self assemblyCameraAnglesForStepAtIndex:stepIndex inModel:model excluding:nil];
+
+	if (angles == nil) {
+		return [model rotationAngleForStepAtIndex:stepIndex];
+	}
+
+	Matrix4 view = [self assemblyViewWithRotation:[self assemblyRotationForStepAtIndex:stepIndex inModel:model]
+										   camera:angles
+									   isAbsolute:[self isAbsoluteRotationAtStepIndex:stepIndex inModel:model]];
+
+	return [self viewingAngleForView:view];
+
+}//end assemblyViewingAngleForStepAtIndex:inModel:
+
+
+//---------- viewingAngleForView: ------------------------------------[static]--
+///
+/// @abstract	A rotation as a viewport's viewing angle, in degrees.
+///
+//------------------------------------------------------------------------------
++ (Tuple3) viewingAngleForView:(Matrix4)view
+{
+	Tuple3 turned = Matrix4DecomposeXZYRotation(view);
+
+	return V3Make(degrees(turned.x), degrees(turned.y), degrees(turned.z));
+
+}//end viewingAngleForView:
+
+
+//---------- getAssemblyLatitude:longitude:forViewingAngle:inModel: --[static]--
++ (BOOL) getAssemblyLatitude:(double *)outLatitude
+				   longitude:(double *)outLongitude
+			 forViewingAngle:(Tuple3)angle
+					 inModel:(nullable LDrawModel *)model
+{
+	NSUInteger	index		= [[model steps] indexOfObjectIdenticalTo:[model visibleStep]];
+	Matrix4		rotation	= [self assemblyRotationForStepAtIndex:index inModel:model];
+	Matrix4		camera		= Matrix4Multiply(Matrix4Invert(rotation), Matrix4Rotate(IdentityMatrix4, angle));
+
+	if (model == nil || index == NSNotFound) {
+		return NO;
+	}
+
+	return [LDrawStepPartListLayout getLatitude:outLatitude longitude:outLongitude ofViewTransform:camera];
+
+}//end getAssemblyLatitude:longitude:forViewingAngle:inModel:
+
+
+//---------- assemblyViewingAngleForLatitude:longitude:inModel: ------[static]--
++ (Tuple3) assemblyViewingAngleForLatitude:(double)latitude
+								 longitude:(double)longitude
+								   inModel:(nullable LDrawModel *)model
+{
+	NSUInteger	index		= [[model steps] indexOfObjectIdenticalTo:[model visibleStep]];
+	Matrix4		rotation	= [self assemblyRotationForStepAtIndex:index inModel:model];
+	Matrix4		camera		= [LDrawStepPartListLayout viewTransformForLatitude:latitude longitude:longitude];
+
+	return [self viewingAngleForView:Matrix4Multiply(rotation, camera)];
+
+}//end assemblyViewingAngleForLatitude:longitude:inModel:
 
 
 //---------- modelScaleForBranch:inModel: ----------------------------[static]--
@@ -1226,6 +1445,16 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 //------------------------------------------------------------------------------
 + (double) assemblyScaleFittingPageInHostSize:(Size2)hostSize inModel:(nullable LDrawModel *)model
 {
+	return [self pointsPerPageInchFittingPageInHostSize:hostSize inModel:model]
+		 * [LPubModelScale inchesPerLDU]
+		 * [self modelScaleForBranch:LPubModelScaleBranchAssembly inModel:model];
+
+}//end assemblyScaleFittingPageInHostSize:inModel:
+
+
+//---------- pointsPerPageInchFittingPageInHostSize:inModel: ---------[static]--
++ (double) pointsPerPageInchFittingPageInHostSize:(Size2)hostSize inModel:(nullable LDrawModel *)model
+{
 	Size2	page	= [self pageSizeInInchesInModel:model forHostSize:hostSize];
 	double	width	= hostSize.width - 2.0 * PAGE_FIT_MARGIN;
 	double	height	= hostSize.height - 2.0 * PAGE_FIT_MARGIN;
@@ -1234,11 +1463,9 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 		return 0.0;
 	}
 
-	return MIN(width / page.width, height / page.height)
-		 * [LPubModelScale inchesPerLDU]
-		 * [self modelScaleForBranch:LPubModelScaleBranchAssembly inModel:model];
+	return MIN(width / page.width, height / page.height);
 
-}//end assemblyScaleFittingPageInHostSize:inModel:
+}//end pointsPerPageInchFittingPageInHostSize:inModel:
 
 
 //---------- pageAnchorInModel: --------------------------------------[static]--
@@ -1294,6 +1521,26 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 	return [LDrawStepPartList outlinePointsOfModel:model];
 
 }//end assemblyOutlinePointsInModel:
+
+
+//---------- earlierAssemblyOutlinePointsInModel: --------------------[static]--
++ (nullable NSData *) earlierAssemblyOutlinePointsInModel:(nullable LDrawModel *)model
+{
+	NSArray<LDrawStep *>	*steps	= [model steps];
+	NSUInteger				 count	= [steps indexOfObjectIdenticalTo:[model visibleStep]];
+	NSMutableData			*points	= [NSMutableData data];
+
+	if (count == NSNotFound) {
+		return nil;
+	}
+
+	for (NSUInteger index = 0; index < count; index++) {
+		[points appendData:[LDrawStepPartList outlinePointsOfStep:steps[index]]];
+	}
+
+	return (points.length > 0) ? points : nil;
+
+}//end earlierAssemblyOutlinePointsInModel:
 
 
 //---------- drawsPageInModel: ---------------------------------------[static]--
@@ -1451,6 +1698,27 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 	return (local != nil && local.mode == LPubPliConstrainModeForAxis(axis));
 
 }//end isAxis:pinnedInStep:
+
+
+//---------- isPlacementPinnedInStep: --------------------------------[static]--
+///
+/// @abstract	Whether the step has a LOCAL PLI PLACEMENT line. A line that
+/// 			carries on to later steps pins nothing.
+///
+//------------------------------------------------------------------------------
++ (BOOL) isPlacementPinnedInStep:(nullable LDrawStep *)step
+{
+	for (LDrawDirective *directive in [step subdirectives]) {
+		if ([directive isKindOfClass:[LPubPlacement class]]
+			&& ((LPubPlacement *)directive).branch == LPubPlacementBranchPartsList
+			&& ((LPubPlacement *)directive).scope == LPubMetaScopeLocal) {
+			return YES;
+		}
+	}
+
+	return NO;
+
+}//end isPlacementPinnedInStep:
 
 
 @end

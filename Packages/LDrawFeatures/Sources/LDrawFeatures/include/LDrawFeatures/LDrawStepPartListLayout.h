@@ -274,6 +274,13 @@ typedef struct LDrawStepPartListMetrics
 + (Matrix4) viewTransformForLatitude:(double)latitude longitude:(double)longitude
 	NS_SWIFT_NAME(viewTransform(latitude:longitude:));
 
+/// The other way: the latitude and longitude of a view transform, in degrees.
+/// NO when the camera is tilted to one side, which the two angles cannot say.
+/// Seen from straight above or below, the longitude is read from the camera's
+/// up.
++ (BOOL) getLatitude:(double *)latitude longitude:(double *)longitude ofViewTransform:(Matrix4)transform
+	NS_SWIFT_NAME(getLatitude(_:longitude:ofViewTransform:));
+
 /// The full rotation for an entry's icon: its own `listOrientation`, then the
 /// list's view transform. The packer and the drawing code both call this, so
 /// they measure and draw the same thing.

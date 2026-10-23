@@ -112,7 +112,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LDrawStepRenderingTests",
-            dependencies: ["LDrawStepRendering", "LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
+            dependencies: ["LDrawStepRendering", "LDrawStepEditing", "LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
             path: "Packages/LDrawStepRendering/Tests/LDrawStepRenderingTests"
         ),
         .testTarget(

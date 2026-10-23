@@ -16,6 +16,7 @@
 
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawModel.h>
+#import <LDrawFeatures/LDrawStepCalloutBox.h>
 #import <LDrawFeatures/LDrawStepPartListLayout.h>
 #import <LDrawFeatures/LDrawStepPartListPresentation.h>
 #import <LDrawFeatures/LDrawStepPartListResizeTracker.h>
@@ -29,6 +30,20 @@
 #import "LDrawView.h"
 #import "LDrawViewerContainer.h"
 #import "StepPartListChromeView.h"
+
+
+/// How strongly the previous step's outline tints the paper.
+static const CGFloat GHOST_ALPHA = 0.18;
+
+/// The badge of the cursor that starts arranging, in points from the hand's
+/// top left: a white plate at the hand's lower right, clear of the finger, the
+/// frame inset in it, and the frame's dash and corner squares. Whole points
+/// keep the lines sharp.
+static const NSRect  ARRANGE_BADGE_RECT			= {{19.0, 20.0}, {16.0, 12.0}};
+static const CGFloat ARRANGE_BADGE_RADIUS		= 2.5;
+static const CGFloat ARRANGE_BADGE_INSET		= 3.0;
+static const CGFloat ARRANGE_BADGE_DASH			= 2.0;
+static const CGFloat ARRANGE_BADGE_CORNER		= 3.0;
 
 
 //========== ClipViewToBounds ==================================================
@@ -67,6 +82,15 @@ static void ClipViewToBounds(NSView *view)
 /// The tint, worked out once from the viewport's color preference. Nil until
 /// asked for, and cleared when that preference changes.
 @property (nonatomic, strong, nullable) NSColor							*cachedListBackgroundColor;
+
+/// What the icon view shows, and the color it clears to. The same key needs
+/// no new model.
+@property (nonatomic, copy, nullable) NSData							*shownIconKey;
+@property (nonatomic, strong, nullable) NSColor							*shownIconBackground;
+
+/// What the previous step's picture on show was drawn for: what it shows,
+/// its size and the screen's scale.
+@property (nonatomic, copy, nullable) NSString							*shownGhostKey;
 /// Draws the frame and the callouts, and keeps the callouts' pictures.
 @property (nonatomic, strong) LDrawStepOverlayRenderer					*renderer;
 @property (nonatomic, strong) LDrawStepCalloutPictureStore				*pictureStore;
@@ -279,6 +303,21 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 
 	[self buildContentLayersWithFrame:shownRect];
 
+	// The same icons at the same size only follow the frame. A turn or a pan
+	// of the page lays the step out again, but leaves the list as it was.
+	NSData	*iconKey	= presentation.iconKey;
+	BOOL	 keepsIcons	= iconKey != nil
+						&& [iconKey isEqualToData:self.shownIconKey]
+						&& NSEqualSizes(contentRect.size, self.iconContainer.frame.size)
+						&& [[self iconBackgroundColor] isEqual:self.shownIconBackground];
+
+	if (keepsIcons) {
+		[self.iconContainer setFrame:contentRect];
+		[self.chromeView setFrame:contentRect];
+		[self showLabelsOfPresentation:presentation];
+		return;
+	}
+
 	// Hidden while its size, model and camera change, so it cannot redraw
 	// halfway through.
 	[self.iconContainer setHidden:YES];
@@ -316,11 +355,30 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 	// step's frame and labels.
 	[iconView draw];
 
+	self.shownIconKey			= iconKey;
+	self.shownIconBackground	= [self iconBackgroundColor];
+
+	[self showLabelsOfPresentation:presentation];
+
+}//end showPresentation:
+
+
+//========== showLabelsOfPresentation: =========================================
+- (void) showLabelsOfPresentation:(LDrawStepPartListPresentation *)presentation
+{
 	[self.chromeView setCountText:presentation.countText];
 	[self.chromeView setAnnotationText:presentation.annotationText];
 	[self.chromeView setLayout:presentation.layout];
 
-}//end showPresentation:
+}//end showLabelsOfPresentation:
+
+
+//========== forgetIcons =======================================================
+- (void) forgetIcons
+{
+	self.shownIconKey = nil;
+
+}//end forgetIcons
 
 
 //========== buildContentLayersWithFrame: ======================================
@@ -381,6 +439,8 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 //==============================================================================
 - (void) tearDownContentLayers
 {
+	self.shownIconKey = nil;
+
 	[[self.iconContainer glView] setLDrawDirective:nil];
 	[self.iconContainer removeFromSuperview];
 	self.iconContainer = nil;
@@ -432,6 +492,10 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 {
 	self.renderer.listBackgroundColor	= [[self listBackgroundColor] CGColor];
 	self.renderer.pinColor				= [[NSColor controlAccentColor] CGColor];
+	self.renderer.arrangeFrameColor		= self.showsArrangeFrame ? [[NSColor controlAccentColor] CGColor] : NULL;
+	self.renderer.guideColor			= [[NSColor controlAccentColor] CGColor];
+	self.renderer.ghostColor			= [[[NSColor controlAccentColor] colorWithAlphaComponent:GHOST_ALPHA] CGColor];
+	self.renderer.selectionColor		= [[NSColor controlAccentColor] CGColor];
 
 	return self.renderer;
 
@@ -639,6 +703,192 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 }//end setReturnTitle:
 
 
+//========== turnedViewText ====================================================
+- (NSString *) turnedViewText
+{
+	return self.renderer.turnedViewText;
+
+}//end turnedViewText
+
+
+//========== setTurnedViewText: ================================================
+- (void) setTurnedViewText:(NSString *)text
+{
+	if (text == self.renderer.turnedViewText || [text isEqualToString:self.renderer.turnedViewText]) {
+		return;
+	}
+
+	self.renderer.turnedViewText = text;
+	[self setNeedsDisplay:YES];
+
+}//end setTurnedViewText:
+
+
+//========== useAngleTitle =====================================================
+- (NSString *) useAngleTitle
+{
+	return self.renderer.useAngleTitle;
+
+}//end useAngleTitle
+
+
+//========== setUseAngleTitle: =================================================
+- (void) setUseAngleTitle:(NSString *)title
+{
+	self.renderer.useAngleTitle = title;
+	[self setNeedsDisplay:YES];
+
+}//end setUseAngleTitle:
+
+
+//========== stepAngleTitle ====================================================
+- (NSString *) stepAngleTitle
+{
+	return self.renderer.stepAngleTitle;
+
+}//end stepAngleTitle
+
+
+//========== setStepAngleTitle: ================================================
+- (void) setStepAngleTitle:(NSString *)title
+{
+	self.renderer.stepAngleTitle = title;
+	[self setNeedsDisplay:YES];
+
+}//end setStepAngleTitle:
+
+
+//========== setShowsArrangeFrame: =============================================
+- (void) setShowsArrangeFrame:(BOOL)flag
+{
+	if (flag == self->_showsArrangeFrame) {
+		return;
+	}
+
+	self->_showsArrangeFrame = flag;
+	[self setNeedsDisplay:YES];
+
+}//end setShowsArrangeFrame:
+
+
+//========== guides ============================================================
+- (NSData *) guides
+{
+	return self.renderer.guides;
+
+}//end guides
+
+
+//========== setGuides: ========================================================
+- (void) setGuides:(NSData *)guides
+{
+	if ([guides isEqualToData:self.renderer.guides]) {
+		return;
+	}
+
+	self.renderer.guides = guides;
+	[self setNeedsDisplay:YES];
+
+}//end setGuides:
+
+
+//========== showGhostPicture: =================================================
+- (void) showGhostPicture:(nullable LDrawStepCalloutPicture *)picture
+{
+	LDrawStepOverlayRenderer	*renderer	= self.renderer;
+	Size2						 size		= picture.rect.size;
+	double						 scale		= [self pictureScale];
+	NSString					*key		= nil;
+
+	if (picture != nil) {
+		key = [NSString stringWithFormat:@"%@|%.1fx%.1f|%.1f", picture.contentKey, size.width, size.height, scale];
+	}
+
+	if (key != self.shownGhostKey && [key isEqualToString:self.shownGhostKey] == NO) {
+		CGImageRef image = NULL;
+
+		if (picture != nil) {
+			image = [self newImageOfModel:picture.model
+								   center:picture.center
+						   zoomPercentage:picture.zoomPercentage
+									 size:size
+									scale:scale];
+		}
+
+		renderer.ghostImage	= image;
+		self.shownGhostKey	= key;
+		CGImageRelease(image);
+		[self setNeedsDisplay:YES];
+	}
+
+	renderer.ghostRect = (picture != nil) ? picture.rect : ZeroBox2;
+
+}//end showGhostPicture:
+
+
+//========== selectionRect =====================================================
+- (NSRect) selectionRect
+{
+	return StepPartListRectFromBox(self.renderer.selectionRect);
+
+}//end selectionRect
+
+
+//========== setSelectionRect: =================================================
+- (void) setSelectionRect:(NSRect)rect
+{
+	if (NSEqualRects(rect, self.selectionRect)) {
+		return;
+	}
+
+	self.renderer.selectionRect = StepPartListBoxFromRect(rect);
+	[self setNeedsDisplay:YES];
+
+}//end setSelectionRect:
+
+
+//========== unobscuredRect ====================================================
+- (NSRect) unobscuredRect
+{
+	return StepPartListRectFromBox(self.renderer.unobscuredRect);
+
+}//end unobscuredRect
+
+
+//========== setUnobscuredRect: ================================================
+- (void) setUnobscuredRect:(NSRect)rect
+{
+	if (NSEqualRects(rect, self.unobscuredRect)) {
+		return;
+	}
+
+	self.renderer.unobscuredRect = StepPartListBoxFromRect(rect);
+	[self setNeedsDisplay:YES];
+
+}//end setUnobscuredRect:
+
+
+//========== ghostOutline ======================================================
+- (NSData *) ghostOutline
+{
+	return self.renderer.ghostOutline;
+
+}//end ghostOutline
+
+
+//========== setGhostOutline: ==================================================
+- (void) setGhostOutline:(NSData *)ghostOutline
+{
+	if ([ghostOutline isEqualToData:self.renderer.ghostOutline]) {
+		return;
+	}
+
+	self.renderer.ghostOutline = ghostOutline;
+	[self setNeedsDisplay:YES];
+
+}//end setGhostOutline:
+
+
 //========== returnButtonRect ==================================================
 - (NSRect) returnButtonRect
 {
@@ -647,7 +897,92 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 }//end returnButtonRect
 
 
+//========== turnedViewStripRect ===============================================
+- (NSRect) turnedViewStripRect
+{
+	return StepPartListRectFromBox([self.renderer turnedViewStripRectForViewSize:[self viewSize]]);
+
+}//end turnedViewStripRect
+
+
+//========== rectOfTurnedViewButton: ===========================================
+- (NSRect) rectOfTurnedViewButton:(LDrawStepTurnedViewButton)button
+{
+	return StepPartListRectFromBox([self.renderer rectOfTurnedViewButton:button forViewSize:[self viewSize]]);
+
+}//end rectOfTurnedViewButton:
+
+
 // MARK: - INTERACTION -
+
+
+//========== arrangeStartCursor ================================================
+///
+/// @abstract	The pointing hand with a badge of the arranging frame. Made
+///				again when the accent color changes.
+///
+//==============================================================================
++ (NSCursor *) arrangeStartCursor
+{
+	static NSCursor	*cursor		= nil;
+	static NSColor	*madeIn		= nil;
+	NSColor			*accent		= [[NSColor controlAccentColor] colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+
+	if (cursor != nil && [madeIn isEqual:accent]) {
+		return cursor;
+	}
+
+	NSCursor	*hand		= [NSCursor pointingHandCursor];
+	NSImage		*handImage	= [hand image];
+	NSSize		 handSize	= [handImage size];
+	NSRect		 badge		= ARRANGE_BADGE_RECT;
+	NSSize		 size		= NSMakeSize(MAX(handSize.width, NSMaxX(badge) + 1.0),
+										 MAX(handSize.height, NSMaxY(badge) + 1.0));
+
+	NSImage *image = [NSImage imageWithSize:size flipped:YES drawingHandler:^BOOL(NSRect rect) {
+		[handImage drawInRect:NSMakeRect(0.0, 0.0, handSize.width, handSize.height)
+					 fromRect:NSZeroRect
+					operation:NSCompositingOperationSourceOver
+					 fraction:1.0
+			   respectFlipped:YES
+						hints:nil];
+
+		// A white plate, so the badge shows on any page.
+		NSBezierPath *plate = [NSBezierPath bezierPathWithRoundedRect:badge
+															  xRadius:ARRANGE_BADGE_RADIUS
+															  yRadius:ARRANGE_BADGE_RADIUS];
+		[[NSColor whiteColor] setFill];
+		[plate fill];
+		[[NSColor colorWithWhite:0.0 alpha:0.45] setStroke];
+		[plate setLineWidth:0.75];
+		[plate stroke];
+
+		// The dashed frame, with a handle at each corner.
+		NSRect			 frame		= NSInsetRect(badge, ARRANGE_BADGE_INSET, ARRANGE_BADGE_INSET);
+		NSBezierPath	*dashed		= [NSBezierPath bezierPathWithRect:frame];
+		CGFloat			 dash[]		= {ARRANGE_BADGE_DASH, ARRANGE_BADGE_DASH};
+		CGFloat			 half		= ARRANGE_BADGE_CORNER / 2.0;
+
+		[dashed setLineDash:dash count:2 phase:0.0];
+		[dashed setLineWidth:1.0];
+		[accent setStroke];
+		[dashed stroke];
+
+		[accent setFill];
+		for (NSUInteger corner = 0; corner < 4; corner++) {
+			CGFloat x = (corner % 2 == 0) ? NSMinX(frame) : NSMaxX(frame);
+			CGFloat y = (corner < 2) ? NSMinY(frame) : NSMaxY(frame);
+
+			NSRectFill(NSMakeRect(x - half, y - half, ARRANGE_BADGE_CORNER, ARRANGE_BADGE_CORNER));
+		}
+		return YES;
+	}];
+
+	cursor = [[NSCursor alloc] initWithImage:image hotSpot:[hand hotSpot]];
+	madeIn = accent;
+	return cursor;
+
+}//end arrangeStartCursor
 
 
 //========== cursorAtPoint: ====================================================
@@ -663,7 +998,8 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 {
 	switch ([self controlAtPoint:point]) {
 		case LDrawStepPartListControlWidthPin:
-		case LDrawStepPartListControlHeightPin:		return [NSCursor pointingHandCursor];
+		case LDrawStepPartListControlHeightPin:
+		case LDrawStepPartListControlPlacementPin:	return [NSCursor pointingHandCursor];
 		case LDrawStepPartListControlWidthEdge:		return [NSCursor resizeLeftRightCursor];
 		case LDrawStepPartListControlHeightEdge:	return [NSCursor resizeUpDownCursor];
 		case LDrawStepPartListControlNone:			break;
@@ -691,6 +1027,10 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 
 		case LDrawStepPartListControlHeightPin:
 			[self.delegate partListView:self didClickPinForAxis:LPubPliAxisHeight];
+			return YES;
+
+		case LDrawStepPartListControlPlacementPin:
+			[self.delegate partListViewDidClickPlacementPin:self];
 			return YES;
 
 		case LDrawStepPartListControlWidthEdge:
