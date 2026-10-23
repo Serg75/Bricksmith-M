@@ -32,6 +32,7 @@
 #import "LDrawDisplayListMTL.h"
 #import "LDrawRenderMetalResources.h"
 #import <LDrawRenderMetal/LDrawShaderRendererMTL.h>
+#import "LDrawTransparentListsMTL.h"
 #import <LDrawRenderMetal/MetalGPU.h>
 #import "MetalUtilities.h"
 #import <objc/runtime.h>
@@ -88,6 +89,14 @@
 @property (nonatomic, strong) id<MTLTexture>    offscreenDepthTexture;
 @property (nonatomic, assign) CGSize            offscreenSize;
 
+// Lists for transparent parts, made when a frame finds some.
+@property (nonatomic, strong) LDrawTransparentLists	*transparentLists;
+@property (nonatomic, strong) LDrawTransparentLists	*offscreenTransparentLists;
+
+// Frames drawn on screen, and whether a check that the view is idle waits.
+@property (nonatomic, assign) NSUInteger			framesDrawn;
+@property (nonatomic, assign) BOOL					listRoomCheckPending;
+
 @end
 
 @implementation LDrawRendererMetalDrawState
@@ -110,6 +119,12 @@ static id<MTLCommandQueue>			_commandQueue;
 static id<MTLRenderPipelineState>	_pipelineState;
 static id<MTLRenderPipelineState>	_wideLinePipelineState;
 static id<MTLRenderPipelineState>	_marqueePipelineState;
+// Empty per-pixel lists, put transparent parts into them, and blend them. Nil
+// on a GPU that cannot keep the lists.
+static id<MTLRenderPipelineState>	_transparentClearPipelineState;
+static id<MTLRenderPipelineState>	_transparentPipelineState;
+static id<MTLRenderPipelineState>	_transparentWideLinePipelineState;
+static id<MTLRenderPipelineState>	_transparentResolvePipelineState;
 static id<MTLDepthStencilState>		_depthStencilState;
 static dispatch_semaphore_t			_inFlightSemaphore;
 
@@ -123,6 +138,16 @@ static NSUInteger					_currentUniformBufferIndex = 0;
 // The widest and tallest texture Metal makes on a Mac.
 enum : NSUInteger { MaxTextureSize = 16384 };
 
+// The most times a picture is drawn while its transparent lists grow.
+enum : NSUInteger { MaxPictureDraws = 24 };
+
+// The most memory a picture's transparent lists keep for the next picture.
+enum : NSUInteger { PictureListsKeptBytes = 64 * 1024 * 1024 };
+
+// Seconds without a frame before a view's lists let go of room they do not
+// need.
+static const NSTimeInterval ListRoomIdleSeconds = 2.0;
+
 
 static const void * kLDrawRendererMetalDrawStateKey = &kLDrawRendererMetalDrawStateKey;
 
@@ -135,6 +160,28 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 		objc_setAssociatedObject(renderer, kLDrawRendererMetalDrawStateKey, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 	}
 	return state;
+}
+
+// The lists the frames on screen, or the pictures, put transparent parts in,
+// made the first time. Nil on a GPU that cannot keep them.
+static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawState * state, BOOL offscreen)
+{
+	if (_transparentResolvePipelineState == nil) {
+		return nil;
+	}
+
+	if (offscreen)
+	{
+		if (state.offscreenTransparentLists == nil) {
+			state.offscreenTransparentLists = [LDrawTransparentLists new];
+		}
+		return state.offscreenTransparentLists;
+	}
+
+	if (state.transparentLists == nil) {
+		state.transparentLists = [LDrawTransparentLists new];
+	}
+	return state.transparentLists;
 }
 
 
@@ -272,6 +319,7 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	metalDrawState(self).fragmentUniformBuffer = [device newBufferWithBytes:&fragmentUniform length:sizeof(fragmentUniform) options:MTLResourceStorageModeShared];
 
 	[self setupMarquee: defaultLibrary];
+	[self setupTransparency:defaultLibrary vertexDescriptor:vertexDescriptor];
 
 } // end prepareMetal
 
@@ -305,6 +353,81 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
 } // end setupMarquee:
+
+
+//========== setupTransparency:vertexDescriptor: ===============================
+//
+// Purpose:		Makes the pipelines that empty per-pixel lists, put transparent
+//				parts into them, and blend them. A GPU that cannot keep the
+//				lists gets none, and blends the parts one at a time.
+//
+//==============================================================================
+- (void)setupTransparency:(id<MTLLibrary>)library vertexDescriptor:(MTLVertexDescriptor *)vertexDescriptor
+{
+	if (_transparentResolvePipelineState || [LDrawTransparentLists isSupported] == NO) { return; }
+
+	// A fragment keeps the samples it covers in 4 bits, and line bits beside them.
+	if (MSAASampleCount > 4) { return; }
+
+	id<MTLDevice>					device			= MetalGPU.device;
+	MTLRenderPipelineDescriptor		*descriptor		= [MTLRenderPipelineDescriptor new];
+	MTLTileRenderPipelineDescriptor	*tileDescriptor	= [MTLTileRenderPipelineDescriptor new];
+	NSError							*error			= nil;
+
+	tileDescriptor.tileFunction = [library newFunctionWithName:@"clearTransparentLists"];
+	tileDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	tileDescriptor.rasterSampleCount = MSAASampleCount;
+	tileDescriptor.threadgroupSizeMatchesTileSize = YES;
+
+	id<MTLRenderPipelineState> clearPipeline = [device newRenderPipelineStateWithTileDescriptor:tileDescriptor
+																						options:MTLPipelineOptionNone
+																					 reflection:nil
+																						  error:&error];
+
+	descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	descriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	descriptor.sampleCount = MSAASampleCount;
+
+	// The lists take the fragments, so the color is left alone.
+	descriptor.colorAttachments[0].writeMask = MTLColorWriteMaskNone;
+	descriptor.vertexFunction = [library newFunctionWithName:@"transparentVertexShader"];
+	descriptor.fragmentFunction = [library newFunctionWithName:@"transparentFragmentShader"];
+	descriptor.vertexDescriptor = vertexDescriptor;
+
+	id<MTLRenderPipelineState> listPipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
+
+	descriptor.vertexFunction = [library newFunctionWithName:@"transparentWideLineVertexShader"];
+	descriptor.fragmentFunction = [library newFunctionWithName:@"transparentWideLineFragmentShader"];
+	descriptor.vertexDescriptor = nil;
+
+	id<MTLRenderPipelineState> wideLinePipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
+
+	// The blend gets premultiplied colors.
+	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = descriptor.colorAttachments[0];
+	colorAttachment.writeMask = MTLColorWriteMaskAll;
+	colorAttachment.blendingEnabled = YES;
+	colorAttachment.rgbBlendOperation = MTLBlendOperationAdd;
+	colorAttachment.alphaBlendOperation = MTLBlendOperationAdd;
+	colorAttachment.sourceRGBBlendFactor = MTLBlendFactorOne;
+	colorAttachment.sourceAlphaBlendFactor = MTLBlendFactorOne;
+	colorAttachment.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+	colorAttachment.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+	descriptor.vertexFunction = [library newFunctionWithName:@"transparencyResolveVertexShader"];
+	descriptor.fragmentFunction = [library newFunctionWithName:@"transparencyResolveFragmentShader"];
+
+	id<MTLRenderPipelineState> resolvePipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
+
+	if (clearPipeline == nil || listPipeline == nil || wideLinePipeline == nil || resolvePipeline == nil) {
+		NSLog(@"Error occurred when creating transparency pipeline states: %@", error);
+		return;
+	}
+
+	_transparentClearPipelineState = clearPipeline;
+	_transparentPipelineState = listPipeline;
+	_transparentWideLinePipelineState = wideLinePipeline;
+	_transparentResolvePipelineState = resolvePipeline;
+
+} // end setupTransparency:vertexDescriptor:
 
 
 //========== newMultisampleTexture ============================================
@@ -451,17 +574,24 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	// Create or update textures if needed
 	[self createTexturesForSize:view.drawableSize];
 
-	LDrawRendererMetalDrawState * state = metalDrawState(self);
+	LDrawRendererMetalDrawState	*state	= metalDrawState(self);
+	LDrawTransparentLists		*lists	= transparentListsOfState(state, NO);
 
 	if ([self encodeDrawWithCommandBuffer:commandBuffer
 					   multisampleTexture:state.msaaColorTexture
 							 depthTexture:state.depthTexture
 						   resolveTexture:currentDrawable.texture
 							   clearColor:[self clearColor]
-							   boundsOnly:boundsOnly] == NO)
+							   boundsOnly:boundsOnly
+						 transparentLists:lists] == NO)
 	{
 		dispatch_semaphore_signal(_inFlightSemaphore);
 		return;
+	}
+
+	// Lists a frame did not need let go of their buffers.
+	if (lists.frameHasTransparentParts == NO) {
+		[lists releaseBuffers];
 	}
 
 	// present the drawable and buffer, unless the view presents with its transaction
@@ -473,12 +603,29 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	// This indicates that we can change the buffer contents without corrupting any rendering.
 	// IMPORTANT: This must be added BEFORE commit, not after!
 	__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
+	__weak LDrawRenderer		*weakSelf	= self;
+	id<MTLBuffer>				counters	= lists.frameUsesLists ? lists.counters : nil;
+	struct TransparencyUniform	uniform		= lists.uniform;
 	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+		// A frame that ran out of room for transparent fragments is drawn
+		// again with more, unless the lists already have the most room they
+		// can.
+		if (	counters != nil
+			&&	[lists finishFrameWithCounters:counters uniform:uniform]
+			&&	[LDrawTransparentLists canGrowBeyondUniform:uniform])
+		{
+			[weakSelf requestRedisplayLater];
+		}
 		dispatch_semaphore_signal(block_sema);
 	}];
 
 	// send the commands to the GPU
 	[commandBuffer commit];
+
+	state.framesDrawn += 1;
+	if (lists.memoryLength > 0) {
+		[self releaseUnneededListRoomWhenIdle];
+	}
 
 	// Presenting after the commands are scheduled is what puts the picture in
 	// the same transaction as the drawing over it.
@@ -519,6 +666,73 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 } // end drawInMTKView:
 
 
+//========== requestRedisplayLater =============================================
+//
+// Purpose:		Asks the delegate for another frame, from the main queue, so it
+//				is safe while drawing and on any thread.
+//
+//==============================================================================
+- (void)requestRedisplayLater
+{
+	__weak LDrawRenderer *weakSelf = self;
+
+	dispatch_async(dispatch_get_main_queue(), ^{
+		LDrawRenderer *renderer = weakSelf;
+
+		if (renderer != nil) {
+			[renderer->delegate LDrawRendererNeedsRedisplay:renderer];
+		}
+	});
+
+} // end requestRedisplayLater
+
+
+//========== releaseUnneededListRoomWhenIdle ===================================
+//
+// Purpose:		Once the view has drawn no frame for a while, its lists let go
+//				of fragment room the last frame did not need. A close-up can
+//				make a lot of it, and the frames that would shrink it may never
+//				come.
+//
+// Notes:		Only one check waits at a time. One that finds new frames waits
+//				again.
+//
+//==============================================================================
+- (void)releaseUnneededListRoomWhenIdle
+{
+	LDrawRendererMetalDrawState	*state		= metalDrawState(self);
+	NSUInteger					frame		= state.framesDrawn;
+	__weak LDrawRenderer		*weakSelf	= self;
+
+	if (state.listRoomCheckPending) {
+		return;
+	}
+
+	state.listRoomCheckPending = YES;
+
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(ListRoomIdleSeconds * NSEC_PER_SEC)),
+				   dispatch_get_main_queue(), ^{
+		LDrawRenderer *renderer = weakSelf;
+
+		if (renderer == nil) {
+			return;
+		}
+
+		LDrawRendererMetalDrawState *drawState = metalDrawState(renderer);
+
+		drawState.listRoomCheckPending = NO;
+
+		if (drawState.framesDrawn == frame) {
+			[drawState.transparentLists releaseUnneededRoom];
+		}
+		else {
+			[renderer releaseUnneededListRoomWhenIdle];
+		}
+	});
+
+} // end releaseUnneededListRoomWhenIdle
+
+
 //========== clearColor ========================================================
 //
 // Purpose:		The background color the view clears to.
@@ -553,6 +767,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 // Purpose:		Encodes one frame of the directive into a render pass that
 //				resolves into resolveTexture. Returns NO if there is no pass.
 //
+// Notes:		Transparent parts go into the lists, made ready when the
+//				drawing finds some, or are blended one at a time without them.
+//				Afterwards the lists tell whether there were any, and whether
+//				they went into the lists.
+//
 //==============================================================================
 - (BOOL)encodeDrawWithCommandBuffer:(id<MTLCommandBuffer>)commandBuffer
 				 multisampleTexture:(id<MTLTexture>)multisampleTexture
@@ -560,6 +779,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 					 resolveTexture:(id<MTLTexture>)resolveTexture
 						 clearColor:(MTLClearColor)clearColor
 						 boundsOnly:(BOOL)boundsOnly
+				   transparentLists:(LDrawTransparentLists *)lists
 {
 	MTLRenderPassDescriptor *renderPassDescriptor = MTLRenderPassDescriptor.renderPassDescriptor;
 	if (renderPassDescriptor == nil) {
@@ -614,8 +834,18 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 																  modelView:[camera modelView]
 																 projection:[camera projection]];
 
+	CGSize pixelSize = CGSizeMake(multisampleTexture.width, multisampleTexture.height);
+
+	[lists beginFrame];
+
+	// Kept here until the drawing is finished, since the session does not retain
+	// it. Without the attribute ARC may let it go right after its last use here.
+	NS_VALID_UNTIL_END_OF_SCOPE
+	LDrawDLPrepareTransparentLists prepareLists = [self prepareTransparentLists:lists pixelSize:pixelSize];
+
 	[ren setBoundsOnlyDrawing:boundsOnly];
-	[self applyOutlineToShaderRenderer:ren pixelSize:CGSizeMake(multisampleTexture.width, multisampleTexture.height)];
+	[self applyOutlineToShaderRenderer:ren pixelSize:pixelSize];
+	[ren setPrepareTransparentLists:prepareLists];
 	[self->fileBeingDrawn drawSelf:ren];
 
 	[ren finishDraw];
@@ -658,6 +888,42 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[ren setWideLines:&lines];
 
 } // end applyOutlineToShaderRenderer:pixelSize:
+
+
+//========== prepareTransparentLists:pixelSize: =================================
+//
+// Purpose:		What a drawing calls when it finds transparent parts: it gets
+//				these lists ready for a surface of this many pixels. Without
+//				lists, nil, and the parts are blended one at a time.
+//
+//==============================================================================
+- (LDrawDLPrepareTransparentLists)prepareTransparentLists:(LDrawTransparentLists *)lists pixelSize:(CGSize)pixelSize
+{
+	if (lists == nil || _transparentResolvePipelineState == nil) {
+		return nil;
+	}
+
+	id<MTLRenderPipelineState> facePipeline = _pipelineState;
+
+	return ^BOOL(struct LDrawDLTransparentLists *settings) {
+		if ([lists prepareForPixelSize:pixelSize] == NO) {
+			return NO;
+		}
+
+		settings->clear_pipeline			= _transparentClearPipelineState;
+		settings->list_pipeline				= _transparentPipelineState;
+		settings->list_wide_line_pipeline	= _transparentWideLinePipelineState;
+		settings->resolve_pipeline			= _transparentResolvePipelineState;
+		settings->face_pipeline				= facePipeline;
+		settings->heads						= lists.heads;
+		settings->fragments					= lists.fragments;
+		settings->counters					= lists.counters;
+		settings->uniform					= lists.uniform;
+
+		return YES;
+	};
+
+} // end prepareTransparentLists:pixelSize:
 
 
 //========== depthOfFaceAt45DegreesAcross:pixelWidth: ==========================
@@ -727,44 +993,74 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[self createOffscreenTexturesForSize:pixelSize];
 	LDrawRendererMetalDrawState * state = metalDrawState(self);
 
-	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
+	// Drawn again while its transparent fragments do not fit in the lists.
+	// When they cannot grow any more, it is drawn once more with the parts
+	// blended one at a time, rather than with some missing.
+	BOOL withoutLists = NO;
 
-	id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
-	commandBuffer.label = @"Offscreen Command Buffer";
+	for (NSUInteger attempt = 0; ; ++attempt)
+	{
+		LDrawTransparentLists *lists = withoutLists ? nil : transparentListsOfState(state, YES);
 
-	BOOL encoded = commandBuffer != nil
-				&& [self encodeDrawWithCommandBuffer:commandBuffer
-								  multisampleTexture:state.offscreenColorTexture
-										depthTexture:state.offscreenDepthTexture
-									  resolveTexture:resolveTexture
-										  clearColor:clearColor
-										  boundsOnly:NO];
-	if (encoded == NO) {
-		dispatch_semaphore_signal(_inFlightSemaphore);
-		return NULL;
+		dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
+
+		id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+		commandBuffer.label = @"Offscreen Command Buffer";
+
+		BOOL encoded = commandBuffer != nil
+					&& [self encodeDrawWithCommandBuffer:commandBuffer
+									  multisampleTexture:state.offscreenColorTexture
+											depthTexture:state.offscreenDepthTexture
+										  resolveTexture:resolveTexture
+											  clearColor:clearColor
+											  boundsOnly:NO
+										transparentLists:lists];
+		if (encoded == NO) {
+			dispatch_semaphore_signal(_inFlightSemaphore);
+			return NULL;
+		}
+
+		id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+		[blit copyFromTexture:resolveTexture
+				  sourceSlice:0
+				  sourceLevel:0
+				 sourceOrigin:MTLOriginMake(0, 0, 0)
+				   sourceSize:MTLSizeMake(width, height, 1)
+					 toBuffer:pixels
+			destinationOffset:0
+	   destinationBytesPerRow:bytesPerRow
+	 destinationBytesPerImage:bytesPerRow * height];
+		[blit endEncoding];
+
+		__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
+		[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+			dispatch_semaphore_signal(block_sema);
+		}];
+		[commandBuffer commit];
+		[commandBuffer waitUntilCompleted];
+
+		if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+			return NULL;
+		}
+
+		if (lists.frameUsesLists == NO || [lists finishFrameWithCounters:lists.counters uniform:lists.uniform] == NO) {
+			break;
+		}
+
+		// The lists grow on every try, so they reach their most room. The
+		// count of tries is only a guard.
+		if ([LDrawTransparentLists canGrowBeyondUniform:lists.uniform] == NO || attempt >= MaxPictureDraws) {
+			withoutLists = YES;
+		}
 	}
 
-	id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
-	[blit copyFromTexture:resolveTexture
-			  sourceSlice:0
-			  sourceLevel:0
-			 sourceOrigin:MTLOriginMake(0, 0, 0)
-			   sourceSize:MTLSizeMake(width, height, 1)
-				 toBuffer:pixels
-		destinationOffset:0
-   destinationBytesPerRow:bytesPerRow
- destinationBytesPerImage:bytesPerRow * height];
-	[blit endEncoding];
+	// The next picture keeps small lists, so pictures in a row do not make
+	// them anew. Big ones let go of their buffers. The lists still tell about
+	// the last draw that used them.
+	LDrawTransparentLists *pictureLists = state.offscreenTransparentLists;
 
-	__block dispatch_semaphore_t block_sema = _inFlightSemaphore;
-	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
-		dispatch_semaphore_signal(block_sema);
-	}];
-	[commandBuffer commit];
-	[commandBuffer waitUntilCompleted];
-
-	if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
-		return NULL;
+	if (pictureLists.frameHasTransparentParts == NO || pictureLists.memoryLength > PictureListsKeptBytes) {
+		[pictureLists releaseBuffers];
 	}
 
 	NSData				*data		= [NSData dataWithBytes:pixels.contents length:bytesPerRow * height];

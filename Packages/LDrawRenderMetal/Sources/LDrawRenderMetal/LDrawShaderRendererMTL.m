@@ -354,3 +354,20 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 } // end setWideLines:
 
 @end
+
+
+@implementation LDrawShaderRenderer (MetalTransparency)
+
+//========== setPrepareTransparentLists: =========================================
+//
+// Purpose:	Puts this drawing's transparent parts into per-pixel lists, so
+//			each pixel blends them in depth order.
+//
+//================================================================================
+- (void)setPrepareTransparentLists:(LDrawDLPrepareTransparentLists)prepare
+{
+	LDrawDLSessionSetPrepareTransparentLists(session, prepare);
+
+} // end setPrepareTransparentLists:
+
+@end

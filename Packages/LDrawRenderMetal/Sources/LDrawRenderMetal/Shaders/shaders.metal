@@ -30,12 +30,13 @@ struct VertexOutput {
 	float2	tex_coord;
 };
 
-vertex VertexOutput vertexShader(VertexInput				in		    [[stage_in]],
-								 device const InstanceInput	*inst	    [[buffer(BufferIndexPerInstanceData)]],
-								 constant VertexUniform&	uni		    [[buffer(BufferIndexVertexUniforms)]],
-								 constant TexturePlaneData&	texGen	    [[buffer(BufferIndexTexturePlane)]],
-								 constant float&			ghost_alpha [[buffer(BufferIndexGhostAlpha)]],
-								 uint						iid		    [[instance_id]])
+// A vertex of a part's face or thin line, placed and colored.
+static VertexOutput partVertex(VertexInput					in,
+							   device const InstanceInput	*inst,
+							   constant VertexUniform&		uni,
+							   constant TexturePlaneData&	texGen,
+							   float						ghost_alpha,
+							   uint							iid)
 {
 	VertexOutput out;
 
@@ -80,6 +81,16 @@ vertex VertexOutput vertexShader(VertexInput				in		    [[stage_in]],
 	return out;
 }
 
+vertex VertexOutput vertexShader(VertexInput				in		    [[stage_in]],
+								 device const InstanceInput	*inst	    [[buffer(BufferIndexPerInstanceData)]],
+								 constant VertexUniform&	uni		    [[buffer(BufferIndexVertexUniforms)]],
+								 constant TexturePlaneData&	texGen	    [[buffer(BufferIndexTexturePlane)]],
+								 constant float&			ghost_alpha [[buffer(BufferIndexGhostAlpha)]],
+								 uint						iid		    [[instance_id]])
+{
+	return partVertex(in, inst, uni, texGen, ghost_alpha, iid);
+}
+
 
 // Fragment shader
 
@@ -93,15 +104,13 @@ struct FragmentOutput {
 	float4	frag_color;
 };
 
-fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
-									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]],
-									   texture2d<float> tex [[texture(0)]])
+// The color of a face or line lit by the two lights, under its texture.
+static float4 shadedColor(float4 color, float3 normal_eye, float2 tex_coord,
+						  constant FragmentUniform& uni, texture2d<float> tex)
 {
-	FragmentOutput out;
+	float3 normal = normalize(normal_eye);
 
-	float3 normal = normalize(in.normal_eye);
-
-	float4 final_color = in.color;
+	float4 final_color = color;
 	float light_source_0_k = dot(normal, uni.light_source[0].position.xyz);
 	float light_source_1_k = dot(normal, uni.light_source[1].position.xyz);
 	final_color.rgb *=
@@ -115,13 +124,22 @@ fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 									 s_address::clamp_to_edge,
 									 t_address::clamp_to_edge);
 
-	float4 tex_color = tex.sample(linear_sampler, in.tex_coord);
+	float4 tex_color = tex.sample(linear_sampler, tex_coord);
 
 	float4 frag_color;
 	frag_color.rgb = ((float3)mix(final_color.rgb, (float3)tex_color.rgb, (float)tex_color.a));
-	frag_color.a = in.color.a;
+	frag_color.a = color.a;
 
-	out.frag_color = frag_color;
+	return frag_color;
+}
+
+fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
+									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]],
+									   texture2d<float> tex [[texture(0)]])
+{
+	FragmentOutput out;
+
+	out.frag_color = shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex);
 
 	return out;
 }
@@ -199,20 +217,23 @@ static float3 outlineColor(float3 color)
 	return color * mix(OUTLINE_KEEP_DARK, OUTLINE_KEEP_LIGHT, brightness);
 }
 
-// Draws each line as a quad, so it can be wider than a pixel. A line takes six
-// vertices, and reads its ends through the index buffer. The part's edge color
-// becomes its outline color.
-vertex LineVertexOutput wideLineVertexShader(
-	device const PackedVertex	*verts		[[buffer(BufferIndexInstanceInvariantData)]],
-	device const InstanceInput	*inst		[[buffer(BufferIndexPerInstanceData)]],
-	constant VertexUniform&		uni			[[buffer(BufferIndexVertexUniforms)]],
-	constant float&				ghost_alpha	[[buffer(BufferIndexGhostAlpha)]],
-	device const uint			*indices	[[buffer(BufferIndexLineIndices)]],
-	constant LineUniform&		line		[[buffer(BufferIndexLineUniforms)]],
-	uint						vid			[[vertex_id]],
-	uint						iid			[[instance_id]])
+// A corner of a line's quad, so the line can be wider than a pixel. A line
+// takes six vertices, and reads its ends through the index buffer. The part's
+// edge color becomes its outline color. depthAcrossWidth is how much the depth
+// changes along the line over one line width.
+static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
+									   device const InstanceInput	*inst,
+									   constant VertexUniform&		uni,
+									   float						ghost_alpha,
+									   device const uint			*indices,
+									   constant LineUniform&		line,
+									   uint							vid,
+									   uint							iid,
+									   thread float&				depthAcrossWidth)
 {
 	LineVertexOutput out;
+
+	depthAcrossWidth = 0.0;
 
 	device const InstanceInput&	part	= inst[iid];
 	uint						first	= (vid / 6) * (line.conditional ? 4 : 2);
@@ -258,6 +279,9 @@ vertex LineVertexOutput wideLineVertexShader(
 
 	float2	halfViewport	= line.viewport_size * 0.5;
 	float2	along			= (clip1.xy / clip1.w - clip0.xy / clip0.w) * halfViewport;
+	float	depthChange		= abs(clip1.z / clip1.w - clip0.z / clip0.w);
+
+	depthAcrossWidth = depthChange / max(length(along), 1e-6) * line.width;
 
 	along = (length(along) > 1e-6) ? normalize(along) : float2(1.0, 0.0);
 
@@ -274,10 +298,484 @@ vertex LineVertexOutput wideLineVertexShader(
 	return out;
 }
 
+vertex LineVertexOutput wideLineVertexShader(
+	device const PackedVertex	*verts		[[buffer(BufferIndexInstanceInvariantData)]],
+	device const InstanceInput	*inst		[[buffer(BufferIndexPerInstanceData)]],
+	constant VertexUniform&		uni			[[buffer(BufferIndexVertexUniforms)]],
+	constant float&				ghost_alpha	[[buffer(BufferIndexGhostAlpha)]],
+	device const uint			*indices	[[buffer(BufferIndexLineIndices)]],
+	constant LineUniform&		line		[[buffer(BufferIndexLineUniforms)]],
+	uint						vid			[[vertex_id]],
+	uint						iid			[[instance_id]])
+{
+	float depthAcrossWidth;
+
+	return wideLineVertex(verts, inst, uni, ghost_alpha, indices, line, vid, iid, depthAcrossWidth);
+}
+
 // Outlines are not lit, so they look the same from every side.
 fragment float4 wideLineFragmentShader(LineVertexOutput in [[stage_in]])
 {
 	return in.color;
+}
+
+
+// MARK: - Transparency -
+
+
+// One transparent fragment in its pixel's list.
+struct TransparentFragment {
+	uint		color;			// RGBA, 8 bits each
+	atomic_uint	depth_mask;		// depth in the top 24 bits, line bits and samples below
+	uint		next;			// the pixel's next fragment, or TransparentListEnd
+};
+
+static_assert(sizeof(TransparentFragment) == TransparentFragmentSize, "the renderer sizes the buffer by this");
+
+// Where transparent fragments go.
+struct TransparentLists {
+	device atomic_uint				*heads;
+	device TransparentFragment		*fragments;
+	device atomic_uint				*counters;
+	constant TransparencyUniform	*uniform;
+};
+
+constant float TRANSPARENT_DEPTH_STEPS	= 16777215.0;
+
+// Fragments that follow each other this close in depth, in steps, are taken
+// as one surface, such as the faces where two parts touch. They are ordered by
+// color, so the surface does not speckle.
+constant uint TRANSPARENT_DEPTH_TIE		= 16;
+
+// The byte below the depth holds the samples a fragment covers in its low 4
+// bits. A line marks itself in the top bit, so the blend can tell lines that
+// lie on each other from faces that do, and keeps in the 3 bits below it how
+// far apart in depth another line on it may be.
+constant uint TRANSPARENT_SAMPLE_BITS	= 0x0Fu;
+constant uint TRANSPARENT_LINE_BITS		= 0xF0u;
+constant uint TRANSPARENT_LINE_BIT		= 0x80u;
+constant uint TRANSPARENT_LEEWAY_SHIFT	= 4;
+constant uint TRANSPARENT_LEEWAY_MAX	= 7;
+
+// The line bits for a line that another line may be this many depth steps
+// from and still lie on it. The leeway is kept as a tie times a power of 4, at
+// least as much as asked.
+static uint lineBits(float leewaySteps)
+{
+	float	ties	= clamp(leewaySteps / TRANSPARENT_DEPTH_TIE, 1.0, 65536.0);
+	uint	power	= min(uint(ceil(log2(ties) * 0.5)), TRANSPARENT_LEEWAY_MAX);
+
+	return TRANSPARENT_LINE_BIT | (power << TRANSPARENT_LEEWAY_SHIFT);
+}
+
+// The depth steps another line may be from a line with these bits.
+static uint lineLeeway(uint bits)
+{
+	return TRANSPARENT_DEPTH_TIE << (2 * ((bits >> TRANSPARENT_LEEWAY_SHIFT) & TRANSPARENT_LEEWAY_MAX));
+}
+
+// Adds a transparent color at one sample to its pixel's list, with the line
+// bits of a line in lineFlags or 0 for a face. The shader runs once for each sample of a
+// face that nothing opaque hides, and those runs get the same color and
+// depth, so they share one fragment and each adds its sample to it.
+static void addTransparentFragment(TransparentLists lists, float4 color, uint lineFlags, float depth, float2 position,
+								   uint sample)
+{
+	uint2	pixel		= uint2(position);
+	uint	headIndex	= pixel.y * lists.uniform->width + pixel.x;
+	uint	packed		= pack_float_to_unorm4x8(saturate(color));
+	uint	steps		= uint(saturate(depth) * TRANSPARENT_DEPTH_STEPS);
+	uint	depthBits	= steps << 8;
+	uint	sampleBit	= 1u << sample;
+	uint	head		= atomic_load_explicit(&lists.heads[headIndex], memory_order_relaxed);
+	uint	mine		= TransparentListEnd;
+
+	// Another sample of the same face may have just put its fragment first.
+	// Their depths can round one step apart. A fragment that already has this
+	// sample is another face, even one of the same color touching this one.
+	for (int attempt = 0; attempt < 16; ++attempt)
+	{
+		if (head != TransparentListEnd)
+		{
+			device TransparentFragment	&first		= lists.fragments[head];
+			uint						firstDepth	= atomic_load_explicit(&first.depth_mask, memory_order_relaxed);
+			uint						firstSteps	= firstDepth >> 8;
+
+			if (	first.color == packed
+				&&	(firstDepth & TRANSPARENT_LINE_BITS) == lineFlags
+				&&	(firstDepth & sampleBit) == 0
+				&&	max(firstSteps, steps) - min(firstSteps, steps) <= 1)
+			{
+				atomic_fetch_or_explicit(&first.depth_mask, sampleBit, memory_order_relaxed);
+				return;
+			}
+		}
+
+		if (mine == TransparentListEnd)
+		{
+			// Neighboring tiles of 8 pixels use different counters.
+			uint2	tile	= pixel / 8;
+			uint	counter	= (tile.x * 7 + tile.y * 13) % TransparentCounterCount;
+			uint	taken	= atomic_fetch_add_explicit(&lists.counters[counter * TransparentCounterStride], 1,
+														memory_order_relaxed);
+
+			// Out of room. The renderer reads the counters and makes more for
+			// the next frame.
+			if (taken >= lists.uniform->slice)
+				return;
+
+			mine = counter * lists.uniform->slice + taken;
+			lists.fragments[mine].color = packed;
+			atomic_store_explicit(&lists.fragments[mine].depth_mask, depthBits | lineFlags | sampleBit,
+								  memory_order_relaxed);
+		}
+
+		lists.fragments[mine].next = head;
+
+		if (atomic_compare_exchange_weak_explicit(&lists.heads[headIndex], &head, mine,
+												  memory_order_relaxed, memory_order_relaxed))
+			return;
+	}
+
+	// Out of tries, which a compare and exchange may run into for no reason.
+	// An exchange cannot fail, so the fragment still goes in at the head.
+	lists.fragments[mine].next = atomic_exchange_explicit(&lists.heads[headIndex], mine, memory_order_relaxed);
+}
+
+// A face or thin line of a transparent part, with what the lists need too.
+struct TransparentVertexOutput {
+	float4	position [[position]];
+	float4	color;
+	float2	tex_coord;
+	float3	normal_eye;
+	float	is_line [[flat]];
+	float2	clip_zw [[center_perspective]];		// for the depth at the pixel's center
+};
+
+vertex TransparentVertexOutput transparentVertexShader(
+	VertexInput					in			[[stage_in]],
+	device const InstanceInput	*inst		[[buffer(BufferIndexPerInstanceData)]],
+	constant VertexUniform&		uni			[[buffer(BufferIndexVertexUniforms)]],
+	constant TexturePlaneData&	texGen		[[buffer(BufferIndexTexturePlane)]],
+	constant float&				ghost_alpha	[[buffer(BufferIndexGhostAlpha)]],
+	uint						iid			[[instance_id]])
+{
+	VertexOutput			part	= partVertex(in, inst, uni, texGen, ghost_alpha, iid);
+	TransparentVertexOutput	out;
+
+	out.position	= part.position;
+	out.color		= part.color;
+	out.tex_coord	= part.tex_coord;
+	out.normal_eye	= part.normal_eye;
+	out.clip_zw		= part.position.zw;
+
+	// Lines have no normal.
+	out.is_line = all(in.normal == 0.0) ? 1.0 : 0.0;
+
+	return out;
+}
+
+// A wide line of a transparent part, with its depth for the lists.
+struct TransparentLineVertexOutput {
+	float4	position [[position]];
+	float4	color;
+	float2	clip_zw [[center_perspective]];		// for the depth at the pixel's center
+	uint	line_flags [[flat]];
+};
+
+// How many line widths along a line another line at a corner may reach, where
+// the ends of their quads overlap. More than one for corners sharper than
+// square.
+constant float TRANSPARENT_CORNER_WIDTHS = 2.0;
+
+vertex TransparentLineVertexOutput transparentWideLineVertexShader(
+	device const PackedVertex	*verts		[[buffer(BufferIndexInstanceInvariantData)]],
+	device const InstanceInput	*inst		[[buffer(BufferIndexPerInstanceData)]],
+	constant VertexUniform&		uni			[[buffer(BufferIndexVertexUniforms)]],
+	constant float&				ghost_alpha	[[buffer(BufferIndexGhostAlpha)]],
+	device const uint			*indices	[[buffer(BufferIndexLineIndices)]],
+	constant LineUniform&		line		[[buffer(BufferIndexLineUniforms)]],
+	uint						vid			[[vertex_id]],
+	uint						iid			[[instance_id]])
+{
+	float						depthAcrossWidth;
+	LineVertexOutput			corner	= wideLineVertex(verts, inst, uni, ghost_alpha, indices, line, vid, iid,
+														 depthAcrossWidth);
+	TransparentLineVertexOutput	out;
+	float						leeway	= depthAcrossWidth * TRANSPARENT_CORNER_WIDTHS * TRANSPARENT_DEPTH_STEPS;
+
+	out.position	= corner.position;
+	out.color		= corner.color;
+	out.clip_zw		= corner.position.zw;
+	out.line_flags	= lineBits(leeway);
+
+	return out;
+}
+
+// How far a face sorts behind the lines on its edges. More than a tie.
+constant float TRANSPARENT_FACE_DEPTH_OFFSET = 2.0 * TRANSPARENT_DEPTH_TIE / TRANSPARENT_DEPTH_STEPS;
+
+// The depth at the pixel's center, from the clip position the rasterizer
+// interpolates there. z and w are both perspective-correct, so z / w is what
+// [[position]].z is at the center. The runs for the samples of one face then
+// get the same depth, wherever the GPU puts their position. Derivatives would
+// not do: where an opaque edge culls part of a pixel's quad, they are not
+// defined.
+static float depthAtPixelCenter(float2 clipZW)
+{
+	return clipZW.x / clipZW.y;
+}
+
+// Puts a transparent face or thin line into the lists instead of blending it.
+// It runs per sample, and only where nothing opaque is in front.
+[[early_fragment_tests]]
+fragment void transparentFragmentShader(
+	TransparentVertexOutput			in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	constant FragmentUniform&		uni			[[buffer(BufferIndexFragmentUniforms)]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	device atomic_uint				*counters	[[buffer(BufferIndexTransparentCounters)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]],
+	texture2d<float>				tex			[[texture(0)]])
+{
+	TransparentLists	lists	= { heads, fragments, counters, &uniform };
+	float4				color	= shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex);
+	bool				isLine	= in.is_line > 0.5;
+	float				behind	= isLine ? 0.0 : TRANSPARENT_FACE_DEPTH_OFFSET;
+	uint				flags	= isLine ? lineBits(0.0) : 0u;		// a thin line gets the least leeway
+
+	addTransparentFragment(lists, color, flags, depthAtPixelCenter(in.clip_zw) + behind, in.position.xy, sample);
+}
+
+// Puts a transparent wide line into the lists instead of blending it.
+[[early_fragment_tests]]
+fragment void transparentWideLineFragmentShader(
+	TransparentLineVertexOutput		in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	device atomic_uint				*counters	[[buffer(BufferIndexTransparentCounters)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+{
+	TransparentLists lists = { heads, fragments, counters, &uniform };
+
+	addTransparentFragment(lists, in.color, in.line_flags, depthAtPixelCenter(in.clip_zw), in.position.xy, sample);
+}
+
+// Empties the lists of the pixels in one tile, in the render pass before the
+// transparent parts are drawn. A tile's later fragments come after it. In a
+// tile dispatch the grid position is the pixel in the render target.
+kernel void clearTransparentLists(
+	ushort2							position	[[thread_position_in_grid]],
+	device uint						*heads		[[buffer(BufferIndexTransparentHeads)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+{
+	if (position.x < uniform.width && position.y < uniform.height)
+		heads[position.y * uniform.width + position.x] = TransparentListEnd;
+}
+
+struct ResolveVertexOutput {
+	float4	position [[position]];
+};
+
+// A triangle over the whole surface.
+vertex ResolveVertexOutput transparencyResolveVertexShader(uint vid [[vertex_id]])
+{
+	ResolveVertexOutput	out;
+	float2				corner	= float2((vid << 1) & 2, vid & 2);
+
+	out.position = float4(corner * 2.0 - 1.0, 0.0, 1.0);
+
+	return out;
+}
+
+// The most fragments a sample blends in their own order. They stay in
+// registers. The ones behind them are blended as one layer of their average
+// color.
+constant uint TRANSPARENT_SORTED_MAX	= 16;
+// Marks a free place among the sorted fragments. A depth and line bits
+// without the samples are never this.
+constant uint TRANSPARENT_SORTED_FREE	= 0xFFFFFFFFu;
+// A list is not followed further, so a broken one cannot hang the GPU.
+constant uint TRANSPARENT_LIST_MAX		= 4096;
+// The lines last blended that a line is checked against, to blend a line
+// lying on one of them only once.
+constant uint TRANSPARENT_RECENT_LINES	= 4;
+
+// Whether fragment a goes before fragment b: nearer, or as near and of a
+// smaller color. x is the depth, y the color.
+static bool isBefore(uint2 a, uint2 b)
+{
+	return a.x < b.x || (a.x == b.x && a.y < b.y);
+}
+
+// Whether two sorted fragments are lines of one color that lie on each other:
+// no further apart in depth than the leeway of either.
+static bool isSameLine(uint2 a, uint2 b)
+{
+	uint aDepth = a.x >> 8;
+	uint bDepth = b.x >> 8;
+
+	return (	a.y == b.y
+			&&	(a.x & b.x & TRANSPARENT_LINE_BIT) != 0
+			&&	max(aDepth, bDepth) - min(aDepth, bDepth) <= max(lineLeeway(a.x), lineLeeway(b.x)));
+}
+
+// Blends the transparent fragments over one sample onto what is drawn there,
+// as a premultiplied color: the nearest first, front to back, with the layer
+// of the farthest behind them. It runs per sample, so a sample a fragment does
+// not cover keeps what is drawn there. Lines that lie on each other count
+// once.
+fragment float4 transparencyResolveFragmentShader(
+	ResolveVertexOutput				in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+{
+	uint2	pixel		= uint2(in.position.xy);
+	uint	index		= atomic_load_explicit(&heads[pixel.y * uniform.width + pixel.x], memory_order_relaxed);
+	uint	sampleBit	= 1u << sample;
+
+	if (index == TransparentListEnd)
+		return float4(0.0);
+
+	// The nearest fragments, nearest first, and free places after them. x is
+	// the depth, y the color.
+	uint2	sorted[TRANSPARENT_SORTED_MAX];
+
+	// The layer behind them: the colors times their alphas with the alphas in
+	// w, and how much light gets through it.
+	float4	far			= float4(0.0);
+	float	farLight	= 1.0;
+
+	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+		sorted[i] = uint2(TRANSPARENT_SORTED_FREE, 0);
+
+	for (uint visited = 0; index != TransparentListEnd && visited < TRANSPARENT_LIST_MAX; ++visited)
+	{
+		uint2 entry = uint2(atomic_load_explicit(&fragments[index].depth_mask, memory_order_relaxed),
+							fragments[index].color);
+
+		index = fragments[index].next;
+
+		if ((entry.x & sampleBit) == 0)
+			continue;
+
+		entry.x &= ~TRANSPARENT_SAMPLE_BITS;
+
+		// The fragment takes its place and the ones behind it move back one.
+		// Every place is visited, so the array stays in registers.
+		#pragma unroll
+		for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+		{
+			bool	inFront	= sorted[i].x == TRANSPARENT_SORTED_FREE || isBefore(entry, sorted[i]);
+			uint2	kept	= inFront ? entry : sorted[i];
+
+			entry		= inFront ? sorted[i] : entry;
+			sorted[i]	= kept;
+		}
+
+		// The one pushed off the end goes behind.
+		if (entry.x != TRANSPARENT_SORTED_FREE)
+		{
+			float4 farColor = unpack_unorm4x8_to_float(entry.y);
+
+			far			+= float4(farColor.rgb * farColor.a, farColor.a);
+			farLight	*= 1.0 - farColor.a;
+		}
+	}
+
+	// Fragments within a tie of the first one of their run are one surface, and
+	// go by color. A run spans no more than a tie, so a chain of close surfaces
+	// does not become one. Which run each is in is worked out from the depths
+	// first, so the order does not depend on the order the fragments came in.
+	uint run[TRANSPARENT_SORTED_MAX];
+	uint runDepth = sorted[0].x >> 8;
+
+	run[0] = 0;
+
+	#pragma unroll
+	for (uint i = 1; i < TRANSPARENT_SORTED_MAX; ++i)
+	{
+		uint	depth	= sorted[i].x >> 8;
+		bool	tied	= (	sorted[i].x != TRANSPARENT_SORTED_FREE
+						 &&	depth - runDepth <= TRANSPARENT_DEPTH_TIE);
+
+		run[i]		= tied ? run[i - 1] : run[i - 1] + 1;
+		runDepth	= tied ? runDepth : depth;
+	}
+
+	for (uint pass = 1; pass < TRANSPARENT_SORTED_MAX; ++pass)
+	{
+		bool swapped = false;
+
+		#pragma unroll
+		for (uint i = 1; i < TRANSPARENT_SORTED_MAX; ++i)
+		{
+			if (run[i] == run[i - 1] && sorted[i].y < sorted[i - 1].y)
+			{
+				uint2 later = sorted[i];
+
+				sorted[i]		= sorted[i - 1];
+				sorted[i - 1]	= later;
+				swapped			= true;
+			}
+		}
+
+		if (swapped == false)
+			break;
+	}
+
+	float3	color	= float3(0.0);
+	float	light	= 1.0;		// how much of what is behind gets through
+	uint2	recentLines[TRANSPARENT_RECENT_LINES];
+
+	for (uint k = 0; k < TRANSPARENT_RECENT_LINES; ++k)
+		recentLines[k] = uint2(0);
+
+	#pragma unroll
+	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+	{
+		if (sorted[i].x == TRANSPARENT_SORTED_FREE)
+			break;
+
+		// A line on a nearer line of the same color, such as where the ends
+		// of two wide lines overlap at a corner, is blended once, as the depth
+		// test does for opaque lines. It is checked against the lines last
+		// blended, so faces between them do not matter. Faces never match.
+		if ((sorted[i].x & TRANSPARENT_LINE_BIT) != 0)
+		{
+			bool repeated = false;
+
+			#pragma unroll
+			for (uint k = 0; k < TRANSPARENT_RECENT_LINES; ++k)
+				repeated = repeated || isSameLine(sorted[i], recentLines[k]);
+
+			if (repeated)
+				continue;
+
+			#pragma unroll
+			for (uint k = TRANSPARENT_RECENT_LINES - 1; k > 0; --k)
+				recentLines[k] = recentLines[k - 1];
+
+			recentLines[0] = sorted[i];
+		}
+
+		float4 fragmentColor = unpack_unorm4x8_to_float(sorted[i].y);
+
+		color += light * fragmentColor.a * fragmentColor.rgb;
+		light *= 1.0 - fragmentColor.a;
+	}
+
+	if (far.w > 0.0)
+	{
+		color += light * (1.0 - farLight) * far.rgb / far.w;
+		light *= farLight;
+	}
+
+	return float4(color, 1.0 - light);
 }
 
 

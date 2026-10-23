@@ -67,7 +67,9 @@ const int MSAASampleCount = 4;
 
 	When a DL has translucency, we always save it to the transparent list.
 
-	Then when the session is destroyed, these DLs are sorted by their local origin and drawn back to front.
+	Then when the session is destroyed, every fragment of these DLs goes into a per-pixel list, and a pass over the
+	whole surface blends each pixel's list in depth order. Without the lists, the DLs are sorted by their local origin
+	and drawn back to front.
 
 */
 
@@ -221,6 +223,8 @@ struct LDrawDLSession {
 
 	struct LDrawDLWideLines				wide_lines;				// Edge and conditional lines as quads, when asked for.
 
+	// Gets lists ready for the transparent parts, when the GPU can keep them.
+	__unsafe_unretained LDrawDLPrepareTransparentLists	prepare_lists;
 	BOOL								transparent_bias;		// Transparent faces get more depth bias.
 
 	id<MTLTexture>						current_bound_texture;
@@ -398,6 +402,22 @@ static id<MTLDepthStencilState> transparentDepthState(void)
 	return state;
 
 } // end transparentDepthState
+
+
+//========== transparentResolveDepthState ========================================
+//
+// Purpose:	Depth state for blending the transparent lists, which covers the
+//			whole surface.
+//
+//================================================================================
+static id<MTLDepthStencilState> transparentResolveDepthState(void)
+{
+	static id<MTLDepthStencilState> state = nil;
+	if (state == nil)
+		state = newDepthState(MTLCompareFunctionAlways, NO);
+	return state;
+
+} // end transparentResolveDepthState
 
 
 //========== ghostBlendDepthState ================================================
@@ -721,10 +741,66 @@ static struct LDrawDLSortedInstanceLink * copyWithEyeDepth(struct LDrawDLSession
 } // end copyWithEyeDepth
 
 
+//========== drawTransparentIntoLists ============================================
+//
+// Purpose:	Puts every fragment of the transparent parts into its pixel's
+//			list, then blends each list over what is drawn, in depth order.
+//
+// Notes:	The parts can go in any order, and a part's faces show through
+//			each other whichever is drawn first.
+//
+//================================================================================
+static void drawTransparentIntoLists(id<MTLRenderCommandEncoder>			renderEncoder,
+									 struct LDrawDLSession *				session,
+									 const struct LDrawDLTransparentLists *	lists)
+{
+	struct LDrawDLWideLines				wideLines	= session->wide_lines;
+	struct LDrawDLSortedInstanceLink *	l;
+
+	// Each tile empties its lists before its first fragment goes in.
+	[renderEncoder setRenderPipelineState:lists->clear_pipeline];
+	[renderEncoder setTileBuffer:lists->heads offset:0 atIndex:BufferIndexTransparentHeads];
+	[renderEncoder setTileBytes:&lists->uniform length:sizeof(lists->uniform) atIndex:BufferIndexTransparencyUniforms];
+	[renderEncoder dispatchThreadsPerTile:MTLSizeMake(renderEncoder.tileWidth, renderEncoder.tileHeight, 1)];
+
+	[renderEncoder setRenderPipelineState:lists->list_pipeline];
+	[renderEncoder setDepthStencilState:transparentDepthState()];
+	[renderEncoder setFragmentBuffer:lists->heads offset:0 atIndex:BufferIndexTransparentHeads];
+	[renderEncoder setFragmentBuffer:lists->fragments offset:0 atIndex:BufferIndexTransparentFragments];
+	[renderEncoder setFragmentBuffer:lists->counters offset:0 atIndex:BufferIndexTransparentCounters];
+	[renderEncoder setFragmentBytes:&lists->uniform
+							 length:sizeof(lists->uniform)
+							atIndex:BufferIndexTransparencyUniforms];
+
+	// Their lines go into the lists too.
+	if (session->wide_lines.line_pipeline)
+		session->wide_lines.line_pipeline = lists->list_wide_line_pipeline;
+	session->wide_lines.face_pipeline = lists->list_pipeline;
+
+	session->transparent_bias = YES;
+	setFaceDepthBias(renderEncoder, session);
+
+	for (l = session->sorted_head; l; l = l->next)
+		drawDeferredInstance(renderEncoder, session, l, NO);
+
+	session->wide_lines = wideLines;
+	session->transparent_bias = NO;
+	setFaceDepthBias(renderEncoder, session);
+
+	[renderEncoder setRenderPipelineState:lists->resolve_pipeline];
+	[renderEncoder setDepthStencilState:transparentResolveDepthState()];
+	[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+
+	[renderEncoder setRenderPipelineState:lists->face_pipeline];
+	[renderEncoder setDepthStencilState:defaultDepthState()];
+
+} // end drawTransparentIntoLists
+
+
 //========== drawTransparentSorted ===============================================
 //
 // Purpose:	Blends the transparent parts one at a time, far to near by their
-//			origins.
+//			origins. For a GPU without the lists.
 //
 // Notes:	They do not write depth, so a part hides neither its own faces nor
 //			the parts behind it. Parts that overlap can blend in the wrong
@@ -1600,6 +1676,7 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	#endif
 	memcpy(session->model_view,model_view,sizeof(float)*16);
 	memset(&session->wide_lines, 0, sizeof(session->wide_lines));
+	session->prepare_lists = nil;
 	session->transparent_bias = NO;
 	session->inst_ring = inst_ring_last;
 	// each session picks up a new buffer in the ring of instance buffers.
@@ -1630,6 +1707,23 @@ void LDrawDLSessionSetWideLines(id<MTLRenderCommandEncoder>		renderEncoder,
 	#endif
 
 } // end LDrawDLSessionSetWideLines
+
+
+//========== LDrawDLSessionSetPrepareTransparentLists ============================
+//
+// Purpose:	Has the session put its transparent parts into the per-pixel lists
+//			prepare gets ready. Without it, or when it returns NO, they are
+//			sorted and blended one at a time.
+//
+// Notes:	The block must stay alive until the session is destroyed.
+//
+//================================================================================
+void LDrawDLSessionSetPrepareTransparentLists(struct LDrawDLSession *			session,
+											  LDrawDLPrepareTransparentLists	prepare)
+{
+	session->prepare_lists = prepare;
+
+} // end LDrawDLSessionSetPrepareTransparentLists
 
 
 //========== LDrawDLSessionDrawAndDestroy ========================================
@@ -1884,7 +1978,14 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 
 	struct LDrawDLSortedInstanceLink * l;
 	if (session->sorted_head)
-		drawTransparentSorted(renderEncoder, session);
+	{
+		struct LDrawDLTransparentLists lists;
+
+		if (session->prepare_lists && session->prepare_lists(&lists))
+			drawTransparentIntoLists(renderEncoder, session, &lists);
+		else
+			drawTransparentSorted(renderEncoder, session);
+	}
 
 	// MAIN LOOP 4: ghosted parts (removed MLCAD groups).
 	//

@@ -43,7 +43,12 @@ typedef enum BufferIndex {
 	// The index buffer a wide line reads its ends from, and how it is drawn.
 	BufferIndexLineIndices				= 5,
 	BufferIndexLineUniforms				= 6,
-	BufferIndexFragmentUniforms 		= 0
+	BufferIndexFragmentUniforms 		= 0,
+	// The per-pixel lists of transparent fragments, in the fragment stage.
+	BufferIndexTransparentHeads			= 1,
+	BufferIndexTransparentFragments		= 2,
+	BufferIndexTransparentCounters		= 3,
+	BufferIndexTransparencyUniforms		= 4
 } BufferIndex;
 
 // Attribute index values shared between shader and CPU code to ensure Metal shader vertex attribute indices
@@ -104,6 +109,25 @@ typedef struct FragmentUniform {
     LightSourceParameters light_source[2];
     LightModelParameters light_model;
 } FragmentUniform;
+
+
+// MARK: - Transparency -
+
+// Transparent fragments go into one list per pixel and are blended in depth
+// order. Several counters hand out room for them, each from its own slice of
+// the fragment buffer, so the fragments do not all wait on one counter.
+#define TransparentListEnd			0xFFFFFFFFu
+#define TransparentCounterCount		32
+// In uints. Each counter has 64 bytes to itself.
+#define TransparentCounterStride	16
+// Color, depth with samples, and the next fragment's index.
+#define TransparentFragmentSize		12
+
+typedef struct TransparencyUniform {
+	unsigned int	width;			// pixels in a row of list heads
+	unsigned int	height;			// rows of list heads
+	unsigned int	slice;			// fragments each counter can hand out
+} TransparencyUniform;
 
 
 #endif /* MetalCommonDefinitions_h */
