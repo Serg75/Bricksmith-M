@@ -1,6 +1,6 @@
 # Transparent parts
 
-**Overview:** The Metal renderer puts every fragment of every transparent part into a list for its pixel, then blends each pixel's list in depth order in one pass over the whole surface. Parts can be drawn in any order, a part's faces show through each other whichever is drawn first, and parts that sit inside each other blend in their true order.
+**Overview:** The Metal renderer puts every fragment of every transparent part into a list for its pixel, then sorts each pixel's list by depth and blends it in one pass over the whole surface, as "How the layers blend" tells. Parts can be drawn in any order, a part's faces show through each other whichever is drawn first, and parts that sit inside each other blend in their true order.
 
 ## What it replaced
 
@@ -16,12 +16,32 @@ All of it is in `Packages/LDrawRenderMetal`.
 1. Opaque parts draw as before.
 2. When the drawing finds transparent parts, it gets the lists ready, and a tile shader (`clearTransparentLists`) empties each tile's lists inside the render pass. A tile's later fragments come after it, so no list is emptied late. The lists are made only when a frame has transparent parts, with no guess from the frame before.
 3. Transparent parts draw with depth testing against the opaque ones, but without depth writes. Their fragment shader (`transparentFragmentShader`, `transparentWideLineFragmentShader`) writes no color. It adds the fragment to its pixel's list: color, depth, the MSAA samples it covers, and for a line, line bits (see below). Thin lines draw with the faces' pipeline, and their vertices carry a normal as a face's do, so the drawing tells the shader when thin lines come. The samples take 4 bits, so the lists need 4 samples or fewer; the renderer uses 4.
-4. A triangle over the whole surface (`transparencyResolveFragmentShader`) runs once per MSAA sample. It reads its pixel's list, keeps the nearest 16 fragments that cover its sample in order, and blends them over what is drawn in that sample. Fragments past the nearest 16 are blended as one layer of their average color, behind the others. Each fragment is passed down all 16 places, swapping where it is nearer, so the 16 stay in registers. Blending each sample on its own keeps edges right where a transparent edge crosses an opaque one: a sample the transparent part does not cover keeps the opaque color.
+4. A triangle over the whole surface (`transparencyResolveFragmentShader`) runs once per MSAA sample. It reads its pixel's list, keeps the nearest 16 fragments that cover its sample in order, and blends them over what is drawn in that sample, as the next section tells. Fragments past the nearest 16 are blended as one layer of their average color, behind the others. Each fragment is passed down all 16 places, swapping where it is nearer, so the 16 stay in registers. Blending each sample on its own keeps edges right where a transparent edge crosses an opaque one: a sample the transparent part does not cover keeps the opaque color.
 5. Ghosts, drag handles and the marquee draw after, as before.
 
 All of this happens in the frame's one render pass, so the multisample targets stay in tile memory on Apple GPUs.
 
 `LDrawTransparentLists` keeps the buffers: one list head per pixel, a buffer of fragments, and 32 counters that hand out room in it. A frame takes counters that a finished frame gave back, or new ones, and sets them to 0, so a frame still on the GPU keeps its own. They are read after the frame to learn how much room it needed, and then given back. The heads and fragments are one buffer each, shared by the frames in flight. Metal tracks them, so a frame does not empty or fill them before the frame before it has blended them. Three copies would triple the memory.
+
+## How the layers blend
+
+Plastic lets some colors through and stops the rest. Think of a channel as a band of colors: a layer lets some of the band through and stops the others. Two layers of one hue let the same colors through, so the one behind stops little more. Two layers of different hues each stop their own, so red behind blue looks dark, as real plastic does. The usual "over" blend, used before, made it a gray purple.
+
+So in each channel the layers still blend front to back as with "over": each adds its color by its alpha and passes on 1 - alpha of what is behind it. Only the order changes:
+
+- Layers of one hue go in depth order, so a part of one color blends exactly as before, its shading included. A face in a darker shade has the same hue: its channels are in the same proportions. Rounding to 8 bits is allowed for. Shading may have cut a channel off at full brightness, so a pair of channels with one is left out of the test. When that leaves no pair, as for a brightly lit yellow face, one color must be the other scaled up, with its cut-off channels at least as bright as the scale makes them: bright yellow, (1, 0.88, 0.20), then matches dim yellow, but not (0.83, 1, 0), whose blue is 0 against 0.20. If no channel is left to scale by, as for two lit faces of (1, 1, 0), both must be cut off in the same channels and dark in the others.
+- A gray layer, such as trans-clear, has no hue and goes in depth order with every layer, so it looks as before.
+- A line takes the hue of the face behind it, which it is drawn on, and goes in depth order with that hue. It is not plastic of its own: going first by its own dark color, the edges inside a part would show as if they were in front, and staying in place, it would leave a light line wherever another hue goes first.
+- The average layer behind the 16 sorted fragments goes in depth order with every layer. An average has no one hue, and where it holds a line it is dark.
+- Where two hues differ, the hue with less of the channel goes first, all its layers together. A hue's value in a channel is its brightest layer's, so its shading does not change its place. Of two layers, the one with less first always gives less light, so this order takes away what the other layer stopped, and adds nothing.
+- A sample keeps 4 hues apart. Layers of any further hue go in depth order with every layer.
+- The layers that go in depth order with every layer split a sample into stretches, and a hue goes first only within its stretch. Otherwise trans-red in front of trans-clear in front of trans-blue would put the blue before the red in the red channel but keep the clear after the red, and the orders would go round in a circle: the red would darken while the clear stayed put.
+
+Each layer is compared with the first layer of each hue found so far, not with every other layer, and then blends with running products of the light: one for the layers before its stretch, and for each hue, one for its nearer layers in the stretch and one for all of them, found by looking ahead once at the start of the stretch. Comparing every pair of layers, as first written, cost two to three times as much GPU time on the stress model. The depth sort is still needed: for the layers that keep their place, and for lines that lie on each other.
+
+What is drawn behind the layers, opaque parts or the background, shows through what no plastic covers, as before, and is not filtered by channel. Filtering it the same way would let a dark part stop the glass's own light in a channel, so a red light on a black brick would look almost black. An opaque face in the lists, of a part that is also transparent, blends last in the same way and hides the layers behind it.
+
+So one layer looks exactly as before over anything, and so does a part of one color. The shader still returns a premultiplied color with how much of what is drawn gets through, so the fixed blend and pictures with a clear background are unchanged.
 
 ## What the GPU does, and why the code looks the way it does
 
@@ -58,7 +78,7 @@ A view lets go of its list buffers after a frame with no transparent parts. Pict
 
 ## Without the lists
 
-On a GPU without the lists, transparent parts are still sorted by their origins and blended far to near, but without depth writes and with the same depth bias. A part no longer hides its own faces or the parts behind it. Parts that sit inside each other can still blend in the wrong order, and lines that lie on each other blend twice, which shows as darker spots at the corners of outlines. Letting the lines write depth was tried: each line then hid the faces drawn after it, which left a light seam along every line.
+On a GPU without the lists, transparent parts are still sorted by their origins and blended far to near with "over", but without depth writes and with the same depth bias. A part no longer hides its own faces or the parts behind it. Parts that sit inside each other can still blend in the wrong order, and lines that lie on each other blend twice, which shows as darker spots at the corners of outlines. Letting the lines write depth was tried: each line then hid the faces drawn after it, which left a light seam along every line.
 
 ## Cost
 
@@ -78,8 +98,15 @@ With outlines on, the lines are quads a few pixels wide, so the same model put 2
 
 The same build varies by 15 to 30% from one launch to the next, so a difference of a few ms needs several launches, taking turns, to show. Raster order groups cost nothing measurable, and the 32 counters fill within 1% of each other. A much faster design would keep the layers in tile memory, out of main memory.
 
+These times were taken with the "over" blend. Blending by channel adds 10 to 27%. On the stress model, in pictures of 2243 x 1414 pixels in a Release build, it took a frame's GPU time from 37 to 46 ms in a side view and from 126 to 160 ms in a view from above, and with outlines from 60 to 72 ms and from 206 to 227 ms. That is the median of 7 pictures in each of 3 launches, taking turns.
+
 ## Limits
 
-- Blending is the usual "over" operator: each layer adds its color by its alpha. Real colored plastic filters the light behind it, so red behind blue looks darker in real life than here.
+- Only transparent layers filter each other. An opaque part behind them shows through as with "over", so a red part in front of a blue brick still looks a gray purple.
+- Colors filter in three channels, not by their spectra, and in the stored color values rather than in linear light.
+- A face lit so brightly that two of its channels are cut off has only one channel left to tell its hue by. Lit neon green, (1, 1, 0.57), then matches any color that, scaled up until its third channel is 0.57, cuts off the other two, such as (0.4, 0.4, 0.2) or trans-red, whose green and blue are small but not 0. It does not match (0.4, 0, 0) or (0.4, 0.4, 0). A matched pair blends in depth order.
+- Trans-clear still lays a white haze over a colored transparent part behind it, as with "over". Real clear plastic would hardly change it.
+- The fragments past the nearest 16 blend as one average layer in depth order, so they do not filter by channel.
+- Without the lists, parts blend with "over", so red behind blue looks a gray purple there.
 - A ghost is drawn after the lists are blended, so it shows over a transparent part even where it is behind it.
 - A part with both opaque and transparent faces goes into the lists as a whole. Its opaque faces do not write depth, so ghosts and drag handles drawn later are not hidden by them.

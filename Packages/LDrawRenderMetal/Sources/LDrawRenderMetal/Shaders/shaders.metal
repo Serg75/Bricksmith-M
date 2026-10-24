@@ -587,10 +587,14 @@ vertex ResolveVertexOutput transparencyResolveVertexShader(uint vid [[vertex_id]
 	return out;
 }
 
-// The most fragments a sample blends in their own order. They stay in
-// registers. The ones behind them are blended as one layer of their average
-// color.
+// The most fragments a sample sorts by depth. They stay in registers. The ones
+// behind them are blended as one layer of their average color.
 constant uint TRANSPARENT_SORTED_MAX	= 16;
+// The layers a sample blends: the sorted fragments and the one behind them.
+constant uint TRANSPARENT_LAYER_MAX		= TRANSPARENT_SORTED_MAX + 1;
+// The hues a sample keeps apart, one in each component of a float4. Layers
+// of further hues go in depth order.
+constant uint TRANSPARENT_HUE_MAX		= 4;
 // Marks a free place among the sorted fragments. A depth and line bits
 // without the samples are never this.
 constant uint TRANSPARENT_SORTED_FREE	= 0xFFFFFFFFu;
@@ -619,11 +623,62 @@ static bool isSameLine(uint2 a, uint2 b)
 			&&	max(aDepth, bDepth) - min(aDepth, bDepth) <= max(lineLeeway(a.x), lineLeeway(b.x)));
 }
 
+// Whether a color is a gray, such as trans-clear, which has no hue.
+static bool isGray(float3 c)
+{
+	return all(abs(c - c.gbr) <= 1.0 / 255.0);
+}
+
+// Half a step of a color rounded to 8 bits.
+constant float TRANSPARENT_COLOR_ROUNDING = 0.5 / 255.0;
+
+// Whether b is a scaled up to s, cut off at full brightness. The scale comes
+// from the channel where a is brightest and b is not cut off. A cut-off
+// channel of b only has to be at least as bright as the scale makes it. With
+// no such channel, as for two lit yellows (1, 1, 0), both must be cut off in
+// the same channels and dark in the others.
+static bool isScaledColor(float3 a, float3 b)
+{
+	float3	known	= select(float3(0.0), a, b < 1.0);
+	float	base	= max3(known.r, known.g, known.b);
+
+	if (base == 0.0)
+		return all(select(b <= TRANSPARENT_COLOR_ROUNDING, a >= 1.0, b >= 1.0));
+
+	float	target	= known.r == base ? b.r : known.g == base ? b.g : b.b;
+	float	s		= target / base;
+	float	spread	= 1.0 / base + 1.0 / max(target, TRANSPARENT_COLOR_ROUNDING);	// how rounding moves s
+	float3	tie		= TRANSPARENT_COLOR_ROUNDING * (1.0 + s + s * a * spread);
+	float3	scaled	= s * a;
+
+	return all(select(abs(min(scaled, 1.0) - b) <= tie, scaled >= 1.0 - tie, b >= 1.0));
+}
+
+// Whether two colors have one hue: each pair of their channels is in the same
+// proportion. A channel at full brightness may have been cut off, so a pair
+// with one is left out. When that leaves no pair, one color must be the other
+// scaled. Rounding a color to 8 bits moves a proportion by up to the tie.
+static bool isSameHue(float3 a, float3 b)
+{
+	float3	cross	= a * b.gbr - a.gbr * b;
+	float3	tie		= TRANSPARENT_COLOR_ROUNDING * (a + a.gbr + b + b.gbr + 2.0 * TRANSPARENT_COLOR_ROUNDING);
+	float3	top		= max(max(a, b), max(a.gbr, b.gbr));
+	float3	miss	= select(float3(0.0), abs(cross) - tie, top < 1.0);
+
+	if (any(top < 1.0))
+		return all(miss <= 0.0);
+
+	return isScaledColor(a, b) || isScaledColor(b, a);
+}
+
 // Blends the transparent fragments over one sample onto what is drawn there,
-// as a premultiplied color: the nearest first, front to back, with the layer
-// of the farthest behind them. It runs per sample, so a sample a fragment does
-// not cover keeps what is drawn there. Lines that lie on each other count
-// once.
+// as a premultiplied color. A channel stands for a band of colors, and plastic
+// lets some of the band through and stops the rest. So in each channel the
+// layers blend front to back, but where their hues differ, the one with less
+// of the channel goes first: what it stops cannot come back, and red behind
+// blue looks dark. Layers of one hue blend as plain blending does. It runs per
+// sample, so a sample a fragment does not cover keeps what is drawn there.
+// Lines that lie on each other count once.
 fragment float4 transparencyResolveFragmentShader(
 	ResolveVertexOutput				in			[[stage_in]],
 	uint							sample		[[sample_id]],
@@ -725,18 +780,25 @@ fragment float4 transparencyResolveFragmentShader(
 			break;
 	}
 
-	float3	color	= float3(0.0);
-	float	light	= 1.0;		// how much of what is behind gets through
 	uint2	recentLines[TRANSPARENT_RECENT_LINES];
+	uint	inPlace	= 0;				// a bit for each layer that keeps its place in depth
+	float4	surface	= float4(0.0);		// an opaque face that hides the layers behind it
 
 	for (uint k = 0; k < TRANSPARENT_RECENT_LINES; ++k)
 		recentLines[k] = uint2(0);
 
+	// A fragment that does not blend loses its color, which has an alpha of 0.
 	#pragma unroll
 	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
 	{
 		if (sorted[i].x == TRANSPARENT_SORTED_FREE)
 			break;
+
+		if (surface.a > 0.0)
+		{
+			sorted[i].y = 0;
+			continue;
+		}
 
 		// A line on a nearer line of the same color, such as where the ends
 		// of two wide lines overlap at a corner, is blended once, as the depth
@@ -751,26 +813,211 @@ fragment float4 transparencyResolveFragmentShader(
 				repeated = repeated || isSameLine(sorted[i], recentLines[k]);
 
 			if (repeated)
+			{
+				sorted[i].y = 0;
 				continue;
+			}
 
 			#pragma unroll
 			for (uint k = TRANSPARENT_RECENT_LINES - 1; k > 0; --k)
 				recentLines[k] = recentLines[k - 1];
 
-			recentLines[0] = sorted[i];
+			// A line keeps its place: it is drawn on the faces and is not
+			// plastic of its own.
+			recentLines[0]	= sorted[i];
+			inPlace			|= 1u << i;
 		}
 
+		// An opaque face, such as one of a part that is also transparent,
+		// blends last, as what is drawn behind the layers does.
 		float4 fragmentColor = unpack_unorm4x8_to_float(sorted[i].y);
 
-		color += light * fragmentColor.a * fragmentColor.rgb;
-		light *= 1.0 - fragmentColor.a;
+		if (fragmentColor.a == 1.0)
+		{
+			surface		= fragmentColor;
+			sorted[i].y	= 0;
+		}
 	}
 
-	if (far.w > 0.0)
+	float4 layers[TRANSPARENT_LAYER_MAX];
+
+	#pragma unroll
+	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+		layers[i] = unpack_unorm4x8_to_float(sorted[i].y);
+
+	layers[TRANSPARENT_SORTED_MAX] = float4(0.0);
+
+	if (far.w > 0.0 && surface.a == 0.0)
 	{
-		color += light * (1.0 - farLight) * far.rgb / far.w;
-		light *= farLight;
+		float4 farLayer = float4(far.rgb / far.w, 1.0 - farLight);
+
+		if (farLayer.a == 1.0)
+		{
+			surface = farLayer;
+		}
+		else
+		{
+			// An average has no one hue, so it keeps its place.
+			layers[TRANSPARENT_SORTED_MAX]	= farLayer;
+			inPlace							|= 1u << TRANSPARENT_SORTED_MAX;
+		}
 	}
+
+	// Each layer's hue, as a number from 1. A layer is compared only with the
+	// first layer of each hue found so far. 0 is for a layer that goes in
+	// depth order with every layer: a gray, the average behind the sorted
+	// ones, or one past the last hue kept. Lines get a hue below. For each hue, its brightest value in each
+	// channel.
+	uint	hue[TRANSPARENT_LAYER_MAX];
+	float3	hueColors[TRANSPARENT_HUE_MAX];
+	float3	hueTop[TRANSPARENT_HUE_MAX];
+	uint	hueCount	= 0;
+
+	#pragma unroll
+	for (uint h = 0; h < TRANSPARENT_HUE_MAX; ++h)
+	{
+		hueColors[h]	= float3(0.0);
+		hueTop[h]		= float3(0.0);
+	}
+
+	#pragma unroll
+	for (uint k = 0; k < TRANSPARENT_LAYER_MAX; ++k)
+	{
+		hue[k] = 0;
+
+		if (layers[k].a == 0.0 || ((inPlace >> k) & 1u) != 0 || isGray(layers[k].rgb))
+			continue;
+
+		#pragma unroll
+		for (uint h = 0; h < TRANSPARENT_HUE_MAX; ++h)
+		{
+			if (hue[k] == 0 && h < hueCount && isSameHue(hueColors[h], layers[k].rgb))
+				hue[k] = h + 1;
+		}
+
+		if (hue[k] == 0 && hueCount < TRANSPARENT_HUE_MAX)
+		{
+			#pragma unroll
+			for (uint h = 0; h < TRANSPARENT_HUE_MAX; ++h)
+			{
+				if (h == hueCount)
+					hueColors[h] = layers[k].rgb;
+			}
+
+			hue[k] = ++hueCount;
+		}
+
+		#pragma unroll
+		for (uint h = 0; h < TRANSPARENT_HUE_MAX; ++h)
+		{
+			if (hue[k] == h + 1)
+				hueTop[h] = max(hueTop[h], layers[k].rgb);
+		}
+	}
+
+	// A line takes the hue of the face behind it, which it is drawn on, so it
+	// moves with that face. Behind a gray it stays at 0.
+	uint below = 0;		// the hue of the nearest face behind
+
+	#pragma unroll
+	for (int k = TRANSPARENT_SORTED_MAX - 1; k >= 0; --k)
+	{
+		if (layers[k].a == 0.0)
+			continue;
+
+		if (((inPlace >> k) & 1u) != 0)
+			hue[k] = below;
+		else
+			below = hue[k];
+	}
+
+	// The layers of hue 0 split the sample into stretches, and a hue goes
+	// before another only within its stretch. Otherwise a hue could jump over
+	// a layer that stays in place, and the orders would go round in a circle.
+	float3	color			= float3(0.0);
+	float	light			= 1.0;			// how much of what is behind gets through
+	float	stretchLight	= 1.0;			// the same for the layers before this stretch
+	float4	nearLight		= float4(1.0);	// the same for the nearer layers of each hue in it
+	float4	wholeLight		= float4(1.0);	// the same for all the layers of each hue in it
+	bool	newStretch		= true;
+
+	// Each layer adds its color by its alpha, less what the layers that go
+	// before it in that channel stop. Layers of its hue, and those of hue 0,
+	// go before it when nearer. In its stretch, another hue goes before it,
+	// all of its layers there together, when that hue's brightest value in
+	// the channel is smaller. With one hue, that is plain blending.
+	#pragma unroll
+	for (uint k = 0; k < TRANSPARENT_LAYER_MAX; ++k)
+	{
+		if (layers[k].a == 0.0)
+			continue;
+
+		bool4	mine	= uint4(1, 2, 3, 4) == hue[k];
+		float3	passed	= float3(light);
+
+		// At the start of a stretch, look ahead to its end for the light of
+		// each hue in it.
+		if (newStretch && hue[k] != 0)
+		{
+			bool open = true;
+
+			wholeLight = float4(1.0);
+			newStretch = false;
+
+			#pragma unroll
+			for (uint j = k; j < TRANSPARENT_LAYER_MAX; ++j)
+			{
+				if (open && layers[j].a > 0.0)
+				{
+					open		= hue[j] != 0;
+					wholeLight	= select(wholeLight, wholeLight * (1.0 - layers[j].a), uint4(1, 2, 3, 4) == hue[j]);
+				}
+			}
+		}
+
+		if (hue[k] != 0)
+		{
+			float3 top = float3(0.0);		// this layer's hue's brightest values
+
+			#pragma unroll
+			for (uint h = 0; h < TRANSPARENT_HUE_MAX; ++h)
+			{
+				if (hue[k] == h + 1)
+					top = hueTop[h];
+			}
+
+			passed = float3(stretchLight * dot(select(float4(0.0), nearLight, mine), float4(1.0)));
+
+			#pragma unroll
+			for (uint h = 0; h < TRANSPARENT_HUE_MAX; ++h)
+			{
+				if (hue[k] == h + 1)
+					continue;
+
+				// A tie goes to the hue found first.
+				bool3 first = h + 1 < hue[k] ? hueTop[h] <= top : hueTop[h] < top;
+
+				passed *= select(float3(1.0), float3(wholeLight[h]), first);
+			}
+		}
+
+		color += layers[k].a * layers[k].rgb * passed;
+		light *= 1.0 - layers[k].a;
+
+		if (hue[k] == 0)
+		{
+			stretchLight	= light;
+			nearLight		= float4(1.0);
+			newStretch		= true;
+		}
+		else
+		{
+			nearLight = select(nearLight, nearLight * (1.0 - layers[k].a), mine);
+		}
+	}
+
+	color += light * surface.a * surface.rgb;
+	light *= 1.0 - surface.a;
 
 	return float4(color, 1.0 - light);
 }
