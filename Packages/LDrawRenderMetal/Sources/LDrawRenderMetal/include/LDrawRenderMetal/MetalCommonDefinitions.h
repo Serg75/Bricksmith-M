@@ -48,7 +48,10 @@ typedef enum BufferIndex {
 	BufferIndexTransparentHeads			= 1,
 	BufferIndexTransparentFragments		= 2,
 	BufferIndexTransparentCounters		= 3,
-	BufferIndexTransparencyUniforms		= 4
+	BufferIndexTransparencyUniforms		= 4,
+	// A lone uint: 1 while thin lines go into the lists, whose vertices do not
+	// tell them from faces.
+	BufferIndexTransparentThinLines		= 5
 } BufferIndex;
 
 // Attribute index values shared between shader and CPU code to ensure Metal shader vertex attribute indices

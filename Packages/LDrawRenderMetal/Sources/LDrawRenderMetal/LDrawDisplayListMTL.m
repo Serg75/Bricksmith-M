@@ -516,6 +516,22 @@ static void setFaceDepthBias(id<MTLRenderCommandEncoder> renderEncoder, struct L
 } // end setFaceDepthBias
 
 
+//========== setThinLines ========================================================
+//
+// Purpose:	While transparent parts draw, tells the lists whether thin lines
+//			come next. Their vertices do not tell them from faces.
+//
+//================================================================================
+static void setThinLines(id<MTLRenderCommandEncoder>	renderEncoder,
+						 struct LDrawDLSession *		session,
+						 uint32_t						thinLines)
+{
+	if (session->transparent_bias)
+		[renderEncoder setFragmentBytes:&thinLines length:sizeof(thinLines) atIndex:BufferIndexTransparentThinLines];
+
+} // end setThinLines
+
+
 #if WANT_SMOOTH
 
 //========== beginWideLines ======================================================
@@ -611,12 +627,16 @@ static void drawLines(id<MTLRenderCommandEncoder>	renderEncoder,
 	if (wide->line_pipeline == nil)
 	{
 		if (tptr->line_count)
+		{
+			setThinLines(renderEncoder, session, 1);
 			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeLine
 									  indexCount:tptr->line_count
 									   indexType:MTLIndexTypeUInt32
 									 indexBuffer:dl->indexBuffer
 							   indexBufferOffset:tptr->line_off * sizeof(uint32_t)
 								   instanceCount:instanceCount];
+			setThinLines(renderEncoder, session, 0);
+		}
 	}
 	else if (tptr->line_count || tptr->cond_quad_count)
 	{
@@ -779,6 +799,7 @@ static void drawTransparentIntoLists(id<MTLRenderCommandEncoder>			renderEncoder
 
 	session->transparent_bias = YES;
 	setFaceDepthBias(renderEncoder, session);
+	setThinLines(renderEncoder, session, 0);
 
 	for (l = session->sorted_head; l; l = l->next)
 		drawDeferredInstance(renderEncoder, session, l, NO);

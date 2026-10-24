@@ -448,7 +448,6 @@ struct TransparentVertexOutput {
 	float4	color;
 	float2	tex_coord;
 	float3	normal_eye;
-	float	is_line [[flat]];
 	float2	clip_zw [[center_perspective]];		// for the depth at the pixel's center
 };
 
@@ -468,9 +467,6 @@ vertex TransparentVertexOutput transparentVertexShader(
 	out.tex_coord	= part.tex_coord;
 	out.normal_eye	= part.normal_eye;
 	out.clip_zw		= part.position.zw;
-
-	// Lines have no normal.
-	out.is_line = all(in.normal == 0.0) ? 1.0 : 0.0;
 
 	return out;
 }
@@ -537,11 +533,12 @@ fragment void transparentFragmentShader(
 	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
 	device atomic_uint				*counters	[[buffer(BufferIndexTransparentCounters)]],
 	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]],
+	constant uint&					thinLines	[[buffer(BufferIndexTransparentThinLines)]],
 	texture2d<float>				tex			[[texture(0)]])
 {
 	TransparentLists	lists	= { heads, fragments, counters, &uniform };
 	float4				color	= shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex);
-	bool				isLine	= in.is_line > 0.5;
+	bool				isLine	= thinLines != 0;
 	float				behind	= isLine ? 0.0 : TRANSPARENT_FACE_DEPTH_OFFSET;
 	uint				flags	= isLine ? lineBits(0.0) : 0u;		// a thin line gets the least leeway
 
