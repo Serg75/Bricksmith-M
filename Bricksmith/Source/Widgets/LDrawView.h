@@ -25,6 +25,8 @@
 
 #import "ToolPalette.h"
 
+NS_ASSUME_NONNULL_BEGIN
+
 //Forward declarations
 @class FocusRingView;
 @class LDrawDirective;
@@ -108,7 +110,7 @@
 - (void) setLockedTurnCursor:(nullable NSCursor *)cursor inRect:(NSRect)rect;
 
 // Accessors
-- (LDrawDirective *) LDrawDirective;
+- (nullable LDrawDirective *) LDrawDirective;
 - (Vector3) nudgeVectorForMatrix:(Matrix4)partMatrix;
 - (LDrawProjectionMode) projectionMode;
 - (LDrawLocationMode) locationMode;
@@ -117,25 +119,25 @@
 - (CGFloat) zoomPercentage;
 
 - (void) setAcceptsFirstResponder:(BOOL)flag;
-- (void) setAutosaveName:(NSString *)newName;
-- (void) setBackAction:(SEL)newAction;
-- (void) setLDrawDelegate:(id)object;
-- (void) setForwardAction:(SEL)newAction;
+- (void) setAutosaveName:(nullable NSString *)newName;
+- (void) setBackAction:(nullable SEL)newAction;
+- (void) setLDrawDelegate:(nullable id)object;
+- (void) setForwardAction:(nullable SEL)newAction;
 - (void) setGridSpacingMode:(LDrawGridSpacingMode)newMode;
-- (void) setLDrawDirective:(LDrawDirective *) newFile;
-- (void) setNudgeAction:(SEL)newAction;
+- (void) setLDrawDirective:(nullable LDrawDirective *) newFile;
+- (void) setNudgeAction:(nullable SEL)newAction;
 - (void) setProjectionMode:(LDrawProjectionMode) newProjectionMode;
 - (void) setLocationMode:(LDrawLocationMode) newLocationMode;
-- (void) setTarget:(id)target;
+- (void) setTarget:(nullable id)target;
 - (void) setViewOrientation:(LDrawViewOrientation) newAngle;
 - (void) setZoomPercentage:(CGFloat) newPercentage;
 - (void) setFocusRingVisible:(BOOL)isVisible;
 
 // Actions
-- (IBAction) viewOrientationSelected:(id)sender;
-- (IBAction) zoomIn:(id)sender;
-- (IBAction) zoomOut:(id)sender;
-- (IBAction) zoomToFit:(id)sender;
+- (IBAction) viewOrientationSelected:(nullable id)sender;
+- (IBAction) zoomIn:(nullable id)sender;
+- (IBAction) zoomOut:(nullable id)sender;
+- (IBAction) zoomToFit:(nullable id)sender;
 
 // Events
 - (void) resetCursor;
@@ -180,7 +182,7 @@ extern NSString * const LDrawViewCameraDidChangeNotification;
 @interface LDrawView (SharedGPUContext)
 /// Draw the view now instead of at the next display pass.
 - (void)draw;
-- (void)setBackgroundColor:(NSColor *)newColor;
+- (void)setBackgroundColor:(nullable NSColor *)newColor;
 - (void)setViewingAngle:(Tuple3)newAngle;
 /// Activate this view's OpenGL context, or no-op on Metal.
 - (void)makeCurrentContext;
@@ -218,7 +220,7 @@ extern NSString * const LDrawViewCameraDidChangeNotification;
 // by clicking in the view. This does not actually do any selecting; that is 
 // left entirely to the delegate. Some may rightly question the design of this 
 // system.
-- (void) LDrawView:(LDrawView *)glView wantsToSelectDirective:(LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
+- (void) LDrawView:(LDrawView *)glView wantsToSelectDirective:(nullable LDrawDirective *)directiveToSelect byExtendingSelection:(BOOL) shouldExtend;
 - (void) LDrawView:(LDrawView*)glView wantsToSelectDirectives:(NSArray *)directivesToSelect selectionMode:(LDrawSelectionMode) selectionMode;
 - (void) LDrawView:(LDrawView *)glView willBeginDraggingHandle:(LDrawDragHandle *)dragHandle;
 - (void) LDrawView:(LDrawView *)glView dragHandleDidMove:(LDrawDragHandle *)dragHandle;
@@ -242,3 +244,5 @@ extern NSString * const LDrawViewCameraDidChangeNotification;
 - (CGFloat) magnification;
 @end
 #endif
+
+NS_ASSUME_NONNULL_END
