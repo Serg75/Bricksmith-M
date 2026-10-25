@@ -70,6 +70,7 @@
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
+#import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawStepEditing/LDrawStepCalloutEdit.h>
 #import <LDrawStepRendering/LDrawStepCalloutPath.h>
 
@@ -281,6 +282,18 @@ void AppendChoicesToNewItem(
 	
 	
 	// File Contents Outline setup
+	NSMenu		*conversionMenu	= [[NSMenu alloc] initWithTitle:@""];
+	NSMenuItem	*toCallout		= [conversionMenu addItemWithTitle:NSLocalizedString(@"SelectionToCallout", nil)
+															action:@selector(convertSelectionToCallout:)
+													 keyEquivalent:@""];
+	NSMenuItem	*toParts		= [conversionMenu addItemWithTitle:NSLocalizedString(@"StepCalloutToParts", nil)
+															action:@selector(convertCalloutToParts:)
+													 keyEquivalent:@""];
+	[toCallout setTarget:self];
+	[toCallout setToolTip:NSLocalizedString(@"CalloutConversionScope", nil)];
+	[toParts setTarget:self];
+	[toParts setToolTip:NSLocalizedString(@"CalloutFlattenScope", nil)];
+	[fileContentsOutline setMenu:conversionMenu];
 	[fileContentsOutline setDoubleAction:@selector(showInspector:)];
 	[fileContentsOutline setVerticalMotionCanBeginDrag:YES];
 	[fileContentsOutline registerForDraggedTypes:[LDrawClipboard outlineRegisteredDragTypes]];
@@ -2167,6 +2180,41 @@ void AppendChoicesToNewItem(
 	[self flushDocChangesAndSelect:movedDirectives];
 
 }//end splitStep:
+
+
+//========== convertSelectionToCallout: =======================================
+//
+// Purpose:		Puts the selected parts into a new callout.
+//
+//==============================================================================
+- (IBAction) convertSelectionToCallout:(id)sender
+{
+	LDrawStepCalloutEdit *edit = [LDrawStepCalloutEdit editConvertingSelection:[self selectedObjects]];
+
+	[self stepPartListController:self->stepPartListController
+				applyCalloutEdit:edit
+						  toStep:[edit targetStep]];
+
+}//end convertSelectionToCallout:
+
+
+//========== convertCalloutToParts: ============================================
+//
+// Purpose:		Replaces the selected callout with the parts of its submodels.
+//
+//==============================================================================
+- (IBAction) convertCalloutToParts:(id)sender
+{
+	LDrawStepCallout *callout = [LDrawStepCalloutEdit calloutInSelection:[self selectedObjects]];
+
+	if(callout == nil)
+		return;
+
+	[self stepPartListController:self->stepPartListController
+				applyCalloutEdit:[LDrawStepCalloutEdit editExpandingCallout:callout]
+						  toStep:[callout step]];
+
+}//end convertCalloutToParts:
 
 
 //========== splitModel: =======================================================
@@ -5015,6 +5063,15 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (BOOL) validateMenuItem:(NSMenuItem *)menuItem
 {
+	if([menuItem action] == @selector(convertSelectionToCallout:))
+		return [LDrawStepCalloutEdit canConvertSelection:[self selectedObjects]];
+
+	if([menuItem action] == @selector(convertCalloutToParts:))
+	{
+		LDrawStepCallout *callout = [LDrawStepCalloutEdit calloutInSelection:[self selectedObjects]];
+		return callout != nil && [LDrawStepCalloutEdit canExpandCallout:callout];
+	}
+
 	NSInteger       tag             = [menuItem tag];
 	NSArray         *selectedItems  = [self selectedObjects];
 	LDrawPart       *selectedPart   = [self selectedPart];
@@ -5720,8 +5777,8 @@ void AppendChoicesToNewItem(
 
 //========== stepPartListController:applyCalloutEdit:toStep: ===================
 //
-// Purpose:		Performs the document change a dragged, added or removed
-//				callout asks for, through the undoable path.
+// Purpose:		Performs the document change a callout edit asks for, through
+//				the undoable path, and selects the parts a conversion makes.
 //
 //==============================================================================
 - (void) stepPartListController:(StepPartListController *)controller
@@ -5732,11 +5789,20 @@ void AppendChoicesToNewItem(
 	if([edit kind] == LDrawStepCalloutEditKindRewrite)
 		[fileContentsOutline deselectAll:self];
 
-	if([edit applyToStep:step host:self] == NO)
+	NSUndoManager	*undoManager	= [self undoManager];
+	BOOL			 changed		= NO;
+
+	[undoManager beginUndoGrouping];
+	changed = [edit applyToStep:step host:self];
+	if(changed)
+		[undoManager setActionName:NSLocalizedString([edit undoActionKey], nil)];
+	[undoManager endUndoGrouping];
+
+	if(changed == NO)
 		return;
 
-	[[self undoManager] setActionName:NSLocalizedString([edit undoActionKey], nil)];
-
+	if([[edit resultParts] count] > 0)
+		[self flushDocChangesAndSelect:[edit resultParts]];
 	[[self documentContents] noteNeedsDisplay];
 
 }//end stepPartListController:applyCalloutEdit:toStep:

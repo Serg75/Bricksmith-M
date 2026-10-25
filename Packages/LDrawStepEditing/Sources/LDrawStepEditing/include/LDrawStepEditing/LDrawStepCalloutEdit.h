@@ -14,6 +14,7 @@
 @class LDrawContainer;
 @class LDrawDirective;
 @class LDrawModel;
+@class LDrawPart;
 @class LDrawStep;
 @class LDrawStepCallout;
 @class LDrawStepCalloutBox;
@@ -95,7 +96,8 @@ typedef NS_ENUM(NSInteger, LDrawStepCalloutEditKind) {
 
 /// For `Rewrite`: the directives to take out first, in this order, and then
 /// the directives to put into the step, each at its index, in this order. A
-/// directive in both lists is moved.
+/// directive in both lists is moved. A conversion first adds its new
+/// submodel to the file.
 @property (nonatomic, readonly) NSArray<LDrawDirective *>	*directivesToRemove;
 @property (nonatomic, readonly) NSArray<LDrawDirective *>	*directivesToInsert;
 @property (nonatomic, readonly) NSArray<NSNumber *>			*insertIndexes;
@@ -127,6 +129,38 @@ typedef NS_ENUM(NSInteger, LDrawStepCalloutEditKind) {
 /// submodel with steps, or the step places it only inside callouts.
 + (instancetype) editCallingOutEntry:(LDrawStepPartListEntry *)entry inModel:(nullable LDrawModel *)model
 	NS_SWIFT_NAME(edit(callingOut:inModel:));
+
+/// The parts to select once a conversion is made. Empty for other edits.
+@property (nonatomic, readonly) NSArray<LDrawPart *>		*resultParts;
+
+/// Whether the selection is parts of one model that can go into a new
+/// callout. No source step may hold a line that would then hold for them
+/// differently.
++ (BOOL) canConvertSelection:(NSArray<LDrawDirective *> *)selection
+	NS_SWIFT_NAME(canConvert(selection:));
+
+/// The edit that puts the selected parts into a callout in the earliest step
+/// they come from. A lone submodel placement is called out as it is. Other
+/// parts go into a new submodel with a free name. A source step left empty is
+/// removed, unless it sets a rotation.
++ (instancetype) editConvertingSelection:(NSArray<LDrawDirective *> *)selection
+	NS_SWIFT_NAME(edit(convertingSelection:));
+
+/// Whether the callout can be turned into parts.
++ (BOOL) canExpandCallout:(LDrawStepCallout *)callout NS_SWIFT_NAME(canExpand(_:));
+
+/// The edit that replaces a callout's placements with the parts of every step
+/// of their submodels, and takes the callout's lines out. The parts keep
+/// their place, and the step keeps its view. A submodel nothing places any
+/// more is removed. Nothing to do when a line in the callout or its
+/// submodels would no longer hold the same way.
++ (instancetype) editExpandingCallout:(LDrawStepCallout *)callout
+	NS_SWIFT_NAME(edit(expanding:));
+
+/// The callout whose BEGIN line alone is selected, or all of whose
+/// placements are.
++ (nullable LDrawStepCallout *) calloutInSelection:(NSArray<LDrawDirective *> *)selection
+	NS_SWIFT_NAME(callout(inSelection:));
 
 /// The edit that removes a callout: its two lines, its arrows, its PLACEMENT,
 /// and the lines between the two that hold for it alone. The parts stay, and

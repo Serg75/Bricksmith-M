@@ -79,6 +79,16 @@
                         <action selector="changeOrigin:" target="-1" id="tKA-fe-JeU"/>
                     </connections>
                 </menuItem>
+                <menuItem title="Convert Selection to Callout" toolTip="Converts selected parts from steps in one model into a callout in the earliest selected step." id="callout-to-item">
+                    <connections>
+                        <action selector="convertSelectionToCallout:" target="-1" id="callout-to-action"/>
+                    </connections>
+                </menuItem>
+                <menuItem title="Convert Callout to Parts" toolTip="Flattens all submodel steps into the current step, discarding step boundaries and callout layout." id="callout-from-item">
+                    <connections>
+                        <action selector="convertCalloutToParts:" target="-1" id="callout-from-action"/>
+                    </connections>
+                </menuItem>
             </items>
             <point key="canvasLocation" x="10" y="152"/>
         </menu>

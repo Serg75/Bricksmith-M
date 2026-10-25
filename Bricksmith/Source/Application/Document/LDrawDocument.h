@@ -188,6 +188,8 @@
 - (IBAction) duplicate:(id)sender;
 - (IBAction) splitStep:(id)sender;
 - (IBAction) splitModel:(id)sender;
+- (IBAction) convertSelectionToCallout:(id)sender;
+- (IBAction) convertCalloutToParts:(id)sender;
 - (IBAction) orderFrontRotationPanel:(id)sender;
 - (IBAction) quickRotateClicked:(id)sender;
 - (IBAction) quickRotateFineClicked:(id)sender;

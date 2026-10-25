@@ -138,6 +138,14 @@
 		[items addObject:item];
 	}
 
+	item = [self itemWithTitleKey:@"StepCalloutToParts"
+					   stepNumber:0
+							 edit:[LDrawStepCalloutEdit editExpandingCallout:box.callout]];
+
+	if (item != nil) {
+		[items addObject:item];
+	}
+
 	return items;
 
 }//end itemsForBox:atPoint:onPage:

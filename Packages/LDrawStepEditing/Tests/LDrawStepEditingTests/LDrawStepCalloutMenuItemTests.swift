@@ -30,7 +30,7 @@ struct LDrawStepCalloutMenuItemTests {
         let items = LDrawStepCalloutMenuItem.items(for: box, at: middle(of: second.rect), onPage: true)
         let otherWay = box.callout.isVertical ? "StepCalloutStepsAcross" : "StepCalloutStepsDown"
 
-        #expect(keys(items) == ["StepCalloutDividerAdd", otherWay, "-", "StepCalloutRemove"])
+        #expect(keys(items) == ["StepCalloutDividerAdd", otherWay, "-", "StepCalloutRemove", "StepCalloutToParts"])
         #expect(items.first?.stepNumber == 2)
         #expect(items.first?.edit?.kind == .rewrite)
         #expect(items.first?.title(fromLocalizedText: "Add Divider Before Step %ld") == "Add Divider Before Step 2")
@@ -47,7 +47,7 @@ struct LDrawStepCalloutMenuItemTests {
         let items = LDrawStepCalloutMenuItem.items(for: box, at: middle(of: first.rect), onPage: true)
 
         #expect(keys(items).contains("StepCalloutDividerAdd") == false)
-        #expect(keys(items).last == "StepCalloutRemove")
+        #expect(keys(items).last == "StepCalloutToParts")
     }
 
     @Test("A step that has a divider offers to take it away")
@@ -65,14 +65,14 @@ struct LDrawStepCalloutMenuItemTests {
         #expect(items.first?.stepNumber == 2)
     }
 
-    @Test("Off the page a box shows no steps, so only removal is offered")
+    @Test("Off the page a box offers removal and flattening")
     func offThePageOnlyRemoval() throws {
         let fixture = CalloutFixture(stepCount: 3)
         let box = try fixture.box(onPage: false)
 
         let items = LDrawStepCalloutMenuItem.items(for: box, at: middle(of: box.frameRect), onPage: false)
 
-        #expect(keys(items) == ["StepCalloutRemove"])
+        #expect(keys(items) == ["StepCalloutRemove", "StepCalloutToParts"])
     }
 
     @Test("A one-step submodel has no other way for its steps to run")
@@ -82,7 +82,7 @@ struct LDrawStepCalloutMenuItemTests {
 
         let items = LDrawStepCalloutMenuItem.items(for: box, at: middle(of: box.frameRect), onPage: true)
 
-        #expect(keys(items) == ["StepCalloutRemove"])
+        #expect(keys(items) == ["StepCalloutRemove", "StepCalloutToParts"])
     }
 
     @Test("A submodel's row of the parts list offers calling it out")

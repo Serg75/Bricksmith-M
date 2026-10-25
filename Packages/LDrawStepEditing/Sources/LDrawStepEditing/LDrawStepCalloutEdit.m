@@ -11,11 +11,16 @@
 
 #import <LDrawStepEditing/LDrawStepCalloutEdit.h>
 
+#import <LDrawCore/LDrawComment.h>
+#import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawKeywords.h>
+#import <LDrawCore/LDrawMetaCommand.h>
 #import <LDrawCore/LDrawModel.h>
+#import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawStepPartListEntry.h>
+#import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LPubCallout.h>
 #import <LDrawCore/LPubCalloutAlloc.h>
 #import <LDrawCore/LPubCalloutBackground.h>
@@ -27,8 +32,10 @@
 #import <LDrawCore/LPubCalloutSeparator.h>
 #import <LDrawCore/LPubCalloutSubmodelColor.h>
 #import <LDrawCore/LPubPlacement.h>
+#import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/LPubPliIgnore.h>
 #import <LDrawCore/LPubPliSubstitute.h>
+#import <LDrawCore/LPubRemoveGroup.h>
 
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
@@ -53,6 +60,13 @@ static const double NEW_POINTER_LOCATION = 0.5;
 @property (nonatomic, readwrite) NSArray<NSNumber *>		*insertIndexes;
 @property (nonatomic, readwrite, nullable) LDrawStep		*targetStep;
 @property (nonatomic, readwrite, copy) NSString				*undoActionKey;
+@property (nonatomic, readwrite) NSArray<LDrawPart *>		*resultParts;
+
+/// A new submodel that goes into the file before the step is rewritten.
+@property (nonatomic, nullable) LDrawMPDModel				*createdSubmodel;
+
+/// Submodels whose definitions go when nothing places them any more.
+@property (nonatomic, copy, nullable) NSArray<LDrawModel *>	*expandedSubmodels;
 
 @end
 
@@ -70,6 +84,7 @@ static const double NEW_POINTER_LOCATION = 0.5;
 
 	edit.kind				= LDrawStepCalloutEditKindNone;
 	edit.undoActionKey		= undoActionKey;
+	edit.resultParts		= @[];
 	edit.directivesToRemove	= @[];
 	edit.directivesToInsert	= @[];
 	edit.insertIndexes		= @[];
@@ -126,6 +141,14 @@ static const double NEW_POINTER_LOCATION = 0.5;
 				return NO;
 			}
 
+			if (self.createdSubmodel != nil) {
+				LDrawFile *file = target.enclosingFile;
+				if (file == nil || [file modelWithName:self.createdSubmodel.modelName] != nil) {
+					return NO;
+				}
+				[host addDirective:self.createdSubmodel toParent:file atIndex:file.subdirectives.count];
+			}
+
 			for (LDrawDirective *directive in self.directivesToRemove) {
 				[host deleteDirective:directive];
 			}
@@ -134,6 +157,16 @@ static const double NEW_POINTER_LOCATION = 0.5;
 				[host addDirective:self.directivesToInsert[index]
 						  toParent:target
 						   atIndex:self.insertIndexes[index].integerValue];
+			}
+			// After the inserts, since a copied part may still place the
+			// submodel. Through the host, so undo puts it back before its parts.
+			LDrawFile *file = target.enclosingFile;
+			for (LDrawModel *model in self.expandedSubmodels) {
+				if (file != nil && model.enclosingDirective == file
+					&& model != file.firstModel && model != target.enclosingModel
+					&& [file partsWithName:[(LDrawMPDModel *)model modelName].lowercaseString].count == 0) {
+					[host deleteDirective:model];
+				}
 			}
 			return YES;
 	}
@@ -277,7 +310,11 @@ static const double NEW_POINTER_LOCATION = 0.5;
 		next += 1;
 	}
 
-	for (NSString *text in [self pointerTextsForPlacements:placements inModel:model]) {
+	NSUInteger stepIndex = [model maximumStepIndexForStepDisplay];
+
+	for (NSString *text in [self pointerTextsForPlacements:placements
+												   inModel:model
+												 stepIndex:stepIndex]) {
 		LPubCalloutPointer *pointer = [LPubCalloutPointer new];
 
 		pointer.lPubCommandString = text;
@@ -304,9 +341,10 @@ static const double NEW_POINTER_LOCATION = 0.5;
 }//end editCallingOutEntry:inModel:
 
 
-//---------- pointerTextsForPlacements:inModel: ----------------------[static]--
+//---------- pointerTextsForPlacements:inModel:stepIndex: ------------[static]--
 ///
-/// @abstract	The text of an arrow to the middle of each placement.
+/// @abstract	The text of an arrow to the middle of each placement, in the
+/// 			step at `stepIndex`.
 ///
 /// @discussion	The tips are measured on the step's assembly at the angle
 /// 			LPub3D prints it at, so they do not depend on how a view is
@@ -316,10 +354,10 @@ static const double NEW_POINTER_LOCATION = 0.5;
 //------------------------------------------------------------------------------
 + (NSArray<NSString *> *) pointerTextsForPlacements:(NSArray<LDrawPart *> *)placements
 											inModel:(nullable LDrawModel *)model
+										  stepIndex:(NSUInteger)stepIndex
 {
 	NSMutableArray<NSString *>	*texts		= [NSMutableArray arrayWithCapacity:placements.count];
 	NSData						*outline	= [LDrawStepPartListPolicy assemblyOutlinePointsInModel:model];
-	NSUInteger					 stepIndex	= [model maximumStepIndexForStepDisplay];
 	Tuple3						 angle		= [LDrawStepPartListPolicy assemblyViewingAngleForStepAtIndex:stepIndex
 																								  inModel:model];
 	Matrix4						 view		= [LDrawStepPartListLayout viewTransformForAngle:angle];
@@ -336,7 +374,7 @@ static const double NEW_POINTER_LOCATION = 0.5;
 
 	return texts;
 
-}//end pointerTextsForPlacements:inModel:
+}//end pointerTextsForPlacements:inModel:stepIndex:
 
 
 //---------- tipForModelPoint:inOutline:view: ------------------------[static]--
@@ -371,6 +409,472 @@ static const double NEW_POINTER_LOCATION = 0.5;
 				  MIN(MAX((seen.y - box.min.y) / height, 0.0), 1.0));
 
 }//end tipForModelPoint:inOutline:view:
+
+
+// MARK: - CONVERTING PARTS AND CALLOUTS -
+
+
+/// Whether a line is a comment or a meta line Bricksmith does not read.
+static BOOL IsPlainMetaLine(LDrawDirective *line)
+{
+	return [line isMemberOfClass:[LDrawComment class]] || [line isMemberOfClass:[LDrawMetaCommand class]];
+}
+
+
+/// Whether a line is 0 BFC INVERTNEXT, which flips the part right after it.
+static BOOL InvertsNextPart(LDrawDirective *line)
+{
+	if ([line isMemberOfClass:[LDrawMetaCommand class]] == NO) {
+		return NO;
+	}
+	NSString	*command	= [(LDrawMetaCommand *)line commandString];
+	NSRange		 found		= [command rangeOfString:@"^\\s*BFC\\s+INVERTNEXT\\b"
+											 options:NSRegularExpressionSearch | NSCaseInsensitiveSearch];
+	return found.location != NSNotFound;
+}
+
+
+/// Whether a line sets page grouping, PLI size or a group removal. These
+/// stay in their step when parts leave it.
+static BOOL IsStepLayoutLine(LDrawDirective *line)
+{
+	if ([line isKindOfClass:[LPubPliConstrain class]] || [line isKindOfClass:[LPubRemoveGroup class]]) {
+		return YES;
+	}
+	if ([line isKindOfClass:[LPubCommand class]] == NO) {
+		return NO;
+	}
+	NSArray<NSString *> *words = ((LPubCommand *)line).lPubCommandWords;
+	return words.count == 2
+		&& [words[0] isEqualToString:@"MULTI_STEP"]
+		&& [@[@"BEGIN", @"END", @"DIVIDER"] containsObject:words[1]];
+}
+
+
+/// Whether a line is an LPub CALLOUT line.
+static BOOL IsCalloutLine(LDrawDirective *line)
+{
+	return [line isKindOfClass:[LPubCommand class]]
+		&& [[(LPubCommand *)line lPubCommandWords].firstObject isEqualToString:LPUB_CALLOUT];
+}
+
+
+//---------- removedGroupsInModel: -----------------------------------[static]--
+///
+/// @abstract	The names of the groups that a REMOVE GROUP line anywhere in
+/// 			the model takes away.
+///
+//------------------------------------------------------------------------------
++ (NSSet<NSString *> *) removedGroupsInModel:(LDrawModel *)model
+{
+	NSMutableSet<NSString *> *removedGroups = [NSMutableSet set];
+
+	for (LDrawStep *step in model.steps) {
+		for (LDrawDirective *line in step.subdirectives) {
+			if ([line isKindOfClass:[LPubRemoveGroup class]]) {
+				NSString *group = ((LPubRemoveGroup *)line).groupName;
+				if (group.length > 0) {
+					[removedGroups addObject:group];
+				}
+			}
+		}
+	}
+	return removedGroups;
+
+}//end removedGroupsInModel:
+
+
+//---------- duplicateOfPart:transform: ------------------------------[static]--
+///
+/// @abstract	A new part with the name, color, group and visibility of `part`,
+/// 			placed by `transform`.
+///
+//------------------------------------------------------------------------------
++ (LDrawPart *) duplicateOfPart:(LDrawPart *)part transform:(Matrix4)transform
+{
+	LDrawPart *duplicate = [LDrawPart new];
+
+	[duplicate setDisplayName:part.displayName parse:NO inGroup:nil];
+	[duplicate setLDrawColor:part.LDrawColor];
+	[duplicate setGroup:part.group];
+	[duplicate setHidden:part.isHidden];
+	[duplicate setTransformationMatrix:&transform];
+	return duplicate;
+
+}//end duplicateOfPart:transform:
+
+
+//---------- canConvertSelection: ------------------------------------[static]--
+///
+/// @abstract	Whether the selection is parts of one model that can go into a
+/// 			new callout.
+///
+/// @discussion	Each source step is checked on its own. Its other lines stay
+/// 			where they are.
+///
+//------------------------------------------------------------------------------
++ (BOOL) canConvertSelection:(NSArray<LDrawDirective *> *)selection
+{
+	LDrawModel *model = selection.firstObject.enclosingModel;
+
+	if (selection.count == 0 || model.enclosingFile == nil
+		|| [NSSet setWithArray:selection].count != selection.count) {
+		return NO;
+	}
+
+	NSSet<NSString *>						*removedGroups	= [self removedGroupsInModel:model];
+	NSMapTable<LDrawStep *, NSMutableSet *>	*partsByStep	= [NSMapTable strongToStrongObjectsMapTable];
+
+	for (LDrawDirective *line in selection) {
+		LDrawStep *step = line.enclosingStep;
+		if ([line isKindOfClass:[LDrawPart class]] == NO
+			|| line.enclosingDirective != step || step.enclosingModel != model) {
+			return NO;
+		}
+		// REMOVE GROUP holds within one model, so it would miss the part in
+		// the new submodel.
+		NSString *group = ((LDrawPart *)line).group;
+		if (group.length > 0 && [removedGroups containsObject:group]) {
+			return NO;
+		}
+		NSMutableSet *parts = [partsByStep objectForKey:step];
+		if (parts == nil) {
+			parts = [NSMutableSet set];
+			[partsByStep setObject:parts forKey:step];
+		}
+		[parts addObject:line];
+	}
+
+	for (LDrawStep *step in partsByStep) {
+		if ([self canGatherParts:[partsByStep objectForKey:step] inStep:step] == NO) {
+			return NO;
+		}
+	}
+	return YES;
+
+}//end canConvertSelection:
+
+
+//---------- canGatherParts:inStep: ----------------------------------[static]--
+///
+/// @abstract	Whether the chosen parts of one step can be taken out of it
+/// 			without moving them across a line that holds for them.
+///
+//------------------------------------------------------------------------------
++ (BOOL) canGatherParts:(NSSet<LDrawDirective *> *)chosen inStep:(LDrawStep *)step
+{
+	NSArray<LDrawDirective *>	*lines		= step.subdirectives;
+	NSIndexSet					*indexes	= [lines indexesOfObjectsPassingTest:
+											   ^BOOL(LDrawDirective *line, NSUInteger index, BOOL *stop) {
+		return [chosen containsObject:line];
+	}];
+	NSUInteger					 first		= indexes.firstIndex;
+	NSUInteger					 last		= indexes.lastIndex;
+	BOOL						 inCallout	= NO;
+
+	// Another callout may stay in the step. Never take a part out of it or
+	// gather parts across its lines.
+	for (NSUInteger index = 0; index < lines.count; index++) {
+		LDrawDirective	*line		= lines[index];
+		BOOL			 between	= index > first && index < last;
+
+		if ([line isKindOfClass:[LPubCallout class]]) {
+			if (between) {
+				return NO;
+			}
+			LPubCalloutLine kind = ((LPubCallout *)line).line;
+			if (kind == LPubCalloutLineBegin && inCallout == NO) {
+				inCallout = YES;
+			} else if (kind == LPubCalloutLineEnd && inCallout) {
+				inCallout = NO;
+			} else {
+				return NO;
+			}
+		} else if (inCallout) {
+			if ([chosen containsObject:line]) {
+				return NO;
+			}
+		} else if (InvertsNextPart(line)) {
+			// The flip must stay with the part it is for.
+			if (index + 1 < lines.count && [chosen containsObject:lines[index + 1]]) {
+				return NO;
+			}
+		} else if ([line isKindOfClass:[LDrawPart class]] == NO && IsPlainMetaLine(line) == NO) {
+			// Gathering parts across a layout line would move one to its
+			// other side. Any other line may start an ignore range.
+			if (between || IsStepLayoutLine(line) == NO) {
+				return NO;
+			}
+		}
+	}
+	return inCallout == NO;
+
+}//end canGatherParts:inStep:
+
+
+//---------- editConvertingSelection: --------------------------------[static]--
+///
+/// @abstract	The edit that puts the selected parts into a callout in the
+/// 			earliest step they come from.
+///
+/// @discussion	A source step left with nothing goes too, unless it sets a
+/// 			rotation, which the steps after it may go by.
+///
+//------------------------------------------------------------------------------
++ (instancetype) editConvertingSelection:(NSArray<LDrawDirective *> *)selection
+{
+	LDrawStepCalloutEdit *edit = [self editWithUndoActionKey:@"UndoSelectionToCallout"];
+
+	if ([self canConvertSelection:selection] == NO) {
+		return edit;
+	}
+
+	LDrawModel					*model		= selection.firstObject.enclosingModel;
+	LDrawFile					*file		= model.enclosingFile;
+	NSSet						*chosen		= [NSSet setWithArray:selection];
+	NSMutableArray<LDrawPart *>	*parts		= [NSMutableArray array];
+	NSMutableArray				*removed	= [NSMutableArray array];
+	LDrawStep					*step		= nil;
+
+	// The selection's order is not file order.
+	for (LDrawStep *sourceStep in model.steps) {
+		NSArray *lines	= sourceStep.subdirectives;
+		NSArray *picked	= [lines objectsAtIndexes:[lines indexesOfObjectsPassingTest:
+												   ^BOOL(id line, NSUInteger index, BOOL *stop) {
+			return [chosen containsObject:line];
+		}]];
+		if (picked.count == 0) {
+			continue;
+		}
+		[parts addObjectsFromArray:picked];
+		if (step == nil) {
+			step = sourceStep;
+			[removed addObjectsFromArray:picked];
+		} else if (picked.count == lines.count && sourceStep.stepRotationType == LDrawStepRotationNone) {
+			[removed addObject:sourceStep];
+		} else {
+			[removed addObjectsFromArray:picked];
+		}
+	}
+
+	NSUInteger	 firstIndex	= [step.subdirectives indexOfObjectIdenticalTo:parts.firstObject];
+	LDrawPart	*reference	= parts.firstObject;
+	BOOL		 reuse		= parts.count == 1 && reference.referencedMPDSubmodel != nil;
+
+	if (reuse == NO) {
+		NSString	*name	= @"callout.ldr";
+		NSUInteger	 suffix	= 2;
+		while ([file modelWithName:name] != nil) {
+			name = [NSString stringWithFormat:@"callout-%lu.ldr", (unsigned long)suffix++];
+		}
+		LDrawMPDModel	*submodel	= [LDrawMPDModel model];
+		[submodel setModelName:name];
+		LDrawStep		*contents	= submodel.steps.firstObject;
+
+		// Move by the first part's position only. Undoing its whole matrix
+		// would fail for a matrix with no inverse.
+		Point3	origin		= parts.firstObject.position;
+		Matrix4	placement	= Matrix4Translate(IdentityMatrix4, origin);
+		Matrix4	correction	= Matrix4Translate(IdentityMatrix4, V3Make(-origin.x, -origin.y, -origin.z));
+		for (LDrawPart *part in parts) {
+			[contents addDirective:[self duplicateOfPart:part
+											   transform:Matrix4Multiply(part.transformationMatrix, correction)]];
+		}
+
+		reference = [LDrawPart new];
+		[reference setDisplayName:name parse:NO inGroup:nil];
+		// The same color object a parsed 16 gets.
+		[reference setLDrawColor:[LDrawUtilities parseColorFromField:@"16"]];
+		[reference setTransformationMatrix:&placement];
+		edit.createdSubmodel = submodel;
+	}
+
+	LPubCallout			*begin		= [LPubCallout new];
+	LPubCallout			*end		= [LPubCallout new];
+	LPubCalloutPointer	*pointer	= [LPubCalloutPointer new];
+	NSUInteger			 stepIndex	= [model.steps indexOfObjectIdenticalTo:step];
+
+	begin.lPubCommandString		= [NSString stringWithFormat:@"%@ %@", LPUB_CALLOUT, LPUB_CALLOUT_BEGIN];
+	end.lPubCommandString		= [NSString stringWithFormat:@"%@ %@", LPUB_CALLOUT, LPUB_CALLOUT_END];
+	// Aimed at the first part, which is still in the step.
+	pointer.lPubCommandString	= [self pointerTextsForPlacements:@[parts.firstObject]
+														  inModel:model
+														stepIndex:stepIndex].firstObject;
+
+	edit.kind				= LDrawStepCalloutEditKindRewrite;
+	edit.targetStep			= step;
+	edit.directivesToRemove	= removed;
+	edit.directivesToInsert	= @[begin, reference, pointer, end];
+	edit.insertIndexes		= @[@(firstIndex), @(firstIndex + 1), @(firstIndex + 2), @(firstIndex + 3)];
+	edit.resultParts		= @[reference];
+
+	return edit;
+
+}//end editConvertingSelection:
+
+
+//---------- calloutInSelection: -------------------------------------[static]--
+///
+/// @abstract	The callout whose BEGIN line alone is selected, or all of whose
+/// 			placements are.
+///
+//------------------------------------------------------------------------------
++ (nullable LDrawStepCallout *) calloutInSelection:(NSArray<LDrawDirective *> *)selection
+{
+	if (selection.count == 0) {
+		return nil;
+	}
+
+	NSSet *chosen = [NSSet setWithArray:selection];
+
+	for (LDrawStepCallout *callout in [LDrawStepCallout calloutsForStep:selection.firstObject.enclosingStep]) {
+		if ((selection.count == 1 && selection.firstObject == callout.beginDirective)
+			|| [chosen isEqualToSet:[NSSet setWithArray:callout.placements]]) {
+			return callout;
+		}
+	}
+	return nil;
+
+}//end calloutInSelection:
+
+
+//---------- partsToExpandForCallout: --------------------------------[static]--
+///
+/// @abstract	For each placement of the callout, the parts of its submodel
+/// 			that would go into the step, in file order. Nil when the
+/// 			callout cannot be turned into parts.
+///
+/// @discussion	Comments, meta lines Bricksmith does not read, and CALLOUT
+/// 			lines are left out. Any other line stops the edit.
+///
+//------------------------------------------------------------------------------
++ (nullable NSArray<NSArray<LDrawPart *> *> *) partsToExpandForCallout:(LDrawStepCallout *)callout
+{
+	LDrawStep *step = callout.step;
+
+	if (step == nil || callout.endDirective == nil || callout.placements.count == 0) {
+		return nil;
+	}
+
+	// Any other line in the callout, such as a PLI ignore range, would hold
+	// for the parts.
+	for (LDrawDirective *line in callout.ownLines) {
+		if (IsCalloutLine(line) == NO) {
+			return nil;
+		}
+	}
+
+	NSSet<NSString *>	*removedGroups		= [self removedGroupsInModel:step.enclosingModel];
+	NSMutableArray		*partsByPlacement	= [NSMutableArray array];
+
+	for (LDrawPart *placement in callout.placements) {
+		LDrawModel *model = placement.referencedMPDSubmodel;
+		// A grouped placement would need its group passed to the parts.
+		if (model == nil || model == step.enclosingModel || placement.group.length > 0) {
+			return nil;
+		}
+
+		// Steps and their rotations are left out. The parts keep their
+		// place, and the parent step keeps its view.
+		NSMutableArray<LDrawPart *> *parts = [NSMutableArray array];
+		for (LDrawStep *candidate in model.steps) {
+			for (LDrawDirective *line in candidate.subdirectives) {
+				if (IsCalloutLine(line) || (IsPlainMetaLine(line) && InvertsNextPart(line) == NO)) {
+					continue;
+				}
+				if ([line isKindOfClass:[LDrawPart class]] == NO) {
+					return nil;
+				}
+				LDrawPart *part = (LDrawPart *)line;
+				// In the parent, a REMOVE GROUP for its group would take it away.
+				if (part.group.length > 0 && [removedGroups containsObject:part.group]) {
+					return nil;
+				}
+				// Edge color would need converting to the parent's colors.
+				if (part.LDrawColor.colorCode == LDrawEdgeColor) {
+					return nil;
+				}
+				[parts addObject:part];
+			}
+		}
+		if (parts.count == 0) {
+			return nil;
+		}
+		[partsByPlacement addObject:parts];
+	}
+	return partsByPlacement;
+
+}//end partsToExpandForCallout:
+
+
+//---------- canExpandCallout: ---------------------------------------[static]--
+///
+/// @abstract	Whether the callout can be turned into parts.
+///
+//------------------------------------------------------------------------------
++ (BOOL) canExpandCallout:(LDrawStepCallout *)callout
+{
+	return [self partsToExpandForCallout:callout] != nil;
+
+}//end canExpandCallout:
+
+
+//---------- editExpandingCallout: -----------------------------------[static]--
+///
+/// @abstract	The edit that replaces a callout's placements with the parts
+/// 			of their submodels and takes the callout's lines out.
+///
+//------------------------------------------------------------------------------
++ (instancetype) editExpandingCallout:(LDrawStepCallout *)callout
+{
+	LDrawStepCalloutEdit			*edit				= [self editWithUndoActionKey:@"UndoCalloutToParts"];
+	NSArray<NSArray<LDrawPart *> *>	*partsByPlacement	= [self partsToExpandForCallout:callout];
+
+	if (partsByPlacement == nil) {
+		return edit;
+	}
+
+	LDrawStep				*step		= callout.step;
+	NSArray<LDrawPart *>	*placements	= callout.placements;
+	NSMutableArray			*removed	= [[self editRemovingCallout:callout].directivesToRemove mutableCopy];
+	NSMutableArray			*inserted	= [NSMutableArray array];
+	NSMutableArray			*indexes	= [NSMutableArray array];
+	NSUInteger				 index		= 0;
+
+	[removed addObjectsFromArray:placements];
+	NSSet *removedSet = [NSSet setWithArray:removed];
+
+	// Each placement's parts go where it was, counted after the removals.
+	for (LDrawDirective *line in step.subdirectives) {
+		NSUInteger slot = [placements indexOfObjectIdenticalTo:(LDrawPart *)line];
+		if (slot != NSNotFound) {
+			LDrawPart *placement = placements[slot];
+			for (LDrawPart *part in partsByPlacement[slot]) {
+				Matrix4		 placed	= Matrix4Multiply(part.transformationMatrix, placement.transformationMatrix);
+				LDrawPart	*copy	= [self duplicateOfPart:part transform:placed];
+				[copy setHidden:part.isHidden || placement.isHidden];
+				if (part.LDrawColor.colorCode == LDrawCurrentColor) {
+					[copy setLDrawColor:placement.LDrawColor];
+				}
+				[inserted addObject:copy];
+				[indexes addObject:@(index++)];
+			}
+		} else if ([removedSet containsObject:line] == NO) {
+			index++;
+		}
+	}
+
+	edit.kind				= LDrawStepCalloutEditKindRewrite;
+	edit.targetStep			= step;
+	edit.directivesToRemove	= removed;
+	edit.directivesToInsert	= inserted;
+	edit.insertIndexes		= indexes;
+	edit.resultParts		= inserted;
+	edit.expandedSubmodels	= [[NSOrderedSet orderedSetWithArray:callout.submodels] array];
+
+	return edit;
+
+}//end editExpandingCallout:
 
 
 // MARK: - REMOVING A CALLOUT -

@@ -203,6 +203,18 @@ CA
                                     <action selector="splitModel:" target="-1" id="Qqh-4h-xCC"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Convert Selection to Callout" toolTip="Converts selected parts from steps in one model into a callout in the earliest selected step." id="callout-to-item">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="convertSelectionToCallout:" target="-1" id="callout-to-action"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Convert Callout to Parts" toolTip="Flattens all submodel steps into the current step, discarding step boundaries and callout layout." id="callout-from-item">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="convertCalloutToParts:" target="-1" id="callout-from-action"/>
+                                </connections>
+                            </menuItem>
                             <menuItem title="Move to Parent Model" tag="228" id="kYE-eX-XIk">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
