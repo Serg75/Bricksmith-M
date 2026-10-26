@@ -1,0 +1,117 @@
+//==============================================================================
+//
+//  File:       LDrawPartIdentity.h
+//  Package:    LDrawInventory
+//
+//  Created by Sergey Slobodenyuk on 2026-10-26.
+//
+//==============================================================================
+
+#import <Foundation/Foundation.h>
+
+#import <LDrawCore/LDrawColor.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+//------------------------------------------------------------------------------
+///
+/// @class      LDrawPartIdentity
+///
+/// @abstract   Which LEGO part an LDraw part is, which color an LDraw color is,
+///             and which parts count as one.
+///
+/// @discussion Immutable. LEGO parts and colors go by Rebrickable's numbers.
+///
+///             An LDraw part finds its Rebrickable number, in this order: a
+///             match the user made by hand; the "Rebrickable <number>" keyword
+///             the LDraw library writes when the numbers differ; Rebrickable's
+///             own LDraw links; and last the same number.
+///
+///             Colors are matched only through links. Rebrickable's color ids
+///             are not LDraw codes, though many agree.
+///
+//------------------------------------------------------------------------------
+@interface LDrawPartIdentity : NSObject
+
+/// The identity of an empty map: every part keeps its own number, and no
+/// color matches.
++ (instancetype) emptyIdentity NS_SWIFT_NAME(empty());
+
+/// Merges what is known about parts, weakest first: the same number,
+/// Rebrickable's links from `rebrickableData`, the library's keywords and
+/// moved parts from `catalogRecords`, then `overrides`. Every argument may
+/// be nil.
+///
+/// `catalogRecords` are the part library's records, with
+/// `PART_NUMBER_KEY`, `PART_NAME_KEY` and `PART_KEYWORDS_KEY`.
+/// `rebrickableData` is what `+rebrickableDataWith...` makes, as the store
+/// keeps it. `overrides` maps LDraw part names to Rebrickable numbers.
++ (instancetype) identityWithCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords
+							rebrickableData:(nullable NSDictionary *)rebrickableData
+								  overrides:(nullable NSDictionary<NSString *, NSString *> *)overrides;
+
+/// What Rebrickable tells about parts and colors, in the form the store keeps.
+///
+/// - `partLinks`: LDraw part name → Rebrickable number.
+/// - `colorLinks`: Rebrickable color id → LDraw color code, or a list of
+///   codes when one Rebrickable color stands for several, as Black does for
+///   LDraw's black and rubber black.
+/// - `relations`: rows of relation code, child, parent, as Rebrickable's
+///   `part_relationships` has them: "P" print, "T" pattern, "M" mold,
+///   "A" alternate. "B" sub-part and "R" pair are kept but not used yet.
+/// - `knownPartNumbers`: every part Rebrickable has, or nil when not known. A
+///   part outside it has no data.
++ (NSDictionary *) rebrickableDataWithPartLinks:(nullable NSDictionary<NSString *, NSString *> *)partLinks
+									 colorLinks:(nullable NSDictionary<NSNumber *, id> *)colorLinks
+									  relations:(nullable NSArray<NSArray<NSString *> *> *)relations
+							   knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers;
+
+/// Rebrickable data with some parts replaced. Part links are added to the
+/// links `data` has; any other argument that is not nil replaces what `data`
+/// has. `data` may be nil.
++ (NSDictionary *) rebrickableDataByUpdating:(nullable NSDictionary *)data
+								   partLinks:(nullable NSDictionary<NSString *, NSString *> *)addedPartLinks
+								  colorLinks:(nullable NSDictionary<NSNumber *, id> *)colorLinks
+								   relations:(nullable NSArray<NSArray<NSString *> *> *)relations
+							knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers;
+
+/// The color links in Rebrickable data, each as a list of LDraw codes, or an
+/// empty dictionary.
++ (NSDictionary<NSNumber *, NSArray<NSNumber *> *> *) colorLinksInRebrickableData:(nullable NSDictionary *)data;
+
+/// An LDraw part name as the map keys it: lowercase, no ".dat", and "/" for a
+/// path. "3001.DAT" is "3001". Nil for an empty name.
++ (nullable NSString *) normalizedPartName:(nullable NSString *)partName;
+
+/// "Rebrickable <number>" keywords: normalized LDraw name → number.
++ (NSDictionary<NSString *, NSString *> *) keywordLinksFromCatalogRecords:(NSArray<NSDictionary *> *)catalogRecords;
+
+/// "~Moved to <name>" descriptions: normalized LDraw name → normalized target.
++ (NSDictionary<NSString *, NSString *> *) movedPartsFromCatalogRecords:(NSArray<NSDictionary *> *)catalogRecords;
+
+/// Rebrickable's number for an LDraw part, following moved parts. Nil when
+/// Rebrickable does not have the part, as far as is known.
+- (nullable NSString *) rebrickablePartNumberForPartName:(NSString *)partName;
+
+/// The LDraw part for a Rebrickable number, e.g. "3001.dat": a linked one, or
+/// else the same number. The library may not have it; the host checks.
+- (NSString *) partNameForRebrickablePartNumber:(NSString *)partNumber;
+
+/// Every Rebrickable color an LDraw color can be, lowest id first. Several
+/// Rebrickable colors can share one LDraw color. Empty when none links.
+- (NSArray<NSNumber *> *) rebrickableColorIDsForColorCode:(LDrawColorT)colorCode;
+
+/// The LDraw color for a Rebrickable color, the first when it has several,
+/// or `LDrawColorBogus`.
+- (LDrawColorT) colorCodeForRebrickableColorID:(NSInteger)colorID;
+
+/// The part that stands for a whole pool. With `matchesAnyPrint`, a print or
+/// pattern stands for its plain part. With `matchesMoldVariants`, a part's
+/// molds and alternates share one key.
+- (NSString *) poolKeyForRebrickablePartNumber:(NSString *)partNumber
+						   matchesMoldVariants:(BOOL)matchesMoldVariants
+							   matchesAnyPrint:(BOOL)matchesAnyPrint;
+
+@end
+
+NS_ASSUME_NONNULL_END

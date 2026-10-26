@@ -21,6 +21,10 @@ let package = Package(
         // What a host that edits callouts adds to that.
         .library(name: "LDrawStepEditing", targets: ["LDrawStepEditing"]),
         .library(name: "LDrawConnectivity", targets: ["LDrawConnectivity"]),
+        // Inventories, part availability, and the parts limit built from them. No network.
+        .library(name: "LDrawInventory", targets: ["LDrawInventory"]),
+        // Rebrickable's downloads and API, read into LDrawInventory's types. The only network code.
+        .library(name: "LDrawRebrickable", targets: ["LDrawRebrickable"]),
     ],
     targets: [
         .target(
@@ -95,6 +99,24 @@ let package = Package(
             path: "Packages/LDrawConnectivity/Sources/LDrawConnectivity",
             publicHeadersPath: "include"
         ),
+        .target(
+            name: "LDrawInventory",
+            dependencies: ["LDrawCore"],
+            path: "Packages/LDrawInventory/Sources/LDrawInventory",
+            publicHeadersPath: "include"
+        ),
+        .target(
+            name: "LDrawRebrickable",
+            dependencies: ["LDrawInventory", "LDrawCore"],
+            path: "Packages/LDrawRebrickable/Sources/LDrawRebrickable",
+            resources: [
+                .process("Resources"),
+            ],
+            publicHeadersPath: "include",
+            linkerSettings: [
+                .linkedLibrary("z"),
+            ]
+        ),
         // Helpers for the test targets. No product uses it.
         .target(
             name: "LDrawTestSupport",
@@ -119,6 +141,19 @@ let package = Package(
             name: "LDrawStepEditingTests",
             dependencies: ["LDrawStepEditing", "LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
             path: "Packages/LDrawStepEditing/Tests/LDrawStepEditingTests"
+        ),
+        .testTarget(
+            name: "LDrawInventoryTests",
+            dependencies: ["LDrawInventory", "LDrawCore"],
+            path: "Packages/LDrawInventory/Tests/LDrawInventoryTests"
+        ),
+        .testTarget(
+            name: "LDrawRebrickableTests",
+            dependencies: ["LDrawRebrickable", "LDrawInventory", "LDrawCore"],
+            path: "Packages/LDrawRebrickable/Tests/LDrawRebrickableTests",
+            resources: [
+                .copy("Fixtures"),
+            ]
         ),
         .testTarget(
             name: "LDrawConnectivityTests",

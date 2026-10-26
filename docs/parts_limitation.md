@@ -6,8 +6,8 @@
 
 | ID | Phase | Status |
 |----|-------|--------|
-| `limit_data` | Phase 0: inventory and availability types, identity maps, the store on disk (new package LDrawInventory) | not started |
-| `limit_rebrickable` | Phase 1: Rebrickable downloads, set import, LDraw matching (new package LDrawRebrickable) | not started |
+| `limit_data` | Phase 0: inventory and availability types, identity maps, the store on disk (new package LDrawInventory) | completed |
+| `limit_rebrickable` | Phase 1: Rebrickable downloads, set import, LDraw matching (new package LDrawRebrickable) | completed |
 | `limit_check` | Phase 2: count what the model uses and work out each part's status (LDrawFeatures) | not started |
 | `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | not started |
 | `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | not started |
@@ -280,7 +280,7 @@ What has no match is *no data* and is listed under Unmatched. A match made there
 
 | Module | Platforms | Contents |
 |--------|-----------|----------|
-| **LDrawInventory** (new) | macOS + iOS | Foundation only, depends on LDrawCore. `LDrawInventoryItem`, `LDrawSetInventory`, `LDrawInventory` (a mix of sets and loose parts), `LDrawPartAvailability` (the catalog), `LDrawPartIdentity` (LDraw ↔ LEGO parts and colors, pools, hand matches; reads the `Rebrickable` keywords and aliases from the part catalog), `LDrawInventoryStore` (the library on disk, in a folder the host names), `LDrawPartLimit` (the setting), `LDrawPartLimitTable` (what a limit allows, for fast lookups). No network |
+| **LDrawInventory** (new) | macOS + iOS | Foundation only, depends on LDrawCore. `LDrawInventoryItem`, `LDrawSetInventory`, `LDrawCombinedInventory` (a mix of sets and loose parts), `LDrawPartAvailability` (the catalog), `LDrawPartIdentity` (LDraw ↔ LEGO parts and colors, pools, hand matches; reads the `Rebrickable` keywords and moved parts from the part catalog), `LDrawInventoryStore` (the library on disk, in a folder the host names), `LDrawPartLimit` (the setting), `LDrawPartLimitTable` (what a limit allows, for fast lookups). No network |
 | **LDrawRebrickable** (new) | macOS + iOS | Foundation and `NSURLSession`, depends on LDrawInventory, links `z` for gzip. `LDrawRebrickableClient` (API v3, one call a second, retries, cancel), `LDrawRebrickableDownloads` (the CSV files, conditional GET, gzip, a streaming CSV reader), `LDrawRebrickableCatalogBuilder` (catalog, set list and part relations from the downloads), `LDrawRebrickableSetImporter` (one set, from the downloads or the API), and the color table as a resource. The host passes the API key in |
 | **LDrawCore** | macOS + iOS | `LDrawPartLimitStatus` and a derived `limitStatus` on `LDrawPart`, neither archived nor copied. Host-pushed statics for marks: on or off, style, colors, dim allowed parts. `-drawSelf:` pushes the mark. `pushMark:`/`popMark` in `LDrawCoreRenderer`. Nothing in the file format changes |
 | **LDrawRenderCore** | macOS + iOS | The mark stack in `LDrawShaderRenderer`, passed to `LDrawDLDraw` with each draw, like the ghost alpha |
@@ -317,7 +317,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitKind)
     LDrawPartLimitKindInventory     = 2
 };
 
-@interface LDrawPartLimit : NSObject <NSCopying, NSSecureCoding>
+@interface LDrawPartLimit : NSObject <NSCopying, NSMutableCopying, NSSecureCoding>
 @property (nonatomic, readonly)           LDrawPartLimitKind    kind;
 @property (nonatomic, readonly)           NSInteger             yearsBack;              // Available now; 0 is any year
 @property (nonatomic, readonly)           BOOL                  countsPickABrickParts;  // Available now
@@ -328,25 +328,35 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitKind)
 @property (nonatomic, readonly)           BOOL                  matchesAnyColor;
 @property (nonatomic, readonly)           BOOL                  warnsOnly;
 
-// What the host keeps in its defaults. Nil, junk, or an inventory the store
-// no longer has reads back as All Parts.
+// What the host keeps in its defaults. Nil or junk reads back as All Parts;
+// -[LDrawInventoryStore resolvedLimit:] does the same for a removed inventory.
 - (NSDictionary<NSString *, id> *) dictionaryRepresentation;
-+ (instancetype) limitWithDictionary:(nullable NSDictionary<NSString *, id> *)dictionary;
++ (LDrawPartLimit *) limitWithDictionary:(nullable NSDictionary<NSString *, id> *)dictionary;
+@end
+
+// The same properties, readwrite, for a settings sheet.
+@interface LDrawMutablePartLimit : LDrawPartLimit
 @end
 
 // What a limit allows, ready for lookups by LDraw name and color code.
 @interface LDrawPartLimitTable : NSObject
 + (instancetype) tableForLimit:(LDrawPartLimit *)limit
-                         store:(LDrawInventoryStore *)store
+                  availability:(nullable LDrawPartAvailability *)availability
+                         items:(nullable NSArray<LDrawInventoryItem *> *)items
+                      identity:(LDrawPartIdentity *)identity
                           year:(NSInteger)currentYear;
+@property (nonatomic, readonly) BOOL hasData;                                       // NO without the catalog or items
+- (LDrawPartLimitStatus) statusForPartNamed:(NSString *)partName
+                                  colorCode:(LDrawColorT)colorCode;                 // never TooMany
 - (BOOL) allowsPartNamed:(NSString *)partName;                                      // in some color
 - (BOOL) allowsPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode;
 - (NSUInteger) ownedCountForPartNamed:(NSString *)partName
                             colorCode:(LDrawColorT)colorCode;                       // NSNotFound when not counted
-- (NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName;
-- (NSSet<NSString *> *) partNamesInColor:(LDrawColorT)colorCode;
+- (nullable NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName;    // nil when colors are not limited
+- (nullable NSArray<NSNumber *> *) allowedColorCodes;                               // for the color filter
 - (nullable NSString *) poolKeyForPartNamed:(NSString *)partName;                   // nil when there is no match
 - (NSArray<LDrawInventoryItem *> *) items;                                          // an inventory's rows; empty otherwise
+- (NSArray<LDrawInventoryItem *> *) unmatchedItems;
 @end
 
 // LDrawCore. A later value is worse.
@@ -376,7 +386,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 
 ### Phase 0 — `limit_data`: the data types and the store
 
-- Add the `LDrawInventory` target and product to `Package.swift`, with a Swift Testing target `LDrawInventoryTests`, and link the product into both app targets in `Bricksmith.xcodeproj`, as LDrawFeatures is. LDrawFeatures gets it as a dependency in Phase 2, when it first needs it.
+- Add the `LDrawInventory` target and product to `Package.swift`, with a Swift Testing target `LDrawInventoryTests`. The app targets link the product in Phase 3, when the app first uses it, and LDrawFeatures gets it as a dependency in Phase 2.
 - The types above, plus the store. Its folder, which the app sets to `~/Library/Application Support/Bricksmith/Parts Data/`, holds:
 
   | File | What |
@@ -393,6 +403,18 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - `LDrawPartLimitTable` resolves an inventory into pools and counts once, and answers every lookup from dictionaries. With spares off, spare counts are left out. With *any color* on, colors fold into one.
 - Tests: mixing sets with counts; spares in and out; loose parts added; pools of mold variants and of prints; *Available now* by years and any year; the store round trip; a file of a newer version read without loss; the limit's dictionary round trip, with nil, junk and a removed inventory read as All Parts.
 
+**As built.** `Packages/LDrawInventory`, with 54 tests; every package test passes and the target builds for the iOS Simulator. What came out differently from the sketch:
+
+- *The mix of sets is `LDrawCombinedInventory`.* The umbrella header is `LDrawInventory.h`, so no class can take that name.
+- *`LDrawPartLimitStatus` is already in LDrawCore*, in `LDrawPartLimitStatus.h`, because the table answers with it. `LDrawPart` gets no `limitStatus` until Phase 2.
+- *A limit is an immutable value with a mutable subclass*, `LDrawMutablePartLimit`, as Foundation's collections are. The defaults dictionary keeps the kind as a word (`none`, `availableNow`, `inventory`). An inventory limit names a set number or a combined inventory's UUID, and the store's `-resolvedLimit:` turns one whose inventory is gone into no limit, keeping its options.
+- *The table takes its data, not the store*, so it is tested without files; `-[LDrawInventoryStore tableForLimit:identity:year:]` puts them together. It answers `-statusForPartNamed:colorCode:` too, and keeps the items that match nothing in `-unmatchedItems`. `-partNamesInColor:` was dropped: the Part Browser asks about each record instead, and `-allowedColorCodes` serves the color filter.
+- *Rebrickable's "any color" (9999)* counts toward every color of its pool, and an item in "unknown" (-1) is unmatched.
+- *Several Rebrickable colors can share an LDraw color*, so the identity map gives a list (`-rebrickableColorIDsForColorCode:`), and a part is allowed when any of them is.
+- *Moved parts are followed; alias parts are not yet.* The catalog does not record what an alias points to. Phase 2 can read it from the part file, which is loaded for drawing anyway.
+- *The identity map is immutable.* The host builds it again when the library or the store changes.
+- *Swift names are set with `NS_SWIFT_NAME`*, as `LDrawStepPartList` does, so another host gets a stable API: `LDrawPartLimit.availableNow()`, `LDrawPartLimitTable(limit:availability:items:identity:year:)`, `store.saveSetInventory(_:)`.
+
 ### Phase 1 — `limit_rebrickable`: getting the data
 
 - Add the `LDrawRebrickable` target, `linkerSettings: [.linkedLibrary("z")]`, and `LDrawRebrickableTests` with fixture files, and link the product into both app targets. No test touches the network: the client takes a session configuration, and the tests stub it with an `NSURLProtocol`.
@@ -402,6 +424,19 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - **Set import.** From the downloads, offline and keyless: the set's inventory, spares flagged, minifigure parts included. With a key, from the API instead, which is fresher and carries Rebrickable's own LDraw ids. Set search by number or name runs on the downloaded set list.
 - The client keeps to one call a second, backs off on 429, can be cancelled, and reports progress. The catalog is built on a background queue, and the host shows the progress.
 - Tests: CSV quoting (commas and quotes in names); gzip; a header with an extra column; the year join; a set's latest inventory version; minifigure parts and sets inside sets, multiplied; spares; *Database Sets* kept apart; colors 9999 and -1; API JSON with paging; a 429 then success; a keyword match preferred over the same number; a clashing color id (326) mapped through the table, not by number.
+
+**As built.** `Packages/LDrawRebrickable`, with 28 tests on small hand-made files in Rebrickable's formats and a stub URL protocol; nothing in them reaches the network. Every package test passes and the target builds for the iOS Simulator. What came out differently, or is still open:
+
+- *The color table is made from names for now.* `Scripts/make_color_table.py --names colors.csv.gz LDConfig.ldr` links 198 of Rebrickable's colors by name, then by an RGB value only one LDraw color has; the rest are mostly special lines (HO, Duplo, Modulex, Vintage). Run `REBRICKABLE_API_KEY=… Scripts/make_color_table.py --api` once to replace it with Rebrickable's own links. A user's key can do the same at run time, and `colors-api.json` in the downloads folder then wins.
+- *One Rebrickable color can be several LDraw colors.* Black is LDraw's 0 and 256 (rubber black), so color links map an id to a list of codes. `LDrawPartIdentity` took that change.
+- *`LDrawInventoryJSON.h` is public now*, so both packages read JSON the same careful way.
+- *The set import reads the downloads, sets inside sets and minifigures included, each multiplied.* The API import does not fetch sets inside a set yet.
+- *A set's count in the catalog can come out high* when a part is in the set and in one of its minifigures: each inventory is read on its own. Years, which are what *Available now* reads, are right.
+- *On the real files* (`LDrawRebrickableLiveTests`, which runs only when `REBRICKABLE_LIVE_FOLDER` names a folder, checked on 2026-10-26):
+  - The ten files came down in about a second. A second run within the day asked for nothing.
+  - The catalog built in 4.2 s: 61,910 parts with records, 64,906 parts Rebrickable knows, 37,543 relations, 28,553 sets. Saved, it is 2.9 MB and reads back in 0.08 s.
+  - A set imports from the files in 2.5 s, since it reads every part row. 42115-1 came to 295 items, 3,696 parts and 22 spares, Rebrickable's own count. 99.3% of its items (99.8% of its pieces) found an LDraw part in the library, and every color linked; 10295-1 did the same at 99.2%.
+  - Of the library's 22,965 parts (aliases, moved parts, primitives and subparts left out), Rebrickable knows 61.8%, 59.2% were ever made, and 15.8% came in a set of 2025 or 2026; 75 colors have some part made now. Most of the rest are stickers (about 3,350; Rebrickable lists sticker sheets), LDraw prints with no keyword (1,871), shortcuts (816) and obsolete parts (815). Phase 7 can match an LDraw print to its plain part by name, since LDraw names a print as the base number, `p`, and a code.
 
 ### Phase 2 — `limit_check`: what the model uses, and each part's status
 
