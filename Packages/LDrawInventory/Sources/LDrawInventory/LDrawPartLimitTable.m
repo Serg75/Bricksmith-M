@@ -383,6 +383,27 @@
 }
 
 
+//========== countKeyForPartNamed:colorCode: ===================================
+//==============================================================================
+- (NSString *) countKeyForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode
+{
+	NSString	*pool		= [self poolKeyForPartNamed:partName];
+	NSArray		*colorIDs	= nil;
+
+	if (pool == nil)
+		return nil;
+	if (self.limit.matchesAnyColor)
+		return [pool stringByAppendingString:@"\n*"];
+
+	colorIDs = [self->identity rebrickableColorIDsForColorCode:colorCode];
+	if ([colorIDs count] == 0)
+		return nil;
+
+	return [NSString stringWithFormat:@"%@\n%@", pool, [colorIDs componentsJoinedByString:@","]];
+
+}//end countKeyForPartNamed:colorCode:
+
+
 //========== items =============================================================
 //==============================================================================
 - (NSArray<LDrawInventoryItem *> *) items

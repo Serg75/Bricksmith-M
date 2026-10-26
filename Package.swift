@@ -77,7 +77,7 @@ let package = Package(
         ),
         .target(
             name: "LDrawFeatures",
-            dependencies: ["LDrawCore"],
+            dependencies: ["LDrawCore", "LDrawInventory"],
             path: "Packages/LDrawFeatures/Sources/LDrawFeatures",
             publicHeadersPath: "include"
         ),
@@ -129,7 +129,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LDrawFeaturesTests",
-            dependencies: ["LDrawFeatures", "LDrawCore", "LDrawTestSupport"],
+            dependencies: ["LDrawFeatures", "LDrawCore", "LDrawInventory", "LDrawTestSupport"],
             path: "Packages/LDrawFeatures/Tests/LDrawFeaturesTests"
         ),
         .testTarget(

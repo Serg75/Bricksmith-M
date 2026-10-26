@@ -16,6 +16,7 @@
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawGroupable.h>
+#import <LDrawCore/LDrawPartLimitStatus.h>
 #import <LDrawCore/MatrixMath.h>
 
 @class LDrawFile;
@@ -63,6 +64,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, strong, nullable) NSString * group;		// MLCAD group name or nil
 @property (nonatomic) LDrawGroupVisibilityT groupVisibility;	// see LDrawGroupable
+
+/// How the part stands against the editor's parts limit, as the last check
+/// found it. Neither saved nor copied.
+@property (nonatomic) LDrawPartLimitStatus limitStatus;
 
 //Directives
 - (void) drawBoundsWithColor:(LDrawColor *)drawingColor;

@@ -85,6 +85,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// part has no match.
 - (nullable NSString *) poolKeyForPartNamed:(NSString *)partName;
 
+/// What copies of the part in this color are counted under: its pool and the
+/// Rebrickable colors its color is, so LDraw colors that are one Rebrickable
+/// color share one count. Nil when the part or the color has no match.
+- (nullable NSString *) countKeyForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode;
+
 /// An inventory's rows: one per pool and color, with LDraw ids filled in
 /// where the identity map knows them. Empty for other limits.
 - (NSArray<LDrawInventoryItem *> *) items;

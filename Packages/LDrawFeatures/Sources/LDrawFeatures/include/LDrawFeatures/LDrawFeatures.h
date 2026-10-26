@@ -33,7 +33,9 @@
 #import <LDrawFeatures/LDrawMinifigureSpec.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
+#import <LDrawFeatures/LDrawPartLimitCheck.h>
 #import <LDrawFeatures/LDrawPartListOrientations.h>
+#import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawRelatedParts.h>
 #import <LDrawFeatures/LDrawStepCallout.h>

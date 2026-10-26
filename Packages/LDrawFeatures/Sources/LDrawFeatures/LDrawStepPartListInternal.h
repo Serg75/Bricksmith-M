@@ -57,6 +57,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// no model or no catalog.
 + (nullable NSData *) outlinePointsOfModel:(nullable LDrawModel *)submodel;
 
+/// Whether a reference names a primitive or a subpart rather than a part.
++ (BOOL) isPrimitiveOrSubpartName:(NSString *)partName library:(nullable LDrawPartLibrary *)library;
+
 /// A part's color, or `inheritedColor` when the part is in the main color.
 + (nullable LDrawColor *) colorOfPart:(LDrawPart *)part inheriting:(nullable LDrawColor *)inheritedColor;
 

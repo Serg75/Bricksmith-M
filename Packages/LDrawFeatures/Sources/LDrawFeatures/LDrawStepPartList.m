@@ -33,7 +33,6 @@
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawStepPartListEntry.h>
 #import <LDrawCore/LPubCallout.h>
-#import <LDrawCore/LPubPliIgnore.h>
 #import <LDrawCore/LPubPliShow.h>
 #import <LDrawCore/LPubPliSubstitute.h>
 #import <LDrawCore/LDrawUtilities.h>
@@ -42,6 +41,7 @@
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
+#import "LDrawLPubRangeTracker.h"
 #import "LDrawStepPartListInternal.h"
 
 
@@ -136,32 +136,6 @@ static void NoteShapePoint(Point3 point, const Vector3 *directions, NSUInteger c
 	}
 
 }//end NoteShapePoint
-
-
-//------------------------------------------------------------------------------
-///
-/// @class      LDrawStepPartListRange
-///
-/// @abstract   One open `PLI BEGIN IGN` or `PLI BEGIN SUB` range, while the
-///             step's directives are walked.
-///
-//------------------------------------------------------------------------------
-@interface LDrawStepPartListRange : NSObject
-
-/// The substitute this range lists in its place, or nil for an IGN range.
-@property (nonatomic, strong, nullable) LPubPliSubstitute *substitute;
-
-/// This range sits inside one that lists nothing, so its substitute is not
-/// listed either.
-@property (nonatomic) BOOL suppressed;
-
-/// The color of the first part inside, for a substitute that names none.
-@property (nonatomic, strong, nullable) LDrawColor *firstColor;
-
-@end
-
-@implementation LDrawStepPartListRange
-@end
 
 
 //------------------------------------------------------------------------------
@@ -366,11 +340,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	  inheritedColor:(nullable LDrawColor *)inheritedColor
 	   shouldMeasure:(BOOL)shouldMeasure
 {
-	// `PLI BEGIN IGN` and `PLI BEGIN SUB` share one END, so a `PLI END` closes
-	// whichever opened last. They nest, so they are a stack, and an END with
-	// nothing open does nothing. `PART BEGIN IGN` has its own END and depth.
-	NSMutableArray<LDrawStepPartListRange *>	*pliRanges			= [NSMutableArray array];
-	NSInteger									 partIgnoreDepth	= 0;
+	LDrawLPubRangeTracker *ranges = [[LDrawLPubRangeTracker alloc] init];
 
 	// The callout the walk is inside, if any. LPub3D does not nest them.
 	LPubCallout	*openCallout = nil;
@@ -385,33 +355,10 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			break;
 		}
 
-		if ([directive isKindOfClass:[LPubPliSubstitute class]]) {
-			LDrawStepPartListRange *range = [LDrawStepPartListRange new];
+		LDrawLPubRange *closed = nil;
 
-			range.substitute	= (LPubPliSubstitute *)directive;
-			range.suppressed	= (pliRanges.count > 0 || partIgnoreDepth > 0);
-			[pliRanges addObject:range];
-			continue;
-		}
-
-		if ([directive isKindOfClass:[LPubPliIgnore class]]) {
-			LPubPliIgnore *bracket = (LPubPliIgnore *)directive;
-
-			if (bracket.branch == LPubPliIgnoreBranchPart) {
-				if (bracket.beginsRange) {
-					partIgnoreDepth += 1;
-				}
-				else if (partIgnoreDepth > 0) {
-					partIgnoreDepth -= 1;
-				}
-			}
-			else if (bracket.beginsRange) {
-				[pliRanges addObject:[LDrawStepPartListRange new]];
-			}
-			else if (pliRanges.count > 0) {
-				LDrawStepPartListRange *closed = pliRanges.lastObject;
-
-				[pliRanges removeLastObject];
+		if ([ranges readBracket:directive closedRange:&closed]) {
+			if (closed != nil) {
 				[self addSubstituteOfRange:closed toGroups:entriesByKey order:keyOrder];
 			}
 			continue;
@@ -430,13 +377,12 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 		}
 
 		// A substitute with no color of its own takes the first part's.
-		for (LDrawStepPartListRange *range in pliRanges) {
-			if (range.firstColor == nil && [directive isKindOfClass:[LDrawPart class]]) {
-				range.firstColor = [self colorOfPart:(LDrawPart *)directive inheriting:inheritedColor];
-			}
+		if ([directive isKindOfClass:[LDrawPart class]]) {
+			[ranges notePart:(LDrawPart *)directive
+					   color:[self colorOfPart:(LDrawPart *)directive inheriting:inheritedColor]];
 		}
 
-		if (pliRanges.count > 0 || partIgnoreDepth > 0 || [self isBuiltDirective:directive] == NO) {
+		if (ranges.isInsideRange || [self isBuiltDirective:directive] == NO) {
 			continue;
 		}
 
@@ -510,7 +456,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	}
 
 	// A range that never closes still stands in for the rest of the step.
-	for (LDrawStepPartListRange *range in pliRanges) {
+	for (LDrawLPubRange *range in ranges.openRanges) {
 		[self addSubstituteOfRange:range toGroups:entriesByKey order:keyOrder];
 	}
 
@@ -616,7 +562,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 /// 			that lists nothing of its own.
 ///
 //------------------------------------------------------------------------------
-+ (void) addSubstituteOfRange:(LDrawStepPartListRange *)range
++ (void) addSubstituteOfRange:(LDrawLPubRange *)range
 					 toGroups:(NSMutableDictionary<NSString *, LDrawStepPartListEntry *> *)entriesByKey
 						order:(NSMutableArray<NSString *> *)keyOrder
 {

@@ -8,7 +8,7 @@
 |----|-------|--------|
 | `limit_data` | Phase 0: inventory and availability types, identity maps, the store on disk (new package LDrawInventory) | completed |
 | `limit_rebrickable` | Phase 1: Rebrickable downloads, set import, LDraw matching (new package LDrawRebrickable) | completed |
-| `limit_check` | Phase 2: count what the model uses and work out each part's status (LDrawFeatures) | not started |
+| `limit_check` | Phase 2: count what the model uses and work out each part's status (LDrawFeatures) | completed |
 | `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | not started |
 | `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | not started |
 | `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | not started |
@@ -445,6 +445,17 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - `LDrawPart` gets `limitStatus`. `+applyReport:toFile:` sets it and returns the parts that changed, which the document then redraws with `noteNeedsDisplay`.
 - The IGN and SUB range tracking in `+[LDrawStepPartList collectStep:…]` (its `LDrawStepPartListRange` stack) moves into an internal helper both walks use. The step list's tests keep passing unchanged.
 - Tests: color 16 through two levels of submodels; a submodel placed three times; IGN left out; SUB counted as its substitute; the 11th copy marked and the first 10 not; a submodel in two colors; an unreferenced submodel checked but not counted; LSynth and missing parts as no data; spares on and off; a 5,000-part model checked well under 50 ms.
+
+**As built.** 15 tests in `LDrawFeaturesTests`; every package test passes, both app targets build, and LDrawFeatures, which now depends on LDrawInventory, builds for the iOS Simulator. A 5,000-part model is checked and marked in 21 ms in a debug build. What came out differently, or is left:
+
+- *`LDrawLPubRangeTracker`* holds the IGN and SUB range rules; the step parts list moved onto it with its tests unchanged. A range also keeps the parts inside it, which a substitute's copy stands for and marks.
+- *`LDrawPartUsage`* lists copies: part name, built color, kind (part, substitute, LSynth, missing), the parts that stand for it, and whether it counts. A substitute named `.ldr` or `.mpd` is counted as the `.dat` of that number. A callout's placement counts like any other.
+- *`LDrawPartLimitCheck`* gives `LDrawPartLimitReport`: one row per pool and color with used, owned and status; a status per part; and a problem count and worst status per container, worked out once each for File Contents. *No data* is not a problem in those counts.
+- *Counting shares the limit's own key.* `-[LDrawPartLimitTable countKeyForPartNamed:colorCode:]` keys a copy by its pool and the Rebrickable colors its color is, so black and rubber black draw on one count.
+- *LSynth and missing parts are no data and get no mark*, since only `LDrawPart` carries a status. A part tells it is missing only with a catalog loaded, as in the step parts list; so does a primitive in the library's root folder, such as `stud.dat`.
+- *A part in "any color" (9999) counts toward every color of its pool*, so two colors can each draw on it. Rare, and generous rather than strict.
+- *A model that places itself does not resolve*; the line reads as a part with no match.
+- *Copying a part leaves its status behind*, since a copy starts from a new part. Copying looks up the shared part library, which package tests do not have, so no test covers it.
 
 ### Phase 3 — `limit_settings`: choosing the limit
 
