@@ -89,6 +89,7 @@
 #import "MovePanel.h"
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
+#import "PartsLimitController.h"
 #import "PieceCountPanel.h"
 #import "PreferencesDialogController.h"
 #import "RotationPanelController.h"
@@ -317,6 +318,10 @@ void AppendChoicesToNewItem(
 	[self->coordinateFieldZ setFormatter:coordinateFormatter];
 	
 	
+	// The Parts menu goes in before the scope bar is first laid out.
+	self->partsLimitController = [[PartsLimitController alloc] initWithDocument:self];
+	[self->partsLimitController installAfterView:self->submodelPopUpMenu beforeView:self->scopeStepControlsContainer];
+
 	// update scope step display controls
 	[self setStepDisplay:NO];
 	
@@ -4782,6 +4787,8 @@ void AppendChoicesToNewItem(
 	if([self wantsStepPartList] != ([self->stepPartListController hostView] != nil))
 		[self updateStepPartList];
 
+	[self->partsLimitController setNeedsCheck];
+
 }//end docChanged:
 
 
@@ -6559,6 +6566,8 @@ void AppendChoicesToNewItem(
 
 	[self updateStepPartList];
 
+	[self->partsLimitController setNeedsCheck];
+
 }//end loadDataIntoDocumentUI
 
 
@@ -7578,6 +7587,7 @@ void AppendChoicesToNewItem(
 	BOOL hidesPageSwitch = (stepDisplay == NO || isArranging);
 
 	[self->submodelPopUpMenu setHidden:isArranging];
+	[self->partsLimitController setHidden:isArranging];
 	[self->lpubPageLabel setHidden:hidesPageSwitch];
 	[self->lpubPageSwitch setHidden:hidesPageSwitch];
 

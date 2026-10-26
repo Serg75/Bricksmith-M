@@ -9,7 +9,7 @@
 | `limit_data` | Phase 0: inventory and availability types, identity maps, the store on disk (new package LDrawInventory) | completed |
 | `limit_rebrickable` | Phase 1: Rebrickable downloads, set import, LDraw matching (new package LDrawRebrickable) | completed |
 | `limit_check` | Phase 2: count what the model uses and work out each part's status (LDrawFeatures) | completed |
-| `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | not started |
+| `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | completed |
 | `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | not started |
 | `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | not started |
 | `limit_marks` | Phase 6: marks in the 3D view and File Contents, inspector line, Piece Count columns | not started |
@@ -465,6 +465,19 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - Limit Options sheet, Import Set sheet, Inventories window, Settings → Parts pane. The API key goes into the Keychain, never into the defaults.
 - First use: when a limit is first chosen with no data on the Mac, a sheet says what is downloaded, from where, and how big it is, and asks before downloading.
 - New keys go into `LDrawKeys.h` (`PARTS_LIMIT_…`), with defaults in `LDrawPreferences`, and the host pushes them into the packages at launch and on change.
+
+**As built.** Both app targets build. New tests: 4 for `LDrawPartLimitSession`, 3 for `LDrawRebrickableUpdater`, 3 for `LDrawInventoryPartsFile`; every package test passes, and LDrawInventory, LDrawRebrickable and LDrawFeatures build for the iOS Simulator. Checked in the Metal app on a copy of the Porsche test model, which is an alternate build of 10274-1 ECTO-1, with the downloaded data: the Import sheet finds sets by number or name and imports 10274-1 from the downloads in 3 s. With it as the limit the model has 13 problems (11 parts not in their color, 2 not available) and 61 parts with no data; *Available now* gives 12 problems. The check takes 24 ms in a debug build. What came out differently from the plan, or is left:
+
+- *`LDrawPartLimitSession`* (LDrawFeatures) holds the limit in force and its table, instead of a static on `LDrawPartLimitCheck`. It builds the table again when the limit, the store or the part library's records change, and posts `LDrawPartLimitDidChangeNotification` once per change. A limit on an inventory the store lacks is kept, but is in force as no limit until the set comes back.
+- *`LDrawRebrickableUpdater`* (LDrawRebrickable) runs the downloads, builds and saves the catalog on a background queue, reads the set list once, and imports a set from the downloads or, with a key, from the API, saving the LDraw links the API returns. Every completion runs on the main queue.
+- *`PartsLimitManager`* is the app's one owner of the store, the session and the updater, instead of class methods on `PreferencesDialogController`. It keeps the limit in the defaults under `PARTS_LIMIT_KEY`, the data in `~/Library/Application Support/Bricksmith/Parts Data`, and the API key in the Keychain. It fills every limit menu, asks before the first download (about 18 MB), shows the download's progress, and updates the data quietly when `PARTS_DATA_UPDATE_INTERVAL_KEY` days (default 30) have passed, but only once the user has data.
+- *The Parts menu is a pull-down with a box icon, not a "Parts:" label and pop-up*, placed after the model menu against the step controls, which takes less room. The model menu gives up the width. Both hide while a step is arranged. The problem button shows the count and turns orange when the worst problem is *too many*. Its popover lists each kind with **Select**, which selects the parts in the model being edited, or else in the first model that has some, and **Show Piece Count…**.
+- *Documents check from `-docChanged:` and on every limit change*, once per run of the event loop, and redraw only when a part's status changed. With no limit the walk is skipped, once the marks of the earlier limit are cleared.
+- *View → Parts Limit, File → Import Set Parts… and Window → Inventories* are added in code at launch. **Mark Limit Problems** waits for the marks in Phase 6.
+- *Settings → Parts* has the limit with **Options…**, **Import Set Parts…** and **Manage Inventories…**, then Rebrickable: when the data was last checked with **Update Now** (or **Download**), the update interval (never, weekly, monthly) and the API key. The Part Browser and Marks sections come with Phases 4 and 6.
+- *The Inventories window* lists the sets and the inventories. A set shows its year, theme, parts and spares, and where and when it was imported, with **Use as Limit** and **Refresh**. An inventory has an editable name, its sets with a count each (**Add Set**, **Remove Set**), its loose parts (**Add Parts from File…**, **Remove Loose Parts**) and **Use as Limit**. The picture, minifigures and the Unmatched list are left for Phase 7.
+- *`LDrawInventoryPartsFile`* (LDrawInventory) reads loose parts from Bricksmith's piece count export and from a Rebrickable parts list in CSV. BrickLink XML needs BrickLink's color numbers, so it stays in Phase 8.
+- *Strings use the English text as the key*, as the Settings panes do, except the pane name, which `Localizable.strings` gets.
 
 ### Phase 4 — `limit_browser`: the Part Browser
 

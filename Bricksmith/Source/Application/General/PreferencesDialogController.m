@@ -29,14 +29,17 @@
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawLSynthPanelModel.h>
+#import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawFeatures/LDrawPartListOrientations.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "LDrawApplication.h"
 #import "LDrawHostChrome.h"
 #import "PartLibraryController.h"
+#import "PartsLimitManager.h"
 #import "PreferencesForm.h"
 #import "UserDefaultsCategory.h"
 
@@ -45,6 +48,7 @@
 static NSString * const PreferencesPaneGeneral	= @"PreferencesTabGeneral";
 static NSString * const PreferencesPaneMouse	= @"PreferencesTabMouse";
 static NSString * const PreferencesPaneSteps	= @"PreferencesTabSteps";
+static NSString * const PreferencesPaneParts	= @"PreferencesTabParts";
 static NSString * const PreferencesPaneColors	= @"PreferencesTabStyles";
 static NSString * const PreferencesPaneLSynth	= @"PreferencesTabLSynth";
 
@@ -96,6 +100,7 @@ static NSString *SymbolNameForPane(NSString *identifier)
 		PreferencesPaneGeneral	: @"gearshape",
 		PreferencesPaneMouse	: @"computermouse",
 		PreferencesPaneSteps	: @"square.stack.3d.up",
+		PreferencesPaneParts	: @"shippingbox",
 		PreferencesPaneColors	: @"paintpalette",
 		PreferencesPaneLSynth	: @"scribble.variable",
 	};
@@ -230,7 +235,7 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 
 @interface PreferencesDialogController () <NSWindowDelegate, NSToolbarDelegate,
 										   NSTableViewDataSource, NSTableViewDelegate,
-										   NSTextFieldDelegate>
+										   NSTextFieldDelegate, NSMenuDelegate>
 {
 	NSWindow										*preferencesWindow;
 	NSTableView										*sidebarTable;
@@ -269,6 +274,13 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 	NSSwitch		*stepPageBoldOutlinesSwitch;
 	NSSwitch		*stepCalloutsAutomaticSwitch;
 	NSTextField		*stepPartListOrientationsField;
+
+	// Parts Pane
+	NSPopUpButton	*partsLimitPopUp;
+	NSTextField		*partsDataNote;
+	NSButton		*partsDataButton;
+	NSPopUpButton	*partsDataIntervalPopUp;
+	NSSecureTextField *rebrickableKeyField;
 
 	// Colors Pane
 	NSColorWell		*backgroundColorWell;
@@ -337,6 +349,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	paneIdentifiers = @[PreferencesPaneGeneral,
 						PreferencesPaneMouse,
 						PreferencesPaneSteps,
+						PreferencesPaneParts,
 						PreferencesPaneColors,
 						PreferencesPaneLSynth];
 
@@ -344,6 +357,7 @@ PreferencesDialogController *preferencesDialog = nil;
 		PreferencesPaneGeneral	: [self makeGeneralPane],
 		PreferencesPaneMouse	: [self makeMousePane],
 		PreferencesPaneSteps	: [self makeStepsPane],
+		PreferencesPaneParts	: [self makePartsPane],
 		PreferencesPaneColors	: [self makeColorsPane],
 		PreferencesPaneLSynth	: [self makeLSynthPane],
 	};
@@ -362,6 +376,11 @@ PreferencesDialogController *preferencesDialog = nil;
 											 selector:@selector(stepPartListDidChange:)
 												 name:LDrawStepPartListDidChangeNotification
 											   object:nil];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsLimitDidChange:)
+												 name:LDrawPartLimitDidChangeNotification
+											   object:[[PartsLimitManager sharedManager] session]];
 
 	return self;
 
@@ -762,6 +781,93 @@ PreferencesDialogController *preferencesDialog = nil;
 }//end makeStepsPane
 
 
+//========== makePartsPane =====================================================
+//
+// Purpose:		The parts limit, the Rebrickable data it is built from, and the
+//				inventories.
+//
+//==============================================================================
+- (NSScrollView *) makePartsPane
+{
+	NSString	*limitNote		= NSLocalizedString(@"Only the parts the limit allows show in the Part Browser, and "
+													@"the model's other parts are marked. The limit belongs to "
+													@"Bricksmith, not to a model, so every window shows it.", nil);
+	NSString	*dataNote		= NSLocalizedString(@"Data from Rebrickable.com: which sets were made when, and the "
+													@"parts of each. It is kept in Application Support.", nil);
+	NSString	*keyNote		= NSLocalizedString(@"Optional. With a key, sets are imported straight from "
+													@"Rebrickable with its LDraw part links. Make one free in your "
+													@"Rebrickable account settings, under API.", nil);
+	NSButton	*optionsButton	= nil;
+	NSButton	*importButton	= nil;
+	NSButton	*manageButton	= nil;
+	NSView		*limitRow		= nil;
+	NSView		*dataRow		= nil;
+	NSView		*intervalRow	= nil;
+	NSView		*keyRow			= nil;
+	NSView		*limitSection	= nil;
+	NSView		*dataSection	= nil;
+	NSTextField	*dataNoteField	= nil;
+
+	partsLimitPopUp = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:YES];
+	[partsLimitPopUp addItemWithTitle:@""];
+	[[partsLimitPopUp menu] setDelegate:self];
+	[[partsLimitPopUp widthAnchor] constraintLessThanOrEqualToConstant:220].active = YES;
+
+	optionsButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Options…", nil)
+											  target:[PartsLimitManager sharedManager]
+											  action:@selector(showLimitOptions:)];
+	importButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
+											 target:[PartsLimitManager sharedManager]
+											 action:@selector(importSetParts:)];
+	manageButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Manage Inventories…", nil)
+											 target:[PartsLimitManager sharedManager]
+											 action:@selector(showInventories:)];
+	partsDataButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Update Now", nil)
+												target:self
+												action:@selector(updatePartsData:)];
+
+	partsDataIntervalPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Never", nil),
+																NSLocalizedString(@"Every week", nil),
+																NSLocalizedString(@"Every month", nil)]
+														 tags:@[@0, @7, @30]
+													   target:self
+													   action:@selector(partsDataIntervalChanged:)];
+
+	rebrickableKeyField = [[NSSecureTextField alloc] init];
+	[rebrickableKeyField setPlaceholderString:NSLocalizedString(@"None", nil)];
+	[rebrickableKeyField setTarget:self];
+	[rebrickableKeyField setAction:@selector(rebrickableKeyChanged:)];
+	[[rebrickableKeyField widthAnchor] constraintEqualToConstant:220].active = YES;
+
+	limitRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Limit", nil)
+										control:[PreferencesForm controlGroup:@[partsLimitPopUp, optionsButton]]];
+	dataRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts data", nil)
+										   note:nil
+										control:partsDataButton
+									  noteField:&dataNoteField];
+	partsDataNote = dataNoteField;
+	intervalRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Update automatically", nil)
+										control:partsDataIntervalPopUp];
+	keyRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Rebrickable API key", nil)
+										   note:keyNote
+										control:rebrickableKeyField
+									  noteField:NULL];
+
+	limitSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Parts Limit", nil)
+												rows:@[limitRow,
+													   [PreferencesForm rowWithContent:
+														[PreferencesForm controlGroup:@[importButton, manageButton]]]]
+											  footer:limitNote];
+
+	dataSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Rebrickable", nil)
+											   rows:@[dataRow, intervalRow, keyRow]
+											 footer:dataNote];
+
+	return [PreferencesForm paneWithSections:@[limitSection, dataSection]];
+
+}//end makePartsPane
+
+
 //========== makeColorsPane ====================================================
 //
 // Purpose:		The view background and the file contents colors.
@@ -967,6 +1073,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self setGeneralPaneValues];
 	[self setMousePaneValues];
 	[self setStepsPaneValues];
+	[self setPartsPaneValues];
 	[self setColorsPaneValues];
 	[self setLSynthPaneValues];
 
@@ -1066,6 +1173,47 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self showStepPartListOrientations];
 
 }//end setStepsPaneValues
+
+
+//========== setPartsPaneValues ================================================
+//
+// Purpose:		Shows the limit in force, the data's age, the update interval
+//				and whether a key is set.
+//
+//==============================================================================
+- (void) setPartsPaneValues
+{
+	NSUserDefaults		*defaults	= [NSUserDefaults standardUserDefaults];
+	PartsLimitManager	*manager	= [PartsLimitManager sharedManager];
+	NSDate				*dataDate	= [manager dataDate];
+	NSInteger			 interval	= [defaults integerForKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
+	NSString			*title		= [manager titleForLimit:[[manager session] limit]];
+	NSString			*note		= nil;
+
+	if(dataDate != nil)
+	{
+		NSString *date = [NSDateFormatter localizedStringFromDate:dataDate
+														dateStyle:NSDateFormatterMediumStyle
+														timeStyle:NSDateFormatterShortStyle];
+		note = [NSString stringWithFormat:NSLocalizedString(@"Checked %@", nil), date];
+	}
+	else
+		note = NSLocalizedString(@"Not downloaded yet", nil);
+
+	[[partsLimitPopUp itemAtIndex:0] setTitle:title ?: NSLocalizedString(@"Missing Inventory", nil)];
+	[partsDataNote setStringValue:note];
+	[partsDataButton setTitle:(dataDate != nil) ? NSLocalizedString(@"Update Now", nil)
+												: NSLocalizedString(@"Download", nil)];
+	[partsDataButton setEnabled:([[manager updater] isUpdating] == NO)];
+
+	// A value saved by hand that the menu lacks shows as the nearest longer one.
+	if([partsDataIntervalPopUp selectItemWithTag:interval] == NO)
+		[partsDataIntervalPopUp selectItemWithTag:(interval <= 0) ? 0 : (interval <= 7) ? 7 : 30];
+
+	if([rebrickableKeyField currentEditor] == nil)
+		[rebrickableKeyField setStringValue:[manager apiKey] ?: @""];
+
+}//end setPartsPaneValues
 
 
 //========== setColorsPaneValues ===============================================
@@ -1654,6 +1802,75 @@ PreferencesDialogController *preferencesDialog = nil;
 														object:nil];
 
 }//end postStepPartListDidChange
+
+
+#pragma mark -
+#pragma mark Parts Pane
+#pragma mark -
+
+//========== updatePartsData: ==================================================
+//
+// Purpose:		Downloads what changed since the last check, even within a day.
+//
+//==============================================================================
+- (IBAction) updatePartsData:(id)sender
+{
+	[partsDataButton setEnabled:NO];
+	[[PartsLimitManager sharedManager] updateDataForcing:YES
+												  window:preferencesWindow
+											  completion:^(BOOL success) {
+		[self setPartsPaneValues];
+	}];
+	[self setPartsPaneValues];
+
+}//end updatePartsData:
+
+
+//========== partsDataIntervalChanged: =========================================
+//==============================================================================
+- (IBAction) partsDataIntervalChanged:(id)sender
+{
+	[[NSUserDefaults standardUserDefaults] setInteger:[[sender selectedItem] tag]
+											   forKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
+}
+
+
+//========== rebrickableKeyChanged: ============================================
+//
+// Purpose:		Keeps the key in the Keychain, never in the preferences.
+//
+//==============================================================================
+- (IBAction) rebrickableKeyChanged:(id)sender
+{
+	[[PartsLimitManager sharedManager] setApiKey:[sender stringValue]];
+}
+
+
+//========== partsLimitDidChange: ==============================================
+//
+// Purpose:		Another window changed the limit, or the data was updated.
+//
+//==============================================================================
+- (void) partsLimitDidChange:(NSNotification *)notification
+{
+	[self setPartsPaneValues];
+}
+
+
+//**** NSMenuDelegate ****
+//========== menuNeedsUpdate: ==================================================
+//
+// Purpose:		The app's limit menu, after the pull-down's title item.
+//
+//==============================================================================
+- (void) menuNeedsUpdate:(NSMenu *)menu
+{
+	NSMenuItem *titleItem = [menu itemAtIndex:0];
+
+	[[PartsLimitManager sharedManager] populateLimitMenu:menu];
+	[menu insertItem:titleItem atIndex:0];
+
+}//end menuNeedsUpdate:
 
 
 #pragma mark -

@@ -17,6 +17,7 @@
 #import <LDrawInventory/LDrawCombinedInventory.h>
 #import <LDrawInventory/LDrawInventoryItem.h>
 #import <LDrawInventory/LDrawInventoryJSON.h>
+#import <LDrawInventory/LDrawInventoryPartsFile.h>
 #import <LDrawInventory/LDrawInventoryStore.h>
 #import <LDrawInventory/LDrawPartAvailability.h>
 #import <LDrawInventory/LDrawPartIdentity.h>

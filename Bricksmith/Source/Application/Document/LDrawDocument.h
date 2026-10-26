@@ -42,6 +42,7 @@
 @class LDrawStepPartListPageAnchor;
 @class LDrawStepPartListPageFitter;
 @class PartBrowserDataSource;
+@class PartsLimitController;
 @class StepPartListController;
 
 
@@ -104,6 +105,7 @@
 		LDrawView			*mostRecentLDrawView; 	//file graphic view which most recently had focus. Weak link.
 		__weak LDrawView *pageFitViewport;			// viewport whose size the page is kept against. Weak link.
 		StepPartListController *stepPartListController;	// owns the parts list overlay, or nil until one is wanted
+		PartsLimitController *partsLimitController;	// the Parts menu in the scope bar, and the check of the model
 		LDrawStepPartListPageAnchor *pageAnchor;	// the model point the page is pinned to
 		LDrawStepPartListPageFitter *pageFitter;	// fits the page to pageFitViewport, and keeps the size it fitted
 		LDrawStepCalloutPath *calloutPath;			// the steps left through callouts, to lead back to

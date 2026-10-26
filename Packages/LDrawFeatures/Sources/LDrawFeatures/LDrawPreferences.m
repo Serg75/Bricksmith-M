@@ -64,6 +64,7 @@
 	[initialDefaults setObject:@NO								forKey:STEP_PART_LIST_LPUB_SCALE_KEY]; // an overlay is not a printed page
 	[initialDefaults setObject:@NO								forKey:STEP_PAGE_BOLD_OUTLINES_KEY];
 	[initialDefaults setObject:@NO								forKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
+	[initialDefaults setObject:@30								forKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
 
 	//
 	// Grid Spacing

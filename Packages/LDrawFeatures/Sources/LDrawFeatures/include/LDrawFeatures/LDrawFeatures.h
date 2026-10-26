@@ -34,6 +34,7 @@
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
 #import <LDrawFeatures/LDrawPartLimitCheck.h>
+#import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawFeatures/LDrawPartListOrientations.h>
 #import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawFeatures/LDrawPreferences.h>

@@ -24,3 +24,4 @@
 #import <LDrawRebrickable/LDrawRebrickableDownloads.h>
 #import <LDrawRebrickable/LDrawRebrickableSetImporter.h>
 #import <LDrawRebrickable/LDrawRebrickableSetList.h>
+#import <LDrawRebrickable/LDrawRebrickableUpdater.h>

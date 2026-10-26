@@ -1,0 +1,69 @@
+//==============================================================================
+//
+//  File:       LDrawPartLimitSession.h
+//  Package:    LDrawFeatures
+//
+//  Created by Sergey Slobodenyuk on 2026-10-26.
+//
+//==============================================================================
+
+#import <Foundation/Foundation.h>
+
+@class LDrawInventoryStore;
+@class LDrawPartIdentity;
+@class LDrawPartLimit;
+@class LDrawPartLimitTable;
+
+NS_ASSUME_NONNULL_BEGIN
+
+/// The limit, or what it allows, changed: a new limit, new data in the store,
+/// or a reloaded part library. Object is the session. No userInfo.
+extern NSString * const LDrawPartLimitDidChangeNotification;
+
+
+//------------------------------------------------------------------------------
+///
+/// @class      LDrawPartLimitSession
+///
+/// @abstract   The editor's one parts limit, and the table built for it.
+///
+/// @discussion A host makes one, gives it the store and the part library's
+///             records, and sets the limit it keeps in its own settings. The
+///             session builds the identity map and the table again whenever
+///             one of them changes, and posts
+///             `LDrawPartLimitDidChangeNotification`; every document checks
+///             itself again then. Used on the main thread.
+///
+//------------------------------------------------------------------------------
+@interface LDrawPartLimitSession : NSObject
+
+- (instancetype) initWithStore:(LDrawInventoryStore *)store NS_DESIGNATED_INITIALIZER;
+- (instancetype) init NS_UNAVAILABLE;
+
+@property (nonatomic, readonly) LDrawInventoryStore *store;
+
+/// The limit the host chose. Setting it builds the table again and posts the
+/// notification, unless it is the same limit.
+@property (nonatomic, copy) LDrawPartLimit *limit;
+
+/// The limit in force: `limit`, or no limit when it names an inventory the
+/// store does not have.
+@property (nonatomic, readonly) LDrawPartLimit *effectiveLimit;
+
+@property (nonatomic, readonly) LDrawPartLimitTable *table;
+@property (nonatomic, readonly) LDrawPartIdentity *identity;
+
+/// The year Available now counts back from. Default the current year.
+@property (nonatomic) NSInteger currentYear;
+
+/// The part library's records, for the keywords that name Rebrickable parts
+/// and for moved parts. Setting them builds everything again.
+- (void) setCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords;
+
+/// Builds the identity map and the table again from the store, and posts the
+/// notification. The session does this itself when the store changes.
+- (void) reload;
+
+@end
+
+NS_ASSUME_NONNULL_END
