@@ -17,6 +17,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+// Posted when the Part Browser setting in Settings changes. No object.
+extern NSString * const PartsLimitBrowserSettingDidChangeNotification;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PartsLimitManager

@@ -31,6 +31,8 @@
 #import "InventoriesWindowController.h"
 #import "PartsLimitOptionsController.h"
 
+NSString * const PartsLimitBrowserSettingDidChangeNotification = @"PartsLimitBrowserSettingDidChangeNotification";
+
 static NSString * const KeychainService	= @"Bricksmith Rebrickable API Key";
 static NSString * const KeychainAccount	= @"Rebrickable";
 

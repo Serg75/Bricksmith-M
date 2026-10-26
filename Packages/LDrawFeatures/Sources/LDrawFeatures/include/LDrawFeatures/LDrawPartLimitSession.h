@@ -56,6 +56,12 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 /// The year Available now counts back from. Default the current year.
 @property (nonatomic) NSInteger currentYear;
 
+/// A table for one set or combined inventory, with the limit's options, for
+/// browsing it whatever the limit is. Nil when the store does not have it.
+/// Kept until the session builds its table again.
+- (nullable LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier
+	NS_SWIFT_NAME(table(forInventoryIdentifier:));
+
 /// The part library's records, for the keywords that name Rebrickable parts
 /// and for moved parts. Setting them builds everything again.
 - (void) setCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords;

@@ -65,6 +65,7 @@
 	[initialDefaults setObject:@NO								forKey:STEP_PAGE_BOLD_OUTLINES_KEY];
 	[initialDefaults setObject:@NO								forKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
 	[initialDefaults setObject:@30								forKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
+	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
 
 	//
 	// Grid Spacing

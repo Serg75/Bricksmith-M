@@ -17,11 +17,14 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawFeatures/LDrawPartLimitCheck.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
+#import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawPartLimitTable.h>
 
 #import "LDrawDocument.h"
 #import "PartsLimitManager.h"
+
+NSString * const PartsLimitDidCheckNotification = @"PartsLimitDidCheckNotification";
 
 // Gaps in the scope bar, as the arranging controls use.
 static const CGFloat	PartsLimitGroupGap		= 10.0;
@@ -50,6 +53,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 	BOOL					 isHidden;
 	BOOL					 hasMarks;		// some part may hold a status from an earlier limit
+	LDrawPartUsage			*usage;			// nil after an edit until asked for
 }
 
 
@@ -243,6 +247,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //==============================================================================
 - (void) setNeedsCheck
 {
+	self->usage = nil;
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(check) object:nil];
 	[self performSelector:@selector(check) withObject:nil afterDelay:0];
 }
@@ -271,10 +276,11 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	{
 		self->_report = nil;
 		[self updateControls];
+		[self postCheck];
 		return;
 	}
 
-	self->_report	= [LDrawPartLimitCheck reportForFile:file table:table];
+	self->_report	= [LDrawPartLimitCheck reportForUsage:[self usage] table:table];
 	changed			= [LDrawPartLimitCheck applyReport:self->_report toFile:file];
 	self->hasMarks	= restricts;
 
@@ -283,8 +289,34 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 	[self updateControls];
 	[self updatePopover];
+	[self postCheck];
 
 }//end check
+
+
+//========== usage =============================================================
+//
+// Purpose:		What the model uses. The walk is kept until the next edit.
+//
+//==============================================================================
+- (LDrawPartUsage *) usage
+{
+	LDrawFile *file = [self->document documentContents];
+
+	if(self->usage == nil && file != nil)
+		self->usage = [LDrawPartUsage usageOfFile:file];
+	return self->usage;
+
+}//end usage
+
+
+//========== postCheck =========================================================
+//==============================================================================
+- (void) postCheck
+{
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartsLimitDidCheckNotification
+														object:self->document];
+}
 
 
 #pragma mark -

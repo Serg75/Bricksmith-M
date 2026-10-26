@@ -11,8 +11,13 @@
 
 @class LDrawDocument;
 @class LDrawPartLimitReport;
+@class LDrawPartUsage;
 
 NS_ASSUME_NONNULL_BEGIN
+
+// Posted after a document checked its model, so part browsers can count again.
+// Object is the document.
+extern NSString * const PartsLimitDidCheckNotification;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -35,6 +40,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 // The last check, or nil before the first.
 @property (nonatomic, readonly, nullable) LDrawPartLimitReport *report;
+
+// What the model uses, walked when first asked for after an edit.
+@property (nonatomic, readonly, nullable) LDrawPartUsage *usage;
 
 @end
 

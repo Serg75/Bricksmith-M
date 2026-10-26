@@ -30,7 +30,8 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 
 @implementation LDrawPartLimitSession
 {
-	NSArray<NSDictionary *> *catalogRecords;
+	NSArray<NSDictionary *>								*catalogRecords;
+	NSMutableDictionary<NSString *, LDrawPartLimitTable *>	*inventoryTables;	// by identifier
 }
 
 
@@ -99,6 +100,31 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 }
 
 
+//========== tableForInventoryIdentifier: ======================================
+//==============================================================================
+- (LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier
+{
+	LDrawPartLimitTable	*table		= self->inventoryTables[identifier];
+	LDrawPartLimit		*limit		= nil;
+
+	if (table != nil)
+		return table;
+
+	limit = [self.store resolvedLimit:[self.limit limitWithKind:LDrawPartLimitKindInventory
+											inventoryIdentifier:identifier]];
+	if (limit.kind != LDrawPartLimitKindInventory)
+		return nil;
+
+	table = [self.store tableForLimit:limit identity:self.identity year:self.currentYear];
+	if (self->inventoryTables == nil)
+		self->inventoryTables = [NSMutableDictionary dictionary];
+	self->inventoryTables[identifier] = table;
+
+	return table;
+
+}//end tableForInventoryIdentifier:
+
+
 //========== setCatalogRecords: ================================================
 //==============================================================================
 - (void) setCatalogRecords:(NSArray<NSDictionary *> *)records
@@ -145,6 +171,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 //==============================================================================
 - (void) rebuildTable
 {
+	self->inventoryTables = nil;
 	self.effectiveLimit	= [self.store resolvedLimit:self.limit];
 	self.table			= [self.store tableForLimit:self.effectiveLimit
 										   identity:self.identity

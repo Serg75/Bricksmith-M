@@ -127,6 +127,7 @@
 
 // Accessors
 - (LDrawFile *) documentContents;
+- (PartsLimitController *) partsLimitController;
 - (NSWindow *)foremostWindow;
 - (LDrawGridSpacingMode) gridSpacingMode;
 - (LDrawGridOrientationMode) gridOrientationMode;
@@ -281,6 +282,7 @@
 - (void) addModel:(LDrawMPDModel *)newModel atIndex:(NSInteger)insertAtIndex preventNameCollisions:(BOOL)renameModels;
 - (void) addStep:(LDrawStep *)newStep parent:(LDrawMPDModel*)selectedModel index:(NSInteger)insertAtIndex;
 - (void) addPartNamed:(NSString *)partName;
+- (void) addPartNamed:(NSString *)partName color:(LDrawColor *)color;
 - (void) addStepComponent:(LDrawDirective *)newDirective parent:(LDrawContainer*)parent index:(NSInteger)insertAtIndex;
 
 - (BOOL) canDeleteDirective:(LDrawDirective *)directive displayErrors:(BOOL)errorFlag;

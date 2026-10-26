@@ -277,6 +277,7 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 
 	// Parts Pane
 	NSPopUpButton	*partsLimitPopUp;
+	NSPopUpButton	*partsLimitBrowserPopUp;
 	NSTextField		*partsDataNote;
 	NSButton		*partsDataButton;
 	NSPopUpButton	*partsDataIntervalPopUp;
@@ -801,6 +802,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSButton	*importButton	= nil;
 	NSButton	*manageButton	= nil;
 	NSView		*limitRow		= nil;
+	NSView		*browserRow		= nil;
 	NSView		*dataRow		= nil;
 	NSView		*intervalRow	= nil;
 	NSView		*keyRow			= nil;
@@ -839,8 +841,18 @@ PreferencesDialogController *preferencesDialog = nil;
 	[rebrickableKeyField setAction:@selector(rebrickableKeyChanged:)];
 	[[rebrickableKeyField widthAnchor] constraintEqualToConstant:220].active = YES;
 
+	partsLimitBrowserPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Hide them", nil),
+																NSLocalizedString(@"Show them dimmed", nil)]
+														 tags:@[@0, @1]
+													   target:self
+													   action:@selector(partsLimitBrowserChanged:)];
+
 	limitRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Limit", nil)
 										control:[PreferencesForm controlGroup:@[partsLimitPopUp, optionsButton]]];
+	browserRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts not allowed", nil)
+										   note:NSLocalizedString(@"How the Part Browser lists them.", nil)
+										control:partsLimitBrowserPopUp
+									  noteField:NULL];
 	dataRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts data", nil)
 										   note:nil
 										control:partsDataButton
@@ -854,7 +866,7 @@ PreferencesDialogController *preferencesDialog = nil;
 									  noteField:NULL];
 
 	limitSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Parts Limit", nil)
-												rows:@[limitRow,
+												rows:@[limitRow, browserRow,
 													   [PreferencesForm rowWithContent:
 														[PreferencesForm controlGroup:@[importButton, manageButton]]]]
 											  footer:limitNote];
@@ -1202,6 +1214,7 @@ PreferencesDialogController *preferencesDialog = nil;
 
 	[[partsLimitPopUp itemAtIndex:0] setTitle:title ?: NSLocalizedString(@"Missing Inventory", nil)];
 	[partsDataNote setStringValue:note];
+	[partsLimitBrowserPopUp selectItemWithTag:[defaults boolForKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY] ? 1 : 0];
 	[partsDataButton setTitle:(dataDate != nil) ? NSLocalizedString(@"Update Now", nil)
 												: NSLocalizedString(@"Download", nil)];
 	[partsDataButton setEnabled:([[manager updater] isUpdating] == NO)];
@@ -1824,6 +1837,21 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self setPartsPaneValues];
 
 }//end updatePartsData:
+
+
+//========== partsLimitBrowserChanged: =========================================
+//
+// Purpose:		Whether the Part Browser hides the parts the limit does not
+//				allow, or lists them dimmed.
+//
+//==============================================================================
+- (IBAction) partsLimitBrowserChanged:(id)sender
+{
+	[[NSUserDefaults standardUserDefaults] setBool:([[sender selectedItem] tag] == 1)
+											forKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartsLimitBrowserSettingDidChangeNotification
+														object:nil];
+}
 
 
 //========== partsDataIntervalChanged: =========================================

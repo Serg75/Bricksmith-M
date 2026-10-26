@@ -10,7 +10,7 @@
 | `limit_rebrickable` | Phase 1: Rebrickable downloads, set import, LDraw matching (new package LDrawRebrickable) | completed |
 | `limit_check` | Phase 2: count what the model uses and work out each part's status (LDrawFeatures) | completed |
 | `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | completed |
-| `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | not started |
+| `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | completed |
 | `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | not started |
 | `limit_marks` | Phase 6: marks in the 3D view and File Contents, inspector line, Piece Count columns | not started |
 | `limit_assemblies` | Phase 7: assemblies, minifigure parts and prints matched across LDraw and LEGO numbering | not started |
@@ -485,6 +485,19 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - `PartBrowserDataSource` shows the swatch and Count columns only when the rows have them, draws dimmed and red rows, adds the bar over the list, the color strip under the preview, and the color filter button. Insert and drag take the row's color when it has one.
 - The shared panel listens for `LDrawPartLimitDidChangeNotification` and for the main window changing, and reloads.
 - Tests, on the model only: hide and dim; a color filter; inventory rows and their counts; the SETS group; the count text and its status; sorting by what is left.
+
+**As built.** 8 new tests in `LDrawFeaturesTests`; every package test passes, both app targets build, and LDrawFeatures builds for the iOS Simulator. Checked in the Metal app with the downloaded data and the Porsche test model: *Available now* lists 4,050 of the library's 36,710 parts, 1,302 of them in red, and a reload of All takes about 90 ms in a debug build. With 10274-1 as the limit the browser lists its 567 rows with counts, 4 of them with no LDraw part, and Insert puts a row's part in in the row's color. What came out differently, or is left:
+
+- *`LDrawPartBrowserModel`* takes the `LDrawPartLimitSession` and the document's `LDrawPartUsage`, not a table and a report. It works out the table itself: the set chosen under Sets, or the limit in force when it has its data. Without data nothing is filtered, so a missing catalog never empties the browser. It also gives the row state, the filter's colors, the strip's chips and a part's status in a color, so the host only draws.
+- *`-[LDrawPartLimitSession tableForInventoryIdentifier:]`* builds a set's table with the limit's options, for browsing it under Sets whatever the limit is, and keeps it until the limit or the store changes.
+- *Parts with no data are hidden like parts not made now* under *Available now*, since nothing says they are. Show All lists them dimmed. Primitives and Subparts are never filtered when browsed as categories.
+- *Show All with an inventory as the limit lists the library*, dimming what the inventory lacks, instead of adding library parts to the inventory's rows.
+- *Insert is blocked only for a color the part is not made in* (or the inventory lacks), as the plan says, with Warn Only lifting it. A dimmed part can still be inserted and is then marked. Drag follows the same rule.
+- *A chip that is not an inventory row sets the Colors window's color*, as a click in that window does, which also recolors any parts selected in the model. An inventory row's chip selects that row.
+- *The Count column sorts by what is left*, and sorting now keeps the selected part selected; before, the selection stayed on the same row number while the rows moved.
+- *The shared panel counts the main window's model*, or with the app in the background the frontmost document's. Each document posts `PartsLimitDidCheckNotification` after its check, and keeps the walk of its model until the next edit, so the browser's counts cost no second walk.
+- *Settings → Parts* gets "Parts not allowed: Hide them / Show them dimmed", the default for the bar's Show All. The Marks section comes with Phase 6.
+- *`LDrawViewerContainer`* gets a `bottomAccessory`, which the color strip uses. Strip chips past two rows go into a "+N" menu rather than a grid.
 
 ### Phase 5 — `limit_colors`: the Colors window
 

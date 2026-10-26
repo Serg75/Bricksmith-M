@@ -37,11 +37,11 @@ extern const CGFloat PreferencesFormPaneWidth;
 + (NSStackView *) controlGroup:(NSArray<NSView *> *)views;
 
 // Controls
-+ (NSSwitch *) switchWithTarget:(id)target action:(SEL)action;
++ (NSSwitch *) switchWithTarget:(nullable id)target action:(nullable SEL)action;
 + (NSPopUpButton *) popUpWithTitles:(NSArray<NSString *> *)titles
 							   tags:(NSArray<NSNumber *> *)tags
-							 target:(id)target
-							 action:(SEL)action;
+							 target:(nullable id)target
+							 action:(nullable SEL)action;
 + (NSTextField *) numberFieldWithWidth:(CGFloat)width
 								target:(id)target
 								action:(SEL)action;

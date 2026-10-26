@@ -52,6 +52,8 @@
 #define PARTS_LIMIT_KEY								@"Parts Limit"
 // Days between automatic updates of the parts data. 0 means never.
 #define PARTS_DATA_UPDATE_INTERVAL_KEY				@"Parts Data Update Interval"
+// Whether the Part Browser lists the parts the limit does not allow, dimmed.
+#define PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY			@"Parts Limit Browser Shows All"
 #define LDRAW_PATH_KEY								@"LDraw Path"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
