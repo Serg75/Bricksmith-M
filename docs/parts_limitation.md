@@ -12,7 +12,7 @@
 | `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | completed |
 | `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | completed |
 | `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | completed |
-| `limit_marks` | Phase 6: marks in the 3D view and File Contents, inspector line, Piece Count columns | not started |
+| `limit_marks` | Phase 6: marks in the 3D view and File Contents, inspector line, Piece Count columns | completed |
 | `limit_assemblies` | Phase 7: assemblies, minifigure parts and prints matched across LDraw and LEGO numbering | not started |
 | `limit_polish` | Phase 8 (optional): wanted-list export, BrickLink XML import, Rebrickable "My Parts", Brickset "on sale" | not started |
 
@@ -528,6 +528,18 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - Inspector line, Piece Count columns, Edit → Select Parts with Limit Problems.
 - **Use Nearest Allowed Color.** `LDrawPartLimitPresentation` picks the nearest allowed color by RGB distance; the document applies it through `-setObject:toColor:` as one undo group.
 - Check on both the Metal and the OpenGL app, in All and Steps modes, on LPub3D's page, with transparent parts, printed parts and ghosts.
+
+**As built.** 2 new tests in `LDrawFeaturesTests`; every package test passes, both app targets build without warnings, and LDrawCore, LDrawFeatures, LDrawEditing and LDrawRenderMetal build for the iOS Simulator. Checked in the Metal app on the Porsche test model with 10274-1 as the limit: renders through the view's renderer show the stripes, the tint and the outline on the marked parts and nothing on the others, and with Dim Other Parts every unmarked part goes see-through. The OpenGL app compiles its shader and draws every style with no errors; its pictures were not compared. What came out differently, or is left:
+
+- *The mark rides in the per-instance data, not in a deferred draw.* `InstanceInput` (Metal) and the instance record (OpenGL, now 28 floats) carry a `mark` of RGB and style, so marked parts keep hardware instancing with the rest, and the transparent and ghost passes carry it too. `LDrawDLDraw` takes the mark from the renderer's new mark stack (`-pushMark:`/`-popMark`); the innermost mark wins.
+- *Edges are found by their color.* A line has the normal (0, -1, 0), not none, so a vertex in the edge color (the complement meta color) takes the mark's color. Lines with a color of their own keep it.
+- *Stripes are 14 pixels apart on screen*, leaning one way for not available and not in color and the other way for too many. The shaders hold the same numbers in both languages.
+- *`LDrawPart` holds the mark settings* (`+setLimitMarkStyle:`, `+setLimitMarkColor:forStatus:`, `+setDimsAllowedParts:`), which `PartsLimitManager` sets from the defaults (`PARTS_LIMIT_MARKS_KEY`, `…_MARK_STYLE_KEY`, the two color keys, `…_DIMS_OTHER_PARTS_KEY`) and then redraws every model. *Dim other parts* dims every part without a mark, those with no data too, and only while a limit is on; it pushes the ghost alpha on parts from the library only, so a submodel never dims its own marked parts.
+- *File Contents* badges come from `LDrawPartLimitPresentation` (symbol and color per status) through `IconTextCell`'s new `badgeImage`, `badgeText` and `badgeColor`; a step or model gets a count. Tooltips and the inspector's line come from `PartsLimitController`. They follow View → Parts Limit → Mark Limit Problems, as the 3D marks do.
+- *The inspector's line* goes on the second line of the part's description, in red, instead of a new field.
+- *Piece Count* gets Owned and Status columns, the problems first and Problems Only; a row takes the status of what it counts with. Use Nearest Allowed Color is in the popover only, for all the parts not in their color at once; Piece Count's per-row version and Export Missing Parts are left for Phase 8.
+- *Use Nearest Allowed Color* skips parts in color 16, which take the color of what places them.
+- *Not checked:* Steps mode, LPub3D's page, and marked transparent or printed parts were not rendered on their own; they use the same draw paths.
 
 ### Phase 7 — `limit_assemblies`: assemblies, minifigures and prints
 

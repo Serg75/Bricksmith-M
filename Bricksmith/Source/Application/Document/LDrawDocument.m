@@ -1415,6 +1415,18 @@ void AppendChoicesToNewItem(
 }
 
 
+//========== selectPartsWithLimitProblems: =====================================
+//
+// Purpose:		Edit > Select Parts with Limit Problems.
+//
+//==============================================================================
+- (IBAction) selectPartsWithLimitProblems:(id)sender
+{
+	if([self->partsLimitController selectProblemParts] == NO)
+		NSBeep();
+}
+
+
 //========== insertLDrawPart: ==================================================
 //
 // Purpose:		We are being prompted to insert a new part into the model.
@@ -2645,6 +2657,7 @@ void AppendChoicesToNewItem(
 	PieceCountPanel *pieceCount = nil;
 	
 	pieceCount = [PieceCountPanel pieceCountPanelForFile:[self documentContents]];
+	[pieceCount setLimitReport:[self->partsLimitController report]];
 	
 	[[self windowForSheet] beginSheet:pieceCount
 					completionHandler:nil];
@@ -4174,8 +4187,27 @@ void AppendChoicesToNewItem(
 	}
 		
 	[(IconTextCell *)cell setImage:theImage];
+	[self->partsLimitController configureBadgeOfCell:cell forItem:item];
 	
 }//end outlineView:willDisplayCell:forTableColumn:item:
+
+
+//**** NSOutlineView ****
+//========== outlineView:toolTipForCell:rect:tableColumn:item:mouseLocation: ===
+//
+// Purpose:		Says how a part breaks the parts limit.
+//
+//==============================================================================
+- (NSString *) outlineView:(NSOutlineView *)outlineView
+			toolTipForCell:(NSCell *)cell
+					  rect:(NSRectPointer)rect
+			   tableColumn:(NSTableColumn *)tableColumn
+					  item:(id)item
+			 mouseLocation:(NSPoint)mouseLocation
+{
+	return [self->partsLimitController toolTipForItem:item];
+
+}//end outlineView:toolTipForCell:rect:tableColumn:item:mouseLocation:
 
 
 #pragma mark -

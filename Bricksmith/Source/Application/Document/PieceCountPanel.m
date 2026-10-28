@@ -17,6 +17,9 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPartReport.h>
+#import <LDrawFeatures/LDrawPartLimitCheck.h>
+#import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
 
 #import "LDrawApplication.h"
 #import "LDrawColorCell.h"
@@ -29,6 +32,13 @@
 @property (nonatomic, weak) IBOutlet LDrawViewerContainer	*partPreview;
 
 @end
+
+
+// Keys the limit adds to a row, and the columns that show them.
+static NSString * const LimitOwnedKey		= @"LimitOwned";		// text: a count, or a dash
+static NSString * const LimitOwnedCountKey	= @"LimitOwnedCount";	// for sorting
+static NSString * const LimitStatusKey		= @"LimitStatus";		// LDrawPartLimitStatus, for sorting
+static NSString * const LimitStatusTextKey	= @"LimitStatusText";
 
 
 @implementation PieceCountPanel
@@ -204,6 +214,8 @@
 	
 	//Prepare some new data for the table view:
 	flattened = [NSMutableArray arrayWithArray:[partReport flattenedReport]];
+	if(self->limitReport != nil)
+		flattened = [self rowsWithLimit:flattened];
 	[self setTableDataSource:flattened];
 	
 	[_pieceCountTable reloadData];
@@ -233,6 +245,135 @@
 	[self syncSelectionAndPartDisplayed];
 	
 }//end setTableDataSource
+
+
+//========== setLimitReport: ===================================================
+//
+// Purpose:		Adds what the parts limit says of each row: how many the
+//				inventory holds and the row's problem. Nothing without a limit.
+//
+//==============================================================================
+- (void) setLimitReport:(LDrawPartLimitReport *)report
+{
+	NSView *content = [self contentView];
+
+	if(report == nil || [[report table] limit].isRestricting == NO)
+		return;
+
+	self->limitReport = report;
+
+	if([_pieceCountTable tableColumnWithIdentifier:LimitStatusTextKey] == nil)
+	{
+		NSTableColumn *owned	= [[NSTableColumn alloc] initWithIdentifier:LimitOwnedKey];
+		NSTableColumn *status	= [[NSTableColumn alloc] initWithIdentifier:LimitStatusTextKey];
+
+		[[owned headerCell] setStringValue:NSLocalizedString(@"Owned", nil)];
+		[[owned dataCell] setAlignment:NSTextAlignmentRight];
+		[owned setWidth:50];
+		[owned setSortDescriptorPrototype:[NSSortDescriptor sortDescriptorWithKey:LimitOwnedCountKey ascending:YES]];
+		[[status headerCell] setStringValue:NSLocalizedString(@"Status", nil)];
+		[status setWidth:100];
+		[status setSortDescriptorPrototype:[NSSortDescriptor sortDescriptorWithKey:LimitStatusKey ascending:NO]];
+		[_pieceCountTable addTableColumn:owned];
+		[_pieceCountTable addTableColumn:status];
+
+		// The description gives up what the table lacks, so both columns show.
+		NSTableColumn	*name		= [_pieceCountTable tableColumnWithIdentifier:PART_REPORT_NAME_KEY];
+		CGFloat			 needed		= 0.0;
+		CGFloat			 spacing	= [_pieceCountTable intercellSpacing].width;
+
+		for(NSTableColumn *column in [_pieceCountTable tableColumns])
+			needed += [column width] + spacing;
+		needed -= NSWidth([[_pieceCountTable enclosingScrollView] documentVisibleRect]);
+		if(needed > 0)
+			[name setWidth:MAX([name width] - needed, 120)];
+
+		// The problems first.
+		[_pieceCountTable setSortDescriptors:[@[[status sortDescriptorPrototype]]
+											  arrayByAddingObjectsFromArray:[_pieceCountTable sortDescriptors]]];
+
+		self->problemsOnlyCheckbox = [NSButton checkboxWithTitle:NSLocalizedString(@"Problems only", nil)
+														  target:self
+														  action:@selector(problemsOnlyChanged:)];
+		[self->problemsOnlyCheckbox setFrameOrigin:NSMakePoint(176, 20)];
+		[self->problemsOnlyCheckbox setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
+		[content addSubview:self->problemsOnlyCheckbox];
+	}
+
+	[self setPartReport:self->partReport];
+
+}//end setLimitReport:
+
+
+//========== rowsWithLimit: ====================================================
+//
+// Purpose:		Each row with the limit's keys, and only the problems when
+//				Problems Only is on. A row takes the status of what it counts
+//				with, so molds and colors that are one LEGO color share it.
+//
+//==============================================================================
+- (NSMutableArray *) rowsWithLimit:(NSArray *)rows
+{
+	LDrawPartLimitTable	*table		= [self->limitReport table];
+	NSMutableDictionary	*byKey		= [NSMutableDictionary dictionary];
+	NSMutableArray		*result		= [NSMutableArray arrayWithCapacity:[rows count]];
+	BOOL				 onlyBad	= ([self->problemsOnlyCheckbox state] == NSControlStateValueOn);
+
+	for(LDrawPartLimitRow *limitRow in [self->limitReport rows])
+	{
+		NSString *key = [table countKeyForPartNamed:limitRow.partName colorCode:limitRow.colorCode];
+		if(key != nil)
+			byKey[key] = limitRow;
+	}
+
+	for(NSDictionary *row in rows)
+	{
+		NSMutableDictionary		*copy		= [row mutableCopy];
+		NSString				*partName	= [row objectForKey:PART_REPORT_NUMBER_KEY];
+		LDrawColorT				 colorCode	= [[row objectForKey:PART_REPORT_LDRAW_COLOR] colorCode];
+		NSString				*key		= [table countKeyForPartNamed:partName colorCode:colorCode];
+		LDrawPartLimitRow		*limitRow	= (key != nil) ? byKey[key] : nil;
+		LDrawPartLimitStatus	 status		= limitRow ? limitRow.status
+														: [table statusForPartNamed:partName colorCode:colorCode];
+		NSUInteger				 owned		= [table ownedCountForPartNamed:partName colorCode:colorCode];
+
+		if(onlyBad && status < LDrawPartLimitStatusTooMany)
+			continue;
+
+		copy[LimitStatusKey]		= @(status);
+		copy[LimitStatusTextKey]	= [self textForStatus:status];
+		copy[LimitOwnedCountKey]	= @((owned == NSNotFound) ? -1 : (NSInteger)owned);
+		copy[LimitOwnedKey]			= (owned == NSNotFound) ? @"—"
+															: [NSString stringWithFormat:@"%lu", (unsigned long)owned];
+		[result addObject:copy];
+	}
+	return result;
+
+}//end rowsWithLimit:
+
+
+//========== textForStatus: ====================================================
+//==============================================================================
+- (NSString *) textForStatus:(LDrawPartLimitStatus)status
+{
+	switch(status)
+	{
+		case LDrawPartLimitStatusNotAvailable:	return NSLocalizedString(@"Not available", nil);
+		case LDrawPartLimitStatusNotInColor:	return NSLocalizedString(@"Not in this color", nil);
+		case LDrawPartLimitStatusTooMany:		return NSLocalizedString(@"Too many", nil);
+		case LDrawPartLimitStatusNoData:		return NSLocalizedString(@"No data", nil);
+		case LDrawPartLimitStatusAllowed:		return @"";
+	}
+	return @"";
+}
+
+
+//========== problemsOnlyChanged: ==============================================
+//==============================================================================
+- (IBAction) problemsOnlyChanged:(id)sender
+{
+	[self setPartReport:self->partReport];
+}
 
 
 // MARK: - ACTIONS -

@@ -12,15 +12,21 @@
 //==============================================================================
 #import "PartsLimitController.h"
 
+#import <LDrawCore/LDrawColorLibrary.h>
+#import <LDrawCore/LDrawContainer.h>
 #import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawFeatures/LDrawPartLimitCheck.h>
+#import <LDrawFeatures/LDrawPartLimitPresentation.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawPartLimitTable.h>
 
+#import "IconTextCell.h"
 #import "LDrawDocument.h"
 #import "PartsLimitManager.h"
 
@@ -387,7 +393,18 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 		[select setTag:status];
 		[select setControlSize:NSControlSizeSmall];
 		[label setToolTip:[self explanationForStatus:status]];
-		[grid addRowWithViews:@[label, select]];
+
+		if(status == LDrawPartLimitStatusNotInColor)
+		{
+			NSButton *nearest = [NSButton buttonWithTitle:NSLocalizedString(@"Use Nearest Color", nil)
+												   target:self
+												   action:@selector(useNearestAllowedColor:)];
+			[nearest setControlSize:NSControlSizeSmall];
+			[nearest setToolTip:NSLocalizedString(@"Gives each of them the nearest color it is made in.", nil)];
+			[grid addRowWithViews:@[label, select, nearest]];
+		}
+		else
+			[grid addRowWithViews:@[label, select]];
 	}
 
 	if([grid numberOfRows] == 0)
@@ -453,9 +470,40 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //==============================================================================
 - (void) selectPartsWithStatus:(id)sender
 {
+	[self->popover close];
+	[self selectParts:[self.report partsWithStatus:[sender tag]]];
+
+}//end selectPartsWithStatus:
+
+
+//========== selectProblemParts ================================================
+//
+// Purpose:		Selects every part that breaks the limit, as -selectParts:
+//				does. NO when there is none.
+//
+//==============================================================================
+- (BOOL) selectProblemParts
+{
+	NSMutableArray *parts = [NSMutableArray array];
+
+	for(LDrawPartLimitStatus status = LDrawPartLimitStatusTooMany; status <= LDrawPartLimitStatusNotAvailable; status++)
+		[parts addObjectsFromArray:[self.report partsWithStatus:status] ?: @[]];
+
+	return [self selectParts:parts];
+
+}//end selectProblemParts
+
+
+//========== selectParts: ======================================================
+//
+// Purpose:		Selects the parts in the model being edited when it has some,
+//				else in the first model that does. NO when there are none.
+//
+//==============================================================================
+- (BOOL) selectParts:(NSArray<LDrawPart *> *)parts
+{
 	LDrawDocument			*owner		= self->document;
 	LDrawFile				*file		= [owner documentContents];
-	NSArray<LDrawPart *>	*parts		= [self.report partsWithStatus:[sender tag]];
 	NSMutableDictionary		*byModel	= [NSMutableDictionary dictionary];
 	LDrawMPDModel			*chosen		= nil;
 
@@ -486,16 +534,306 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 		}
 	}
 
-	[self->popover close];
-
 	if(chosen == nil)
-		return;
+		return NO;
 
 	if(chosen != [file activeModel])
 		[owner setActiveModel:chosen];
 	[owner selectDirectives:byModel[[NSValue valueWithNonretainedObject:chosen]]];
+	return YES;
 
-}//end selectPartsWithStatus:
+}//end selectParts:
+
+
+//========== useNearestAllowedColor: ===========================================
+//
+// Purpose:		Recolors every part not made in its color to the nearest color
+//				it is made in, by red, green and blue, as one undoable edit.
+//
+// Notes:		A part in color 16 takes the color of what places it, so it is
+//				left alone.
+//
+//==============================================================================
+- (IBAction) useNearestAllowedColor:(id)sender
+{
+	LDrawDocument		*owner		= self->document;
+	LDrawPartLimitTable	*table		= [self.report table];
+	LDrawColorLibrary	*library	= [LDrawColorLibrary sharedColorLibrary];
+	NSUndoManager		*undo		= [owner undoManager];
+	NSUInteger			 changed	= 0;
+
+	[self->popover close];
+	[undo beginUndoGrouping];
+
+	for(LDrawPart *part in [self.report partsWithStatus:LDrawPartLimitStatusNotInColor])
+	{
+		LDrawColor		*color		= [part LDrawColor];
+		NSMutableArray	*choices	= [NSMutableArray array];
+		LDrawColor		*nearest	= nil;
+
+		if([color colorCode] == LDrawCurrentColor)
+			continue;
+
+		for(NSNumber *code in [table colorCodesForPartNamed:[part displayName]])
+		{
+			LDrawColor *choice = [library colorForCode:(LDrawColorT)[code intValue]];
+			if(choice != nil)
+				[choices addObject:choice];
+		}
+
+		nearest = [LDrawPartLimitPresentation nearestColorTo:color amongColors:choices];
+		if(nearest == nil)
+			continue;
+
+		[owner setObject:part toColor:nearest];
+		changed++;
+	}
+
+	[undo setActionName:NSLocalizedString(@"Use Nearest Allowed Color", nil)];
+	[undo endUndoGrouping];
+
+	if(changed == 0)
+		NSBeep();
+	[[owner documentContents] noteNeedsDisplay];
+
+}//end useNearestAllowedColor:
+
+
+#pragma mark -
+#pragma mark FILE CONTENTS
+#pragma mark -
+
+//========== showsMarks ========================================================
+//
+// Purpose:		Whether the model's problems are shown: a limit is on, the
+//				check ran, and the marks are on.
+//
+//==============================================================================
+- (BOOL) showsMarks
+{
+	return		self.report != nil
+			&&	[[self.report table] limit].isRestricting
+			&&	[[NSUserDefaults standardUserDefaults] boolForKey:PARTS_LIMIT_MARKS_KEY];
+}
+
+
+//========== configureBadgeOfCell:forItem: =====================================
+//
+// Purpose:		A part's badge says how it breaks the limit. A step or model
+//				says how many of its parts do, in the color of the worst.
+//
+//==============================================================================
+- (void) configureBadgeOfCell:(IconTextCell *)cell forItem:(id)item
+{
+	LDrawPartLimitStatus	status	= LDrawPartLimitStatusAllowed;
+	NSUInteger				count	= 0;
+	NSColor					*color	= nil;
+	NSString				*symbol	= nil;
+
+	if([self showsMarks])
+	{
+		if([item isKindOfClass:[LDrawPart class]])
+			status = [(LDrawPart *)item limitStatus];
+		else if([item isKindOfClass:[LDrawContainer class]])
+		{
+			count	= [self.report problemCountInContainer:item];
+			status	= (count > 0) ? [self.report worstStatusInContainer:item] : LDrawPartLimitStatusAllowed;
+		}
+	}
+
+	symbol	= [LDrawPartLimitPresentation badgeSymbolNameForStatus:status];
+	color	= [self colorForBadgeTint:[LDrawPartLimitPresentation badgeTintForStatus:status]];
+
+	[cell setBadgeColor:color];
+	[cell setBadgeText:(count > 0) ? [NSString stringWithFormat:@"%lu", (unsigned long)count] : nil];
+	[cell setBadgeImage:(symbol != nil) ? [self badgeImageNamed:symbol color:color] : nil];
+
+}//end configureBadgeOfCell:forItem:
+
+
+//========== colorForBadgeTint: ================================================
+//
+// Purpose:		The marks' colors from Settings, or gray for no data.
+//
+//==============================================================================
+- (NSColor *) colorForBadgeTint:(LDrawPartLimitBadgeTint)tint
+{
+	NSString	*key		= nil;
+	NSArray		*components	= nil;
+
+	if(tint == LDrawPartLimitBadgeTintNotAvailable)
+		key = PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY;
+	else if(tint == LDrawPartLimitBadgeTintTooMany)
+		key = PARTS_LIMIT_TOO_MANY_COLOR_KEY;
+	else
+		return [NSColor secondaryLabelColor];
+
+	components = [[NSUserDefaults standardUserDefaults] arrayForKey:key];
+	if([components count] != 3)
+		return [NSColor systemRedColor];
+
+	return [NSColor colorWithSRGBRed:[components[0] doubleValue]
+							   green:[components[1] doubleValue]
+								blue:[components[2] doubleValue]
+							   alpha:1.0];
+
+}//end colorForBadgeTint:
+
+
+//========== badgeImageNamed:color: ============================================
+//
+// Purpose:		A small symbol in the color. Kept, since every row asks.
+//
+//==============================================================================
+- (NSImage *) badgeImageNamed:(NSString *)symbol color:(NSColor *)color
+{
+	static NSMutableDictionary	*images	= nil;
+	NSString					*key	= [NSString stringWithFormat:@"%@ %@", symbol, color];
+	NSImage						*image	= images[key];
+
+	if(image == nil)
+	{
+		NSImageSymbolConfiguration *size	= [NSImageSymbolConfiguration configurationWithPointSize:11
+																						 weight:NSFontWeightRegular];
+		NSImageSymbolConfiguration *tinted	= [size configurationByApplyingConfiguration:
+											   [NSImageSymbolConfiguration configurationWithHierarchicalColor:color]];
+
+		image = [[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil]
+				 imageWithSymbolConfiguration:tinted];
+		if(images == nil)
+			images = [NSMutableDictionary dictionary];
+		if(image != nil)
+			images[key] = image;
+	}
+	return image;
+
+}//end badgeImageNamed:color:
+
+
+//========== toolTipForItem: ===================================================
+//
+// Purpose:		Why a part's badge is there, or how many of a step's or model's
+//				parts break the limit.
+//
+//==============================================================================
+- (NSString *) toolTipForItem:(id)item
+{
+	NSUInteger count = 0;
+
+	if([self showsMarks] == NO)
+		return nil;
+
+	if([item isKindOfClass:[LDrawPart class]])
+		return [self describePart:item fully:YES];
+
+	if([item isKindOfClass:[LDrawContainer class]])
+		count = [self.report problemCountInContainer:item];
+
+	if(count == 0)
+		return nil;
+	return [NSString localizedStringWithFormat:NSLocalizedString(@"%lu parts break the parts limit.", nil),
+			(unsigned long)count];
+
+}//end toolTipForItem:
+
+
+//========== limitLineForPart: =================================================
+//
+// Purpose:		The inspector's line about a part, or nil when it is within the
+//				limit.
+//
+//==============================================================================
+- (NSString *) limitLineForPart:(LDrawPart *)part
+{
+	if([self showsMarks] == NO)
+		return nil;
+	return [self describePart:part fully:NO];
+
+}//end limitLineForPart:
+
+
+//========== describePart:fully: ===============================================
+//
+// Purpose:		How a part breaks the limit, in a short line, or fully for a
+//				tooltip. Nil for a part within it.
+//
+//==============================================================================
+- (NSString *) describePart:(LDrawPart *)part fully:(BOOL)fully
+{
+	LDrawPartLimitTable	*table		= [self.report table];
+	LDrawPartLimit		*limit		= [table limit];
+	BOOL				 isNow		= (limit.kind == LDrawPartLimitKindAvailableNow);
+	NSString			*inventory	= [[PartsLimitManager sharedManager] titleForLimit:limit] ?: @"";
+	NSString			*partName	= [part displayName];
+	LDrawColor			*color		= [part LDrawColor];
+	NSString			*colorName	= [color localizedName];
+	NSString			*line		= nil;
+
+	switch([part limitStatus])
+	{
+		case LDrawPartLimitStatusAllowed:
+			return nil;
+
+		case LDrawPartLimitStatusNoData:
+			return fully ? NSLocalizedString(@"Bricksmith cannot match this part to a LEGO part.", nil)
+						 : NSLocalizedString(@"No LEGO part matches it", nil);
+
+		case LDrawPartLimitStatusNotAvailable:
+			line = isNow ? NSLocalizedString(@"Not made now in any color", nil)
+						 : [NSString stringWithFormat:NSLocalizedString(@"Not in %@", nil), inventory];
+			return fully ? [line stringByAppendingString:@"."] : line;
+
+		case LDrawPartLimitStatusNotInColor:
+			line = isNow ? [NSString stringWithFormat:NSLocalizedString(@"Not made in %@ now", nil), colorName]
+						 : [NSString stringWithFormat:NSLocalizedString(@"Not in %@ in %@", nil), inventory, colorName];
+			if(fully == NO)
+				return line;
+			return [NSString stringWithFormat:isNow ? NSLocalizedString(@"%@. Made in %@.", nil)
+													: NSLocalizedString(@"%@. It has %@.", nil),
+					line, [self listOfColorCodes:[table colorCodesForPartNamed:partName]]];
+
+		case LDrawPartLimitStatusTooMany:
+		{
+			NSUInteger	used	= [self.report usedCountForPartNamed:partName colorCode:[color colorCode]];
+			NSUInteger	owned	= [table ownedCountForPartNamed:partName colorCode:[color colorCode]];
+			NSString	*what	= [[LDrawPartLibrary sharedPartLibrary] descriptionForPartName:partName] ?: partName;
+
+			if(fully == NO)
+				return [NSString stringWithFormat:NSLocalizedString(@"Uses %lu of %lu in %@", nil),
+						(unsigned long)used, (unsigned long)owned, inventory];
+			return [NSString stringWithFormat:NSLocalizedString(@"The model uses %lu %@ %@; %@ holds %lu.", nil),
+					(unsigned long)used, colorName, what, inventory, (unsigned long)owned];
+		}
+	}
+	return nil;
+
+}//end describePart:fully:
+
+
+//========== listOfColorCodes: =================================================
+//
+// Purpose:		"Black, Red, Light Bluish Gray and 11 more".
+//
+//==============================================================================
+- (NSString *) listOfColorCodes:(NSArray<NSNumber *> *)codes
+{
+	LDrawColorLibrary	*library	= [LDrawColorLibrary sharedColorLibrary];
+	NSMutableArray		*names		= [NSMutableArray array];
+	NSUInteger			 shown		= MIN([codes count], (NSUInteger)3);
+
+	for(NSUInteger index = 0; index < shown; index++)
+		[names addObject:[[library colorForCode:(LDrawColorT)[codes[index] intValue]] localizedName] ?: @"?"];
+
+	if([codes count] > shown)
+		return [NSString stringWithFormat:NSLocalizedString(@"%@ and %lu more", nil),
+				[names componentsJoinedByString:@", "], (unsigned long)([codes count] - shown)];
+	if([names count] > 1)
+		return [NSString stringWithFormat:NSLocalizedString(@"%@ and %@", nil),
+				[[names subarrayWithRange:NSMakeRange(0, [names count] - 1)] componentsJoinedByString:@", "],
+				[names lastObject]];
+	return [names firstObject] ?: @"";
+
+}//end listOfColorCodes:
 
 
 //========== showPieceCount: ===================================================

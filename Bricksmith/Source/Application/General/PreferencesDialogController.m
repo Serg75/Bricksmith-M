@@ -23,6 +23,7 @@
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawLSynthConfigSource.h>
 #import <LDrawCore/LDrawModel.h>
+#import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawRegex.h>
@@ -233,6 +234,40 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 }//end RotateStyleNote
 
 
+//========== MarkColor =========================================================
+//
+// Purpose:		A mark color kept as red, green and blue, or gray for anything
+//				else.
+//
+//==============================================================================
+static NSColor *MarkColor(NSUserDefaults *defaults, NSString *key)
+{
+	NSArray *components = [defaults arrayForKey:key];
+
+	if([components count] != 3)
+		return [NSColor grayColor];
+
+	return [NSColor colorWithSRGBRed:[components[0] doubleValue]
+							   green:[components[1] doubleValue]
+								blue:[components[2] doubleValue]
+							   alpha:1.0];
+}
+
+
+//========== MarkColorComponents ===============================================
+//
+// Purpose:		Red, green and blue of a color well's color, as the key keeps
+//				them.
+//
+//==============================================================================
+static NSArray<NSNumber *> *MarkColorComponents(NSColor *color)
+{
+	NSColor *rgb = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: color;
+
+	return @[@([rgb redComponent]), @([rgb greenComponent]), @([rgb blueComponent])];
+}
+
+
 @interface PreferencesDialogController () <NSWindowDelegate, NSToolbarDelegate,
 										   NSTableViewDataSource, NSTableViewDelegate,
 										   NSTextFieldDelegate, NSMenuDelegate>
@@ -278,6 +313,11 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 	// Parts Pane
 	NSPopUpButton	*partsLimitPopUp;
 	NSPopUpButton	*partsLimitBrowserPopUp;
+	NSSwitch		*partsLimitMarksSwitch;
+	NSPopUpButton	*partsLimitMarkStylePopUp;
+	NSColorWell		*partsLimitNotAvailableWell;
+	NSColorWell		*partsLimitTooManyWell;
+	NSSwitch		*partsLimitDimsSwitch;
 	NSTextField		*partsDataNote;
 	NSButton		*partsDataButton;
 	NSPopUpButton	*partsDataIntervalPopUp;
@@ -382,6 +422,11 @@ PreferencesDialogController *preferencesDialog = nil;
 											 selector:@selector(partsLimitDidChange:)
 												 name:LDrawPartLimitDidChangeNotification
 											   object:[[PartsLimitManager sharedManager] session]];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsLimitMarksDidChange:)
+												 name:PartsLimitMarksDidChangeNotification
+											   object:nil];
 
 	return self;
 
@@ -807,6 +852,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSView		*intervalRow	= nil;
 	NSView		*keyRow			= nil;
 	NSView		*limitSection	= nil;
+	NSView		*marksSection	= nil;
 	NSView		*dataSection	= nil;
 	NSTextField	*dataNoteField	= nil;
 
@@ -875,9 +921,63 @@ PreferencesDialogController *preferencesDialog = nil;
 											   rows:@[dataRow, intervalRow, keyRow]
 											 footer:dataNote];
 
-	return [PreferencesForm paneWithSections:@[limitSection, dataSection]];
+	marksSection = [self makePartsMarksSection];
+
+	return [PreferencesForm paneWithSections:@[limitSection, marksSection, dataSection]];
 
 }//end makePartsPane
+
+
+//========== makePartsMarksSection =============================================
+//
+// Purpose:		How the parts that break the limit are marked in the model.
+//
+//==============================================================================
+- (NSView *) makePartsMarksSection
+{
+	NSString	*marksNote	= NSLocalizedString(@"Parts not available or not made in their color are marked in "
+												@"one color, parts past what the inventory holds in the other. "
+												@"Parts with no data are not marked.", nil);
+	NSString	*dimNote	= NSLocalizedString(@"Draws every other part see-through, so the marked ones stand "
+												@"out in a big model.", nil);
+	SEL			 changed	= @selector(partsLimitMarksChanged:);
+	NSView		*marksRow	= nil;
+	NSView		*styleRow	= nil;
+	NSView		*notRow		= nil;
+	NSView		*manyRow	= nil;
+	NSView		*dimRow		= nil;
+
+	partsLimitMarksSwitch		= [PreferencesForm switchWithTarget:self action:changed];
+	partsLimitDimsSwitch		= [PreferencesForm switchWithTarget:self action:changed];
+	partsLimitNotAvailableWell	= [PreferencesForm colorWellWithTarget:self action:changed];
+	partsLimitTooManyWell		= [PreferencesForm colorWellWithTarget:self action:changed];
+	partsLimitMarkStylePopUp	= [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Stripes", nil),
+																	 NSLocalizedString(@"Tint", nil),
+																	 NSLocalizedString(@"Outline", nil)]
+																  tags:@[@(LDrawRenderMarkStripes),
+																	 @(LDrawRenderMarkTint),
+																	 @(LDrawRenderMarkOutline)]
+																target:self
+																action:changed];
+
+	marksRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Mark parts that break the limit", nil)
+										control:partsLimitMarksSwitch];
+	styleRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Highlight with", nil)
+										control:partsLimitMarkStylePopUp];
+	notRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Not available", nil)
+										control:partsLimitNotAvailableWell];
+	manyRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Too many", nil)
+										control:partsLimitTooManyWell];
+	dimRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Dim other parts", nil)
+										   note:dimNote
+										control:partsLimitDimsSwitch
+									  noteField:NULL];
+
+	return [PreferencesForm sectionWithTitle:NSLocalizedString(@"Marks", nil)
+										rows:@[marksRow, styleRow, notRow, manyRow, dimRow]
+									  footer:marksNote];
+
+}//end makePartsMarksSection
 
 
 //========== makeColorsPane ====================================================
@@ -1215,6 +1315,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[[partsLimitPopUp itemAtIndex:0] setTitle:title ?: NSLocalizedString(@"Missing Inventory", nil)];
 	[partsDataNote setStringValue:note];
 	[partsLimitBrowserPopUp selectItemWithTag:[defaults boolForKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY] ? 1 : 0];
+	[self setPartsMarksValues];
 	[partsDataButton setTitle:(dataDate != nil) ? NSLocalizedString(@"Update Now", nil)
 												: NSLocalizedString(@"Download", nil)];
 	[partsDataButton setEnabled:([[manager updater] isUpdating] == NO)];
@@ -1837,6 +1938,64 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self setPartsPaneValues];
 
 }//end updatePartsData:
+
+
+//========== setPartsMarksValues ===============================================
+//
+// Purpose:		Shows the marks' settings.
+//
+//==============================================================================
+- (void) setPartsMarksValues
+{
+	NSUserDefaults	*defaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 marks		= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+
+	[partsLimitMarksSwitch setState:marks ? NSControlStateValueOn : NSControlStateValueOff];
+	[partsLimitDimsSwitch setState:[defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY]
+								   ? NSControlStateValueOn : NSControlStateValueOff];
+	if([partsLimitMarkStylePopUp selectItemWithTag:[defaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY]] == NO)
+		[partsLimitMarkStylePopUp selectItemWithTag:LDrawRenderMarkStripes];
+	[partsLimitNotAvailableWell setColor:MarkColor(defaults, PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY)];
+	[partsLimitTooManyWell setColor:MarkColor(defaults, PARTS_LIMIT_TOO_MANY_COLOR_KEY)];
+
+	for(NSControl *control in @[partsLimitMarkStylePopUp, partsLimitNotAvailableWell, partsLimitTooManyWell,
+								partsLimitDimsSwitch])
+		[control setEnabled:marks];
+
+}//end setPartsMarksValues
+
+
+//========== partsLimitMarksChanged: ===========================================
+//
+// Purpose:		Keeps the marks' settings and redraws the models with them.
+//
+//==============================================================================
+- (IBAction) partsLimitMarksChanged:(id)sender
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+
+	[defaults setBool:([partsLimitMarksSwitch state] == NSControlStateValueOn) forKey:PARTS_LIMIT_MARKS_KEY];
+	[defaults setBool:([partsLimitDimsSwitch state] == NSControlStateValueOn) forKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
+	[defaults setInteger:[[partsLimitMarkStylePopUp selectedItem] tag] forKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	[defaults setObject:MarkColorComponents([partsLimitNotAvailableWell color])
+				 forKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	[defaults setObject:MarkColorComponents([partsLimitTooManyWell color]) forKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
+
+	[[PartsLimitManager sharedManager] applyMarkSettings];
+	[self setPartsMarksValues];
+
+}//end partsLimitMarksChanged:
+
+
+//========== partsLimitMarksDidChange: =========================================
+//
+// Purpose:		View > Parts Limit turned the marks on or off.
+//
+//==============================================================================
+- (void) partsLimitMarksDidChange:(NSNotification *)notification
+{
+	[self setPartsMarksValues];
+}
 
 
 //========== partsLimitBrowserChanged: =========================================

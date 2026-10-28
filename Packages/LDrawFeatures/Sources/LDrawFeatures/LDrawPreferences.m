@@ -66,6 +66,11 @@
 	[initialDefaults setObject:@NO								forKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
 	[initialDefaults setObject:@30								forKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
 	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
+	[initialDefaults setObject:@YES								forKey:PARTS_LIMIT_MARKS_KEY];
+	[initialDefaults setObject:@1								forKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	[initialDefaults setObject:@[@0.90, @0.10, @0.10]			forKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	[initialDefaults setObject:@[@1.00, @0.55, @0.00]			forKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
+	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
 
 	//
 	// Grid Spacing

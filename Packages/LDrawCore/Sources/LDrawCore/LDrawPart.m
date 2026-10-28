@@ -53,6 +53,13 @@
 #define SHRINK_SEAMS 0
 #define SHRINK_AMOUNT 0.125		// in LDU
 
+// The parts limit's marks: style, colors and dimming. See +setLimitMarkStyle:.
+static LDrawRenderMarkStyle	sLimitMarkStyle			= LDrawRenderMarkStripes;
+static float				sNotAvailableMark[3]	= { 0.90f, 0.10f, 0.10f };
+static float				sTooManyMark[3]			= { 1.00f, 0.55f, 0.00f };
+static BOOL					sDimsAllowedParts		= NO;
+
+
 @implementation LDrawPart
 
 
@@ -296,6 +303,77 @@ int floatNearGrid(double v, double grid, double epsi)
 
 
 #pragma mark -
+#pragma mark LIMIT MARKS
+#pragma mark -
+
+//---------- limitMarkStyle ------------------------------------------[static]--
+//------------------------------------------------------------------------------
++ (LDrawRenderMarkStyle) limitMarkStyle
+{
+	return sLimitMarkStyle;
+}
+
+
+//---------- setLimitMarkStyle: --------------------------------------[static]--
+//------------------------------------------------------------------------------
++ (void) setLimitMarkStyle:(LDrawRenderMarkStyle)style
+{
+	sLimitMarkStyle = style;
+}
+
+
+//---------- setLimitMarkColor:forStatus: ----------------------------[static]--
+//------------------------------------------------------------------------------
++ (void) setLimitMarkColor:(const float *)rgb forStatus:(LDrawPartLimitStatus)status
+{
+	if(status == LDrawPartLimitStatusTooMany)
+		memcpy(sTooManyMark, rgb, sizeof(sTooManyMark));
+	else if(status == LDrawPartLimitStatusNotAvailable || status == LDrawPartLimitStatusNotInColor)
+		memcpy(sNotAvailableMark, rgb, sizeof(sNotAvailableMark));
+}
+
+
+//---------- setDimsAllowedParts: ------------------------------------[static]--
+//------------------------------------------------------------------------------
++ (void) setDimsAllowedParts:(BOOL)dims
+{
+	sDimsAllowedParts = dims;
+}
+
+
+//========== getLimitMark: =====================================================
+//
+// Purpose:		The mark the part's status calls for, as the renderer takes it.
+//				NO when it gets none. The two kinds of stripes lean opposite
+//				ways.
+//
+//==============================================================================
+- (BOOL) getLimitMark:(float *)mark
+{
+	LDrawPartLimitStatus	status	= self.limitStatus;
+	LDrawRenderMarkStyle	style	= sLimitMarkStyle;
+	const float				*rgb	= sNotAvailableMark;
+
+	if(style == LDrawRenderMarkNone || status < LDrawPartLimitStatusTooMany)
+		return NO;
+
+	if(status == LDrawPartLimitStatusTooMany)
+	{
+		rgb = sTooManyMark;
+		if(style == LDrawRenderMarkStripes)
+			style = LDrawRenderMarkStripesBack;
+	}
+
+	mark[0] = rgb[0];
+	mark[1] = rgb[1];
+	mark[2] = rgb[2];
+	mark[3] = (float)style;
+	return YES;
+
+}//end getLimitMark:
+
+
+#pragma mark -
 #pragma mark DIRECTIVES
 #pragma mark -
 
@@ -314,11 +392,32 @@ int floatNearGrid(double v, double grid, double epsi)
 	if([self isOmitted] == NO)
 	{
 		BOOL	drawAsGhost		= (self->_groupVisibility == LDrawGroupVisibilityGhosted);
+		float	mark[4];
+		BOOL	isMarked		= [self getLimitMark:mark];
+		BOOL	isDimmed		= NO;
 
 		[self resolvePart];
 
+		// Every part without a mark dims, so the marked ones stand out. Only
+		// parts from the library: a submodel's own parts dim themselves, and
+		// its marked parts must not.
+		if(		sDimsAllowedParts
+		   &&	sLimitMarkStyle != LDrawRenderMarkNone
+		   &&	isMarked == NO
+		   &&	drawAsGhost == NO
+		   &&	[self referencedMPDSubmodel] == nil
+		   &&	[self referencedPeerFile] == nil )
+		{
+			isDimmed = YES;
+		}
+
 		if(cacheModel)
 		{
+			if(isMarked)
+				[renderer pushMark:mark];
+			if(isDimmed)
+				[renderer pushAlphaModulation:[LDrawModel ghostAlpha]];
+
 			// Ghosting is a renderer-level alpha scale rather than a color, so
 			// that it reaches the parts inside a submodel -- each of those
 			// pushes its own opaque color and would otherwise override a
@@ -403,6 +502,11 @@ int floatNearGrid(double v, double grid, double epsi)
 
 			if([self isSelected] == YES)
 				[renderer popWireFrame];
+
+			if(isDimmed)
+				[renderer popAlphaModulation];
+			if(isMarked)
+				[renderer popMark];
 				
 		}	
 	}

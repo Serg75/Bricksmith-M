@@ -101,6 +101,27 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 
+/// How a mark draws the parts under it. The renderer sends it to the shaders as
+/// the mark's fourth float.
+typedef NS_ENUM(NSInteger, LDrawRenderMarkStyle)
+{
+	LDrawRenderMarkNone			= 0,
+
+	/// Stripes across the screen, leaning up to the right.
+	LDrawRenderMarkStripes		= 1,
+
+	/// Stripes leaning the other way, so two kinds of mark differ without
+	/// their colors.
+	LDrawRenderMarkStripesBack	= 2,
+
+	/// The whole part tinted.
+	LDrawRenderMarkTint			= 3,
+
+	/// Only the edges.
+	LDrawRenderMarkOutline		= 4
+};
+
+
 //------------------------------------------------------------------------------
 ///
 /// @protocol   LDrawCoreRenderer
@@ -147,6 +168,13 @@ NS_ASSUME_NONNULL_BEGIN
 // either, because display lists are cached and shared between every reference to the same part.
 - (void)pushAlphaModulation:(float)factor;
 - (void)popAlphaModulation;
+
+// Mark stack.  A mark draws every part below it with stripes or a tint in its color, baked-in mesh
+// colors included, and their edges in its color.  It shows a part that breaks the parts limit.  The
+// mark is red, green, blue and an LDrawRenderMarkStyle.  The innermost mark wins.  Like the alpha
+// modulation, it travels with each draw call and is never baked into a display list.
+- (void)pushMark:(const float *)mark;
+- (void)popMark;
 
 // Texture stack - sets up new texturing.  When the stack is totally popped, no texturing is applied.
 - (void)pushTexture:(struct LDrawTextureSpec *)tex_spec;

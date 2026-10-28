@@ -71,6 +71,7 @@ static const GLuint * idx_null = NULL;
 
 #define INST_CUTOFF 0								// Minimum instances to use hw case, which has higher overhead to set up.
 #define INST_MAX_COUNT (1024 * 512)					// Maximum instances to write per draw before going to immediate mode - avoids unbounded VRAM use.
+#define INST_STRIDE 28								// Floats per instance: colors, transform, mark.
 #define INST_RING_BUFFER_COUNT 1					// Number of VBOs to rotate for hw instancing - doesn't actually help, it turns out.
 #define MODE_FOR_INST_STREAM GL_DYNAMIC_STATIC		// VBO mode for instancing.
 
@@ -128,6 +129,7 @@ struct LDrawDLInstance {
 	GLfloat					color[4];
 	GLfloat					comp[4];
 	GLfloat					transform[16];
+	GLfloat					mark[4];
 };
 
 // A single DL.  A few notes on book-keeping:
@@ -189,6 +191,7 @@ struct LDrawDLSortedInstanceLink {
 	GLfloat									transform[16];
 	int										ghost_id;			// Non-zero for ghosts; all DLs of one ghosted part share an id.
 	GLfloat									ghost_alpha;		// Alpha scale for the above; 1 for a plain transparent part.
+	GLfloat									mark[4];			// RGB and style; zero for no mark.
 };
 
 
@@ -674,7 +677,8 @@ static void saveForDeferredDraw(struct LDrawDLSession *		session,
 								const float 				cmp_color[4],
 								const float					transform[16],
 								int							ghost_id,
-								float						ghost_alpha)
+								float						ghost_alpha,
+								const float					mark[4])
 {
 	struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
 
@@ -702,6 +706,7 @@ static void saveForDeferredDraw(struct LDrawDLSession *		session,
 	memcpy(link->color,cur_color,sizeof(GLfloat)*4);
 	memcpy(link->comp,cmp_color,sizeof(GLfloat)*4);
 	memcpy(link->transform,transform,sizeof(GLfloat)*16);
+	memcpy(link->mark,mark,sizeof(GLfloat)*4);
 
 	if (spec)
 		memcpy(&link->spec,spec,sizeof(struct LDrawTextureSpec));
@@ -755,6 +760,7 @@ static void drawDeferredInstance(struct LDrawDLSortedInstanceLink * l)
     glVertexAttrib4fv(attr_color_current, l->color);
 	glVertexAttrib4fv(attr_color_complement, l->comp);
 	glVertexAttrib1f(attr_ghost_alpha, l->ghost_alpha);
+	glVertexAttrib4fv(attr_mark, l->mark);
 
 	glBindBuffer(GL_ARRAY_BUFFER,dl->geo_vbo);
 	#if WANT_SMOOTH
@@ -821,7 +827,7 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 			
 		// Map our instance buffer so we can write instancing data.
 		glBindBuffer(GL_ARRAY_BUFFER, inst_vbo_ring[session->inst_ring]);
-		glBufferData(GL_ARRAY_BUFFER,INST_MAX_COUNT * sizeof(GLfloat)*24, NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER,INST_MAX_COUNT * sizeof(GLfloat)*INST_STRIDE, NULL, GL_DYNAMIC_DRAW);
 		GLfloat * inst_base = (GLfloat *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		GLfloat * inst_data = inst_base;
 		int		  inst_remain = INST_MAX_COUNT;
@@ -873,7 +879,8 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 					inst_data[21] = inst->transform[7];
 					inst_data[22] = inst->transform[11];
 					inst_data[23] = inst->transform[15];
-					inst_data += 24;
+					copy_vec4(inst_data+24,inst->mark);
+					inst_data += INST_STRIDE;
 					--inst_remain;
 				}
 				++cur_segment;
@@ -906,6 +913,7 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 						glVertexAttrib4f(attr_transform_x+i,inst->transform[i],inst->transform[4+i],inst->transform[8+i],inst->transform[12+i]);
 					glVertexAttrib4fv(attr_color_current, inst->color);
 					glVertexAttrib4fv(attr_color_complement, inst->comp);
+					glVertexAttrib4fv(attr_mark, inst->mark);
 			
 					struct LDrawDLPerTex * tptr = dl->texes;
 					
@@ -956,12 +964,14 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 			glEnableVertexAttribArray(attr_transform_w);
 			glEnableVertexAttribArray(attr_color_current);
 			glEnableVertexAttribArray(attr_color_complement);
+			glEnableVertexAttribArray(attr_mark);
 			glVertexAttribDivisorARB(attr_transform_x,1);
 			glVertexAttribDivisorARB(attr_transform_y,1);
 			glVertexAttribDivisorARB(attr_transform_z,1);
 			glVertexAttribDivisorARB(attr_transform_w,1);
 			glVertexAttribDivisorARB(attr_color_current,1);
 			glVertexAttribDivisorARB(attr_color_complement,1);
+			glVertexAttribDivisorARB(attr_mark,1);
 
 			// Main loop 2 over DLs - for each DL that had hw-instances we built a segment
 			// in our array.  Bind the DL itself, as well as the instance pointers, and do an instanced-draw.
@@ -982,12 +992,13 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 				glBindBuffer(GL_ARRAY_BUFFER,inst_vbo_ring[session->inst_ring]);
 
 				p = s->inst_base;
-				glVertexAttribPointer(attr_color_current, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p  );
-				glVertexAttribPointer(attr_color_complement, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+4);
-				glVertexAttribPointer(attr_transform_x, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+8);
-				glVertexAttribPointer(attr_transform_y, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+12);
-				glVertexAttribPointer(attr_transform_z, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+16);
-				glVertexAttribPointer(attr_transform_w, 4, GL_FLOAT, GL_FALSE, 24 * sizeof(GLfloat), p+20);
+				glVertexAttribPointer(attr_color_current, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p  );
+				glVertexAttribPointer(attr_color_complement, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p+4);
+				glVertexAttribPointer(attr_transform_x, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p+8);
+				glVertexAttribPointer(attr_transform_y, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p+12);
+				glVertexAttribPointer(attr_transform_z, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p+16);
+				glVertexAttribPointer(attr_transform_w, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p+20);
+				glVertexAttribPointer(attr_mark, 4, GL_FLOAT, GL_FALSE, INST_STRIDE * sizeof(GLfloat), p+24);
 				
 				#if WANT_SMOOTH	
 				if (s->dl->line_count)
@@ -1012,12 +1023,14 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 			glDisableVertexAttribArray(attr_transform_w);
 			glDisableVertexAttribArray(attr_color_current);
 			glDisableVertexAttribArray(attr_color_complement);
+			glDisableVertexAttribArray(attr_mark);
 			glVertexAttribDivisorARB(attr_transform_x,0);
 			glVertexAttribDivisorARB(attr_transform_y,0);
 			glVertexAttribDivisorARB(attr_transform_z,0);
 			glVertexAttribDivisorARB(attr_transform_w,0);
 			glVertexAttribDivisorARB(attr_color_current,0);
 			glVertexAttribDivisorARB(attr_color_complement,0);
+			glVertexAttribDivisorARB(attr_mark,0);
 
 		}
 
@@ -1194,14 +1207,15 @@ void LDrawDLDraw(
 									const float						transform[16],
 									BOOL							is_wire_frame,
 									int								ghost_id,
-									float							ghost_alpha)
+									float							ghost_alpha,
+									const float						mark[4])
 {
 	// A ghost gets its own pass at the end of the session; see MAIN LOOP 4.
 	// Wireframe wins, since that is the selection cue -- and it draws at full
 	// strength, because a faint cue is no cue.
 	if (ghost_id != 0 && !is_wire_frame)
 	{
-		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, ghost_id, ghost_alpha);
+		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, ghost_id, ghost_alpha, mark);
 		return;
 	}
 
@@ -1214,7 +1228,7 @@ void LDrawDLDraw(
 		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && (cur_color[3] < 1.0f || cmp_color[3] < 1.0f));
 		if (want_sort)
 		{
-			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f);
+			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f, mark);
 			return;
 		}
 
@@ -1251,6 +1265,7 @@ void LDrawDLDraw(
 				memcpy(inst->color,cur_color,sizeof(GLfloat)*4);
 				memcpy(inst->comp,cmp_color,sizeof(GLfloat)*4);
 				memcpy(inst->transform,transform,sizeof(GLfloat)*16);
+				memcpy(inst->mark,mark,sizeof(GLfloat)*4);
 			}
 			return;
 		}
@@ -1270,6 +1285,7 @@ void LDrawDLDraw(
 		
 	glVertexAttrib4fv(attr_color_current, cur_color);
 	glVertexAttrib4fv(attr_color_complement, cmp_color);
+	glVertexAttrib4fv(attr_mark, mark);
 	
 	assert(dl->tex_count > 0);
 	

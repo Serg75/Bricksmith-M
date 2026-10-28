@@ -20,6 +20,9 @@ NS_ASSUME_NONNULL_BEGIN
 // Posted when the Part Browser setting in Settings changes. No object.
 extern NSString * const PartsLimitBrowserSettingDidChangeNotification;
 
+// Posted when the marks are turned on or off, or their look changes. No object.
+extern NSString * const PartsLimitMarksDidChangeNotification;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PartsLimitManager
@@ -41,6 +44,9 @@ extern NSString * const PartsLimitBrowserSettingDidChangeNotification;
 - (void) populateLimitMenu:(NSMenu *)menu;
 - (nullable NSString *) titleForLimit:(LDrawPartLimit *)limit;
 
+// The marks
+- (void) applyMarkSettings;
+
 // The data
 - (void) updateDataForcing:(BOOL)force
 					window:(nullable NSWindow *)window
@@ -56,6 +62,7 @@ extern NSString * const PartsLimitBrowserSettingDidChangeNotification;
 - (IBAction) showLimitOptions:(nullable id)sender;
 - (IBAction) importSetParts:(nullable id)sender;
 - (IBAction) showInventories:(nullable id)sender;
+- (IBAction) toggleLimitMarks:(nullable id)sender;
 
 @end
 

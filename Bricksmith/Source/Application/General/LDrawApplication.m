@@ -772,6 +772,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	NSMenu				*viewMenu	= [[mainMenu itemWithTag:LDrawViewsMenuTag] submenu];
 	NSMenu				*fileMenu	= [[mainMenu itemWithTag:LDrawFileMenuTag] submenu];
 	NSMenu				*windowMenu	= [[mainMenu itemWithTag:LDrawWindowMenuTag] submenu];
+	NSMenu				*editMenu	= [[mainMenu itemWithTag:LDrawEditMenuTag] submenu];
 	NSMenu				*limitMenu	= [[NSMenu alloc] initWithTitle:NSLocalizedString(@"Parts Limit", nil)];
 	NSMenuItem			*item		= nil;
 	NSInteger			 index		= 0;
@@ -793,6 +794,13 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[item setTarget:manager];
 	index = [fileMenu indexOfItemWithTitle:@"Export Steps…"];
 	[fileMenu insertItem:item atIndex:(index >= 0) ? index + 1 : [fileMenu numberOfItems]];
+
+	// After Select All.
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Select Parts with Limit Problems", nil)
+									  action:@selector(selectPartsWithLimitProblems:)
+							   keyEquivalent:@""];
+	index = [editMenu indexOfItemWithTag:LDrawSelectAllMenuTag];
+	[editMenu insertItem:item atIndex:(index >= 0) ? index + 1 : [editMenu numberOfItems]];
 
 	// After Minimize and Zoom.
 	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Inventories", nil)

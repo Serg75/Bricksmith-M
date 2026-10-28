@@ -28,7 +28,14 @@ struct VertexOutput {
 	float3	normal_eye;
 	float	tex_mix;
 	float2	tex_coord;
+	float4	mark [[flat]];
 };
+
+// The color of a marked part's edges: the mark's, at the edge's alpha.
+static float4 markedEdgeColor(float4 color, float4 mark)
+{
+	return (mark.w > 0.0) ? float4(mark.rgb, color.a) : color;
+}
 
 // A vertex of a part's face or thin line, placed and colored.
 static VertexOutput partVertex(VertexInput					in,
@@ -62,12 +69,18 @@ static VertexOutput partVertex(VertexInput					in,
 		col = mix(inst[iid].color_current, inst[iid].color_complement, in.color.r);
 	};
 
+	// A vertex in the edge color is on an edge line.
+	if (in.color.a == 0.0 && in.color.r == 1.0) {
+		col = markedEdgeColor(col, inst[iid].mark);
+	}
+
 	// The ghost scale goes on here rather than on color_current, so that it
 	// reaches a color baked into the mesh as well as a meta one.
 	col.a *= ghost_alpha;
 
 	out.color.a = col.a;
 	out.color.rgb = col.rgb;
+	out.mark = inst[iid].mark;
 
 	if (in.normal.x == 0.0 && in.normal.y == 0.0 && in.normal.z == 0.0) {
 		out.color = col;
@@ -95,9 +108,11 @@ vertex VertexOutput vertexShader(VertexInput				in		    [[stage_in]],
 // Fragment shader
 
 struct FragmentInput {
+	float4	position [[position]];
 	float4	color;
 	float2	tex_coord;
 	float3	normal_eye;
+	float4	mark [[flat]];
 };
 
 struct FragmentOutput {
@@ -133,13 +148,42 @@ static float4 shadedColor(float4 color, float3 normal_eye, float2 tex_coord,
 	return frag_color;
 }
 
+// How marked faces look. The stripes are in pixels, across the screen, so they
+// read the same at every zoom.
+constant float MARK_STRIPE_PERIOD	= 14.0;
+constant float MARK_STRIPE_WIDTH	= 5.0;
+constant float MARK_STRIPE_STRENGTH	= 0.8;
+constant float MARK_TINT_STRENGTH	= 0.55;
+
+// A marked face at this pixel: in a stripe, or tinted, in the mark's color.
+// An outline mark leaves faces alone.
+static float4 markedColor(float4 color, float4 mark, float2 pixel)
+{
+	int style = int(mark.w + 0.5);
+
+	if (style == MarkStyleStripes || style == MarkStyleStripesBack) {
+		float along	= (style == MarkStyleStripes) ? pixel.x + pixel.y : pixel.x - pixel.y;
+		float phase	= along - MARK_STRIPE_PERIOD * floor(along / MARK_STRIPE_PERIOD);
+
+		if (phase < MARK_STRIPE_WIDTH) {
+			color.rgb = mix(color.rgb, mark.rgb, MARK_STRIPE_STRENGTH);
+		}
+	}
+	else if (style == MarkStyleTint) {
+		color.rgb = mix(color.rgb, mark.rgb, MARK_TINT_STRENGTH);
+	}
+
+	return color;
+}
+
 fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]],
 									   texture2d<float> tex [[texture(0)]])
 {
 	FragmentOutput out;
 
-	out.frag_color = shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex);
+	out.frag_color = markedColor(shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex), in.mark,
+								 in.position.xy);
 
 	return out;
 }
@@ -250,7 +294,7 @@ static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
 	}
 
 	color.a		*= ghost_alpha;
-	out.color	 = color;
+	out.color	 = markedEdgeColor(color, part.mark);
 
 	float4	clip0	= clipPosition(end0, part, uni);
 	float4	clip1	= clipPosition(end1, part, uni);
@@ -449,6 +493,7 @@ struct TransparentVertexOutput {
 	float2	tex_coord;
 	float3	normal_eye;
 	float2	clip_zw [[center_perspective]];		// for the depth at the pixel's center
+	float4	mark [[flat]];
 };
 
 vertex TransparentVertexOutput transparentVertexShader(
@@ -467,6 +512,7 @@ vertex TransparentVertexOutput transparentVertexShader(
 	out.tex_coord	= part.tex_coord;
 	out.normal_eye	= part.normal_eye;
 	out.clip_zw		= part.position.zw;
+	out.mark		= part.mark;
 
 	return out;
 }
@@ -537,7 +583,8 @@ fragment void transparentFragmentShader(
 	texture2d<float>				tex			[[texture(0)]])
 {
 	TransparentLists	lists	= { heads, fragments, counters, &uniform };
-	float4				color	= shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex);
+	float4				color	= markedColor(shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex),
+											  in.mark, in.position.xy);
 	bool				isLine	= thinLines != 0;
 	float				behind	= isLine ? 0.0 : TRANSPARENT_FACE_DEPTH_OFFSET;
 	uint				flags	= isLine ? lineBits(0.0) : 0u;		// a thin line gets the least leeway

@@ -13,6 +13,7 @@
 #import <Foundation/Foundation.h>
 
 #import <LDrawCore/LDrawColorLibrary.h>
+#import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawCore/LDrawDirective.h>
 #import <LDrawCore/LDrawDrawableElement.h>
 #import <LDrawCore/LDrawGroupable.h>
@@ -68,6 +69,19 @@ NS_ASSUME_NONNULL_BEGIN
 /// How the part stands against the editor's parts limit, as the last check
 /// found it. Neither saved nor copied.
 @property (nonatomic) LDrawPartLimitStatus limitStatus;
+
+// Marks for the parts limit. The host sets them from its settings, then
+// redraws. With LDrawRenderMarkNone no part is marked.
++ (LDrawRenderMarkStyle) limitMarkStyle;
++ (void) setLimitMarkStyle:(LDrawRenderMarkStyle)style;
+
+/// The mark's color, RGB, for a status: the not-available color also marks a
+/// part not made in its color. No data has no mark.
++ (void) setLimitMarkColor:(const float *)rgb forStatus:(LDrawPartLimitStatus)status;
+
+/// Whether the parts without a mark draw as ghosts, so the marked ones stand
+/// out in a big model.
++ (void) setDimsAllowedParts:(BOOL)dims;
 
 //Directives
 - (void) drawBoundsWithColor:(LDrawColor *)drawingColor;

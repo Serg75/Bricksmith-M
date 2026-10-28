@@ -39,6 +39,7 @@ enum {
 	attr_texture_mix,
 	attr_ghost_alpha,		// Scales the vertex color's alpha, baked-in mesh colors included;
 							// 1 for everything that is not a ghost.
+	attr_mark,				// A part's mark: RGB and an LDrawRenderMarkStyle; zero for none.
 	attr_count
 };
 
@@ -116,6 +117,10 @@ struct	LDrawDragHandleInstance;
 
     int                                ghost_stack_top;
     int                                ghost_serial;
+
+	// Mark stack: red, green, blue and style for each frame. Empty means no mark.
+	float							mark_stack[COLOR_STACK_DEPTH*4];
+	int								mark_stack_top;
 
 	// Metal
 	LDrawRenderEncoder				_Nullable _renderEncoder;

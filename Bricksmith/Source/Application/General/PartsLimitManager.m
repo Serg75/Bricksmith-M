@@ -16,11 +16,14 @@
 #import <Security/Security.h>
 
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawFile.h>
+#import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawInventory/LDrawCombinedInventory.h>
 #import <LDrawInventory/LDrawInventoryStore.h>
 #import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
 #import <LDrawInventory/LDrawSetInventory.h>
 #import <LDrawRebrickable/LDrawRebrickableCSVReader.h>
 #import <LDrawRebrickable/LDrawRebrickableClient.h>
@@ -29,9 +32,11 @@
 
 #import "ImportSetController.h"
 #import "InventoriesWindowController.h"
+#import "LDrawDocument.h"
 #import "PartsLimitOptionsController.h"
 
 NSString * const PartsLimitBrowserSettingDidChangeNotification = @"PartsLimitBrowserSettingDidChangeNotification";
+NSString * const PartsLimitMarksDidChangeNotification = @"PartsLimitMarksDidChangeNotification";
 
 static NSString * const KeychainService	= @"Bricksmith Rebrickable API Key";
 static NSString * const KeychainAccount	= @"Rebrickable";
@@ -162,6 +167,30 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 @end
 
 
+//========== ReadColor =========================================================
+//
+// Purpose:		Reads a mark color kept as red, green and blue. NO for anything
+//				else.
+//
+//==============================================================================
+static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
+{
+	NSArray *components = [defaults arrayForKey:key];
+
+	if([components count] != 3)
+		return NO;
+
+	for(NSUInteger index = 0; index < 3; index++)
+	{
+		if([components[index] isKindOfClass:[NSNumber class]] == NO)
+			return NO;
+		rgb[index] = [components[index] floatValue];
+	}
+	return YES;
+
+}//end ReadColor
+
+
 @implementation PartsLimitManager
 {
 	LDrawRebrickableDownloads	*downloads;
@@ -236,6 +265,13 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 												 name:LDrawPartLibraryDidChangeNotification
 											   object:nil];
 	[self partLibraryDidChange:nil];
+
+	// Dimming the other parts waits for a limit.
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(applyMarkSettings)
+												 name:LDrawPartLimitDidChangeNotification
+											   object:self.session];
+	[self applyMarkSettings];
 
 	// Only data the user already asked for is kept up to date, quietly.
 	if(		days > 0
@@ -388,13 +424,83 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 
 //========== menuNeedsUpdate: ==================================================
 //
-// Purpose:		The View menu's Parts Limit submenu is filled when it opens.
+// Purpose:		The View menu's Parts Limit submenu is filled when it opens. It
+//				ends with the switch for the marks.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
+	NSMenuItem *marks = nil;
+
 	[self populateLimitMenu:menu];
-}
+	[menu addItem:[NSMenuItem separatorItem]];
+
+	marks = [menu addItemWithTitle:NSLocalizedString(@"Mark Limit Problems", nil)
+							action:@selector(toggleLimitMarks:)
+					 keyEquivalent:@""];
+	[marks setTarget:self];
+	[marks setState:[[NSUserDefaults standardUserDefaults] boolForKey:PARTS_LIMIT_MARKS_KEY]];
+
+}//end menuNeedsUpdate:
+
+
+#pragma mark -
+#pragma mark THE MARKS
+#pragma mark -
+
+//========== applyMarkSettings =================================================
+//
+// Purpose:		Gives the drawing code the marks the settings ask for, and
+//				redraws every model.
+//
+// Notes:		The other parts dim only while a limit is on, since with none
+//				every part would.
+//
+//==============================================================================
+- (void) applyMarkSettings
+{
+	NSUserDefaults	*defaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 marks		= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+	BOOL			 restricts	= [[self.session table] limit].isRestricting;
+	BOOL			 dims		= [defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
+	NSInteger		 style		= [defaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	float			 rgb[3];
+
+	// Settings offer stripes, a tint or an outline.
+	if(style != LDrawRenderMarkTint && style != LDrawRenderMarkOutline)
+		style = LDrawRenderMarkStripes;
+
+	[LDrawPart setLimitMarkStyle:marks ? style : LDrawRenderMarkNone];
+	[LDrawPart setDimsAllowedParts:(marks && restricts && dims)];
+
+	if(ReadColor(defaults, PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY, rgb))
+		[LDrawPart setLimitMarkColor:rgb forStatus:LDrawPartLimitStatusNotAvailable];
+	if(ReadColor(defaults, PARTS_LIMIT_TOO_MANY_COLOR_KEY, rgb))
+		[LDrawPart setLimitMarkColor:rgb forStatus:LDrawPartLimitStatusTooMany];
+
+	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
+	{
+		if([document isKindOfClass:[LDrawDocument class]])
+			[[(LDrawDocument *)document documentContents] noteNeedsDisplay];
+	}
+
+}//end applyMarkSettings
+
+
+//========== toggleLimitMarks: =================================================
+//
+// Purpose:		View > Parts Limit > Mark Limit Problems.
+//
+//==============================================================================
+- (IBAction) toggleLimitMarks:(id)sender
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+
+	[defaults setBool:([defaults boolForKey:PARTS_LIMIT_MARKS_KEY] == NO) forKey:PARTS_LIMIT_MARKS_KEY];
+	[self applyMarkSettings];
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartsLimitMarksDidChangeNotification object:nil];
+
+}//end toggleLimitMarks:
 
 
 #pragma mark -

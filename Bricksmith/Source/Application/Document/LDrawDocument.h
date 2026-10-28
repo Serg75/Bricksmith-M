@@ -209,6 +209,7 @@
 - (IBAction) gridOrientationModeChanged:(id)sender;
 - (IBAction) showDimensions:(id)sender;
 - (IBAction) showPieceCount:(id)sender;
+- (IBAction) selectPartsWithLimitProblems:(id)sender;
 
 // - View menu
 - (IBAction) zoomActual:(id)sender;

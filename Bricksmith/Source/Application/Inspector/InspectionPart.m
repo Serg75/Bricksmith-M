@@ -20,6 +20,7 @@
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
+#import "PartsLimitController.h"
 
 @interface InspectionPart ()
 
@@ -135,6 +136,27 @@
 	
 	[_partDescriptionField setStringValue:description];
 	[_partDescriptionField setToolTip:description]; //in case it overflows the field.
+
+	// How the part breaks the parts limit goes on the field's second line.
+	LDrawDocument	*document	= [[NSDocumentController sharedDocumentController] currentDocument];
+	NSString		*limitLine	= nil;
+
+	if([document isKindOfClass:[LDrawDocument class]])
+		limitLine = [[document partsLimitController] limitLineForPart:representedObject];
+	if(limitLine != nil)
+	{
+		NSFont						*font	= [_partDescriptionField font];
+		NSMutableAttributedString	*text	= [[NSMutableAttributedString alloc]
+											   initWithString:description
+												   attributes:@{NSFontAttributeName: font}];
+
+		[text appendAttributedString:[[NSAttributedString alloc]
+									  initWithString:[@"\n" stringByAppendingString:limitLine]
+										  attributes:@{NSFontAttributeName: font,
+													   NSForegroundColorAttributeName: [NSColor systemRedColor]}]];
+		[_partDescriptionField setAttributedStringValue:text];
+		[_partDescriptionField setToolTip:[NSString stringWithFormat:@"%@\n%@", description, limitLine]];
+	}
 	[_partNameField setStringValue:[representedObject displayName]];
 	
 	[_colorWell setLDrawColor:[representedObject LDrawColor]];

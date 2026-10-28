@@ -9,7 +9,9 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
+@class IconTextCell;
 @class LDrawDocument;
+@class LDrawPart;
 @class LDrawPartLimitReport;
 @class LDrawPartUsage;
 
@@ -43,6 +45,17 @@ extern NSString * const PartsLimitDidCheckNotification;
 
 // What the model uses, walked when first asked for after an edit.
 @property (nonatomic, readonly, nullable) LDrawPartUsage *usage;
+
+// File Contents and the inspector, while the marks are on.
+- (void) configureBadgeOfCell:(IconTextCell *)cell forItem:(id)item;
+- (nullable NSString *) toolTipForItem:(id)item;
+- (nullable NSString *) limitLineForPart:(LDrawPart *)part;
+
+// Edit > Select Parts with Limit Problems.
+- (BOOL) selectProblemParts;
+
+// Gives every part not made in its color the nearest color it is made in.
+- (IBAction) useNearestAllowedColor:(nullable id)sender;
 
 @end
 

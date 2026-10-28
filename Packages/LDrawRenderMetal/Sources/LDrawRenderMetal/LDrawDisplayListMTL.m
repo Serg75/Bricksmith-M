@@ -119,6 +119,7 @@ struct LDrawDLInstance {
 	float					color[4];
 	float					comp[4];
 	float					transform[16];
+	float					mark[4];
 	BOOL					is_wireframe;
 };
 
@@ -186,6 +187,7 @@ struct LDrawDLSortedInstanceLink {
 	float									transform[16];
 	int										ghost_id;			// Non-zero for ghosts; all DLs of one ghosted part share an id.
 	float									ghost_alpha;		// Alpha scale for the above; 1 for a plain transparent part.
+	float									mark[4];			// See InstanceInput.mark.
 };
 
 
@@ -682,6 +684,7 @@ static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
 	instData.transform_w = simd_make_float4(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
 	copy_vec4((float *)&instData.color_current, l->color);
 	copy_vec4((float *)&instData.color_complement, l->comp);
+	copy_vec4((float *)&instData.mark, l->mark);
 
 	[renderEncoder setVertexBytes:&alpha_scale
 						   length:sizeof(alpha_scale)
@@ -871,7 +874,8 @@ static void saveForDeferredDraw(struct LDrawDLSession *		session,
 								const float 				cmp_color[4],
 								const float					transform[16],
 								int							ghost_id,
-								float						ghost_alpha)
+								float						ghost_alpha,
+								const float					mark[4])
 {
 	struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
 
@@ -900,6 +904,7 @@ static void saveForDeferredDraw(struct LDrawDLSession *		session,
 	memcpy(link->color,cur_color,sizeof(float)*4);
 	memcpy(link->comp,cmp_color,sizeof(float)*4);
 	memcpy(link->transform,transform,sizeof(float)*16);
+	memcpy(link->mark,mark,sizeof(float)*4);
 
 	if (spec)
 		memcpy((void*)&link->spec, (void*)spec, sizeof(struct LDrawTextureSpec));
@@ -937,6 +942,7 @@ static void saveForInstanceDraw(struct LDrawDLSession *	session,
 								const float 			cur_color[4],
 								const float 			cmp_color[4],
 								const float				transform[16],
+								const float				mark[4],
 								BOOL					is_wireframe)
 {
 	// assert(dl->next_dl == NULL || session->dl_head != NULL);
@@ -968,6 +974,7 @@ static void saveForInstanceDraw(struct LDrawDLSession *	session,
 		memcpy(inst->color,cur_color,sizeof(float)*4);
 		memcpy(inst->comp,cmp_color,sizeof(float)*4);
 		memcpy(inst->transform,transform,sizeof(float)*16);
+		memcpy(inst->mark,mark,sizeof(float)*4);
 		inst->is_wireframe = is_wireframe;
 	}
 
@@ -987,6 +994,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 						  const float	 				cur_color[4],
 						  const float 					cmp_color[4],
 						  const float					transform[16],
+						  const float					mark[4],
 						  BOOL							is_wire_frame)
 {
 	#if WANT_STATS
@@ -1001,6 +1009,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	instData.transform_w = simd_make_float4(transform[3], transform[7], transform[11], transform[15]);
 	copy_vec4((float *)&instData.color_current, cur_color);
 	copy_vec4((float *)&instData.color_complement, cmp_color);
+	copy_vec4((float *)&instData.mark, mark);
 
 	[renderEncoder setVertexBytes:&instData
 						   length:sizeof(instData)
@@ -1113,6 +1122,7 @@ static void writeHardwareInstanceData(struct LDrawDLSegment	*	segment,
 		copy_matrix_transposed(inst_data, inst->transform);
 		copy_vec4(inst_data + 16, inst->color);
 		copy_vec4(inst_data + 20, inst->comp);
+		copy_vec4(inst_data + 24, inst->mark);
 		inst_data += InstanceInputLength;
 		++inst_count;
 	}
@@ -1834,6 +1844,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 					instData.transform_w = simd_make_float4(inst->transform[3], inst->transform[7], inst->transform[11], inst->transform[15]);
 					copy_vec4((float *)&instData.color_current, inst->color);
 					copy_vec4((float *)&instData.color_complement, inst->comp);
+					copy_vec4((float *)&instData.mark, inst->mark);
 
 					[renderEncoder setVertexBytes:&instData
 										   length:sizeof(instData)
@@ -2134,7 +2145,8 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 				 const float					transform[16],
 				 BOOL							is_wire_frame,
 				 int							ghost_id,
-				 float							ghost_alpha)
+				 float							ghost_alpha,
+				 const float					mark[4])
 {
 	// A ghost gets its own pass: it is drawn like an ordinary part and blended
 	// as a whole, so its interior does not show through the way a transparent
@@ -2142,7 +2154,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	// draws at full strength, because a faint cue is no cue.
 	if (ghost_id != 0 && !is_wire_frame)
 	{
-		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, ghost_id, ghost_alpha);
+		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, ghost_id, ghost_alpha, mark);
 		return;
 	}
 
@@ -2155,7 +2167,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 			// 1. There is alpha baked into our meshes permanently or
 			// 2. Our mesh uses meta colors and the current meta colors have alpha.
 
-			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f);
+			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f, mark);
 			return;
 		}
 
@@ -2165,15 +2177,15 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 			// 1. No texture is being applied to us AND
 			// 2. There isn't any texturing baked into the DL.
 
-			saveForInstanceDraw(session, dl, cur_color, cmp_color, transform, NO);
+			saveForInstanceDraw(session, dl, cur_color, cmp_color, transform, mark, NO);
 			return;
 		}
 	}
 
 	if (is_wire_frame) {
-		saveForInstanceDraw(session, dl, cur_color, cmp_color, transform, YES);
+		saveForInstanceDraw(session, dl, cur_color, cmp_color, transform, mark, YES);
 	} else {
-		immediateDraw(renderEncoder, session, dl, spec, cur_color, cmp_color, transform, NO);
+		immediateDraw(renderEncoder, session, dl, spec, cur_color, cmp_color, transform, mark, NO);
 	}
 
 } // end LDrawDLDraw
