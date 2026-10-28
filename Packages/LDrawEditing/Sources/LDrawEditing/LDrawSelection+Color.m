@@ -60,6 +60,19 @@
 //==============================================================================
 + (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
 {
+	return [self randomizedColorsForDirectives:colorable allowedColors:nil];
+}
+
+
+//---------- randomizedColorsForDirectives:allowedColors: ------------[static]--
+//
+// Purpose:		Randomizes each directive among the selection's colors that it
+//				is allowed to take.
+//
+//------------------------------------------------------------------------------
++ (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
+							 allowedColors:(BOOL (^)(id directive, LDrawColor *color))allowedColors
+{
 	NSUInteger count = [colorable count];
 	if (count == 0)
 	{
@@ -73,29 +86,44 @@
 		[allColors addObject:[currentObject LDrawColor]];
 	}
 
-	NSUInteger colorCount = [allColors count];
-	if (colorCount == 0)
+	if ([allColors count] == 0)
 	{
 		return @[];
 	}
 
 	NSArray        *palette = [allColors allObjects];
 	NSMutableArray *result  = [NSMutableArray arrayWithCapacity:count];
-	int             last    = -1;
+	LDrawColor     *last    = nil;
 
-	for (NSUInteger counter = 0; counter < count; ++counter)
+	for (id directive in colorable)
 	{
-		int r = rand() % (int)colorCount;
+		NSArray *choices = palette;
+
+		if (allowedColors != nil)
+		{
+			choices = [palette objectsAtIndexes:[palette indexesOfObjectsPassingTest:
+						^BOOL(LDrawColor *color, NSUInteger index, BOOL *stop) {
+							return allowedColors(directive, color);
+						}]];
+		}
+
+		if ([choices count] == 0)
+		{
+			[result addObject:[directive LDrawColor]];
+			continue;
+		}
+
+		LDrawColor *pick = [choices objectAtIndex:(NSUInteger)(rand() % (int)[choices count])];
 		// Try to avoid consecutives if we have enough palette --
 		// this technically makes the distribution not random, but
 		// it probably looks better unless the parts are just super
 		// tiny.
-		while (colorCount > 1 && r == last)
+		while ([choices count] > 1 && pick == last)
 		{
-			r = rand() % (int)colorCount;
+			pick = [choices objectAtIndex:(NSUInteger)(rand() % (int)[choices count])];
 		}
-		last = r;
-		[result addObject:[palette objectAtIndex:(NSUInteger)r]];
+		last = pick;
+		[result addObject:pick];
 	}
 	return result;
 }

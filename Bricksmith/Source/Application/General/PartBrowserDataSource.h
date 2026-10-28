@@ -19,6 +19,9 @@
 @class PartBrowserLimitBar;
 @class PartColorStripView;
 
+// Posted when a browser's selected part changes. Object is the browser.
+extern NSString * const PartBrowserSelectionDidChangeNotification;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PartBrowserDataSource

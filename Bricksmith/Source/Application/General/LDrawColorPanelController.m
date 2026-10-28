@@ -14,15 +14,27 @@
 #import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/NSString+LDraw.h>
 
 #import <LDrawEditing/LDrawInspection.h>
 #import <LDrawFeatures/LDrawColorPanelModel.h>
+#import <LDrawFeatures/LDrawPartLimitSession.h>
+#import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
 
 #import "LDrawColorBar.h"
 #import "LDrawColorCell.h"
 #import "LDrawColorWell.h"
 #import "LDrawHostChrome.h"
+#import "PartBrowserDataSource.h"
+#import "PartsLimitManager.h"
+
+// The separator after the material pop-up's limit items.
+static const NSInteger LimitSeparatorTag = 10;
+
+static const CGFloat FooterHeight = 16.0;
 
 @implementation LDrawColorPanelController
 
@@ -47,6 +59,12 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	[colorColumn setDataCell:colorCell];
 	
 	[materialPopUpButton selectItemWithTag:LDrawColorFilterAll];
+
+	// The panel decides which rows can be picked, and never lets the list
+	// pick a color by itself.
+	[colorTable setDelegate:self];
+	[colorListController setAvoidsEmptySelection:NO];
+	[self makeFooter];
 	
 	[(NSPanel*)[self window] setWorksWhenModal:YES];
 	[(NSPanel*)[self window] setLevel:NSStatusWindowLevel];
@@ -106,6 +124,16 @@ LDrawColorPanelController *sharedColorPanel = nil;
 		
 		[self setLDrawColor:[colorLibrary colorForCode:LDrawRed]];
 		updatingToReflectFile = NO;
+
+		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(partsLimitDidChange:)
+													 name:LDrawPartLimitDidChangeNotification
+												   object:[[PartsLimitManager sharedManager] session]];
+		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(browserSelectionDidChange:)
+													 name:PartBrowserSelectionDidChangeNotification
+												   object:nil];
+		[self updateLimitFilter];
 	}
 	return self;
 	
@@ -144,6 +172,14 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	//Try to find the color we are after in the current list.
 	NSInteger rowToSelect = [self indexOfColor:newColor]; //will be the row index for the color we want.
 	
+	// A parts limit's list keeps its filter. The color shows in the bar.
+	if([LDrawColorPanelModel shouldClearColorFilterWhenIndexNotFound:rowToSelect] && [self isLimitFilterOn])
+	{
+		[self->colorListController setSelectionIndexes:[NSIndexSet indexSet]];
+		[colorBar setLDrawColor:newColor];
+		return;
+	}
+
 	if([LDrawColorPanelModel shouldClearColorFilterWhenIndexNotFound:rowToSelect])
 	{
 		//It wasn't in the currently-displayed list. Search the master list.
@@ -201,6 +237,10 @@ LDrawColorPanelController *sharedColorPanel = nil;
 - (void) sendAction
 {
 	LDrawColorWell *activeColorWell = [LDrawColorWell activeColorWell];
+
+	// A list narrowed by the parts limit applies nothing.
+	if(isRefiltering)
+		return;
 
 	if(activeColorWell != nil)
 	{
@@ -268,8 +308,21 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (void) updateSelectionWithObjects:(NSArray *)selectedObjects
 {
-	LDrawColor *objectColor = [LDrawInspection colorOfLastObjectInSelection:selectedObjects
-															  fallingBackTo:[self LDrawColor]];
+	LDrawColor		*objectColor	= [LDrawInspection colorOfLastObjectInSelection:selectedObjects
+																	  fallingBackTo:[self LDrawColor]];
+	NSMutableArray	*partNames		= [NSMutableArray array];
+
+	// The list follows the parts the selection holds.
+	for(id object in selectedObjects)
+	{
+		if([object isKindOfClass:[LDrawPart class]] && [object displayName] != nil)
+			[partNames addObject:[object displayName]];
+	}
+	if([partNames isEqualToArray:self->selectedPartNames ?: @[]] == NO)
+	{
+		self->selectedPartNames = partNames;
+		[self updateLimitFilter];
+	}
 	
 	updatingToReflectFile = YES;
 		[self setLDrawColor:objectColor];
@@ -346,25 +399,65 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (void) updateColorFilter
 {
+	[self applyColorFilterSelectingFirst:YES];
+
+}//end updateColorFilter
+
+
+//========== applyColorFilterSelectingFirst: ===================================
+//
+// Purpose:		Filters the color list by the search, the material, and the
+//				parts limit.
+//
+// Parameters:	selectsFirst - when the current color is filtered out, picks
+//						the first color that can be picked. NO when the list
+//						changes by itself, which must not change any part.
+//
+//==============================================================================
+- (void) applyColorFilterSelectingFirst:(BOOL)selectsFirst
+{
 	NSString			*searchString				= [searchField stringValue];
 	LDrawColorFilter	materialType				= (LDrawColorFilter)[[materialPopUpButton selectedItem] tag];
 	NSPredicate 		*searchPredicate			= nil;
 	LDrawColor			*currentColor				= [self LDrawColor];
 	NSInteger			indexOfPreviousSelection	= 0;
+	NSArray				*colorCodes					= nil;
 	
-	searchPredicate = [LDrawColorPanelModel predicateForSearchString:searchString material:materialType];
+	if(materialType == LDrawColorFilterSelectedPart)
+		colorCodes = self->allowedColorCodes;
+	else if(materialType == LDrawColorFilterLimit)
+		colorCodes = [[self restrictingTable] allowedColorCodes];
+
+	searchPredicate = [LDrawColorPanelModel predicateForSearchString:searchString
+															material:materialType
+												   allowedColorCodes:colorCodes];
 	
 	//Update the table with our results.
 	[self->colorListController setFilterPredicate:searchPredicate];
 	
-	// The array controller will automatically maintain the selection if it can.
-	// But if it can't, we need to come up a reasonable new answer.
+	// The list keeps the selection if it is still listed. If not, come up
+	// with a reasonable new answer: the first color the parts may take.
 	indexOfPreviousSelection = [self indexOfColor:currentColor];
-	if([LDrawColorPanelModel shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
+	if(		selectsFirst
+	   &&	[LDrawColorPanelModel shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
 	{
-		[self->colorListController setSelectionIndex:0];
+		NSArray		*colors	= [self->colorListController arrangedObjects];
+		NSUInteger	 first	= [colors indexOfObjectPassingTest:^BOOL(LDrawColor *color, NSUInteger index, BOOL *stop) {
+			return [self canSelectColor:color];
+		}];
+
+		if(first != NSNotFound)
+			[self->colorListController setSelectionIndex:first];
 	}
-}//end updateColorFilter
+	else if(		self->isRefiltering
+			&&	indexOfPreviousSelection != NSNotFound
+			&&	[[self->colorListController selectionIndexes] count] == 0 )
+	{
+		// The color is listed again. Nothing is applied while refiltering.
+		[self->colorListController setSelectionIndex:indexOfPreviousSelection];
+	}
+
+}//end applyColorFilterSelectingFirst:
 
 
 #pragma mark -
@@ -410,6 +503,279 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	
 }//end observeValueForKeyPath:ofObject:change:context:
 
+#pragma mark - PARTS LIMIT -
+
+//========== makeFooter ========================================================
+//
+// Purpose:		A line under the list that says why it is short. It takes room
+//				from the list only while shown.
+//
+//==============================================================================
+- (void) makeFooter
+{
+	NSScrollView *scrollView = [self->colorTable enclosingScrollView];
+
+	self->footerField = [NSTextField labelWithString:@""];
+	[self->footerField setFont:[NSFont systemFontOfSize:[NSFont smallSystemFontSize]]];
+	[self->footerField setTextColor:[NSColor secondaryLabelColor]];
+	[self->footerField setLineBreakMode:NSLineBreakByTruncatingMiddle];
+	[self->footerField setFrame:NSMakeRect(NSMinX([scrollView frame]), NSMinY([scrollView frame]),
+										   NSWidth([scrollView frame]), FooterHeight)];
+	[self->footerField setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
+	[self->footerField setHidden:YES];
+	[[scrollView superview] addSubview:self->footerField];
+
+}//end makeFooter
+
+
+//========== setFooterText: ====================================================
+//
+// Purpose:		Shows the footer with the text, or hides it for nil.
+//
+//==============================================================================
+- (void) setFooterText:(NSString *)text
+{
+	NSScrollView	*scrollView	= [self->colorTable enclosingScrollView];
+	NSRect			 list		= [scrollView frame];
+	BOOL			 shows		= (text != nil);
+
+	[self->footerField setStringValue:text ?: @""];
+	[self->footerField setToolTip:text];
+
+	if(shows == ([self->footerField isHidden] == NO))
+		return;
+
+	list.origin.y		+= shows ? FooterHeight : -FooterHeight;
+	list.size.height	-= shows ? FooterHeight : -FooterHeight;
+	[scrollView setFrame:list];
+	[self->footerField setHidden:(shows == NO)];
+
+}//end setFooterText:
+
+
+//========== restrictingTable ==================================================
+//
+// Purpose:		The limit's table, when it limits anything and has its data.
+//
+//==============================================================================
+- (LDrawPartLimitTable *) restrictingTable
+{
+	LDrawPartLimitTable *table = [[[PartsLimitManager sharedManager] session] table];
+
+	return (table.limit.isRestricting && table.hasData) ? table : nil;
+}
+
+
+//========== isLimitFilterOn ===================================================
+//==============================================================================
+- (BOOL) isLimitFilterOn
+{
+	NSInteger tag = [[materialPopUpButton selectedItem] tag];
+
+	return (		(tag == LDrawColorFilterSelectedPart && self->allowedColorCodes != nil)
+			||	tag == LDrawColorFilterLimit );
+}
+
+
+//========== canSelectColor: ===================================================
+//
+// Purpose:		Whether the user may pick the color for the selected parts.
+//
+//==============================================================================
+- (BOOL) canSelectColor:(LDrawColor *)color
+{
+	return [LDrawColorPanelModel canSelectColorCode:[color colorCode]
+								  allowedColorCodes:self->allowedColorCodes
+										  warnsOnly:[[self restrictingTable] limit].warnsOnly];
+}
+
+
+//========== updateLimitFilter =================================================
+//
+// Purpose:		Works out the colors the parts may take, the parts selected in
+//				the document or else the Part Browser's, and narrows the list
+//				without changing any part.
+//
+//==============================================================================
+- (void) updateLimitFilter
+{
+	LDrawPartLimitTable	*table	= [self restrictingTable];
+	NSArray				*names	= self->selectedPartNames;
+
+	if([names count] == 0)
+		names = (self->browserPartName != nil) ? @[self->browserPartName] : @[];
+
+	self->allowedColorCodes = [LDrawColorPanelModel allowedColorCodesForPartNames:names table:table];
+
+	[self updateLimitMenuItems:table];
+
+	self->isRefiltering = YES;
+		[self applyColorFilterSelectingFirst:NO];
+	self->isRefiltering = NO;
+
+	[self updateFooterForPartNames:names];
+	[self->colorTable setNeedsDisplay:YES];
+
+}//end updateLimitFilter
+
+
+//========== updateLimitMenuItems: =============================================
+//
+// Purpose:		With a limit on, the material pop-up starts with For Selected
+//				Part, which it then shows, and the limit's own item.
+//
+//==============================================================================
+- (void) updateLimitMenuItems:(LDrawPartLimitTable *)table
+{
+	NSMenu		*menu		= [materialPopUpButton menu];
+	NSMenuItem	*partItem	= [menu itemWithTag:LDrawColorFilterSelectedPart];
+	NSMenuItem	*limitItem	= [menu itemWithTag:LDrawColorFilterLimit];
+	NSMenuItem	*separator	= nil;
+
+	if(table != nil && partItem == nil)
+	{
+		partItem	= [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"For Selected Part", nil)
+											  action:NULL
+									   keyEquivalent:@""];
+		limitItem	= [[NSMenuItem alloc] initWithTitle:@"" action:NULL keyEquivalent:@""];
+		separator	= [NSMenuItem separatorItem];
+
+		[partItem setTag:LDrawColorFilterSelectedPart];
+		[limitItem setTag:LDrawColorFilterLimit];
+		[separator setTag:LimitSeparatorTag];
+		[menu insertItem:partItem atIndex:0];
+		[menu insertItem:limitItem atIndex:1];
+		[menu insertItem:separator atIndex:2];
+		[materialPopUpButton selectItemWithTag:LDrawColorFilterSelectedPart];
+	}
+	else if(table == nil && partItem != nil)
+	{
+		BOOL wasOn = ([[materialPopUpButton selectedItem] tag] >= LDrawColorFilterSelectedPart);
+
+		[menu removeItem:partItem];
+		[menu removeItem:limitItem];
+		[menu removeItem:[menu itemWithTag:LimitSeparatorTag]];
+		if(wasOn)
+			[materialPopUpButton selectItemWithTag:LDrawColorFilterAll];
+	}
+
+	if(table.limit.kind == LDrawPartLimitKindAvailableNow)
+		[limitItem setTitle:NSLocalizedString(@"Made Now", nil)];
+	else if(table != nil)
+		[limitItem setTitle:[NSString stringWithFormat:NSLocalizedString(@"In %@", nil),
+							 [[PartsLimitManager sharedManager] titleForLimit:table.limit] ?: @""]];
+
+}//end updateLimitMenuItems:
+
+
+//========== updateFooterForPartNames: =========================================
+//
+// Purpose:		Colors for Brick 2 x 4 (3001): 14 of 92.
+//
+//==============================================================================
+- (void) updateFooterForPartNames:(NSArray *)names
+{
+	NSSet		*unique		= [NSSet setWithArray:names];
+	NSUInteger	 total		= [[[LDrawColorLibrary sharedColorLibrary] colors] count];
+	NSString	*partName	= [unique anyObject];
+	NSString	*parts		= nil;
+
+	if(self->allowedColorCodes == nil)
+	{
+		[self setFooterText:nil];
+		return;
+	}
+
+	if([unique count] == 1)
+		parts = [NSString stringWithFormat:@"%@ (%@)",
+				 [[LDrawPartLibrary sharedPartLibraryIfRegistered] descriptionForPartName:partName] ?: partName,
+				 [partName stringByDeletingPathExtension]];
+	else
+		parts = [NSString stringWithFormat:NSLocalizedString(@"%lu parts", nil), (unsigned long)[unique count]];
+
+	[self setFooterText:[NSString stringWithFormat:NSLocalizedString(@"Colors for %@: %lu of %lu", nil),
+						 parts, (unsigned long)[self->allowedColorCodes count], (unsigned long)total]];
+
+}//end updateFooterForPartNames:
+
+
+//========== partsLimitDidChange: ==============================================
+//==============================================================================
+- (void) partsLimitDidChange:(NSNotification *)notification
+{
+	[self updateLimitFilter];
+}
+
+
+//========== browserSelectionDidChange: ========================================
+//
+// Purpose:		The Part Browser's part counts when the document has no part
+//				selected.
+//
+//==============================================================================
+- (void) browserSelectionDidChange:(NSNotification *)notification
+{
+	NSString *partName = [[notification object] selectedPartName];
+
+	if([partName isEqualToString:self->browserPartName ?: @""])
+		return;
+
+	self->browserPartName = partName;
+	if([self->selectedPartNames count] == 0)
+		[self updateLimitFilter];
+
+}//end browserSelectionDidChange:
+
+
+//**** NSTableViewDelegate ****
+//========== tableView:shouldSelectRow: ========================================
+//
+// Purpose:		Refuses a color the selected parts are not made in, whether by
+//				click or arrow key.
+//
+//==============================================================================
+- (BOOL) tableView:(NSTableView *)tableView shouldSelectRow:(NSInteger)row
+{
+	NSArray *colors = [self->colorListController arrangedObjects];
+
+	if(row < 0 || row >= (NSInteger)[colors count])
+		return NO;
+	return [self canSelectColor:[colors objectAtIndex:row]];
+
+}//end tableView:shouldSelectRow:
+
+
+//**** NSTableViewDelegate ****
+//========== tableView:willDisplayCell:forTableColumn:row: =====================
+//
+// Purpose:		Fades and crosses out the colors the selected parts are not made
+//				in. Warn Only still shows them so, though they can be picked.
+//
+//==============================================================================
+- (void) tableView:(NSTableView *)tableView
+   willDisplayCell:(id)cell
+	forTableColumn:(NSTableColumn *)tableColumn
+			   row:(NSInteger)row
+{
+	NSArray		*colors		= [self->colorListController arrangedObjects];
+	LDrawColor	*color		= (row >= 0 && row < (NSInteger)[colors count]) ? [colors objectAtIndex:row] : nil;
+	BOOL		 allowed	= [LDrawColorPanelModel canSelectColorCode:[color colorCode]
+												  allowedColorCodes:self->allowedColorCodes
+														  warnsOnly:NO];
+
+	if([cell isKindOfClass:[LDrawColorCell class]])
+		[(LDrawColorCell *)cell setStruck:(allowed == NO)];
+	else if([cell isKindOfClass:[NSTextFieldCell class]])
+	{
+		// Cells are reused, so every row sets its color. A selected row keeps
+		// the selection's.
+		BOOL faded = (allowed == NO && [tableView isRowSelected:row] == NO);
+		[(NSTextFieldCell *)cell setTextColor:faded ? [NSColor disabledControlTextColor] : [NSColor controlTextColor]];
+	}
+
+}//end tableView:willDisplayCell:forTableColumn:row:
+
+
 #pragma mark - NSWindow -
 
 //========== windowWillClose: ==================================================
@@ -453,6 +819,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (void) dealloc
 {
+	[[NSNotificationCenter defaultCenter] removeObserver:self];
 	[colorListController removeObserver:self forKeyPath:@"selectedObjects"];
 	[colorListController removeObserver:self forKeyPath:@"sortDescriptors"];
 	

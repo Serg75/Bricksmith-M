@@ -67,6 +67,9 @@
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
 #import <LDrawFeatures/LDrawStepPartListPageAnchor.h>
 #import <LDrawFeatures/LDrawStepPartListPageFitter.h>
+#import <LDrawFeatures/LDrawPartLimitSession.h>
+#import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
 
@@ -90,6 +93,7 @@
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
 #import "PartsLimitController.h"
+#import "PartsLimitManager.h"
 #import "PieceCountPanel.h"
 #import "PreferencesDialogController.h"
 #import "RotationPanelController.h"
@@ -2452,8 +2456,22 @@ void AppendChoicesToNewItem(
 //==============================================================================
 - (void) randomizeLDrawColors:(id)sender
 {
-	NSArray *colorable = [LDrawSelection colorableDirectivesInSelection:[self selectedObjects]];
-	NSArray *colors    = [LDrawSelection randomizedColorsForDirectives:colorable];
+	NSArray				*colorable	= [LDrawSelection colorableDirectivesInSelection:[self selectedObjects]];
+	LDrawPartLimitTable	*table		= [[[PartsLimitManager sharedManager] session] table];
+	BOOL				(^allowed)(id, LDrawColor *) = nil;
+
+	// Under a parts limit each part draws only on the colors it is made in.
+	if(table.limit.isRestricting && table.hasData && table.limit.warnsOnly == NO)
+	{
+		allowed = ^BOOL(id directive, LDrawColor *color) {
+			if([directive isKindOfClass:[LDrawPart class]] == NO)
+				return YES;
+			return [table statusForPartNamed:[directive displayName] colorCode:[color colorCode]]
+				   != LDrawPartLimitStatusNotInColor;
+		};
+	}
+
+	NSArray *colors = [LDrawSelection randomizedColorsForDirectives:colorable allowedColors:allowed];
 
 	NSUInteger count = [colors count];
 	for(NSUInteger counter = 0; counter < count; ++counter)

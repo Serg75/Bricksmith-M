@@ -27,6 +27,7 @@
 
 #import <LDrawEditing/LDrawPartTransformUpdate.h>
 
+@class LDrawColor;
 @class LDrawPart;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -251,6 +252,12 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 /// the set. Consecutive repeats are avoided when the palette has more than one
 /// color. The host still applies the colors (undo).
 + (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable;
+
+/// The same, each directive drawing only on the colors allowedColors lets it
+/// take, such as those a parts limit allows. A directive allowed none of them
+/// keeps its own color. Nil allows every color.
++ (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
+							 allowedColors:(nullable BOOL (^)(id directive, LDrawColor *color))allowedColors;
 
 @end
 

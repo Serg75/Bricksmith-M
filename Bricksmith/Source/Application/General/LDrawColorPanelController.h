@@ -18,7 +18,7 @@
 // Class:		LDrawColorPanelController
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface LDrawColorPanelController : NSWindowController <LDrawColorable>
+@interface LDrawColorPanelController : NSWindowController <LDrawColorable, NSTableViewDelegate>
 {
 	__weak IBOutlet	LDrawColorBar		*colorBar;
 	__weak IBOutlet	NSPopUpButton		*materialPopUpButton;
@@ -30,6 +30,13 @@
 				//YES if we are in the middle of updating the color panel to 
 				// reflect the current selection, NO any other time.
 				BOOL				 updatingToReflectFile;
+
+				// Parts limit
+				NSArray				*selectedPartNames;	// parts selected in the document
+				NSString			*browserPartName;	// the Part Browser's part, for when none are
+				NSArray				*allowedColorCodes;	// the colors those parts may take, or nil for any
+				NSTextField			*footerField;		// says why the list is short
+				BOOL				 isRefiltering;		// the limit changes the list; no color is applied
 }
 
 //Initialization

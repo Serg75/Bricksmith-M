@@ -11,7 +11,7 @@
 | `limit_check` | Phase 2: count what the model uses and work out each part's status (LDrawFeatures) | completed |
 | `limit_settings` | Phase 3: the app-wide limit, the Parts pop-up, Settings → Parts, Import Set Parts, Inventories window | completed |
 | `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | completed |
-| `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | not started |
+| `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | completed |
 | `limit_marks` | Phase 6: marks in the 3D view and File Contents, inspector line, Piece Count columns | not started |
 | `limit_assemblies` | Phase 7: assemblies, minifigure parts and prints matched across LDraw and LEGO numbering | not started |
 | `limit_polish` | Phase 8 (optional): wanted-list export, BrickLink XML import, Rebrickable "My Parts", Brickset "on sale" | not started |
@@ -505,6 +505,17 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - `LDrawColorPanelController` adds the new pop-up items when a limit is on, dims the rows it may not select (`LDrawColorCell`), refuses them in `-tableView:shouldSelectRow:`, and shows the footer line. It follows the limit, the main document's selection, and the Part Browser's selected part.
 - `+[LDrawSelection randomizedColorsForDirectives:allowedColors:]` takes a block that gives each part's allowed colors.
 - Tests, on the models: allowed colors for one part and for several; a typed code that is not allowed; random colors stay allowed.
+
+**As built.** 3 new tests in `LDrawFeaturesTests`; every package test passes, both app targets build, and LDrawFeatures and LDrawEditing build for the iOS Simulator. Checked in the Metal app with *Available now* and the Porsche test model: with 3001 chosen in the Part Browser the list is its 40 colors of 322, and under Solid 110 rows are refused; 40 parts selected in the model share one color and keep their own colors while the list follows them; Randomize Color changed 25 of them and put none in a color its part is not made in. What came out differently, or is left:
+
+- *`LDrawColorPanelModel`* gets `+allowedColorCodesForPartNames:table:`, which takes the colors every part shares. A part the limit knows nothing of, or allows in no color, does not narrow the list, since no color would make it right. `+canSelectColorCode:allowedColorCodes:warnsOnly:` always lets color 16 through, as it takes the color of what places the part. The predicate's search and material parts were joined without a space before AND; that is fixed.
+- *The Colors window never picks a color by itself.* Its list no longer avoids an empty selection, and narrowing the list for the limit applies no color, so selecting a part never recolors it. A part already in a color it is not made in shows that color in the bar with no row selected.
+- *For Selected Part becomes the filter when a limit comes on*, and the limit's item reads Made Now or In *set*. Both go away with the limit, back to All.
+- *Rows the parts may not take are faded and crossed out*, and refused by click or arrow key. A typed code picks the first listed color that can be picked. Warn Only still fades them, but lets them be picked.
+- *The footer* says "Colors for Brick 2 x 4 (3001): 40 of 322", or "Colors for 16 parts" for several. It and the material pop-up do not render in snapshots of this panel, so it was checked by its state.
+- *The Part Browser posts `PartBrowserSelectionDidChangeNotification`*, so its part counts when the model has none selected.
+- *`+[LDrawSelection randomizedColorsForDirectives:allowedColors:]`* takes a block per part and color; a part allowed none of the selection's colors keeps its own. LDrawEditing has no test target, since it needs a renderer's display lists to link, so Randomize was checked in the app instead.
+- *The inspector's color well* goes through the same window and rules; it was not checked on its own.
 
 ### Phase 6 — `limit_marks`: marks in the model
 

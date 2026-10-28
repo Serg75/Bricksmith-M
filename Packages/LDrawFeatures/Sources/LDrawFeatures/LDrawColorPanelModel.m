@@ -11,6 +11,8 @@
 
 #import <LDrawFeatures/LDrawColorPanelModel.h>
 
+#import <LDrawInventory/LDrawPartLimitTable.h>
+
 
 @implementation LDrawColorPanelModel
 
@@ -107,6 +109,44 @@
 }
 
 
+//---------- allowedColorCodesForPartNames:table: --------------------[static]--
+//
+// Purpose:		The colors every part may take: those all of their lists share.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSNumber *> *)allowedColorCodesForPartNames:(NSArray<NSString *> *)partNames
+												 table:(LDrawPartLimitTable *)table
+{
+	NSMutableSet *allowed = nil;
+
+	for (NSString *partName in partNames)
+	{
+		NSArray *codes = [table colorCodesForPartNamed:partName];
+
+		if ([codes count] == 0)
+			continue;
+		if (allowed == nil)
+			allowed = [NSMutableSet setWithArray:codes];
+		else
+			[allowed intersectSet:[NSSet setWithArray:codes]];
+	}
+
+	return [[allowed allObjects] sortedArrayUsingSelector:@selector(compare:)];
+}
+
+
+//---------- canSelectColorCode:allowedColorCodes:warnsOnly: ---------[static]--
+//------------------------------------------------------------------------------
++ (BOOL)canSelectColorCode:(LDrawColorT)colorCode
+		 allowedColorCodes:(NSArray<NSNumber *> *)allowedColorCodes
+				 warnsOnly:(BOOL)warnsOnly
+{
+	if (allowedColorCodes == nil || warnsOnly || colorCode == LDrawCurrentColor)
+		return YES;
+	return [allowedColorCodes containsObject:@(colorCode)];
+}
+
+
 //---------- predicateForSearchString:material: ----------------------[static]--
 //
 // Purpose:		Returns a search predicate suitable for finding colors based on
@@ -118,6 +158,19 @@
 //------------------------------------------------------------------------------
 + (NSPredicate *)predicateForSearchString:(NSString *)searchString
 								 material:(LDrawColorFilter)material
+{
+	return [self predicateForSearchString:searchString material:material allowedColorCodes:nil];
+}
+
+
+//---------- predicateForSearchString:material:allowedColorCodes: ----[static]--
+//
+// Purpose:		The search predicate, narrowed to the allowed colors.
+//
+//------------------------------------------------------------------------------
++ (NSPredicate *)predicateForSearchString:(NSString *)searchString
+								 material:(LDrawColorFilter)material
+						allowedColorCodes:(NSArray<NSNumber *> *)allowedColorCodes
 {
 	NSString        *keywordFormat      = nil;
 	NSArray         *keywordArguments   = nil;
@@ -164,6 +217,8 @@
 	switch (material)
 	{
 		case LDrawColorFilterAll:
+		case LDrawColorFilterSelectedPart:
+		case LDrawColorFilterLimit:
 			break;
 		case LDrawColorFilterSolid:
 			materialFormat    = @"(%K == %@) AND (%K == 1.0)";
@@ -197,6 +252,24 @@
 			break;
 	}
 
+	if (allowedColorCodes != nil)
+	{
+		NSString *allowedFormat = @"(%K IN %@)";
+		NSArray  *allowedArgs   = @[NSStringFromSelector(@selector(colorCode)), allowedColorCodes];
+
+		// Joined like the material clause below.
+		if (materialFormat)
+		{
+			materialFormat    = [NSString stringWithFormat:@"(%@) AND %@", materialFormat, allowedFormat];
+			materialArguments = [materialArguments arrayByAddingObjectsFromArray:allowedArgs];
+		}
+		else
+		{
+			materialFormat    = allowedFormat;
+			materialArguments = allowedArgs;
+		}
+	}
+
 	if (keywordFormat || materialFormat)
 	{
 		predicateFormat    = [NSMutableString string];
@@ -212,7 +285,7 @@
 	if (materialFormat)
 	{
 		if ([predicateFormat length])
-			[predicateFormat appendString:@"AND "];
+			[predicateFormat appendString:@" AND "];
 
 		[predicateFormat appendFormat:@"(%@)", materialFormat];
 		[predicateArguments addObjectsFromArray:materialArguments];

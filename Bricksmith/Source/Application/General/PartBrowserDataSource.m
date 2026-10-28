@@ -47,6 +47,8 @@
 #import "PartsLimitManager.h"
 #import "TableViewCategory.h"
 
+NSString * const PartBrowserSelectionDidChangeNotification = @"PartBrowserSelectionDidChangeNotification";
+
 // Columns added for an inventory's rows.
 static NSString * const LimitColorColumn	= @"LimitColor";
 static NSString * const LimitCountColumn	= @"LimitCount";
@@ -799,6 +801,10 @@ static const CGFloat SwatchSize				= 14.0;
 	//Redisplay preview.
 	[self syncSelectionAndPartDisplayed];
 	[self setConstraints];
+
+	// The Colors window lists the colors of the part the next insert makes.
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartBrowserSelectionDidChangeNotification
+														object:self];
 	
 	//save for posterity.
 	if(newRow != -1)

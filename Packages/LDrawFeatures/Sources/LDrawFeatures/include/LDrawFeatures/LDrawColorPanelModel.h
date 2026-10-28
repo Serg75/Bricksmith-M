@@ -15,6 +15,8 @@
 
 #import <LDrawCore/LDrawColor.h>
 
+@class LDrawPartLimitTable;
+
 NS_ASSUME_NONNULL_BEGIN
 
 /// Color-panel material popup tags (1-based filter kinds after All = 0).
@@ -26,7 +28,13 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 	LDrawColorFilterPearlescent   = 4,
 	LDrawColorFilterRubber        = 5,
 	LDrawColorFilterMetal         = 6,
-	LDrawColorFilterOther         = 7
+	LDrawColorFilterOther         = 7,
+
+	/// The colors the parts limit allows the selected parts in.
+	LDrawColorFilterSelectedPart  = 8,
+
+	/// Every color the parts limit allows some part in.
+	LDrawColorFilterLimit         = 9
 };
 
 
@@ -51,6 +59,24 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 /// to NSArrayController.
 + (nullable NSPredicate *)predicateForSearchString:(nullable NSString *)searchString
 										  material:(LDrawColorFilter)material;
+
+/// The same, keeping only allowedColorCodes when they are given. The two
+/// limit filters match any material.
++ (nullable NSPredicate *)predicateForSearchString:(nullable NSString *)searchString
+										  material:(LDrawColorFilter)material
+								 allowedColorCodes:(nullable NSArray<NSNumber *> *)allowedColorCodes;
+
+/// The colors the limit allows every one of the parts in, lowest code first. A
+/// part the limit knows nothing of, or allows in no color, does not narrow the
+/// list, since no color would make it right. Nil when no part narrows it.
++ (nullable NSArray<NSNumber *> *)allowedColorCodesForPartNames:(NSArray<NSString *> *)partNames
+														  table:(nullable LDrawPartLimitTable *)table;
+
+/// Whether the user may pick the color: always with no list, with Warn Only,
+/// and for color 16, which takes the color of what places the part.
++ (BOOL)canSelectColorCode:(LDrawColorT)colorCode
+		 allowedColorCodes:(nullable NSArray<NSNumber *> *)allowedColorCodes
+				 warnsOnly:(BOOL)warnsOnly;
 
 /// YES when the filtered list no longer contains the previous selection and
 /// the host should select the first color to avoid an empty selection.
