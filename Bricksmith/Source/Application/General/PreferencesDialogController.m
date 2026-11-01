@@ -866,7 +866,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[[partsLimitPopUp menu] setDelegate:self];
 	[[partsLimitPopUp widthAnchor] constraintLessThanOrEqualToConstant:220].active = YES;
 
-	optionsButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Options…", nil)
+	optionsButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Limit Options…", nil)
 											  target:[PartsLimitManager sharedManager]
 											  action:@selector(showLimitOptions:)];
 	importButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
@@ -2053,14 +2053,15 @@ PreferencesDialogController *preferencesDialog = nil;
 //**** NSMenuDelegate ****
 //========== menuNeedsUpdate: ==================================================
 //
-// Purpose:		The app's limit menu, after the pull-down's title item.
+// Purpose:		The app's limits, after the pull-down's title item. The
+//				commands are buttons beside it.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
 	NSMenuItem *titleItem = [menu itemAtIndex:0];
 
-	[[PartsLimitManager sharedManager] populateLimitMenu:menu];
+	[[PartsLimitManager sharedManager] populateLimitMenu:menu commands:PartsLimitMenuNoCommands];
 	[menu insertItem:titleItem atIndex:0];
 
 }//end menuNeedsUpdate:

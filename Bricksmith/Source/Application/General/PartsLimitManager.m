@@ -440,13 +440,13 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 }//end titleForLimit:
 
 
-//========== populateLimitMenu: ================================================
+//========== populateLimitMenu:commands: =======================================
 //
 // Purpose:		All Parts, Available Now, the inventories and the sets, then
-//				the commands. The limit in force has a check mark.
+//				the commands asked for. The limit in force has a check mark.
 //
 //==============================================================================
-- (void) populateLimitMenu:(NSMenu *)menu
+- (void) populateLimitMenu:(NSMenu *)menu commands:(PartsLimitMenuCommands)commands
 {
 	LDrawPartLimit	*current	= self.session.limit;
 	NSMutableArray	*limits		= [NSMutableArray arrayWithObjects:[current limitWithKind:LDrawPartLimitKindNone
@@ -477,31 +477,36 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 		[item setState:[limit isEqual:current] ? NSControlStateValueOn : NSControlStateValueOff];
 	}
 
-	[menu addItem:[NSMenuItem separatorItem]];
-	[[menu addItemWithTitle:NSLocalizedString(@"Limit Options…", nil)
-					 action:@selector(showLimitOptions:)
-			  keyEquivalent:@""] setTarget:self];
-	[[menu addItemWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
-					 action:@selector(importSetParts:)
-			  keyEquivalent:@""] setTarget:self];
-	[[menu addItemWithTitle:NSLocalizedString(@"Manage Inventories…", nil)
-					 action:@selector(showInventories:)
-			  keyEquivalent:@""] setTarget:self];
+	if(commands != PartsLimitMenuNoCommands)
+		[menu addItem:[NSMenuItem separatorItem]];
+	if(commands & PartsLimitMenuLimitOptions)
+	{
+		[[menu addItemWithTitle:NSLocalizedString(@"Limit Options…", nil)
+						 action:@selector(showLimitOptions:)
+				  keyEquivalent:@""] setTarget:self];
+	}
+	if(commands & PartsLimitMenuImportSetParts)
+	{
+		[[menu addItemWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
+						 action:@selector(importSetParts:)
+				  keyEquivalent:@""] setTarget:self];
+	}
 
-}//end populateLimitMenu:
+}//end populateLimitMenu:commands:
 
 
 //========== menuNeedsUpdate: ==================================================
 //
 // Purpose:		The View menu's Parts Limit submenu is filled when it opens. It
-//				ends with the switch for the marks.
+//				ends with the switch for the marks. Importing and the
+//				inventories have their own items in the File and Window menus.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
 	NSMenuItem *marks = nil;
 
-	[self populateLimitMenu:menu];
+	[self populateLimitMenu:menu commands:PartsLimitMenuLimitOptions];
 	[menu addItem:[NSMenuItem separatorItem]];
 
 	marks = [menu addItemWithTitle:NSLocalizedString(@"Mark Limit Problems", nil)

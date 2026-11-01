@@ -880,14 +880,16 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 //========== menuNeedsUpdate: ==================================================
 //
-// Purpose:		The app's limit menu, after the pull-down's title item.
+// Purpose:		The app's limit menu, after the pull-down's title item, with
+//				the two commands needed while choosing a limit.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
-	NSMenuItem *titleItem = [menu itemAtIndex:0];
+	NSMenuItem				*titleItem	= [menu itemAtIndex:0];
+	PartsLimitMenuCommands	 commands	= PartsLimitMenuLimitOptions | PartsLimitMenuImportSetParts;
 
-	[[PartsLimitManager sharedManager] populateLimitMenu:menu];
+	[[PartsLimitManager sharedManager] populateLimitMenu:menu commands:commands];
 	[menu insertItem:titleItem atIndex:0];
 
 }//end menuNeedsUpdate:

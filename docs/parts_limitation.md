@@ -122,11 +122,10 @@ Parts: [All Parts             ▾]  ⚠ 12
         ─────────────
         Limit Options…
         Import Set Parts…
-        Manage Inventories…
 ```
 
 - The button after it shows how many parts of this window's model break the limit, and hides at zero. It opens a popover with the count of each kind, a **Select** button for each, and **Show Piece Count**.
-- The same choices are in **View → Parts Limit**, with **Mark Limit Problems** to turn the marks on and off.
+- The same choices are in **View → Parts Limit**, with **Limit Options…** and **Mark Limit Problems** to turn the marks on and off. Each command has one place in the menu bar: importing is in the File menu and the inventories in the Window menu.
 - **Limit Options…** opens a sheet: include spare parts (on, as Rebrickable's Build counts them); prints must match, or any print of a part will do; mold variants and alternates count as one (on); colors must match (on), or any color will do; how many years back *Available now* reaches (1, 2, 3, 5, or any year), and whether parts sold only through Pick a Brick count (off); and **Warn only**, which lets a color the part is not made in be picked, and only marks it.
 - The limit and its options are kept in the app's defaults. Switching it is not an edit: it does not touch the file, mark the document changed, or go on the undo stack.
 
@@ -477,7 +476,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - *The Parts menu is a pull-down with a box icon, not a "Parts:" label and pop-up*, placed after the model menu against the step controls, which takes less room. The model menu gives up the width. Both hide while a step is arranged. The problem button shows the count and turns orange when the worst problem is *too many*. Its popover lists each kind with **Select**, which selects the parts in the model being edited, or else in the first model that has some, and **Show Piece Count…**.
 - *Documents check from `-docChanged:` and on every limit change*, once per run of the event loop, and redraw only when a part's status changed. With no limit the walk is skipped, once the marks of the earlier limit are cleared.
 - *View → Parts Limit, File → Import Set Parts… and Window → Inventories* are added in code at launch. **Mark Limit Problems** waits for the marks in Phase 6.
-- *Settings → Parts* has the limit with **Options…**, **Import Set Parts…** and **Manage Inventories…**, then Rebrickable: when the data was last checked with **Update Now** (or **Download**), the update interval (never, weekly, monthly) and the API key. The Part Browser and Marks sections come with Phases 4 and 6.
+- *Settings → Parts* has the limit with **Limit Options…**, **Import Set Parts…** and **Manage Inventories…** as buttons; its pull-down lists only the limits. Then Rebrickable: when the data was last checked with **Update Now** (or **Download**), the update interval (never, weekly, monthly) and the API key. The Part Browser and Marks sections come with Phases 4 and 6.
 - *The Inventories window* lists the sets and the inventories. A set shows its year, theme, parts and spares, and where and when it was imported, with **Use as Limit** and **Refresh**. An inventory has an editable name, its sets with a count each (**Add Set**, **Remove Set**), its loose parts (**Add Parts from File…**, **Remove Loose Parts**) and **Use as Limit**. The picture, minifigures and the Unmatched list are left for Phase 7.
 - *`LDrawInventoryPartsFile`* (LDrawInventory) reads loose parts from Bricksmith's piece count export and from a Rebrickable parts list in CSV. BrickLink XML needs BrickLink's color numbers, so it stays in Phase 8.
 - *Strings use the English text as the key*, as the Settings panes do, except the pane name, which `Localizable.strings` gets.

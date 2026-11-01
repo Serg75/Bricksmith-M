@@ -26,6 +26,14 @@ extern NSString * const PartsLimitMarksDidChangeNotification;
 // Posted when an update of the parts data ends, however it ended. No object.
 extern NSString * const PartsDataUpdateDidEndNotification;
 
+// The commands a limit menu adds after the limits.
+typedef NS_OPTIONS(NSUInteger, PartsLimitMenuCommands)
+{
+	PartsLimitMenuNoCommands		= 0,
+	PartsLimitMenuLimitOptions		= 1 << 0,
+	PartsLimitMenuImportSetParts	= 1 << 1
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PartsLimitManager
@@ -44,7 +52,7 @@ extern NSString * const PartsDataUpdateDidEndNotification;
 
 // The limit
 - (void) setLimit:(LDrawPartLimit *)limit window:(nullable NSWindow *)window;
-- (void) populateLimitMenu:(NSMenu *)menu;
+- (void) populateLimitMenu:(NSMenu *)menu commands:(PartsLimitMenuCommands)commands;
 - (nullable NSString *) titleForLimit:(LDrawPartLimit *)limit;
 
 // The marks
