@@ -13,7 +13,7 @@
 | `limit_browser` | Phase 4: Part Browser: filter, SETS group, Count column, color strip, color filter | completed |
 | `limit_colors` | Phase 5: Colors window: allowed colors only, Randomize Color | completed |
 | `limit_marks` | Phase 6: marks in the 3D view and File Contents, inspector line, Piece Count columns | completed |
-| `limit_assemblies` | Phase 7: assemblies, minifigure parts and prints matched across LDraw and LEGO numbering | not started |
+| `limit_assemblies` | Phase 7: assemblies, minifigure parts and prints matched across LDraw and LEGO numbering | completed |
 | `limit_polish` | Phase 8 (optional): wanted-list export, BrickLink XML import, Rebrickable "My Parts", Brickset "on sale" | not started |
 
 Phases 0–2 land entirely in the packages. Phases 3–6 add AppKit views, and even there the policy (which rows, which colors, which text, which mark) stays in the packages. The iOS smoke build must keep passing after every phase.
@@ -238,7 +238,8 @@ A step or model row that holds marked parts shows how many, in the color of the 
 - Color 16 takes the color of the reference that brings the part in. A part in color 16 at the top of the main model has no real color, so its status is *no data*.
 - Hidden parts count, since hiding is only a view. A part in a removed group counts once, in the step that adds it.
 - Parts inside `PLI BEGIN IGN` and `PART BEGIN IGN` ranges do not count. LPub3D keeps them out of its bill of materials; they are alternates and helpers. A `PLI BEGIN SUB` range counts its substitute once instead of what it holds, as LPub3D lists it. A set lists it that way too: one hinge, not its two halves. `LDrawStepPartList` follows the same rules, so the range tracking moves into a helper that both use.
-- An LSynth hose or band, a peer-file part, a missing part, and a part in a direct color (`0x2RRGGBB`) are *no data*.
+- An LSynth hose or band, a peer-file part, a missing part, and a part in a direct color (`0x2RRGGBB`) are *no data*. A peer file is not walked into, since its parts can be neither marked nor changed from this file.
+- Models that nothing places are walked after the main model, first those no other model places, so a model placed only by one of them takes its color from there.
 - Copies are numbered in build order, so the copies past the count are the last ones built.
 
 ### Matching an LDraw part to a LEGO part
@@ -391,16 +392,18 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 
   | File | What |
   |------|------|
-  | `Rebrickable/*.csv.gz`, `Rebrickable/downloads.json` | the downloaded files, with their dates and ETags |
+  | `Rebrickable/*.csv.gz`, `Rebrickable/downloads.json` | the downloaded files, with their dates, their ETags and which ones the catalog was not built from yet. A changed file waits in a staging folder, and the files replace the old ones together once all have come |
   | `catalog.json` | availability: part → color → first year, last year, set count; and the date of the data |
   | `identity.json` | LEGO ↔ LDraw parts and colors, and the relations between parts |
   | `identity-overrides.json` | matches made by hand |
   | `sets/<number>.json` | one imported set, with both LEGO and LDraw ids, so a better map can match it again |
   | `inventories.json` | the user's inventories |
 
+  An `inventories.json` or `identity-overrides.json` that cannot be read is renamed to `<name>.unreadable.json` before anything is saved, so a save never writes over it.
+
   Every file has a `version`. A reader skips what it does not know.
 - `LDrawPartIdentity` reads the `Rebrickable <number>` keywords, the aliases and the moved parts from the part catalog, and is built again on `LDrawPartLibraryDidChangeNotification`.
-- `LDrawPartLimitTable` resolves an inventory into pools and counts once, and answers every lookup from dictionaries. With spares off, spare counts are left out. With *any color* on, colors fold into one.
+- `LDrawPartLimitTable` resolves an inventory into pools and counts once, and answers every lookup from dictionaries. With spares off, spare counts are left out, and a part held only as spares is not allowed. With *any color* on, colors fold into one.
 - Tests: mixing sets with counts; spares in and out; loose parts added; pools of mold variants and of prints; *Available now* by years and any year; the store round trip; a file of a newer version read without loss; the limit's dictionary round trip, with nil, junk and a removed inventory read as All Parts.
 
 **As built.** `Packages/LDrawInventory`, with 54 tests; every package test passes and the target builds for the iOS Simulator. What came out differently from the sketch:
@@ -422,12 +425,12 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - **Catalog.** Join inventory parts → inventories → sets for the year of each part and color. A set's minifigures and the sets inside it count too, through `inventory_minifigs` and `inventory_sets`, with their quantities multiplied. Use each set's latest inventory version; versions do not always start at 1. Keep the first year, the last year and the number of sets, for each part and color, and mark the parts found only in *Database Sets*.
 - **Identity.** This phase adds to Phase 0's keyword map the links kept from API set fetches and the relations from `part_relationships` (`P` print, `M` mold, `A` alternate, `B` sub-part, `T` pattern, `R` pair), in the order *Matching an LDraw part to a LEGO part* gives. Colors come from the shipped table (`Resources/rebrickable-colors.json`, made by a small script at release time from `lego/colors/`). A user's key refreshes the table with that same one call.
 - **Set import.** From the downloads, offline and keyless: the set's inventory, spares flagged, minifigure parts included. With a key, from the API instead, which is fresher and carries Rebrickable's own LDraw ids. Set search by number or name runs on the downloaded set list.
-- The client keeps to one call a second, backs off on 429, can be cancelled, and reports progress. The catalog is built on a background queue, and the host shows the progress.
+- The client keeps to one call a second, backs off on 429, and can be cancelled. It does not report progress; the host shows a spinner during a set import. The catalog is built on a background queue, and the host shows the download's progress. The host keeps one client while the key stays, since a client spaces only its own calls.
 - Tests: CSV quoting (commas and quotes in names); gzip; a header with an extra column; the year join; a set's latest inventory version; minifigure parts and sets inside sets, multiplied; spares; *Database Sets* kept apart; colors 9999 and -1; API JSON with paging; a 429 then success; a keyword match preferred over the same number; a clashing color id (326) mapped through the table, not by number.
 
 **As built.** `Packages/LDrawRebrickable`, with 28 tests on small hand-made files in Rebrickable's formats and a stub URL protocol; nothing in them reaches the network. Every package test passes and the target builds for the iOS Simulator. What came out differently, or is still open:
 
-- *The color table is made from names for now.* `Scripts/make_color_table.py --names colors.csv.gz LDConfig.ldr` links 198 of Rebrickable's colors by name, then by an RGB value only one LDraw color has; the rest are mostly special lines (HO, Duplo, Modulex, Vintage). Run `REBRICKABLE_API_KEY=… Scripts/make_color_table.py --api` once to replace it with Rebrickable's own links. A user's key can do the same at run time, and `colors-api.json` in the downloads folder then wins.
+- *The color table is made from names for now.* `Scripts/make_color_table.py --names colors.csv.gz LDConfig.ldr` links 198 of Rebrickable's colors by name, then by an RGB value only one LDraw color has; the rest are mostly special lines (HO, Duplo, Modulex, Vintage). Run `REBRICKABLE_API_KEY=… Scripts/make_color_table.py --api` once to replace it with Rebrickable's own links. A user's key does the same at run time: after a data update, or when the key is entered, `PartsLimitManager` fetches `lego/colors/` once into `colors-api.json` in the downloads folder, which then wins, and gives the links to the identity data already saved.
 - *One Rebrickable color can be several LDraw colors.* Black is LDraw's 0 and 256 (rubber black), so color links map an id to a list of codes. `LDrawPartIdentity` took that change.
 - *`LDrawInventoryJSON.h` is public now*, so both packages read JSON the same careful way.
 - *The set import reads the downloads, sets inside sets and minifigures included, each multiplied.* The API import does not fetch sets inside a set yet.
@@ -444,7 +447,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - `LDrawPartLimitCheck` puts the usage against an `LDrawPartLimitTable`, gives each copy a status, and each directive the worst status of its copies. It counts the problems in each container for File Contents.
 - `LDrawPart` gets `limitStatus`. `+applyReport:toFile:` sets it and returns the parts that changed, which the document then redraws with `noteNeedsDisplay`.
 - The IGN and SUB range tracking in `+[LDrawStepPartList collectStep:…]` (its `LDrawStepPartListRange` stack) moves into an internal helper both walks use. The step list's tests keep passing unchanged.
-- Tests: color 16 through two levels of submodels; a submodel placed three times; IGN left out; SUB counted as its substitute; the 11th copy marked and the first 10 not; a submodel in two colors; an unreferenced submodel checked but not counted; LSynth and missing parts as no data; spares on and off; a 5,000-part model checked well under 50 ms.
+- Tests: color 16 through two levels of submodels; a submodel placed three times; IGN left out, with any submodel placed only inside a range; SUB counted as its substitute; the 11th copy marked and the first 10 not; a submodel in two colors; an unreferenced submodel checked but not counted; LSynth and missing parts as no data; spares on and off; a 5,000-part model checked well under 50 ms.
 
 **As built.** 15 tests in `LDrawFeaturesTests`; every package test passes, both app targets build, and LDrawFeatures, which now depends on LDrawInventory, builds for the iOS Simulator. A 5,000-part model is checked and marked in 21 ms in a debug build. What came out differently, or is left:
 
@@ -534,7 +537,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - *The mark rides in the per-instance data, not in a deferred draw.* `InstanceInput` (Metal) and the instance record (OpenGL, now 28 floats) carry a `mark` of RGB and style, so marked parts keep hardware instancing with the rest, and the transparent and ghost passes carry it too. `LDrawDLDraw` takes the mark from the renderer's new mark stack (`-pushMark:`/`-popMark`); the innermost mark wins.
 - *Edges are found by their color.* A line has the normal (0, -1, 0), not none, so a vertex in the edge color (the complement meta color) takes the mark's color. Lines with a color of their own keep it.
 - *Stripes are 14 pixels apart on screen*, leaning one way for not available and not in color and the other way for too many. The shaders hold the same numbers in both languages.
-- *`LDrawPart` holds the mark settings* (`+setLimitMarkStyle:`, `+setLimitMarkColor:forStatus:`, `+setDimsAllowedParts:`), which `PartsLimitManager` sets from the defaults (`PARTS_LIMIT_MARKS_KEY`, `…_MARK_STYLE_KEY`, the two color keys, `…_DIMS_OTHER_PARTS_KEY`) and then redraws every model. *Dim other parts* dims every part without a mark, those with no data too, and only while a limit is on; it pushes the ghost alpha on parts from the library only, so a submodel never dims its own marked parts.
+- *`LDrawPart` holds the mark settings* (`+setLimitMarkStyle:`, `+setLimitMarkColor:forStatus:`, `+setDimsAllowedParts:`), which `PartsLimitManager` sets from the defaults (`PARTS_LIMIT_MARKS_KEY`, `…_MARK_STYLE_KEY`, the two color keys, `…_DIMS_OTHER_PARTS_KEY`), redrawing every model when they change. *Dim other parts* dims every checked part without a mark, those with no data too, and only while a limit is on; it pushes the ghost alpha on parts from the library only, so a submodel never dims its own marked parts. `-applyReport:toFile:` sets `isLimitChecked` on each part it visits, so the Part Browser, Piece Count and step parts list previews never dim.
 - *File Contents* badges come from `LDrawPartLimitPresentation` (symbol and color per status) through `IconTextCell`'s new `badgeImage`, `badgeText` and `badgeColor`; a step or model gets a count. Tooltips and the inspector's line come from `PartsLimitController`. They follow View → Parts Limit → Mark Limit Problems, as the 3D marks do.
 - *The inspector's line* goes on the second line of the part's description, in red, instead of a new field.
 - *Piece Count* gets Owned and Status columns, the problems first and Problems Only; a row takes the status of what it counts with. Use Nearest Allowed Color is in the popover only, for all the parts not in their color at once; Piece Count's per-row version and Export Missing Parts are left for Phase 8.
@@ -547,6 +550,19 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - Minifigure parts: torsos with arms and hands, hips with legs.
 - The Unmatched list and hand matches in the Inventories window.
 - Tests with real cases from a fixture library: hinge halves against a hinge, a minifigure from the Minifigure Generator against a set's minifigure.
+
+**As built.** 21 new tests (17 in `LDrawInventoryTests`, 4 in `LDrawFeaturesTests`); every package test passes, both app targets build without warnings, and LDrawInventory, LDrawFeatures and LDrawRebrickable build for the iOS Simulator. Checked in the Metal app on the Porsche test model with 10274-1 as the limit. What came out differently, or is left:
+
+- *LDraw shortcuts split assemblies on both sides; Rebrickable's sub-part relations are not used.* Its "B" rows carry no colors, and some list one-of assortments (80 printed tiles under `3068bc01`). The library's shortcuts give each piece its color: 5,193 of them, among them 809 torsos with arms and hands whose keywords name Rebrickable's torso assemblies. `LDrawShortcutMap` (LDrawInventory) reads `!LDRAW_ORG Shortcut` files through the host's reader, follows `~Moved to`, opens nested shortcuts, and gives color 16 the assembly's color.
+- *The host reads the library once, in the background.* `+libraryMapWithPartNames:` reads the first 4 KB of each part in the catalog, and a shortcut or moved part whole. `PartsLimitManager` runs it on a utility queue (3.4–4.6 s for 36,710 parts) once a limit, a set or an inventory exists, and again after each library load while one does, then hands the map to `LDrawPartLimitSession.shortcuts`, which builds the tables again. Until then nothing splits. A user who never limits parts never pays for the read.
+- *An inventory counts an assembly by its pieces.* The table replaces an item by its pieces when one of the LDraw parts linked to its number is a shortcut (`-[LDrawPartIdentity partNamesForRebrickablePartNumber:]`); when the library has a part of the item's own number, that part alone decides, so a plain brick is not split because a stickered shortcut links to it, and the check counts a placed shortcut as one copy of each piece (`-countedPiecesOfPartNamed:`). A set's hinge matches a model's halves and the other way round; a set's torso assembly matches the Minifigure Generator's torso, arms and hands, the hands in their own color. An assembly's status, colors and owned count (as many as its scarcest piece allows) come from its pieces, even when a print of one piece links to the assembly's number, so the Part Browser shows it, and Piece Count gives it the worst status of its pieces (`-[LDrawPartLimitReport statusForPartNamed:colorCode:]`). A set's rows list the pieces.
+- *Available now* allows the pieces of an assembly that came in a set, in its color, and an assembly whose pieces came. A placed shortcut is not split there, since nothing is counted.
+- *A piece Rebrickable does not have*, such as a sticker, pools by its LDraw name, so it meets the same piece on the other side. Any other part with no number still has no data.
+- *Renamed parts.* A part the library renamed takes the old name's Rebrickable number when Rebrickable has only that one and no keyword says otherwise: 147 parts in the library, `32532a` in the test model.
+- *A quoted `PLI BEGIN SUB` name* loses its quotes.
+- *Unmatched Parts* is a row under Matching in the Inventories window. It lists the open models' parts with no Rebrickable number (an assembly lists its pieces that have none), and when the limit is an inventory, its Rebrickable parts with no LDraw part (under *any print*, a print whose plain part the library has is matched). Typing in the Match column saves a hand match, an LDraw name to a Rebrickable number, in `identity-overrides.json`; an LDraw name the library lacks is refused. Hand Matches lists them, with Remove Match. The lists come from `LDrawUnmatchedParts` (LDrawFeatures).
+- *On the test model:* the two parts *not available* were hinge halves in an unplaced submodel; with the set's 11 hinges split, they now have no data only for their color 16. The model's 2429c01 hinges count as halves against the set's. The set's table grows from 567 to 574 rows and builds in 70–100 ms; Available now builds in 145–160 ms with shortcuts, against 110–120 ms without. No data went from 61 to 60: the halves added 2, and `32532a` took away 3. Left unmatched: 6 submodels used as parts (hoses and a bumper) and 3 Rebrickable prints with no LDraw part, which are for hand matches.
+- *Not done:* an assembly Rebrickable lists under a number that no LDraw shortcut links to stays one part, and a print with no keyword needs a hand match.
 
 ### Phase 8 — `limit_polish` (optional)
 
@@ -577,7 +593,7 @@ To confirm. The plan above takes the first answer of each, and each is cheap to 
 ## Risks
 
 - **Matching.** LDraw and LEGO number parts differently, mostly for prints, assemblies, minifigure parts and stickers. *No data* and the Unmatched list make each gap visible, hand matches close it, and Phase 7 removes the common ones.
-- **The data's terms and shape.** The download terms ask for a credit and at most one automated download a day; the plan does both. The API is overloaded and may stop taking new apps, so nothing depends on it. Rebrickable may change its files: columns are read by name, every request backs off, and Bricksmith keeps working on the data it has. Only the small color table ships in the app; each user's Bricksmith downloads the rest.
+- **The data's terms and shape.** The download terms ask for a credit and at most one automated download a day; the plan does both. The API is overloaded and may stop taking new apps, so nothing depends on it. Rebrickable may change its files: columns are read by name, API calls back off on 429, a failed download keeps the old files for the next update to try again, and Bricksmith keeps working on the data it has. Only the small color table ships in the app; each user's Bricksmith downloads the rest.
 - **Community data.** Rebrickable's inventories are made by people and have mistakes, and the LDraw keywords are added by hand. Hand matches and *Refresh* on a set are the way out.
 - **Size and time.** The inventory parts file has over a million rows. It is read as a stream on a background queue, the catalog is kept, and the download is asked for before it starts.
 - **"Available now" is a guess from release years.** The UI says what it means ("made in 2025–2026"), not "in stock".

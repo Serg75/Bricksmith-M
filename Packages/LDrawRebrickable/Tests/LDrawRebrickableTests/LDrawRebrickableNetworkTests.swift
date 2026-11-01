@@ -101,6 +101,59 @@ struct LDrawRebrickableNetworkTests {
         #expect(StubURLProtocol.requests.count == 1)
     }
 
+    @Test("A failed update keeps the old files, and a file that came before the error waits for the next one")
+    func failedUpdateKeepsOldFiles() async throws {
+        let themes = try RebrickableFixtures.data(ofDownload: "themes")
+        let sets = try RebrickableFixtures.data(ofDownload: "sets")
+        let folder = RebrickableFixtures.temporaryFolder()
+        StubURLProtocol.answer { request in
+            let isThemes = request.url!.lastPathComponent == "themes.csv.gz"
+            return .init(status: 200, headers: ["ETag": "\"v1\""], body: isThemes ? themes : sets)
+        }
+        _ = await update(downloads(in: folder), ["themes", "sets"])
+
+        StubURLProtocol.answer { request in
+            request.url!.lastPathComponent == "themes.csv.gz"
+                ? .init(status: 200, headers: ["ETag": "\"v2\""], body: sets)
+                : .init(status: 503)
+        }
+        let (changed, error) = await update(downloads(in: folder), ["themes", "sets"], force: true)
+        #expect(changed.isEmpty)
+        #expect(error != nil)
+        #expect(try Data(contentsOf: folder.appendingPathComponent("themes.csv.gz")) == themes)
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+        #expect(leftovers.allSatisfy { $0.hasPrefix(".incoming-") == false })
+
+        StubURLProtocol.answer { request in
+            request.value(forHTTPHeaderField: "If-None-Match") == "\"v1\""
+                ? .init(status: 200, headers: ["ETag": "\"v2\""], body: sets)
+                : .init(status: 304)
+        }
+        let (retried, retryError) = await update(downloads(in: folder), ["themes", "sets"], force: true)
+        #expect(retryError == nil)
+        #expect(Set(retried) == ["themes", "sets"])
+        #expect(try Data(contentsOf: folder.appendingPathComponent("themes.csv.gz")) == sets)
+    }
+
+    @Test("A stored file stays new until it is marked as used, across launches")
+    func newFiles() async throws {
+        let body = try RebrickableFixtures.data(ofDownload: "themes")
+        let folder = RebrickableFixtures.temporaryFolder()
+        StubURLProtocol.answer { _ in .init(status: 200, headers: ["ETag": "\"v1\""], body: body) }
+        let first = downloads(in: folder)
+        #expect(first.hasNewFiles(named: ["themes"]) == false)
+        _ = await update(first, ["themes"])
+        #expect(first.hasNewFiles(named: ["themes"]))
+
+        StubURLProtocol.answer { _ in .init(status: 304) }
+        let second = downloads(in: folder)
+        _ = await update(second, ["themes"], force: true)
+        #expect(second.hasNewFiles(named: ["themes"]))
+
+        second.markFilesAsUsed(named: ["themes"])
+        #expect(downloads(in: folder).hasNewFiles(named: ["themes"]) == false)
+    }
+
     // MARK: - API client
 
     @Test("A list is read across its pages, with the key in the header")
@@ -137,11 +190,11 @@ struct LDrawRebrickableNetworkTests {
 
     @Test("A 429 is retried after the wait the server names")
     func tooManyRequests() async throws {
-        var calls = 0
+        var times: [Date] = []
         StubURLProtocol.answer { _ in
-            calls += 1
-            return calls == 1 ? .init(status: 429, headers: ["Retry-After": "0"])
-                              : .init(status: 200, body: self.json(["set_num": "42115-1"]))
+            times.append(Date())
+            return times.count == 1 ? .init(status: 429, headers: ["Retry-After": "1"])
+                                    : .init(status: 200, body: self.json(["set_num": "42115-1"]))
         }
         let object: [AnyHashable: Any]? = await withCheckedContinuation { continuation in
             client().fetchObject(atPath: "lego/sets/42115-1/", parameters: nil) { object, _ in
@@ -150,6 +203,19 @@ struct LDrawRebrickableNetworkTests {
         }
         #expect(object?["set_num"] as? String == "42115-1")
         #expect(StubURLProtocol.requests.count == 2)
+        #expect(times.count == 2 && times[1].timeIntervalSince(times[0]) >= 0.9)
+    }
+
+    @Test("A 429 that asks for too long a wait gives up at once")
+    func tooLongAWait() async throws {
+        StubURLProtocol.answer { _ in .init(status: 429, headers: ["Retry-After": "3600"]) }
+        let error: Error? = await withCheckedContinuation { continuation in
+            client().fetchObject(atPath: "lego/sets/42115-1/", parameters: nil) { _, error in
+                continuation.resume(returning: error)
+            }
+        }
+        #expect((error as NSError?)?.code == LDrawRebrickableError.tooManyRequests.rawValue)
+        #expect(StubURLProtocol.requests.count == 1)
     }
 
     @Test("A refused key and an unknown item come back as their own errors", arguments: [

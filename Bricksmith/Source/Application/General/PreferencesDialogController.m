@@ -428,6 +428,11 @@ PreferencesDialogController *preferencesDialog = nil;
 												 name:PartsLimitMarksDidChangeNotification
 											   object:nil];
 
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsLimitDidChange:)
+												 name:PartsDataUpdateDidEndNotification
+											   object:nil];
+
 	return self;
 
 }//end init
@@ -885,6 +890,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[rebrickableKeyField setPlaceholderString:NSLocalizedString(@"None", nil)];
 	[rebrickableKeyField setTarget:self];
 	[rebrickableKeyField setAction:@selector(rebrickableKeyChanged:)];
+	[[rebrickableKeyField cell] setSendsActionOnEndEditing:YES];
 	[[rebrickableKeyField widthAnchor] constraintEqualToConstant:220].active = YES;
 
 	partsLimitBrowserPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Hide them", nil),

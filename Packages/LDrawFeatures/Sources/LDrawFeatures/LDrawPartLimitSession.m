@@ -100,6 +100,19 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 }
 
 
+//========== setShortcuts: =====================================================
+//==============================================================================
+- (void) setShortcuts:(LDrawShortcutMap *)shortcuts
+{
+	if (shortcuts == self->_shortcuts)
+		return;
+
+	self->_shortcuts = shortcuts;
+	[self rebuildTable];
+	[self postChange];
+}
+
+
 //========== tableForInventoryIdentifier: ======================================
 //==============================================================================
 - (LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier
@@ -115,7 +128,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 	if (limit.kind != LDrawPartLimitKindInventory)
 		return nil;
 
-	table = [self.store tableForLimit:limit identity:self.identity year:self.currentYear];
+	table = [self.store tableForLimit:limit identity:self.identity shortcuts:self.shortcuts year:self.currentYear];
 	if (self->inventoryTables == nil)
 		self->inventoryTables = [NSMutableDictionary dictionary];
 	self->inventoryTables[identifier] = table;
@@ -175,6 +188,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 	self.effectiveLimit	= [self.store resolvedLimit:self.limit];
 	self.table			= [self.store tableForLimit:self.effectiveLimit
 										   identity:self.identity
+										  shortcuts:self.shortcuts
 											   year:self.currentYear];
 }
 

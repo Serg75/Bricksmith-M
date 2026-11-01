@@ -619,10 +619,16 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 		return nil;
 	}
 
+	// A name with spaces comes in quotes, which are dropped.
 	LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
-	NSString			*name		= [substitute.partName lowercaseString];
+	NSCharacterSet		*quotes		= [NSCharacterSet characterSetWithCharactersInString:@"\""];
+	NSString			*name		= [[substitute.partName lowercaseString] stringByTrimmingCharactersInSet:quotes];
 	NSString			*extension	= [name pathExtension];
 	LDrawColor			*color		= fallbackColor;
+
+	if (name.length == 0) {
+		return nil;
+	}
 
 	// Parsed like a part line's color, so an unknown code still gets one.
 	if (substitute.partColorCode != LDrawColorBogus) {

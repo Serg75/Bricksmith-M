@@ -15,22 +15,28 @@
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+#import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
+#import <LDrawFeatures/LDrawUnmatchedParts.h>
 #import <LDrawInventory/LDrawCombinedInventory.h>
 #import <LDrawInventory/LDrawInventoryItem.h>
 #import <LDrawInventory/LDrawInventoryPartsFile.h>
 #import <LDrawInventory/LDrawInventoryStore.h>
+#import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawSetInventory.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "ImportSetController.h"
+#import "LDrawDocument.h"
+#import "PartsLimitController.h"
 #import "PartsLimitManager.h"
 
 // Kinds of rows in the list.
 static NSString * const RowKindGroup		= @"group";
 static NSString * const RowKindSet			= @"set";
 static NSString * const RowKindInventory	= @"inventory";
+static NSString * const RowKindMatching		= @"matching";
 
 static const CGFloat SidebarWidth	= 240;
 static const CGFloat DetailInset	= 20;
@@ -39,6 +45,7 @@ static const CGFloat DetailInset	= 20;
 @implementation InventoriesWindowController
 {
 	NSTableView						*sourceList;
+	NSButton						*removeButton;		// for a set or an inventory only
 	NSView							*detailView;
 	NSArray<NSDictionary *>			*rows;				// kind, identifier, title
 	NSString						*selectedKind;
@@ -47,6 +54,13 @@ static const CGFloat DetailInset	= 20;
 	// The inventory shown
 	NSTableView						*setCountsTable;
 	NSArray<NSString *>				*setCountNumbers;	// its sets, in number order
+
+	// Matching
+	NSTableView						*unmatchedTable;
+	NSTableView						*matchesTable;
+	NSArray<LDrawUnmatchedPart *>	*unmatchedParts;	// the models' first, then the limit's inventory's
+	NSString						*inventoryName;		// the limit's inventory, or nil
+	NSArray<NSString *>				*matchNames;		// hand-matched LDraw names, in order
 }
 
 
@@ -112,6 +126,14 @@ static const CGFloat DetailInset	= 20;
 												 selector:@selector(storeDidChange:)
 													 name:LDrawInventoryStoreDidChangeNotification
 												   object:[[PartsLimitManager sharedManager] store]];
+		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(modelsDidChange:)
+													 name:PartsLimitDidCheckNotification
+												   object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(modelsDidChange:)
+													 name:LDrawPartLimitDidChangeNotification
+												   object:nil];
 		[self reloadRows];
 	}
 	return self;
@@ -134,6 +156,7 @@ static const CGFloat DetailInset	= 20;
 													action:@selector(removeSelection:)];
 	NSStackView		*bar		= nil;
 
+	removeButton = remove;
 	sourceList = [[NSTableView alloc] init];
 	[sourceList setStyle:NSTableViewStyleSourceList];
 	[sourceList setHeaderView:nil];
@@ -221,6 +244,11 @@ static const CGFloat DetailInset	= 20;
 							 @"title": inventory.name}];
 	}
 
+	[newRows addObject:@{@"kind": RowKindGroup, @"title": NSLocalizedString(@"Matching", nil)}];
+	[newRows addObject:@{@"kind": RowKindMatching,
+						 @"identifier": RowKindMatching,
+						 @"title": NSLocalizedString(@"Unmatched Parts", nil)}];
+
 	rows = newRows;
 	[sourceList reloadData];
 
@@ -235,8 +263,10 @@ static const CGFloat DetailInset	= 20;
 		[sourceList selectRowIndexes:[NSIndexSet indexSetWithIndex:selected] byExtendingSelection:NO];
 	else
 	{
+		// The table would keep the old row's index, now another item.
 		selectedKind		= nil;
 		selectedIdentifier	= nil;
+		[sourceList deselectAll:nil];
 	}
 	[self showDetail];
 
@@ -260,6 +290,10 @@ static const CGFloat DetailInset	= 20;
 {
 	if(tableView == setCountsTable)
 		return [setCountNumbers count];
+	if(tableView == unmatchedTable)
+		return [unmatchedParts count];
+	if(tableView == matchesTable)
+		return [matchNames count];
 	return [rows count];
 }
 
@@ -289,6 +323,10 @@ static const CGFloat DetailInset	= 20;
 {
 	if(tableView == setCountsTable)
 		return [self setCountsViewForColumn:column row:row];
+	if(tableView == unmatchedTable)
+		return [self unmatchedViewForColumn:column row:row];
+	if(tableView == matchesTable)
+		return [self matchesViewForColumn:column row:row];
 
 	NSDictionary	*entry	= rows[row];
 	NSTableCellView	*cell	= [tableView makeViewWithIdentifier:@"Cell" owner:self];
@@ -322,6 +360,8 @@ static const CGFloat DetailInset	= 20;
 		symbol = @"shippingbox";
 	else if([entry[@"kind"] isEqualToString:RowKindInventory])
 		symbol = @"tray.2";
+	else if([entry[@"kind"] isEqualToString:RowKindMatching])
+		symbol = @"link";
 
 	[[cell textField] setStringValue:entry[@"title"]];
 	[[cell imageView] setImage:(symbol != nil) ? [NSImage imageWithSystemSymbolName:symbol
@@ -366,11 +406,18 @@ static const CGFloat DetailInset	= 20;
 
 	setCountsTable	= nil;
 	setCountNumbers	= nil;
+	unmatchedTable	= nil;
+	matchesTable	= nil;
+
+	[removeButton setEnabled:(		[selectedKind isEqualToString:RowKindSet]
+							  ||	[selectedKind isEqualToString:RowKindInventory] )];
 
 	if([selectedKind isEqualToString:RowKindSet])
 		content = [self viewForSet:[store setInventoryForNumber:selectedIdentifier]];
 	else if([selectedKind isEqualToString:RowKindInventory])
 		content = [self viewForInventory:[store combinedInventoryWithIdentifier:selectedIdentifier]];
+	else if([selectedKind isEqualToString:RowKindMatching])
+		content = [self viewForMatching];
 
 	if(content == nil)
 	{
@@ -579,6 +626,251 @@ static const CGFloat DetailInset	= 20;
 
 
 #pragma mark -
+#pragma mark MATCHING
+#pragma mark -
+
+//========== viewForMatching ===================================================
+//
+// Purpose:		The parts that match nothing, with a field to match each by
+//				hand, and the hand matches.
+//
+//==============================================================================
+- (NSView *) viewForMatching
+{
+	NSTextField	*title		= [NSTextField labelWithString:NSLocalizedString(@"Unmatched Parts", nil)];
+	NSTextField	*about		= nil;
+	NSString	*text		= NSLocalizedString(@"Parts with no match have no data under the parts limit. Type what "
+											@"a part is: the Rebrickable number of an LDraw part, or the LDraw "
+											@"part of a Rebrickable number.", nil);
+	NSArray		*unmatched	= @[@[@"part", NSLocalizedString(@"Part", nil), @100],
+								@[@"description", NSLocalizedString(@"Description", nil), @200],
+								@[@"count", NSLocalizedString(@"Count", nil), @50],
+								@[@"match", NSLocalizedString(@"Match", nil), @120]];
+	NSArray		*matches	= @[@[@"part", NSLocalizedString(@"LDraw Part", nil), @110],
+								@[@"description", NSLocalizedString(@"Description", nil), @260],
+								@[@"number", NSLocalizedString(@"Rebrickable Part", nil), @120]];
+	NSButton	*remove		= [NSButton buttonWithTitle:NSLocalizedString(@"Remove Match", nil)
+												 target:self
+												 action:@selector(removeMatch:)];
+
+	[self loadUnmatchedParts];
+
+	[title setFont:[NSFont boldSystemFontOfSize:[NSFont systemFontSize] + 2]];
+	about = [NSTextField wrappingLabelWithString:text];
+	[about setTextColor:[NSColor secondaryLabelColor]];
+	[[about widthAnchor] constraintLessThanOrEqualToConstant:520].active = YES;
+
+	unmatchedTable	= [self tableWithColumns:unmatched];
+	matchesTable	= [self tableWithColumns:matches];
+	[unmatchedTable setColumnAutoresizingStyle:NSTableViewLastColumnOnlyAutoresizingStyle];
+
+	return [self stackWithViews:@[title, about,
+								  [self scrollViewForTable:unmatchedTable height:170],
+								  [self headingWithString:NSLocalizedString(@"Hand Matches", nil)],
+								  [self scrollViewForTable:matchesTable height:90],
+								  remove]];
+
+}//end viewForMatching
+
+
+//========== loadUnmatchedParts ================================================
+//
+// Purpose:		Finds the parts the open models place that match no LEGO part,
+//				and the LEGO parts of the limit's inventory with no LDraw part.
+//
+//==============================================================================
+- (void) loadUnmatchedParts
+{
+	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
+	LDrawPartLimitSession	*session	= [manager session];
+	LDrawInventoryStore		*store		= [manager store];
+	LDrawPartLimit			*limit		= [session effectiveLimit];
+	LDrawPartLibrary		*library	= [LDrawPartLibrary sharedPartLibrary];
+	NSMutableArray			*files		= [NSMutableArray array];
+	NSArray					*parts		= nil;
+
+	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
+	{
+		if([document isKindOfClass:[LDrawDocument class]])
+			[files addObject:[(LDrawDocument *)document documentContents]];
+	}
+	parts = [LDrawUnmatchedParts partsInFiles:files identity:[session identity] shortcuts:[session shortcuts]];
+
+	inventoryName = nil;
+	if(limit.kind == LDrawPartLimitKindInventory)
+	{
+		NSString	*identifier	= limit.inventoryIdentifier;
+		NSArray		*items		= [store itemsForInventoryIdentifier:identifier] ?: @[];
+
+		inventoryName = [store setInventoryForNumber:identifier] ? identifier
+						: [store combinedInventoryWithIdentifier:identifier].name;
+		parts = [parts arrayByAddingObjectsFromArray:
+				 [LDrawUnmatchedParts partsInItems:items
+											 limit:limit
+										  identity:[session identity]
+									libraryHasPart:^BOOL(NSString *partName) {
+					return [library categoryForPartName:partName] != nil;
+				}]];
+	}
+	unmatchedParts	= parts;
+	matchNames		= [[[store identityOverrides] allKeys]
+					   sortedArrayUsingSelector:@selector(localizedStandardCompare:)];
+
+}//end loadUnmatchedParts
+
+
+//========== unmatchedViewForColumn:row: =======================================
+//
+// Purpose:		A cell of the unmatched parts. The match can be typed.
+//
+//==============================================================================
+- (NSView *) unmatchedViewForColumn:(NSTableColumn *)column row:(NSInteger)row
+{
+	LDrawUnmatchedPart	*part		= unmatchedParts[row];
+	NSString			*identifier	= [column identifier];
+	BOOL				 isModel	= (part.partName != nil);
+	NSTextField			*cell		= nil;
+
+	if([identifier isEqualToString:@"match"])
+	{
+		cell = [NSTextField textFieldWithString:@""];
+		[cell setPlaceholderString:isModel ? NSLocalizedString(@"Rebrickable no.", nil)
+										   : NSLocalizedString(@"LDraw part", nil)];
+		[cell setBordered:NO];
+		[cell setDrawsBackground:NO];
+		[cell setTag:row];
+		[cell setTarget:self];
+		[cell setAction:@selector(matchTyped:)];
+		return cell;
+	}
+
+	if([identifier isEqualToString:@"part"])
+		cell = [NSTextField labelWithString:isModel ? [part.partName stringByDeletingPathExtension]
+													: part.rebrickablePartNumber];
+	else if([identifier isEqualToString:@"description"])
+		cell = [NSTextField labelWithString:[self descriptionOfUnmatchedPart:part]];
+	else
+	{
+		cell = [NSTextField labelWithString:[NSString stringWithFormat:@"%lu", (unsigned long)part.count]];
+		[cell setAlignment:NSTextAlignmentRight];
+	}
+	[cell setLineBreakMode:NSLineBreakByTruncatingTail];
+	return cell;
+
+}//end unmatchedViewForColumn:row:
+
+
+//========== descriptionOfUnmatchedPart: =======================================
+//
+// Purpose:		A model's part by its library description; an inventory's part
+//				by where it is.
+//
+//==============================================================================
+- (NSString *) descriptionOfUnmatchedPart:(LDrawUnmatchedPart *)part
+{
+	LDrawPartLibrary *library = [LDrawPartLibrary sharedPartLibrary];
+
+	if(part.partName == nil)
+		return [NSString stringWithFormat:NSLocalizedString(@"In %@, with no LDraw part", nil), inventoryName ?: @""];
+	if([library categoryForPartName:part.partName] == nil)
+		return NSLocalizedString(@"Not in the part library", nil);
+	return [library descriptionForPartName:part.partName];
+
+}//end descriptionOfUnmatchedPart:
+
+
+//========== matchesViewForColumn:row: =========================================
+//==============================================================================
+- (NSView *) matchesViewForColumn:(NSTableColumn *)column row:(NSInteger)row
+{
+	NSString	*name		= [matchNames[row] stringByAppendingPathExtension:@"dat"];
+	NSString	*number		= [[[PartsLimitManager sharedManager] store] identityOverrides][matchNames[row]];
+	NSString	*identifier	= [column identifier];
+	NSTextField	*cell		= nil;
+
+	if([identifier isEqualToString:@"part"])
+		cell = [NSTextField labelWithString:matchNames[row]];
+	else if([identifier isEqualToString:@"description"])
+		cell = [NSTextField labelWithString:[[LDrawPartLibrary sharedPartLibrary] descriptionForPartName:name]];
+	else
+		cell = [NSTextField labelWithString:number ?: @""];
+	[cell setLineBreakMode:NSLineBreakByTruncatingTail];
+	return cell;
+
+}//end matchesViewForColumn:row:
+
+
+//========== matchTyped: =======================================================
+//
+// Purpose:		Saves what the user typed as a hand match: a Rebrickable number
+//				for an LDraw part, or an LDraw part for a Rebrickable number.
+//
+//==============================================================================
+- (IBAction) matchTyped:(id)sender
+{
+	LDrawInventoryStore	*store		= [[PartsLimitManager sharedManager] store];
+	NSInteger			 row		= [sender tag];
+	NSString			*typed		= [[sender stringValue] stringByTrimmingCharactersInSet:
+									   [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+	LDrawUnmatchedPart	*part		= (row >= 0 && row < (NSInteger)[unmatchedParts count]) ? unmatchedParts[row] : nil;
+	NSDictionary		*overrides	= nil;
+	NSError				*error		= nil;
+
+	if(part == nil || [typed length] == 0)
+		return;
+
+	if(part.partName != nil)
+		overrides = [LDrawUnmatchedParts overrides:[store identityOverrides]
+							   byMatchingPartNamed:part.partName
+									  toPartNumber:typed];
+	else
+	{
+		NSString *name = [[typed lowercaseString] stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+
+		if([[name pathExtension] length] == 0)
+			name = [name stringByAppendingPathExtension:@"dat"];
+		if([[LDrawPartLibrary sharedPartLibrary] categoryForPartName:name] == nil)
+		{
+			NSAlert		*alert		= [[NSAlert alloc] init];
+			NSString	*message	= NSLocalizedString(@"The part library has no part “%@”.", nil);
+
+			[alert setMessageText:[NSString stringWithFormat:message, typed]];
+			[alert beginSheetModalForWindow:[self window] completionHandler:nil];
+			return;
+		}
+		overrides = [LDrawUnmatchedParts overrides:[store identityOverrides]
+							   byMatchingPartNamed:name
+									  toPartNumber:part.rebrickablePartNumber];
+	}
+
+	[store saveIdentityOverrides:overrides error:&error];
+	[self showError:error];
+
+}//end matchTyped:
+
+
+//========== removeMatch: ======================================================
+//==============================================================================
+- (IBAction) removeMatch:(id)sender
+{
+	LDrawInventoryStore	*store		= [[PartsLimitManager sharedManager] store];
+	NSInteger			 row		= [matchesTable selectedRow];
+	NSDictionary		*overrides	= nil;
+	NSError				*error		= nil;
+
+	if(row < 0 || row >= (NSInteger)[matchNames count])
+		return;
+
+	overrides = [LDrawUnmatchedParts overrides:[store identityOverrides]
+						   byMatchingPartNamed:matchNames[row]
+								  toPartNumber:nil];
+	[store saveIdentityOverrides:overrides error:&error];
+	[self showError:error];
+
+}//end removeMatch:
+
+
+#pragma mark -
 #pragma mark ACTIONS
 #pragma mark -
 
@@ -621,6 +913,8 @@ static const CGFloat DetailInset	= 20;
 	NSString			*identifier	= selectedIdentifier;
 
 	if(row < 0 || identifier == nil)
+		return;
+	if(isSet == NO && [selectedKind isEqualToString:RowKindInventory] == NO)
 		return;
 
 	[alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"Remove “%@”?", nil), rows[row][@"title"]]];
@@ -861,6 +1155,47 @@ static const CGFloat DetailInset	= 20;
 }//end gridWithRows:
 
 
+//========== tableWithColumns: =================================================
+//
+// Purpose:		A table with these columns, each an identifier, a title and a
+//				width.
+//
+//==============================================================================
+- (NSTableView *) tableWithColumns:(NSArray<NSArray *> *)columns
+{
+	NSTableView *table = [[NSTableView alloc] init];
+
+	for(NSArray *spec in columns)
+	{
+		NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:spec[0]];
+		[[column headerCell] setStringValue:spec[1]];
+		[column setWidth:[spec[2] doubleValue]];
+		[table addTableColumn:column];
+	}
+	[table setUsesAlternatingRowBackgroundColors:YES];
+	[table setDataSource:self];
+	[table setDelegate:self];
+	return table;
+
+}//end tableWithColumns:
+
+
+//========== scrollViewForTable:height: ========================================
+//==============================================================================
+- (NSScrollView *) scrollViewForTable:(NSTableView *)table height:(CGFloat)height
+{
+	NSScrollView *scrollView = [[NSScrollView alloc] init];
+
+	[scrollView setDocumentView:table];
+	[scrollView setHasVerticalScroller:YES];
+	[scrollView setBorderType:NSBezelBorder];
+	[[scrollView heightAnchor] constraintEqualToConstant:height].active = YES;
+	[[scrollView widthAnchor] constraintGreaterThanOrEqualToConstant:400].active = YES;
+	return scrollView;
+
+}//end scrollViewForTable:height:
+
+
 //========== headingWithString: ================================================
 //==============================================================================
 - (NSTextField *) headingWithString:(NSString *)string
@@ -899,6 +1234,35 @@ static const CGFloat DetailInset	= 20;
 {
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reloadRows) object:nil];
 	[self performSelector:@selector(reloadRows) withObject:nil afterDelay:0];
+}
+
+
+//========== modelsDidChange: ==================================================
+//
+// Purpose:		A model was checked again, or the limit changed. The unmatched
+//				parts are found again a moment later, once edits settle.
+//
+//==============================================================================
+- (void) modelsDidChange:(NSNotification *)notification
+{
+	if(unmatchedTable == nil || [[self window] isVisible] == NO)
+		return;
+
+	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reloadUnmatchedParts) object:nil];
+	[self performSelector:@selector(reloadUnmatchedParts) withObject:nil afterDelay:0.5];
+}
+
+
+//========== reloadUnmatchedParts ==============================================
+//==============================================================================
+- (void) reloadUnmatchedParts
+{
+	if(unmatchedTable == nil)
+		return;
+
+	[self loadUnmatchedParts];
+	[unmatchedTable reloadData];
+	[matchesTable reloadData];
 }
 
 @end

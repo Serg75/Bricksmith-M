@@ -77,7 +77,7 @@
 {
 	NSMutableArray<LDrawPartUsageCopy *>	*collected;
 	NSHashTable<LDrawModel *>				*walkPath;		// models being walked, against a loop
-	NSHashTable<LDrawModel *>				*walked;		// models walked at least once
+	NSHashTable<LDrawModel *>				*walked;		// models walked or skipped at least once
 	LDrawPartLibrary						*library;		// nil in a host with no catalog
 }
 
@@ -102,6 +102,15 @@
 	if (first != nil)
 		[usage walkModel:first inheritingColor:nil counted:YES];
 
+	// Models nothing places, first those no other model places, so a model
+	// placed only by one of them takes its color from there.
+	NSHashTable<LDrawModel *> *placed = [usage modelsPlacedInFile:file];
+
+	for (LDrawModel *model in [file submodels])
+	{
+		if ([usage->walked containsObject:model] == NO && [placed containsObject:model] == NO)
+			[usage walkModel:model inheritingColor:nil counted:NO];
+	}
 	for (LDrawModel *model in [file submodels])
 	{
 		if ([usage->walked containsObject:model] == NO)
@@ -112,6 +121,35 @@
 	return usage;
 
 }//end usageOfFile:
+
+
+//========== modelsPlacedInFile: ===============================================
+///
+/// @abstract	The file's models that another of its models places.
+///
+//==============================================================================
+- (NSHashTable<LDrawModel *> *) modelsPlacedInFile:(LDrawFile *)file
+{
+	NSHashTable<LDrawModel *> *placed = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+
+	for (LDrawModel *model in [file submodels])
+	{
+		for (LDrawStep *step in [model steps])
+		{
+			for (LDrawDirective *directive in [LDrawStepPartList flattenedDirectives:[step subdirectives]])
+			{
+				LDrawModel *submodel = nil;
+
+				if ([directive isKindOfClass:[LDrawPart class]])
+					submodel = [(LDrawPart *)directive referencedMPDSubmodel];
+				if (submodel != nil && submodel != model)
+					[placed addObject:submodel];
+			}
+		}
+	}
+	return placed;
+
+}//end modelsPlacedInFile:
 
 
 //========== walkModel:inheritingColor:counted: ================================
@@ -161,7 +199,11 @@
 		}
 
 		if (ranges.isInsideRange)
+		{
+			if ([directive isKindOfClass:[LDrawPart class]])
+				[self skipModelPlacedBy:(LDrawPart *)directive];
 			continue;
+		}
 
 		if ([directive isKindOfClass:[LDrawLSynth class]])
 		{
@@ -191,7 +233,8 @@
 
 //========== walkPart:inheritingColor:counted: =================================
 ///
-/// @abstract	A part is a copy; a part that places an assembly is walked into.
+/// @abstract	A part is a copy; a part that places a model of this file is
+/// 			walked into.
 ///
 //==============================================================================
 - (void) walkPart:(LDrawPart *)part inheritingColor:(LDrawColor *)inheritedColor counted:(BOOL)counted
@@ -202,6 +245,16 @@
 
 	if (submodel != nil && [LDrawStepPartList isPartLikeModel:submodel] == NO)
 	{
+		// A peer file's parts cannot be marked or changed from this file.
+		if (submodel != [part referencedMPDSubmodel])
+		{
+			[self addCopyNamed:name ?: @""
+						 color:(color != nil) ? [color colorCode] : LDrawCurrentColor
+						  kind:LDrawPartUsageKindPeerFile
+						 parts:@[part]
+					   counted:counted];
+			return;
+		}
 		[self walkModel:submodel inheritingColor:color counted:counted];
 		return;
 	}
@@ -221,16 +274,49 @@
 }//end walkPart:inheritingColor:counted:
 
 
+//========== skipModelPlacedBy: ================================================
+///
+/// @abstract	A model placed inside an IGN or SUB range, and the models it
+/// 			places, are not walked. Noting them as walked keeps the pass
+/// 			over unplaced models from walking them either.
+///
+//==============================================================================
+- (void) skipModelPlacedBy:(LDrawPart *)part
+{
+	LDrawModel *submodel = [LDrawStepPartList submodelForPart:part library:self->library];
+
+	if (	submodel == nil
+		||	[LDrawStepPartList isPartLikeModel:submodel]
+		||	[self->walked containsObject:submodel] )
+	{
+		return;
+	}
+
+	[self->walked addObject:submodel];
+	for (LDrawStep *step in [submodel steps])
+	{
+		for (LDrawDirective *directive in [LDrawStepPartList flattenedDirectives:[step subdirectives]])
+		{
+			if ([directive isKindOfClass:[LDrawPart class]])
+				[self skipModelPlacedBy:(LDrawPart *)directive];
+		}
+	}
+
+}//end skipModelPlacedBy:
+
+
 //========== addSubstituteOfRange:counted: =====================================
 ///
 /// @abstract	What a SUB range lists, standing for the parts inside it. An IGN
 /// 			range, and a SUB inside a range that lists nothing, add nothing.
+/// 			A name with spaces comes in quotes, which are dropped.
 ///
 //==============================================================================
 - (void) addSubstituteOfRange:(LDrawLPubRange *)range counted:(BOOL)counted
 {
 	LPubPliSubstitute	*substitute	= range.substitute;
-	NSString			*name		= [substitute.partName lowercaseString];
+	NSCharacterSet		*quotes		= [NSCharacterSet characterSetWithCharactersInString:@"\""];
+	NSString			*name		= [[substitute.partName lowercaseString] stringByTrimmingCharactersInSet:quotes];
 	NSString			*extension	= [name pathExtension];
 	LDrawColorT			 colorCode	= (LDrawColorT)substitute.partColorCode;
 

@@ -25,7 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 ///             An LDraw part finds its Rebrickable number, in this order: a
 ///             match the user made by hand; the "Rebrickable <number>" keyword
 ///             the LDraw library writes when the numbers differ; Rebrickable's
-///             own LDraw links; and last the same number.
+///             own LDraw links; the old number of a part the library renamed,
+///             while Rebrickable has only that; and last the same number.
 ///
 ///             Colors are matched only through links. Rebrickable's color ids
 ///             are not LDraw codes, though many agree.
@@ -37,10 +38,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// color matches.
 + (instancetype) emptyIdentity NS_SWIFT_NAME(empty());
 
-/// Merges what is known about parts, weakest first: the same number,
-/// Rebrickable's links from `rebrickableData`, the library's keywords and
-/// moved parts from `catalogRecords`, then `overrides`. Every argument may
-/// be nil.
+/// Merges what is known about parts, weakest first: the same number, the old
+/// numbers of renamed parts, Rebrickable's links from `rebrickableData`, the
+/// library's keywords from `catalogRecords`, then `overrides`. Every argument
+/// may be nil.
 ///
 /// `catalogRecords` are the part library's records, with
 /// `PART_NUMBER_KEY`, `PART_NAME_KEY` and `PART_KEYWORDS_KEY`.
@@ -93,9 +94,16 @@ NS_ASSUME_NONNULL_BEGIN
 /// Rebrickable does not have the part, as far as is known.
 - (nullable NSString *) rebrickablePartNumberForPartName:(NSString *)partName;
 
-/// The LDraw part for a Rebrickable number, e.g. "3001.dat": a linked one, or
-/// else the same number. The library may not have it; the host checks.
+/// The LDraw part for a Rebrickable number, e.g. "3001.dat": the library's
+/// part of the same number when it has one that has not moved and links
+/// nowhere else, else a linked one, else the same number. The library may
+/// not have it; the host checks.
 - (NSString *) partNameForRebrickablePartNumber:(NSString *)partNumber;
+
+/// Every LDraw part that may be a Rebrickable part: the one
+/// `partNameForRebrickablePartNumber:` gives first, then the linked ones and
+/// the same number unless that LDraw part links elsewhere.
+- (NSArray<NSString *> *) partNamesForRebrickablePartNumber:(NSString *)partNumber;
 
 /// Every Rebrickable color an LDraw color can be, lowest id first. Several
 /// Rebrickable colors can share one LDraw color. Empty when none links.

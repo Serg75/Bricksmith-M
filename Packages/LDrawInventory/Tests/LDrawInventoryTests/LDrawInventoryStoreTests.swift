@@ -154,6 +154,39 @@ final class LDrawInventoryStoreTests {
         #expect(store().combinedInventories().map(\.name) == ["Shelf"])
     }
 
+    @Test("An unreadable inventories file is moved aside before a save, not written over")
+    func unreadableInventories() throws {
+        let damaged = Data("{\"version\": 1, \"inventories\": [ ,]}".utf8)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try damaged.write(to: folder.appendingPathComponent("inventories.json"))
+
+        let store = store()
+        #expect(store.combinedInventories().isEmpty)
+        try store.saveCombinedInventory(LDrawCombinedInventory(name: "Shelf"))
+
+        let kept = try Data(contentsOf: folder.appendingPathComponent("inventories.unreadable.json"))
+        #expect(kept == damaged)
+        #expect(self.store().combinedInventories().map(\.name) == ["Shelf"])
+    }
+
+    @Test("An unreadable hand matches file is moved aside, and a second one gets its own name")
+    func unreadableOverrides() throws {
+        let url = folder.appendingPathComponent("identity-overrides.json")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("not json".utf8).write(to: url)
+        try store().saveIdentityOverrides(["x.dat": "1234"])
+        try Data("[]".utf8).write(to: url)
+
+        let store = store()
+        #expect(store.identityOverrides().isEmpty)
+        try store.saveIdentityOverrides(["y.dat": "5678"])
+
+        for name in ["identity-overrides.unreadable.json", "identity-overrides.unreadable 2.json"] {
+            #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent(name).path))
+        }
+        #expect(store.identityOverrides() == ["y.dat": "5678"])
+    }
+
     @Test("Saving posts a change")
     func notification() throws {
         let store = store()

@@ -29,7 +29,11 @@ typedef NS_ENUM(NSInteger, LDrawPartUsageKind)
 	LDrawPartUsageKindSynthesized	= 2,
 
 	/// A reference the library does not have.
-	LDrawPartUsageKindMissing		= 3
+	LDrawPartUsageKindMissing		= 3,
+
+	/// A model from another file next to this one. Its parts belong to that
+	/// file, so they are not walked here.
+	LDrawPartUsageKindPeerFile		= 4
 };
 
 

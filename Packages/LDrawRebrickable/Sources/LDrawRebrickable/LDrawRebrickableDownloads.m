@@ -21,6 +21,8 @@ static NSString * const RecordsFilesKey		= @"files";
 static NSString * const RecordETagKey		= @"etag";
 static NSString * const RecordModifiedKey	= @"lastModified";
 static NSString * const RecordCheckedKey	= @"checked";
+static NSString * const RecordNewKey		= @"new";
+static NSString * const StagingPrefix		= @".incoming-";
 
 static const NSTimeInterval OneDay = 24 * 60 * 60;
 
@@ -86,6 +88,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 			if (LDrawJSONString(name) != nil && LDrawJSONDictionary(files[name]) != nil)
 				self->records[name] = files[name];
 		}
+		[self removeStagingFolders];
 	}
 	return self;
 
@@ -122,6 +125,44 @@ static int64_t ApproximateKilobytes(NSString *name)
 			return NO;
 	}
 	return YES;
+}
+
+
+//========== hasNewFilesNamed: =================================================
+///
+/// @abstract	Whether any of the files was stored after the last
+/// 			-markFilesNamedAsUsed:.
+///
+//==============================================================================
+- (BOOL) hasNewFilesNamed:(NSArray<NSString *> *)names
+{
+	@synchronized (self) {
+		for (NSString *name in names)
+		{
+			if (LDrawJSONBool(self->records[name][RecordNewKey], NO))
+				return YES;
+		}
+	}
+	return NO;
+}
+
+
+//========== markFilesNamedAsUsed: =============================================
+//==============================================================================
+- (void) markFilesNamedAsUsed:(NSArray<NSString *> *)names
+{
+	@synchronized (self) {
+		for (NSString *name in names)
+		{
+			NSMutableDictionary *record = [self->records[name] mutableCopy];
+
+			if (record[RecordNewKey] == nil)
+				continue;
+			[record removeObjectForKey:RecordNewKey];
+			self->records[name] = record;
+		}
+	}
+	[self saveRecords];
 }
 
 
@@ -165,8 +206,10 @@ static int64_t ApproximateKilobytes(NSString *name)
 ///
 /// @abstract	Fetches the files one after another.
 ///
-/// @discussion	The work runs on the session's queue. Records are saved once,
-/// 			at the end, whatever happened.
+/// @discussion	The work runs on the session's queue. A changed file waits in a
+/// 			staging folder, and the files replace the old ones together
+/// 			once all have come, so a failed update leaves the old ones.
+/// 			Records are saved once, at the end, whatever happened.
 ///
 //==============================================================================
 - (NSProgress *) updateFilesNamed:(NSArray<NSString *> *)names
@@ -176,7 +219,9 @@ static int64_t ApproximateKilobytes(NSString *name)
 {
 	NSURLSession				*session	= [NSURLSession sessionWithConfiguration:self.sessionConfiguration];
 	NSProgress					*progress	= [NSProgress progressWithTotalUnitCount:0];
-	NSMutableArray				*changed	= [NSMutableArray array];
+	NSMutableDictionary			*staged		= [NSMutableDictionary dictionary];
+	NSURL						*staging	= [self.folderURL URLByAppendingPathComponent:
+											   [StagingPrefix stringByAppendingString:[[NSUUID UUID] UUIDString]]];
 	dispatch_queue_t			 queue		= completionQueue ?: dispatch_get_main_queue();
 	NSObject					*lock		= [[NSObject alloc] init];
 	__block NSURLSessionTask	*current	= nil;
@@ -197,10 +242,19 @@ static int64_t ApproximateKilobytes(NSString *name)
 	};
 
 	void (^finish)(NSError *) = ^(NSError *error) {
-		[weakSelf saveRecords];
+		LDrawRebrickableDownloads	*downloads	= weakSelf;
+		NSMutableArray				*stored		= [NSMutableArray array];
+		NSError						*failure	= error;
+
+		if (failure == nil && downloads == nil)
+			failure = CancelledError();
+		if (failure == nil)
+			failure = [downloads storeStagedFiles:staged stored:stored];
+		[downloads saveRecords];
+		[[NSFileManager defaultManager] removeItemAtURL:staging error:NULL];
 		[session finishTasksAndInvalidate];
 		dispatch_async(queue, ^{
-			completion(changed, error);
+			completion(stored, failure);
 		});
 	};
 
@@ -210,7 +264,12 @@ static int64_t ApproximateKilobytes(NSString *name)
 		int64_t						 weight		= ApproximateKilobytes(name);
 		void						(^next)(NSUInteger) = weakFetchNext;
 
-		if (downloads == nil || name == nil)
+		if (downloads == nil)
+		{
+			finish(CancelledError());
+			return;
+		}
+		if (name == nil)
 		{
 			finish(nil);
 			return;
@@ -232,15 +291,23 @@ static int64_t ApproximateKilobytes(NSString *name)
 
 		task = [session downloadTaskWithRequest:request
 							  completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-			NSError *failure = [weakSelf takeFileNamed:name from:location response:response error:error];
+			LDrawRebrickableDownloads	*strongSelf	= weakSelf;
+			NSError						*failure	= nil;
 
+			if (strongSelf == nil)
+				failure = CancelledError();
+			else
+				failure = [strongSelf takeFileNamed:name
+											   from:location
+										   response:response
+											  error:error
+										  stagingIn:staging
+											 staged:staged];
 			if (failure != nil)
 			{
 				finish(failure);
 				return;
 			}
-			if ([(NSHTTPURLResponse *)response statusCode] == 200)
-				[changed addObject:name];
 			next(index + 1);
 		}];
 
@@ -305,17 +372,21 @@ static int64_t ApproximateKilobytes(NSString *name)
 
 //========== takeFileNamed:from:response:error: ================================
 ///
-/// @abstract	Keeps a fetched file and what the server said about it. Returns
-/// 			an error when there is nothing to keep.
+/// @abstract	Moves a changed file into the staging folder, and notes what the
+/// 			server said about it. Returns an error when there is nothing to
+/// 			keep.
 ///
 //==============================================================================
 - (NSError *) takeFileNamed:(NSString *)name
 					   from:(NSURL *)location
 				   response:(NSURLResponse *)response
 					  error:(NSError *)error
+				  stagingIn:(NSURL *)staging
+					 staged:(NSMutableDictionary<NSString *, NSDictionary *> *)staged
 {
 	NSHTTPURLResponse	*http			= (NSHTTPURLResponse *)response;
-	NSURL				*destination	= [self localURLForFileNamed:name];
+	NSURL				*destination	= [staging URLByAppendingPathComponent:
+										   [[self localURLForFileNamed:name] lastPathComponent]];
 	NSFileManager		*fileManager	= [NSFileManager defaultManager];
 	NSMutableDictionary	*record			= [NSMutableDictionary dictionary];
 	NSError				*moveError		= nil;
@@ -340,24 +411,90 @@ static int64_t ApproximateKilobytes(NSString *name)
 		[record addEntriesFromDictionary:self->records[name] ?: @{}];
 	}
 
+	record[RecordCheckedKey] = LDrawJSONStringFromDate([NSDate date]);
+
 	if (http.statusCode == 200)
 	{
-		[fileManager createDirectoryAtURL:self.folderURL withIntermediateDirectories:YES attributes:nil error:NULL];
+		[fileManager createDirectoryAtURL:staging withIntermediateDirectories:YES attributes:nil error:NULL];
 		[fileManager removeItemAtURL:destination error:NULL];
 		if ([fileManager moveItemAtURL:location toURL:destination error:&moveError] == NO)
 			return moveError;
 
 		record[RecordETagKey]		= [http valueForHTTPHeaderField:@"ETag"];
 		record[RecordModifiedKey]	= [http valueForHTTPHeaderField:@"Last-Modified"];
+		record[RecordNewKey]		= @YES;
+		staged[name] = @{ @"record" : [record copy], @"url" : destination };
+		return nil;
 	}
-	record[RecordCheckedKey] = LDrawJSONStringFromDate([NSDate date]);
 
 	@synchronized (self) {
 		self->records[name] = record;
 	}
 	return nil;
 
-}//end takeFileNamed:from:response:error:
+}//end takeFileNamed:from:response:error:stagingIn:staged:
+
+
+//========== storeStagedFiles:stored: ==========================================
+///
+/// @abstract	Puts the staged files in place of the old ones, and keeps their
+/// 			records. An old file stays until its new one is in place.
+///
+//==============================================================================
+- (NSError *) storeStagedFiles:(NSDictionary<NSString *, NSDictionary *> *)staged
+						stored:(NSMutableArray<NSString *> *)stored
+{
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+
+	for (NSString *name in [[staged allKeys] sortedArrayUsingSelector:@selector(compare:)])
+	{
+		NSURL	*source			= staged[name][@"url"];
+		NSURL	*destination	= [self localURLForFileNamed:name];
+		NSError	*error			= nil;
+		BOOL	 moved			= NO;
+
+		if ([fileManager fileExistsAtPath:[destination path]])
+			moved = [fileManager replaceItemAtURL:destination
+									withItemAtURL:source
+								   backupItemName:nil
+										  options:0
+								 resultingItemURL:NULL
+											error:&error];
+		else
+			moved = [fileManager moveItemAtURL:source toURL:destination error:&error];
+		if (moved == NO)
+			return error;
+
+		@synchronized (self) {
+			self->records[name] = staged[name][@"record"];
+		}
+		[stored addObject:name];
+	}
+	return nil;
+
+}//end storeStagedFiles:stored:
+
+
+//========== removeStagingFolders ==============================================
+///
+/// @abstract	Removes staging folders that a run which did not end left.
+///
+//==============================================================================
+- (void) removeStagingFolders
+{
+	NSFileManager	*fileManager	= [NSFileManager defaultManager];
+	NSArray			*contents		= [fileManager contentsOfDirectoryAtURL:self.folderURL
+												 includingPropertiesForKeys:nil
+																	options:0
+																	  error:NULL];
+
+	for (NSURL *url in contents)
+	{
+		if ([[url lastPathComponent] hasPrefix:StagingPrefix])
+			[fileManager removeItemAtURL:url error:NULL];
+	}
+
+}//end removeStagingFolders
 
 
 //========== saveRecords =======================================================

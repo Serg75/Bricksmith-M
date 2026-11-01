@@ -57,7 +57,8 @@ NS_ASSUME_NONNULL_BEGIN
 ///             holds, counted in build order: if the sets hold 10, the 11th
 ///             copy built and those after it are too many. A part inside a
 ///             submodel stands for every copy of the submodel, and takes the
-///             worst status of them.
+///             worst status of them. An assembly an inventory counts by its
+///             pieces takes the worst status of its pieces.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPartLimitReport : NSObject
@@ -71,9 +72,20 @@ NS_ASSUME_NONNULL_BEGIN
 /// inside an IGN range.
 - (LDrawPartLimitStatus) statusForPart:(LDrawPart *)part;
 
+/// The color the part was checked in: for a part in color 16, the color of
+/// what places it, from the copy that gave its status. LDrawColorBogus for a
+/// part the walk does not count.
+- (LDrawColorT) colorCodeForPart:(LDrawPart *)part;
+
 /// How many copies of the part in this color the model uses, counted the way
 /// the limit counts them.
 - (NSUInteger) usedCountForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode;
+
+/// How the copies of the part in this color stand: the worst of the copies
+/// counted with them, or of their pieces for an assembly counted by its
+/// pieces. The table's status for a part the model does not use.
+- (LDrawPartLimitStatus) statusForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode
+	NS_SWIFT_NAME(status(forPartNamed:colorCode:));
 
 /// The parts with this status, in no set order.
 - (NSArray<LDrawPart *> *) partsWithStatus:(LDrawPartLimitStatus)status;
@@ -103,8 +115,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// The same for a usage already walked.
 + (LDrawPartLimitReport *) reportForUsage:(LDrawPartUsage *)usage table:(LDrawPartLimitTable *)table;
 
-/// Sets every part's `limitStatus` in the file from the report. Returns the
-/// parts whose status changed, which the host redraws.
+/// Sets every part's `limitStatus` in the file from the report, and marks it
+/// checked. Returns the parts whose status changed or that were not checked
+/// before, which the host redraws.
 + (NSArray<LDrawPart *> *) applyReport:(LDrawPartLimitReport *)report toFile:(LDrawFile *)file;
 
 @end

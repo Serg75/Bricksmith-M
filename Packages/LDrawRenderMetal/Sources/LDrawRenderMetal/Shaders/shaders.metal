@@ -285,6 +285,7 @@ static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
 	PackedVertex				end0	= verts[indices[first]];
 	PackedVertex				end1	= verts[indices[first + 1]];
 	float4						color	= float4(end0.color);
+	bool						isEdge	= (color.a == 0.0 && color.r == 1.0);
 
 	// The same meta colors as a face: 0 is the part's own color, 1 its edge.
 	if (color.a == 0.0) {
@@ -293,8 +294,9 @@ static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
 		color = float4(mix(current.rgb, outlineColor(current.rgb), color.r), current.a);
 	}
 
+	// Only lines in the edge color take the mark; others keep their color.
 	color.a		*= ghost_alpha;
-	out.color	 = markedEdgeColor(color, part.mark);
+	out.color	 = isEdge ? markedEdgeColor(color, part.mark) : color;
 
 	float4	clip0	= clipPosition(end0, part, uni);
 	float4	clip1	= clipPosition(end1, part, uni);

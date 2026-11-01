@@ -229,10 +229,14 @@ struct LDrawPartLimitTests {
         #expect(table.status(forPartNamed: "3002.dat", colorCode: color(Self.red)) == .notAvailable)
     }
 
-    @Test("Spares are left out on request")
+    @Test("Spares are left out on request, and a part held only as a spare is then not allowed")
     func noSpares() {
-        let table = inventoryTable([item("3001", 4, 6, spares: 1)]) { $0.includesSpares = false }
+        let table = inventoryTable([item("3001", 4, 6, spares: 1), item("3001", 0, 0, spares: 1),
+                                    item("3002", 4, 0, spares: 1)]) { $0.includesSpares = false }
         #expect(table.ownedCount(forPartNamed: "3001.dat", colorCode: color(Self.red)) == 6)
+        #expect(table.status(forPartNamed: "3001.dat", colorCode: color(Self.black)) == .notInColor)
+        #expect(table.status(forPartNamed: "3002.dat", colorCode: color(Self.red)) == .notAvailable)
+        #expect(table.allowsPartNamed("3002.dat") == false)
     }
 
     @Test("A loose part given in LDraw terms counts with the set's")

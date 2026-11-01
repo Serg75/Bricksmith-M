@@ -52,6 +52,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (BOOL) hasFilesNamed:(NSArray<NSString *> *)names NS_SWIFT_NAME(hasFiles(named:));
 
+/// Whether any of the files was stored since the last `markFilesNamedAsUsed:`.
+/// A host that builds from the files asks this, so a failed build is tried
+/// again.
+- (BOOL) hasNewFilesNamed:(NSArray<NSString *> *)names NS_SWIFT_NAME(hasNewFiles(named:));
+
+/// Notes that the files as they are now were built from.
+- (void) markFilesNamedAsUsed:(NSArray<NSString *> *)names NS_SWIFT_NAME(markFilesAsUsed(named:));
+
 /// When the server was last asked for the file, or nil.
 - (nullable NSDate *) checkDateForFileNamed:(NSString *)name;
 
@@ -59,9 +67,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSDate *) dataDateForFileNamed:(NSString *)name;
 
 /// Fetches the files one after another. A file asked for within
-/// `minimumCheckInterval` is skipped, unless `force`. The completion gets the
-/// names of the files that changed, or an error, on `completionQueue` (main
-/// when nil). Cancel through the progress.
+/// `minimumCheckInterval` is skipped, unless `force`. The changed files replace
+/// the old ones only when all have come, so after an error or a cancel the
+/// folder holds the old files. The completion gets the names of the files that
+/// changed, or an error, on `completionQueue` (main when nil). Cancel through
+/// the progress.
 - (NSProgress *) updateFilesNamed:(NSArray<NSString *> *)names
 							force:(BOOL)force
 				  completionQueue:(nullable dispatch_queue_t)completionQueue

@@ -396,7 +396,7 @@ static const CGFloat SwatchSize				= 14.0;
 //==============================================================================
 - (void) setTableDataSource:(NSMutableArray *)allPartRecords
 {
-	NSString        *originalSelectedPartName   = [self selectedPartName];
+	NSDictionary    *originalSelectedRecord     = [self selectedRecord];
 	NSUInteger      newSelectedIndex            = NSNotFound;
 
 	[allPartRecords sortUsingDescriptors:[partsTable sortDescriptors]];
@@ -407,8 +407,8 @@ static const CGFloat SwatchSize				= 14.0;
 	
 	// Attempt to restore the original selection (happens especially if clearing 
 	// the search field) 
-	newSelectedIndex = [LDrawPartBrowserModel indexOfPartNamed:originalSelectedPartName
-													 inRecords:self->tableDataSource];
+	newSelectedIndex = [LDrawPartBrowserModel indexOfRecord:originalSelectedRecord
+												  inRecords:self->tableDataSource];
 	newSelectedIndex = [LDrawPartBrowserModel tableSelectionIndexPreferring:newSelectedIndex];
 	
 	// Scroll to the new selection
@@ -603,7 +603,11 @@ static const CGFloat SwatchSize				= 14.0;
 	//If it's a part, get rid of the file extension on its name. A row of an
 	// inventory with no LDraw part shows its LEGO number.
 	if([columnIdentifier isEqualToString:PART_NUMBER_KEY])
-		cellValue = [cellValue stringByDeletingPathExtension] ?: [partRecord objectForKey:LDrawPartBrowserLEGONumberKey];
+	{
+		NSString *legoNumber = [partRecord objectForKey:LDrawPartBrowserLEGONumberKey];
+
+		cellValue = [cellValue stringByDeletingPathExtension] ?: legoNumber;
+	}
 	
 	return cellValue;
 	
@@ -1183,6 +1187,7 @@ static const CGFloat SwatchSize				= 14.0;
 		[colorColumn setMinWidth:SwatchSize + 6];
 		[colorColumn setMaxWidth:SwatchSize + 6];
 		[colorColumn setResizingMask:NSTableColumnNoResizing];
+		[colorColumn setEditable:NO];
 		[[colorColumn headerCell] setStringValue:@""];
 		[self->partsTable addTableColumn:colorColumn];
 		[self->partsTable moveColumn:[self->partsTable numberOfColumns] - 1 toColumn:0];
@@ -1193,6 +1198,7 @@ static const CGFloat SwatchSize				= 14.0;
 		[[countColumn dataCell] setFont:[[nameColumn dataCell] font]];
 		[countColumn setWidth:64];
 		[countColumn setMinWidth:44];
+		[countColumn setEditable:NO];
 		[countColumn setSortDescriptorPrototype:[NSSortDescriptor sortDescriptorWithKey:LDrawPartBrowserLeftKey
 																			   ascending:YES]];
 		[self->partsTable addTableColumn:countColumn];
@@ -1402,8 +1408,9 @@ static const CGFloat SwatchSize				= 14.0;
 	}
 	else
 	{
-		[[LDrawColorPanelController sharedColorPanel] setLDrawColor:
-		 [[LDrawColorLibrary sharedColorLibrary] colorForCode:chip.colorCode]];
+		LDrawColor *color = [[LDrawColorLibrary sharedColorLibrary] colorForCode:chip.colorCode];
+
+		[[LDrawColorPanelController sharedColorPanel] setLDrawColor:color];
 	}
 
 }//end colorChipClicked:

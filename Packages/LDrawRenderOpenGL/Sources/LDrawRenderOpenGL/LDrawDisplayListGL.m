@@ -1153,6 +1153,10 @@ void LDrawDLSessionDrawAndDestroy(LDrawRenderEncoder renderEncoder, struct LDraw
 		glVertexAttrib1f(attr_ghost_alpha,1.0f);
 	}
 
+	// Drag handles draw next with the same program, and must not keep the
+	// last part's mark.
+	glVertexAttrib4f(attr_mark,0.0f,0.0f,0.0f,0.0f);
+
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 	#if WANT_SMOOTH
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);

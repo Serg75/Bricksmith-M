@@ -14,6 +14,7 @@
 
 #import <LDrawInventory/LDrawCombinedInventory.h>
 #import <LDrawInventory/LDrawInventoryItem.h>
+#import <LDrawInventory/LDrawInventoryPartsFile.h>
 #import <LDrawInventory/LDrawPartAvailability.h>
 #import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
@@ -41,6 +42,10 @@ static NSString * const OverridesKey			= @"links";
 	NSMutableDictionary<NSString *, LDrawSetInventory *>	*sets;			// nil until read
 	LDrawPartAvailability									*catalog;		// nil until read or when there is none
 	BOOL													 catalogWasRead;
+	NSDictionary											*identityData;	// nil until read or when there is none
+	BOOL													 identityDataWasRead;
+	NSDictionary<NSString *, NSString *>					*handMatches;	// nil until read
+	NSMutableSet<NSString *>								*lockedFiles;	// unreadable and still in place
 }
 
 
@@ -246,6 +251,17 @@ static NSString * const OverridesKey			= @"links";
 							   identity:(LDrawPartIdentity *)identity
 								   year:(NSInteger)currentYear
 {
+	return [self tableForLimit:limit identity:identity shortcuts:nil year:currentYear];
+}
+
+
+//========== tableForLimit:identity:shortcuts:year: ============================
+//==============================================================================
+- (LDrawPartLimitTable *) tableForLimit:(LDrawPartLimit *)limit
+							   identity:(LDrawPartIdentity *)identity
+							  shortcuts:(LDrawShortcutMap *)shortcuts
+								   year:(NSInteger)currentYear
+{
 	LDrawPartLimit			*resolved		= [self resolvedLimit:limit];
 	LDrawPartAvailability	*availability	= nil;
 	NSArray					*items			= nil;
@@ -259,9 +275,10 @@ static NSString * const OverridesKey			= @"links";
 								 availability:availability
 										items:items
 									 identity:identity
+									shortcuts:shortcuts
 										 year:currentYear];
 
-}//end tableForLimit:identity:year:
+}//end tableForLimit:identity:shortcuts:year:
 
 
 // MARK: - CATALOG AND IDENTITY -
@@ -306,7 +323,12 @@ static NSString * const OverridesKey			= @"links";
 //==============================================================================
 - (NSDictionary *) rebrickableIdentityData
 {
-	return LDrawJSONReadFile([self urlForFile:IdentityFileName]);
+	if (self->identityDataWasRead == NO)
+	{
+		self->identityData			= LDrawJSONReadFile([self urlForFile:IdentityFileName]);
+		self->identityDataWasRead	= YES;
+	}
+	return self->identityData;
 }
 
 
@@ -317,6 +339,8 @@ static NSString * const OverridesKey			= @"links";
 	if (LDrawJSONWriteFile(data, [self urlForFile:IdentityFileName], NO, error) == NO)
 		return NO;
 
+	self->identityData			= [data copy];
+	self->identityDataWasRead	= YES;
 	[self postChange];
 	return YES;
 }
@@ -326,16 +350,23 @@ static NSString * const OverridesKey			= @"links";
 //==============================================================================
 - (NSDictionary<NSString *, NSString *> *) identityOverrides
 {
-	NSDictionary		*file		= LDrawJSONReadFile([self urlForFile:OverridesFileName]);
-	NSDictionary		*links		= LDrawJSONDictionary(file[OverridesKey]);
-	NSMutableDictionary	*overrides	= [NSMutableDictionary dictionary];
+	NSDictionary		*file		= nil;
+	NSDictionary		*links		= nil;
+	NSMutableDictionary	*read		= nil;
 
+	if (self->handMatches != nil)
+		return self->handMatches;
+
+	file	= [self readUserFile:OverridesFileName];
+	links	= LDrawJSONDictionary(file[OverridesKey]);
+	read	= [NSMutableDictionary dictionary];
 	for (id partName in links)
 	{
 		if (LDrawJSONString(partName) != nil && LDrawJSONString(links[partName]) != nil)
-			overrides[partName] = links[partName];
+			read[partName] = links[partName];
 	}
-	return overrides;
+	self->handMatches = [read copy];
+	return self->handMatches;
 
 }//end identityOverrides
 
@@ -346,9 +377,12 @@ static NSString * const OverridesKey			= @"links";
 {
 	NSDictionary *file = @{ VersionKey : @(LDrawInventoryFileVersion), OverridesKey : overrides };
 
-	if (LDrawJSONWriteFile(file, [self urlForFile:OverridesFileName], YES, error) == NO)
+	[self identityOverrides];
+	if (	[self refusesToWriteFile:OverridesFileName error:error]
+		||	LDrawJSONWriteFile(file, [self urlForFile:OverridesFileName], YES, error) == NO )
 		return NO;
 
+	self->handMatches = [overrides copy];
 	[self postChange];
 	return YES;
 }
@@ -373,7 +407,7 @@ static NSString * const OverridesKey			= @"links";
 {
 	if (self->inventories == nil)
 	{
-		NSDictionary *file = LDrawJSONReadFile([self urlForFile:InventoriesFileName]);
+		NSDictionary *file = [self readUserFile:InventoriesFileName];
 
 		self->inventories = [NSMutableArray array];
 		for (id dictionary in LDrawJSONArray(file[InventoriesKey]))
@@ -444,7 +478,8 @@ static NSString * const OverridesKey			= @"links";
 		InventoriesKey	: [updated valueForKey:@"dictionaryRepresentation"],
 	};
 
-	if (LDrawJSONWriteFile(file, [self urlForFile:InventoriesFileName], YES, error) == NO)
+	if (	[self refusesToWriteFile:InventoriesFileName error:error]
+		||	LDrawJSONWriteFile(file, [self urlForFile:InventoriesFileName], YES, error) == NO )
 		return NO;
 
 	self->inventories = [updated mutableCopy];
@@ -452,6 +487,95 @@ static NSString * const OverridesKey			= @"links";
 	return YES;
 
 }//end writeInventories:error:
+
+
+//========== readUserFile: =====================================================
+///
+/// @abstract	Reads a file that holds the user's own data. A file that is
+/// 			there but cannot be read is moved aside, so a save cannot write
+/// 			over it.
+///
+//==============================================================================
+- (NSDictionary *) readUserFile:(NSString *)fileName
+{
+	NSURL			*url	= [self urlForFile:fileName];
+	NSDictionary	*file	= LDrawJSONReadFile(url);
+
+	if (file != nil)
+		[self->lockedFiles removeObject:fileName];
+	else if ([[NSFileManager defaultManager] fileExistsAtPath:[url path]])
+		[self moveAsideUnreadableFile:fileName];
+	return file;
+
+}//end readUserFile:
+
+
+//========== moveAsideUnreadableFile: ==========================================
+///
+/// @abstract	Renames an unreadable file to a free name such as
+/// 			"inventories.unreadable.json". When that fails, the file stays
+/// 			locked against saves.
+///
+//==============================================================================
+- (void) moveAsideUnreadableFile:(NSString *)fileName
+{
+	NSFileManager	*fileManager	= [NSFileManager defaultManager];
+	NSURL			*url			= [self urlForFile:fileName];
+	NSString		*baseName		= [[fileName stringByDeletingPathExtension]
+									   stringByAppendingPathExtension:@"unreadable"];
+	NSURL			*destination	= nil;
+
+	for (NSUInteger number = 1; number < 1000; number++)
+	{
+		NSString *name = baseName;
+
+		if (number > 1)
+			name = [NSString stringWithFormat:@"%@ %lu", baseName, (unsigned long)number];
+		destination = [self urlForFile:[name stringByAppendingPathExtension:@"json"]];
+		if ([fileManager fileExistsAtPath:[destination path]] == NO)
+			break;
+		destination = nil;
+	}
+
+	if (destination != nil && [fileManager moveItemAtURL:url toURL:destination error:NULL])
+	{
+		NSLog(@"Moved the unreadable %@ to %@.", fileName, [destination lastPathComponent]);
+		[self->lockedFiles removeObject:fileName];
+	}
+	else
+	{
+		NSLog(@"Could not read %@, and it is kept as it is.", fileName);
+		if (self->lockedFiles == nil)
+			self->lockedFiles = [NSMutableSet set];
+		[self->lockedFiles addObject:fileName];
+	}
+
+}//end moveAsideUnreadableFile:
+
+
+//========== refusesToWriteFile:error: =========================================
+///
+/// @abstract	YES for a file that could not be read or moved aside.
+///
+//==============================================================================
+- (BOOL) refusesToWriteFile:(NSString *)fileName error:(NSError **)error
+{
+	NSString *reason = nil;
+
+	if ([self->lockedFiles containsObject:fileName] == NO)
+		return NO;
+
+	if (error != NULL)
+	{
+		reason = [NSString stringWithFormat:@"%@ in %@ cannot be read. Fix it or move it away, then try again.",
+				  fileName, [self.folderURL path]];
+		*error = [NSError errorWithDomain:LDrawInventoryErrorDomain
+									 code:LDrawInventoryErrorUnreadableFile
+								 userInfo:@{ NSLocalizedDescriptionKey : reason }];
+	}
+	return YES;
+
+}//end refusesToWriteFile:error:
 
 
 //========== urlForFile: =======================================================

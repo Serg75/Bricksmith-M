@@ -16,6 +16,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawInventory/LDrawPartLimitTable.h>
+#import <LDrawInventory/LDrawShortcutMap.h>
 
 
 //========== IsProblem =========================================================
@@ -65,8 +66,11 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 
 @implementation LDrawPartLimitReport
 {
+	NSMutableArray<LDrawPartLimitRow *>						*rowsInOrder;
 	NSMutableDictionary<NSString *, LDrawPartLimitRow *>	*rowsByKey;
+	NSMutableDictionary<NSString *, NSArray<NSNumber *> *>	*assemblies;		// used count, worst status
 	NSMapTable<LDrawPart *, NSNumber *>						*statusByPart;
+	NSMapTable<LDrawPart *, NSNumber *>						*colorByPart;		// the color of the worst copy
 	NSMapTable<LDrawContainer *, NSArray<NSNumber *> *>		*containerCache;	// problem count, worst status
 }
 
@@ -74,67 +78,115 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 //========== initWithUsage:table: ==============================================
 ///
 /// @abstract	Gives each copy a status in build order, and each part the worst
-/// 			status of the copies it stands for.
+/// 			status of the copies it stands for. An assembly the limit counts
+/// 			by its pieces adds a copy of each piece.
 ///
 //==============================================================================
 - (instancetype) initWithUsage:(LDrawPartUsage *)usage table:(LDrawPartLimitTable *)table
 {
-	NSMutableArray<LDrawPartLimitRow *> *rows = [NSMutableArray array];
-
 	self = [super init];
 	if (self == nil)
 		return nil;
 
 	self->_table			= table;
+	self->rowsInOrder		= [NSMutableArray array];
 	self->rowsByKey			= [NSMutableDictionary dictionary];
+	self->assemblies		= [NSMutableDictionary dictionary];
 	self->statusByPart		= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality
+												valueOptions:NSPointerFunctionsStrongMemory];
+	self->colorByPart		= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality
 												valueOptions:NSPointerFunctionsStrongMemory];
 	self->containerCache	= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality
 												valueOptions:NSPointerFunctionsStrongMemory];
 
 	for (LDrawPartUsageCopy *copy in usage.copies)
 	{
-		NSString				*key	= [self rowKeyForPartNamed:copy.partName colorCode:copy.colorCode];
-		LDrawPartLimitRow		*row	= self->rowsByKey[key];
-		LDrawPartLimitStatus	 status	= LDrawPartLimitStatusNoData;
+		BOOL					 isPart	= (	copy.kind == LDrawPartUsageKindPart
+											||	copy.kind == LDrawPartUsageKindSubstitute );
+		NSArray					*pieces	= isPart ? [table countedPiecesOfPartNamed:copy.partName] : nil;
+		LDrawPartLimitStatus	 worst	= LDrawPartLimitStatusAllowed;
 
-		if (copy.kind == LDrawPartUsageKindPart || copy.kind == LDrawPartUsageKindSubstitute)
-			status = [table statusForPartNamed:copy.partName colorCode:copy.colorCode];
-
-		if (row == nil)
+		if (pieces == nil)
 		{
-			row				= [[LDrawPartLimitRow alloc] init];
-			row.partName	= copy.partName;
-			row.colorCode	= copy.colorCode;
-			row.ownedCount	= (status == LDrawPartLimitStatusNoData)
-							  ? NSNotFound
-							  : [table ownedCountForPartNamed:copy.partName colorCode:copy.colorCode];
-			self->rowsByKey[key] = row;
-			[rows addObject:row];
+			[self addCopyOfPartNamed:copy.partName colorCode:copy.colorCode isPart:isPart from:copy];
+			continue;
 		}
 
-		if (copy.isCounted)
+		for (LDrawShortcutPiece *piece in pieces)
 		{
-			row.usedCount += 1;
+			LDrawColorT color = (piece.colorCode == LDrawCurrentColor) ? copy.colorCode : piece.colorCode;
 
-			// The copies past what is owned, in build order.
-			if (status == LDrawPartLimitStatusAllowed && row.ownedCount != NSNotFound && row.usedCount > row.ownedCount)
-				status = LDrawPartLimitStatusTooMany;
+			worst = MAX(worst, [self addCopyOfPartNamed:piece.partName colorCode:color isPart:YES from:copy]);
 		}
 
-		row.status = MAX(row.status, status);
+		NSString	*key	= [self assemblyKeyForPartNamed:copy.partName colorCode:copy.colorCode];
+		NSArray		*known	= self->assemblies[key];
+		NSUInteger	 used	= [known[0] unsignedIntegerValue] + (copy.isCounted ? 1 : 0);
 
-		for (LDrawPart *part in copy.parts)
-		{
-			NSNumber *known = [self->statusByPart objectForKey:part];
-			[self->statusByPart setObject:@(MAX((LDrawPartLimitStatus)[known integerValue], status)) forKey:part];
-		}
+		self->assemblies[key] = @[@(used), @(MAX((LDrawPartLimitStatus)[known[1] integerValue], worst))];
 	}
 
-	self->_rows = rows;
+	self->_rows = [self->rowsInOrder copy];
 	return self;
 
 }//end initWithUsage:table:
+
+
+//========== addCopyOfPartNamed:colorCode:isPart:from: =========================
+///
+/// @abstract	Counts one copy of a part in a color, and gives the parts the
+/// 			usage copy stands for its status. Returns the status.
+///
+//==============================================================================
+- (LDrawPartLimitStatus) addCopyOfPartNamed:(NSString *)partName
+								  colorCode:(LDrawColorT)colorCode
+									 isPart:(BOOL)isPart
+									   from:(LDrawPartUsageCopy *)copy
+{
+	LDrawPartLimitTable		*table	= self.table;
+	NSString				*key	= [self rowKeyForPartNamed:partName colorCode:colorCode];
+	LDrawPartLimitRow		*row	= self->rowsByKey[key];
+	LDrawPartLimitStatus	 status	= LDrawPartLimitStatusNoData;
+
+	if (isPart)
+		status = [table statusForPartNamed:partName colorCode:colorCode];
+
+	if (row == nil)
+	{
+		row				= [[LDrawPartLimitRow alloc] init];
+		row.partName	= partName;
+		row.colorCode	= colorCode;
+		row.ownedCount	= (status == LDrawPartLimitStatusNoData)
+						  ? NSNotFound
+						  : [table ownedCountForPartNamed:partName colorCode:colorCode];
+		self->rowsByKey[key] = row;
+		[self->rowsInOrder addObject:row];
+	}
+
+	if (copy.isCounted)
+	{
+		row.usedCount += 1;
+
+		// The copies past what is owned, in build order.
+		if (status == LDrawPartLimitStatusAllowed && row.ownedCount != NSNotFound && row.usedCount > row.ownedCount)
+			status = LDrawPartLimitStatusTooMany;
+	}
+
+	row.status = MAX(row.status, status);
+
+	for (LDrawPart *part in copy.parts)
+	{
+		NSNumber *known = [self->statusByPart objectForKey:part];
+
+		if (known == nil || status > (LDrawPartLimitStatus)[known integerValue])
+		{
+			[self->statusByPart setObject:@(status) forKey:part];
+			[self->colorByPart setObject:@(copy.colorCode) forKey:part];
+		}
+	}
+	return status;
+
+}//end addCopyOfPartNamed:colorCode:isPart:from:
 
 
 // MARK: - LOOKUPS -
@@ -148,11 +200,39 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 }
 
 
+//========== colorCodeForPart: =================================================
+//==============================================================================
+- (LDrawColorT) colorCodeForPart:(LDrawPart *)part
+{
+	NSNumber *color = [self->colorByPart objectForKey:part];
+	return (color != nil) ? (LDrawColorT)[color intValue] : LDrawColorBogus;
+}
+
+
 //========== usedCountForPartNamed:colorCode: ==================================
 //==============================================================================
 - (NSUInteger) usedCountForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode
 {
+	NSArray *assembly = self->assemblies[[self assemblyKeyForPartNamed:partName colorCode:colorCode]];
+
+	if (assembly != nil)
+		return [assembly[0] unsignedIntegerValue];
 	return self->rowsByKey[[self rowKeyForPartNamed:partName colorCode:colorCode]].usedCount;
+}
+
+
+//========== statusForPartNamed:colorCode: =====================================
+//==============================================================================
+- (LDrawPartLimitStatus) statusForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode
+{
+	NSArray				*assembly	= self->assemblies[[self assemblyKeyForPartNamed:partName colorCode:colorCode]];
+	LDrawPartLimitRow	*row		= self->rowsByKey[[self rowKeyForPartNamed:partName colorCode:colorCode]];
+
+	if (assembly != nil)
+		return (LDrawPartLimitStatus)[assembly[1] integerValue];
+	if (row != nil)
+		return row.status;
+	return [self.table statusForPartNamed:partName colorCode:colorCode];
 }
 
 
@@ -202,6 +282,14 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 	NSString *key = [self.table countKeyForPartNamed:partName colorCode:colorCode];
 
 	return key ?: [NSString stringWithFormat:@"?\n%@\n%d", [partName lowercaseString], (int)colorCode];
+}
+
+
+//========== assemblyKeyForPartNamed:colorCode: ================================
+//==============================================================================
+- (NSString *) assemblyKeyForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode
+{
+	return [NSString stringWithFormat:@"%@\n%d", [partName lowercaseString], (int)colorCode];
 }
 
 
@@ -264,7 +352,7 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 //---------- applyReport:toFile: -------------------------------------[static]--
 ///
 /// @abstract	Sets every part's status, including the parts the report does
-/// 			not know, which are allowed.
+/// 			not know, which are allowed, and marks each part as checked.
 ///
 //------------------------------------------------------------------------------
 + (NSArray<LDrawPart *> *) applyReport:(LDrawPartLimitReport *)report toFile:(LDrawFile *)file
@@ -281,9 +369,10 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 			LDrawPart				*part	= element;
 			LDrawPartLimitStatus	 status	= [report statusForPart:part];
 
-			if (part.limitStatus != status)
+			if (part.limitStatus != status || part.isLimitChecked == NO)
 			{
-				part.limitStatus = status;
+				part.limitStatus	= status;
+				part.isLimitChecked	= YES;
 				[changed addObject:part];
 			}
 		}

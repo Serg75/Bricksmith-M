@@ -205,12 +205,15 @@ static PartsLimitOptionsController *runningController = nil;
 //==============================================================================
 - (void) closeWithLimit:(LDrawPartLimit *)result
 {
+	void (^done)(LDrawPartLimit *) = completion;
+
 	if(parent != nil)
 		[parent endSheet:panel];
 	[panel orderOut:nil];
 
+	// The last strong reference may go here, so nothing of self is read after.
 	runningController = nil;
-	completion(result);
+	done(result);
 
 }//end closeWithLimit:
 

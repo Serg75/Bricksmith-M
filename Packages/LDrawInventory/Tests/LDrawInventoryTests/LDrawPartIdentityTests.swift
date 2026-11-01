@@ -88,6 +88,44 @@ struct LDrawPartIdentityTests {
         #expect(identity.rebrickablePartNumber(forPartName: "a.dat") != nil)
     }
 
+    @Test("A hand match on a moved part's old name wins over the move")
+    func handMatchOnMovedPart() {
+        let records = [record("x.dat", "~Moved to y"), record("y.dat")]
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: nil, relations: nil,
+                                                     knownPartNumbers: ["1234"])
+        let identity = LDrawPartIdentity(catalogRecords: records, rebrickableData: data,
+                                         overrides: ["x.dat": "1234"])
+        #expect(identity.rebrickablePartNumber(forPartName: "x.dat") == "1234")
+        #expect(identity.rebrickablePartNumber(forPartName: "y.dat") == nil)
+    }
+
+    @Test("A renamed part keeps its old number while Rebrickable has only that")
+    func renamedParts() {
+        let records = [
+            record("32532.dat", "~Moved to 32532a"),
+            record("3062a.dat", "~Moved to 3062b"),
+            record("2654.dat", "~Moved to 2654a"),
+            record("2654a.dat", keywords: ["Rebrickable 2654b"]),
+        ]
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: nil, relations: nil,
+                                                     knownPartNumbers: ["32532", "3062a", "3062b", "2654", "2654b"])
+        let identity = LDrawPartIdentity(catalogRecords: records, rebrickableData: data, overrides: nil)
+        #expect(identity.rebrickablePartNumber(forPartName: "32532a.dat") == "32532")
+        #expect(identity.partNames(forRebrickablePartNumber: "32532").first == "32532a.dat")
+        #expect(identity.rebrickablePartNumber(forPartName: "3062b.dat") == "3062b")
+        #expect(identity.rebrickablePartNumber(forPartName: "2654a.dat") == "2654b")
+    }
+
+    @Test("A part renamed twice keeps the oldest number, whatever the names' order")
+    func renamedTwice() {
+        let records = [record("a2.dat", "~Moved to a1"), record("a1.dat", "~Moved to a0"), record("a0.dat")]
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: nil, relations: nil,
+                                                     knownPartNumbers: ["a2"])
+        let identity = LDrawPartIdentity(catalogRecords: records, rebrickableData: data, overrides: nil)
+        #expect(identity.rebrickablePartNumber(forPartName: "a0.dat") == "a2")
+        #expect(identity.rebrickablePartNumber(forPartName: "a2.dat") == "a2")
+    }
+
     @Test("A part Rebrickable does not have has no number")
     func knownParts() {
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: ["3001p11.dat": "3001pr0001"],

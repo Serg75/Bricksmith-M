@@ -172,11 +172,16 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	//Try to find the color we are after in the current list.
 	NSInteger rowToSelect = [self indexOfColor:newColor]; //will be the row index for the color we want.
 	
-	// A parts limit's list keeps its filter. The color shows in the bar.
+	// A parts limit's list keeps its filter. The color shows in the bar, and
+	// the windows that follow the color learn of it. The selected parts keep
+	// theirs, since the list leaves the color out for them.
 	if([LDrawColorPanelModel shouldClearColorFilterWhenIndexNotFound:rowToSelect] && [self isLimitFilterOn])
 	{
 		[self->colorListController setSelectionIndexes:[NSIndexSet indexSet]];
 		[colorBar setLDrawColor:newColor];
+		if(newColor != nil)
+			[[NSNotificationCenter defaultCenter] postNotificationName:LDrawColorDidChangeNotification
+																object:newColor];
 		return;
 	}
 
@@ -318,9 +323,11 @@ LDrawColorPanelController *sharedColorPanel = nil;
 		if([object isKindOfClass:[LDrawPart class]] && [object displayName] != nil)
 			[partNames addObject:[object displayName]];
 	}
-	if([partNames isEqualToArray:self->selectedPartNames ?: @[]] == NO)
+	if(		[partNames isEqualToArray:self->selectedPartNames ?: @[]] == NO
+	   ||	self->hasSelection != ([selectedObjects count] > 0) )
 	{
-		self->selectedPartNames = partNames;
+		self->selectedPartNames		= partNames;
+		self->hasSelection			= ([selectedObjects count] > 0);
 		[self updateLimitFilter];
 	}
 	
@@ -596,13 +603,16 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //				the document or else the Part Browser's, and narrows the list
 //				without changing any part.
 //
+// Notes:		A selection of lines or quads holds no part, so it may take any
+//				color. The Part Browser's part counts only with nothing selected.
+//
 //==============================================================================
 - (void) updateLimitFilter
 {
 	LDrawPartLimitTable	*table	= [self restrictingTable];
 	NSArray				*names	= self->selectedPartNames;
 
-	if([names count] == 0)
+	if([names count] == 0 && self->hasSelection == NO)
 		names = (self->browserPartName != nil) ? @[self->browserPartName] : @[];
 
 	self->allowedColorCodes = [LDrawColorPanelModel allowedColorCodesForPartNames:names table:table];
@@ -721,7 +731,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 		return;
 
 	self->browserPartName = partName;
-	if([self->selectedPartNames count] == 0)
+	if(self->hasSelection == NO)
 		[self updateLimitFilter];
 
 }//end browserSelectionDidChange:

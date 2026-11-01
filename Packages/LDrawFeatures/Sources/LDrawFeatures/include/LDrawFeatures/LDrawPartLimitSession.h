@@ -13,6 +13,7 @@
 @class LDrawPartIdentity;
 @class LDrawPartLimit;
 @class LDrawPartLimitTable;
+@class LDrawShortcutMap;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -65,6 +66,10 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 /// The part library's records, for the keywords that name Rebrickable parts
 /// and for moved parts. Setting them builds everything again.
 - (void) setCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords;
+
+/// The part library's shortcuts, so assemblies and their pieces count alike.
+/// Setting it builds the tables again and posts the notification.
+@property (nonatomic, nullable) LDrawShortcutMap *shortcuts;
 
 /// Builds the identity map and the table again from the store, and posts the
 /// notification. The session does this itself when the store changes.

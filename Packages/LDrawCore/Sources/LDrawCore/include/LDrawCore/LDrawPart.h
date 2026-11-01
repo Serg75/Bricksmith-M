@@ -70,6 +70,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// found it. Neither saved nor copied.
 @property (nonatomic) LDrawPartLimitStatus limitStatus;
 
+/// Whether a check set `limitStatus`. Only checked parts dim, so a part drawn
+/// outside a model, such as in a preview, looks as it always did.
+@property (nonatomic) BOOL isLimitChecked;
+
 // Marks for the parts limit. The host sets them from its settings, then
 // redraws. With LDrawRenderMarkNone no part is marked.
 + (LDrawRenderMarkStyle) limitMarkStyle;
@@ -79,8 +83,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// part not made in its color. No data has no mark.
 + (void) setLimitMarkColor:(const float *)rgb forStatus:(LDrawPartLimitStatus)status;
 
-/// Whether the parts without a mark draw as ghosts, so the marked ones stand
-/// out in a big model.
+/// Whether the checked parts without a mark draw as ghosts, so the marked ones
+/// stand out in a big model.
 + (void) setDimsAllowedParts:(BOOL)dims;
 
 //Directives

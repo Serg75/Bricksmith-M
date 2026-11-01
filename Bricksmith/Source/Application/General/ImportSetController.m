@@ -42,6 +42,7 @@ static ImportSetController *runningController = nil;
 	LDrawRebrickableSetList				*setList;
 	NSArray<LDrawRebrickableSet *>		*matches;
 	BOOL								 isImporting;
+	BOOL								 isClosed;
 }
 
 
@@ -262,6 +263,10 @@ static ImportSetController *runningController = nil;
 								client:[manager client]
 							completion:^(LDrawSetInventory *set, NSError *error) {
 		self->isImporting = NO;
+
+		// After Cancel, the import still saves the set, but leaves the limit.
+		if(self->isClosed)
+			return;
 		[self->spinner stopAnimation:nil];
 
 		if(set == nil)
@@ -296,11 +301,17 @@ static ImportSetController *runningController = nil;
 //==============================================================================
 - (void) close
 {
+	if(isClosed)
+		return;
+	isClosed = YES;
+
 	if(parent != nil)
 		[parent endSheet:panel];
 	[panel orderOut:nil];
 
-	runningController = nil;
+	// A sheet opened after this one was cancelled is not this one.
+	if(runningController == self)
+		runningController = nil;
 
 }//end close
 

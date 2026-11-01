@@ -44,9 +44,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) BOOL isUpdating;
 
 /// Fetches the downloads that are due, or all when forced, then builds and
-/// saves the catalog when a file changed or the store has none. The progress
-/// covers the downloads; building takes a few seconds more. `changed` says
-/// whether the catalog was saved.
+/// saves the catalog when a file changed since the last build, or the store
+/// has none. The progress covers the downloads; building takes a few seconds
+/// more. `changed` says whether the catalog was saved.
 - (NSProgress *) updateCatalogForcing:(BOOL)force
 						   completion:(void (^)(BOOL changed, NSError * _Nullable error))completion
 	NS_SWIFT_NAME(updateCatalog(forcing:completion:));

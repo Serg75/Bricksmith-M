@@ -73,6 +73,12 @@
     } else {
 		NSLog(@"Couldn't load InspectorPart.nib");
     }
+
+	// A check runs after the edit that changed the part, so its line comes later.
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsLimitDidCheck:)
+												 name:PartsLimitDidCheckNotification
+											   object:nil];
 	
     return self;
 	
@@ -90,6 +96,21 @@
 #pragma mark -
 #pragma mark ACTIONS
 #pragma mark -
+
+//========== partsLimitDidCheck: ===============================================
+//
+// Purpose:		Shows how the part stands after the latest check. Only the
+//				description changes, so fields being edited keep their text.
+//
+//==============================================================================
+- (void) partsLimitDidCheck:(NSNotification *)notification
+{
+	LDrawPart *part = [self object];
+
+	if([part isKindOfClass:[LDrawPart class]])
+		[self showDescription:[[LDrawPartLibrary sharedPartLibrary] descriptionForPart:part]];
+}
+
 
 //========== commitChanges: ====================================================
 //
@@ -116,6 +137,46 @@
 }//end commitChanges:
 
 
+//========== showDescription: ==================================================
+//
+// Purpose:		The part's description, and on the second line how the part
+//				breaks the parts limit. With that line the description keeps to
+//				one line, since the field holds two.
+//
+//==============================================================================
+- (void) showDescription:(NSString *)description
+{
+	LDrawDocument			*document	= [[NSDocumentController sharedDocumentController] currentDocument];
+	NSString				*limitLine	= nil;
+	NSFont					*font		= [_partDescriptionField font];
+	NSMutableParagraphStyle	*oneLine	= [[NSMutableParagraphStyle alloc] init];
+	NSDictionary			*plain		= nil;
+	NSDictionary			*red		= nil;
+	NSMutableAttributedString *text		= nil;
+
+	if([document isKindOfClass:[LDrawDocument class]])
+		limitLine = [[document partsLimitController] limitLineForPart:[self object]];
+	if(limitLine == nil)
+	{
+		[_partDescriptionField setStringValue:description];
+		[_partDescriptionField setToolTip:description]; //in case it overflows the field.
+		return;
+	}
+
+	[oneLine setLineBreakMode:NSLineBreakByTruncatingTail];
+	plain	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine};
+	red		= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine,
+				NSForegroundColorAttributeName: [NSColor systemRedColor]};
+	text	= [[NSMutableAttributedString alloc] initWithString:[description stringByAppendingString:@"\n"]
+													 attributes:plain];
+
+	[text appendAttributedString:[[NSAttributedString alloc] initWithString:limitLine attributes:red]];
+	[_partDescriptionField setAttributedStringValue:text];
+	[_partDescriptionField setToolTip:[NSString stringWithFormat:@"%@\n%@", description, limitLine]];
+
+}//end showDescription:
+
+
 //========== revert ============================================================
 //
 // Purpose:		Restores the palette to reflect the state of the object.
@@ -134,29 +195,7 @@
 	Tuple3				 shear				= ZeroPoint3;
 	
 	
-	[_partDescriptionField setStringValue:description];
-	[_partDescriptionField setToolTip:description]; //in case it overflows the field.
-
-	// How the part breaks the parts limit goes on the field's second line.
-	LDrawDocument	*document	= [[NSDocumentController sharedDocumentController] currentDocument];
-	NSString		*limitLine	= nil;
-
-	if([document isKindOfClass:[LDrawDocument class]])
-		limitLine = [[document partsLimitController] limitLineForPart:representedObject];
-	if(limitLine != nil)
-	{
-		NSFont						*font	= [_partDescriptionField font];
-		NSMutableAttributedString	*text	= [[NSMutableAttributedString alloc]
-											   initWithString:description
-												   attributes:@{NSFontAttributeName: font}];
-
-		[text appendAttributedString:[[NSAttributedString alloc]
-									  initWithString:[@"\n" stringByAppendingString:limitLine]
-										  attributes:@{NSFontAttributeName: font,
-													   NSForegroundColorAttributeName: [NSColor systemRedColor]}]];
-		[_partDescriptionField setAttributedStringValue:text];
-		[_partDescriptionField setToolTip:[NSString stringWithFormat:@"%@\n%@", description, limitLine]];
-	}
+	[self showDescription:description];
 	[_partNameField setStringValue:[representedObject displayName]];
 	
 	[_colorWell setLDrawColor:[representedObject LDrawColor]];

@@ -309,32 +309,22 @@ static NSString * const LimitStatusTextKey	= @"LimitStatusText";
 //
 // Purpose:		Each row with the limit's keys, and only the problems when
 //				Problems Only is on. A row takes the status of what it counts
-//				with, so molds and colors that are one LEGO color share it.
+//				with, so molds and colors that are one LEGO color share it. An
+//				assembly takes the worst status of its pieces.
 //
 //==============================================================================
 - (NSMutableArray *) rowsWithLimit:(NSArray *)rows
 {
 	LDrawPartLimitTable	*table		= [self->limitReport table];
-	NSMutableDictionary	*byKey		= [NSMutableDictionary dictionary];
 	NSMutableArray		*result		= [NSMutableArray arrayWithCapacity:[rows count]];
 	BOOL				 onlyBad	= ([self->problemsOnlyCheckbox state] == NSControlStateValueOn);
-
-	for(LDrawPartLimitRow *limitRow in [self->limitReport rows])
-	{
-		NSString *key = [table countKeyForPartNamed:limitRow.partName colorCode:limitRow.colorCode];
-		if(key != nil)
-			byKey[key] = limitRow;
-	}
 
 	for(NSDictionary *row in rows)
 	{
 		NSMutableDictionary		*copy		= [row mutableCopy];
 		NSString				*partName	= [row objectForKey:PART_REPORT_NUMBER_KEY];
 		LDrawColorT				 colorCode	= [[row objectForKey:PART_REPORT_LDRAW_COLOR] colorCode];
-		NSString				*key		= [table countKeyForPartNamed:partName colorCode:colorCode];
-		LDrawPartLimitRow		*limitRow	= (key != nil) ? byKey[key] : nil;
-		LDrawPartLimitStatus	 status		= limitRow ? limitRow.status
-														: [table statusForPartNamed:partName colorCode:colorCode];
+		LDrawPartLimitStatus	 status		= [self->limitReport statusForPartNamed:partName colorCode:colorCode];
 		NSUInteger				 owned		= [table ownedCountForPartNamed:partName colorCode:colorCode];
 
 		if(onlyBad && status < LDrawPartLimitStatusTooMany)

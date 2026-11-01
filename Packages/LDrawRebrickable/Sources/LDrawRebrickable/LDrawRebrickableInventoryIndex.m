@@ -101,7 +101,7 @@
 	NSURL						*url		= [self->downloads localURLForFileNamed:name];
 	LDrawRebrickableCSVReader	*reader		= [[LDrawRebrickableCSVReader alloc] initWithURL:url error:error];
 	NSArray						*columns	= [reader indexesOfColumns:@[@"inventory_id", numberColumn, @"quantity"]
-															   error:error];
+																 error:error];
 	NSUInteger					 last		= [LDrawRebrickableCSVReader lastIndexOfColumns:columns];
 
 	if (columns == nil)
@@ -177,7 +177,7 @@
 	LDrawRebrickableCSVReader	*reader		= [[LDrawRebrickableCSVReader alloc] initWithURL:url error:error];
 	NSArray						*columns	= [reader indexesOfColumns:@[@"inventory_id", @"part_num", @"color_id",
 																		 @"quantity", @"is_spare"]
-															   error:error];
+																 error:error];
 	NSUInteger					 last		= [LDrawRebrickableCSVReader lastIndexOfColumns:columns];
 	NSUInteger					 inventory	= [columns[0] unsignedIntegerValue];
 	NSUInteger					 part		= [columns[1] unsignedIntegerValue];

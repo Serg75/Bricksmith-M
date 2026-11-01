@@ -208,6 +208,25 @@ final class LDrawPartBrowserLimitTests {
         #expect(chips.first?.record != nil)
     }
 
+    @Test("With an inventory as the limit, Primitives still list the library's primitives")
+    func inventoryPrimitives() throws {
+        let model = browser(try session(LDrawPartLimit.inventory("42115-1")), category: Category_Primitives)
+        model.reloadFilter()
+
+        #expect(model.showsInventoryRows == false)
+        #expect(names(model) == ["4-4cyli.dat"])
+    }
+
+    @Test("A selection comes back to the same part in the same color")
+    func selectionKeepsColor() {
+        let black: [String: Any] = [PART_NUMBER_KEY: "3001.dat", LDrawPartBrowserColorCodeKey: 0]
+        let red: [String: Any] = [PART_NUMBER_KEY: "3001.dat", LDrawPartBrowserColorCodeKey: 4]
+        let records = [black, red]
+        #expect(LDrawPartBrowserModel.index(ofRecord: red, inRecords: records) == 1)
+        #expect(LDrawPartBrowserModel.index(ofRecord: [PART_NUMBER_KEY: "3001.dat"], inRecords: records) == 0)
+        #expect(LDrawPartBrowserModel.index(ofRecord: nil, inRecords: records) == NSNotFound)
+    }
+
     @Test("Inventory rows follow the category, the color filter and the search")
     func inventoryFilters() throws {
         let model = browser(try session(LDrawPartLimit.inventory("42115-1")), category: "Brick")

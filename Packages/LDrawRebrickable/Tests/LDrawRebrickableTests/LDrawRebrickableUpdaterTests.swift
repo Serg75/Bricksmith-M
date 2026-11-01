@@ -54,6 +54,32 @@ extension LDrawRebrickableNetworkTests {
         #expect(again == false)
     }
 
+    @Test("Files stored after the last build are built on the next update, even when nothing changed since")
+    func buildRetried() async throws {
+        serveFixtures()
+        let updater = updater()
+        let _: (Bool, Error?) = await withCheckedContinuation { continuation in
+            _ = updater.updateCatalog(forcing: false) { continuation.resume(returning: ($0, $1)) }
+        }
+        #expect(updater.downloads.hasNewFiles(named: LDrawRebrickableDownloads.catalogFileNames()) == false)
+
+        // A file stored by a run whose build did not finish.
+        let _: ([String], Error?) = await withCheckedContinuation { continuation in
+            _ = updater.downloads.updateFiles(named: ["themes"], force: true, completionQueue: nil) {
+                continuation.resume(returning: ($0, $1))
+            }
+        }
+        #expect(updater.downloads.hasNewFiles(named: ["themes"]))
+
+        StubURLProtocol.answer { _ in .init(status: 304) }
+        let (changed, error): (Bool, Error?) = await withCheckedContinuation { continuation in
+            _ = updater.updateCatalog(forcing: true) { continuation.resume(returning: ($0, $1)) }
+        }
+        #expect(error == nil)
+        #expect(changed)
+        #expect(updater.downloads.hasNewFiles(named: ["themes"]) == false)
+    }
+
     @Test("A set is imported from the downloads and saved in the store")
     func importFromDownloads() async throws {
         serveFixtures()

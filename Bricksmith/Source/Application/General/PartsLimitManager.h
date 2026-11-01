@@ -23,6 +23,9 @@ extern NSString * const PartsLimitBrowserSettingDidChangeNotification;
 // Posted when the marks are turned on or off, or their look changes. No object.
 extern NSString * const PartsLimitMarksDidChangeNotification;
 
+// Posted when an update of the parts data ends, however it ended. No object.
+extern NSString * const PartsDataUpdateDidEndNotification;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PartsLimitManager

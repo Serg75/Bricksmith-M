@@ -151,6 +151,18 @@ static const NSUInteger MaximumNesting = 6;
 	if (didRead == NO)
 		return nil;
 
+	// Saving a set with no parts would hide that the downloads did not match.
+	if ([[tally items] count] == 0)
+	{
+		NSString *reason = [NSString stringWithFormat:@"Rebrickable lists no parts for set %@.", set.setNumber];
+
+		if (error != NULL)
+			*error = [NSError errorWithDomain:LDrawRebrickableErrorDomain
+										 code:LDrawRebrickableErrorNotFound
+									 userInfo:@{ NSLocalizedDescriptionKey : reason }];
+		return nil;
+	}
+
 	return [[LDrawSetInventory alloc] initWithSetNumber:set.setNumber
 												   name:set.name
 												   year:set.year

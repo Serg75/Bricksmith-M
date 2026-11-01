@@ -59,6 +59,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 	BOOL					 isHidden;
 	BOOL					 hasMarks;		// some part may hold a status from an earlier limit
+	BOOL					 isRedrawing;	// the redraw reaches the document as an edit
 	LDrawPartUsage			*usage;			// nil after an edit until asked for
 }
 
@@ -125,7 +126,10 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	[self->limitPopUp setToolTip:NSLocalizedString(@"Which parts the model may use. Every window shares it.", nil)];
 	[self->limitPopUp setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
 
-	self->problemButton = [NSButton buttonWithTitle:@"" image:[NSImage new] target:self action:@selector(showProblems:)];
+	self->problemButton = [NSButton buttonWithTitle:@""
+											  image:[NSImage new]
+											 target:self
+											 action:@selector(showProblems:)];
 	[self->problemButton setBezelStyle:NSBezelStyleRecessed];
 	[self->problemButton setShowsBorderOnlyWhileMouseInside:YES];
 	[self->problemButton setControlSize:NSControlSizeSmall];
@@ -253,9 +257,26 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //==============================================================================
 - (void) setNeedsCheck
 {
+	if(self->isRedrawing)
+		return;
+
 	self->usage = nil;
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(check) object:nil];
 	[self performSelector:@selector(check) withObject:nil afterDelay:0];
+}
+
+
+//========== redrawMarks =======================================================
+//
+// Purpose:		Redraws the model. The document takes the redraw for an edit,
+//				which would walk the model again for nothing.
+//
+//==============================================================================
+- (void) redrawMarks
+{
+	self->isRedrawing = YES;
+	[[self->document documentContents] noteNeedsDisplay];
+	self->isRedrawing = NO;
 }
 
 
@@ -291,7 +312,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	self->hasMarks	= restricts;
 
 	if([changed count] > 0)
-		[file noteNeedsDisplay];
+		[self redrawMarks];
 
 	[self updateControls];
 	[self updatePopover];
@@ -581,8 +602,10 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 				[choices addObject:choice];
 		}
 
+		// A part inside a SUB range takes the substitute's status, and may
+		// already be in its nearest color.
 		nearest = [LDrawPartLimitPresentation nearestColorTo:color amongColors:choices];
-		if(nearest == nil)
+		if(nearest == nil || [nearest colorCode] == [color colorCode])
 			continue;
 
 		[owner setObject:part toColor:nearest];
@@ -766,8 +789,14 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	NSString			*inventory	= [[PartsLimitManager sharedManager] titleForLimit:limit] ?: @"";
 	NSString			*partName	= [part displayName];
 	LDrawColor			*color		= [part LDrawColor];
-	NSString			*colorName	= [color localizedName];
+	LDrawColorT			 checked	= [self.report colorCodeForPart:part];
+	NSString			*colorName	= nil;
 	NSString			*line		= nil;
+
+	// A part in color 16 is checked in the color of what places it.
+	if(checked != LDrawColorBogus && checked != [color colorCode])
+		color = [[LDrawColorLibrary sharedColorLibrary] colorForCode:checked] ?: color;
+	colorName = [color localizedName];
 
 	switch([part limitStatus])
 	{

@@ -176,6 +176,10 @@ typedef NS_ENUM(NSInteger, LDrawPartBrowserSearchMode)
 
 + (NSUInteger)indexOfPartNamed:(nullable NSString *)partName inRecords:(NSArray *)records;
 
+/// The row for the same part in the same color, since an inventory lists a
+/// part once per color. Else the first row for the part, or NSNotFound.
++ (NSUInteger)indexOfRecord:(nullable NSDictionary *)record inRecords:(NSArray *)records;
+
 /// Category dictionary whose Name matches, walking group Children. Nil if none.
 /// The host still asks the outline for the row and selects it.
 + (nullable id)categoryItemNamed:(nullable NSString *)name inHierarchy:(NSArray *)categoryList;

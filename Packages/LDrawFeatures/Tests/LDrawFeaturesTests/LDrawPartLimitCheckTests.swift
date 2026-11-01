@@ -119,7 +119,7 @@ struct LDrawPartLimitCheckTests {
         #expect(usage(file) == ["3003.dat/4"])
     }
 
-    @Test("A SUB range counts its substitute once, in its own color or the first part's")
+    @Test("A SUB range counts its substitute once, in its own color or the first part's; quotes are dropped")
     func substitutes() throws {
         let file = LDrawFile()
         let left = part("2429.dat", Self.black)
@@ -127,9 +127,11 @@ struct LDrawPartLimitCheckTests {
         model("main.ldr", in: file, steps: [[
             bracket("PLI BEGIN SUB 2429c01.ldr"), left, right, bracket("PLI END"),
             bracket("PLI BEGIN SUB 3001.dat 1"), part("3001.dat"), bracket("PLI END"),
+            bracket("PLI BEGIN SUB \"Front Bumper.ldr\" 4"), part("3002.dat"), bracket("PLI END"),
         ]])
         let copies = LDrawPartUsage(file: file).copies
-        #expect(copies.map { "\($0.partName)/\($0.colorCode.rawValue)" } == ["2429c01.dat/0", "3001.dat/1"])
+        #expect(copies.map { "\($0.partName)/\($0.colorCode.rawValue)" }
+                == ["2429c01.dat/0", "3001.dat/1", "front bumper.dat/4"])
         #expect(copies[0].kind == .substitute)
         #expect(copies[0].parts == [left, right])
     }
@@ -139,6 +141,31 @@ struct LDrawPartLimitCheckTests {
         let file = LDrawFile()
         model("main.ldr", in: file, steps: [[part("3001.dat")]])
         model("spare.ldr", in: file, steps: [[part("3002.dat")]])
+        #expect(usage(file) == ["3001.dat/4", "3002.dat/4 not counted"])
+    }
+
+    @Test("A model placed only inside a range is not walked, nor the models it places")
+    func modelInsideRange() {
+        let file = LDrawFile()
+        model("main.ldr", in: file, steps: [[
+            bracket("PLI BEGIN SUB 73983.dat 0"), part("hinge.ldr"), bracket("PLI END"),
+            bracket("PART BEGIN IGN"), part("stand.ldr"), bracket("PART END"),
+        ]])
+        model("hinge.ldr", in: file, steps: [[part("2429.dat", Self.main), part("2430.dat", Self.main)]])
+        model("stand.ldr", in: file, steps: [[part("base.ldr"), part("3001.dat")]])
+        model("base.ldr", in: file, steps: [[part("3002.dat")]])
+        model("spare.ldr", in: file, steps: [[part("3003.dat")]])
+
+        #expect(usage(file) == ["73983.dat/0", "3003.dat/4 not counted"])
+    }
+
+    @Test("A model placed only by a model nothing places takes its color from there, in any file order")
+    func unplacedChain() {
+        let file = LDrawFile()
+        model("main.ldr", in: file, steps: [[part("3001.dat")]])
+        model("x.ldr", in: file, steps: [[part("3002.dat", Self.main)]])
+        model("y.ldr", in: file, steps: [[part("x.ldr", Self.red)]])
+
         #expect(usage(file) == ["3001.dat/4", "3002.dat/4 not counted"])
     }
 
@@ -181,6 +208,21 @@ struct LDrawPartLimitCheckTests {
         #expect(without.status(for: bricks[2]) == .tooMany)
     }
 
+    // A missing part needs the shared part library, which package tests do not
+    // have, so only LSynth is tested here.
+    @Test("An LSynth band is no data, even in a color the limit allows")
+    func synthesized() {
+        let file = LDrawFile()
+        let band = LDrawLSynth()
+        band.setLsynthType("RUBBER_BAND")
+        band.setLDrawColor(color(Self.red))
+        model("main.ldr", in: file, steps: [[band, part("3001.dat")]])
+
+        let report = LDrawPartLimitCheck.report(for: file, table: inventory([item("3001", 4, 1)]))
+        #expect(report.status(forPartNamed: "rubber_band", colorCode: LDrawColorT(rawValue: Self.red)!) == .noData)
+        #expect(report.rows.first { $0.partName == "rubber_band" }?.ownedCount == UInt(NSNotFound))
+    }
+
     @Test("A part in a submodel placed twice takes the worst status of its copies")
     func submodelCopies() {
         let file = LDrawFile()
@@ -208,6 +250,50 @@ struct LDrawPartLimitCheckTests {
         #expect(report.status(for: unavailable) == .notAvailable)
         #expect(report.status(for: noColor) == .noData)
         #expect(report.parts(with: .notInColor) == [wrongColor])
+    }
+
+    @Test("An inventory counts a placed hinge by its halves, against the set's hinges")
+    func assemblies() throws {
+        let file = LDrawFile()
+        let hinges = [part("73983.dat"), part("73983.dat")]
+        let halves = [part("2429.dat"), part("2430.dat")]
+        model("main.ldr", in: file, steps: [hinges, halves])
+
+        let hinge = """
+            0 Hinge Plate  1 x  4 (Complete)
+            0 !LDRAW_ORG Shortcut UPDATE 2004-03
+            1 16 0 0 0 1 0 0 0 1 0 0 0 1 2429.dat
+            1 16 0 0 0 1 0 0 0 1 0 0 0 1 2430.dat
+            """
+        let shortcuts = LDrawShortcutMap(fileReader: { $0 == "73983.dat" ? hinge : nil })
+        let table = LDrawPartLimitTable(limit: LDrawPartLimit.inventory("set"), availability: nil,
+                                        items: [item("73983", 4, 2)], identity: identity(), shortcuts: shortcuts,
+                                        year: 2026)
+        let report = LDrawPartLimitCheck.report(for: file, table: table)
+        let red = LDrawColorT(rawValue: Self.red)!
+
+        #expect(hinges.allSatisfy { report.status(for: $0) == .allowed })
+        #expect(halves.allSatisfy { report.status(for: $0) == .tooMany })
+        #expect(report.rows.map(\.partName) == ["2429.dat", "2430.dat"])
+        #expect(report.usedCount(forPartNamed: "2429.dat", colorCode: red) == 3)
+        #expect(report.usedCount(forPartNamed: "73983.dat", colorCode: red) == 2)
+        #expect(report.status(forPartNamed: "73983.dat", colorCode: red) == .allowed)
+        #expect(report.status(forPartNamed: "2430.dat", colorCode: red) == .tooMany)
+    }
+
+    @Test("A part in color 16 is checked in the color of what places it, and the report says which")
+    func checkedColor() {
+        let file = LDrawFile()
+        let inner = part("3001.dat", Self.main)
+        let ignored = part("3002.dat")
+        model("main.ldr", in: file, steps: [[part("sub.ldr", Self.red),
+                                            bracket("PLI BEGIN IGN"), ignored, bracket("PLI END")]])
+        model("sub.ldr", in: file, steps: [[inner]])
+
+        let report = LDrawPartLimitCheck.report(for: file, table: inventory([item("3001", 4, 1)]))
+        #expect(report.colorCode(for: inner).rawValue == Self.red)
+        #expect(report.status(for: inner) == .allowed)
+        #expect(report.colorCode(for: ignored) == LDrawColorT(rawValue: -1)!)
     }
 
     @Test("Colors that are one Rebrickable color share one count")
@@ -238,16 +324,19 @@ struct LDrawPartLimitCheckTests {
 
     // Copying a part looks up the shared part library, which package tests do
     // not have, so the copy's status is not tested here.
-    @Test("Applying a report sets each part's status and returns only the parts that changed")
+    @Test("Applying a report sets each part's status and returns only the parts that changed or were new")
     func applying() throws {
         let file = LDrawFile()
         let good = part("3001.dat")
         let bad = part("3002.dat")
         let main = model("main.ldr", in: file, steps: [[good, bad]])
         let table = inventory([item("3001", 4, 1)])
+        #expect(good.isLimitChecked == false)
 
         let changed = LDrawPartLimitCheck.apply(LDrawPartLimitCheck.report(for: file, table: table), to: file)
-        #expect(changed == [bad])
+        #expect(Set(changed) == [good, bad])
+        #expect(good.isLimitChecked && bad.isLimitChecked)
+        #expect(part("3001.dat").isLimitChecked == false)
         #expect(bad.limitStatus == .notAvailable)
         #expect(good.limitStatus == .allowed)
         #expect(LDrawPartLimitCheck.apply(LDrawPartLimitCheck.report(for: file, table: table), to: file).isEmpty)

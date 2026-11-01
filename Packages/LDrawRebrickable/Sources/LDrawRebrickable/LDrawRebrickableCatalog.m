@@ -160,7 +160,7 @@ static const NSUInteger MaximumNesting = 6;
 	LDrawRebrickableCSVReader	*reader		= [[LDrawRebrickableCSVReader alloc] initWithURL:url error:error];
 	NSArray						*columns	= [reader indexesOfColumns:@[@"rel_type", @"child_part_num",
 																		 @"parent_part_num"]
-															   error:error];
+																 error:error];
 	NSUInteger					 last		= [LDrawRebrickableCSVReader lastIndexOfColumns:columns];
 	NSMutableArray				*relations	= [NSMutableArray array];
 

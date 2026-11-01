@@ -16,6 +16,8 @@
 @class LDrawPartAvailability;
 @class LDrawPartIdentity;
 @class LDrawPartLimit;
+@class LDrawShortcutMap;
+@class LDrawShortcutPiece;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -32,7 +34,14 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 ///             Parts are counted by pool: a part, its molds and alternates,
 ///             and with any print, its prints. An item in Rebrickable's "any
-///             color" counts toward every color of its pool.
+///             color" counts toward every color of its pool. A part with no
+///             Rebrickable number pools by its LDraw name.
+///
+///             With a shortcut map, an inventory counts an assembly by its
+///             pieces, such as a hinge by its two halves, so a model can build
+///             it either way. Available now also allows the pieces of an
+///             assembly that came in a set, in its color. An assembly is
+///             allowed when its pieces are.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPartLimitTable : NSObject
@@ -50,7 +59,18 @@ NS_ASSUME_NONNULL_BEGIN
 						  year:(NSInteger)currentYear
 	NS_SWIFT_NAME(init(limit:availability:items:identity:year:));
 
+/// The same, splitting assemblies into their pieces through `shortcuts`.
++ (instancetype) tableForLimit:(LDrawPartLimit *)limit
+				  availability:(nullable LDrawPartAvailability *)availability
+						 items:(nullable NSArray<LDrawInventoryItem *> *)items
+					  identity:(LDrawPartIdentity *)identity
+					 shortcuts:(nullable LDrawShortcutMap *)shortcuts
+						  year:(NSInteger)currentYear
+	NS_SWIFT_NAME(init(limit:availability:items:identity:shortcuts:year:));
+
 @property (nonatomic, readonly) LDrawPartLimit *limit;
+
+@property (nonatomic, readonly, nullable) LDrawShortcutMap *shortcuts;
 
 /// Whether the limit has the data it needs. Without it, every part has no
 /// data.
@@ -90,8 +110,14 @@ NS_ASSUME_NONNULL_BEGIN
 /// color share one count. Nil when the part or the color has no match.
 - (nullable NSString *) countKeyForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode;
 
+/// The pieces an inventory counts a copy of the part as, each in its own
+/// color, 16 for the copy's. Nil when the part counts as itself.
+- (nullable NSArray<LDrawShortcutPiece *> *) countedPiecesOfPartNamed:(NSString *)partName
+	NS_SWIFT_NAME(countedPieces(ofPartNamed:));
+
 /// An inventory's rows: one per pool and color, with LDraw ids filled in
-/// where the identity map knows them. Empty for other limits.
+/// where the identity map knows them, and assemblies as their pieces. Empty
+/// for other limits.
 - (NSArray<LDrawInventoryItem *> *) items;
 
 /// An inventory's items that match no part, or no color while colors count.

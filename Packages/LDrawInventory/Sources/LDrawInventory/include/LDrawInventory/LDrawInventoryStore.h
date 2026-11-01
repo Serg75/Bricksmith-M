@@ -15,6 +15,7 @@
 @class LDrawPartIdentity;
 @class LDrawPartLimit;
 @class LDrawPartLimitTable;
+@class LDrawShortcutMap;
 @class LDrawSetInventory;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -42,6 +43,9 @@ extern NSString * const LDrawInventoryStoreDidChangeNotification;
 ///
 ///             Read and written on one thread. What is read is kept in memory,
 ///             and a save changes the file and the memory together.
+///
+///             An inventories or overrides file that cannot be read is renamed
+///             to `<name>.unreadable.json`, so a save cannot write over it.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawInventoryStore : NSObject
@@ -95,6 +99,13 @@ extern NSString * const LDrawInventoryStoreDidChangeNotification;
 							   identity:(LDrawPartIdentity *)identity
 								   year:(NSInteger)currentYear
 	NS_SWIFT_NAME(table(for:identity:year:));
+
+/// The same, splitting assemblies into their pieces through `shortcuts`.
+- (LDrawPartLimitTable *) tableForLimit:(LDrawPartLimit *)limit
+							   identity:(LDrawPartIdentity *)identity
+							  shortcuts:(nullable LDrawShortcutMap *)shortcuts
+								   year:(NSInteger)currentYear
+	NS_SWIFT_NAME(table(for:identity:shortcuts:year:));
 
 
 // MARK: - Catalog and identity

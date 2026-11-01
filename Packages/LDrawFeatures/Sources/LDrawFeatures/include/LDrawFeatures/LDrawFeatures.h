@@ -56,4 +56,5 @@
 #import <LDrawFeatures/LDrawStepPartListResizeTracker.h>
 #import <LDrawFeatures/LDrawStepPartListStyle.h>
 #import <LDrawFeatures/LDrawToolMode.h>
+#import <LDrawFeatures/LDrawUnmatchedParts.h>
 #import <LDrawFeatures/LSynthConfiguration.h>

@@ -128,7 +128,7 @@ static const NSUInteger MaximumThemeDepth = 16;
 	LDrawRebrickableCSVReader	*reader		= [[LDrawRebrickableCSVReader alloc] initWithURL:setsURL error:error];
 	NSArray						*setIndex	= [reader indexesOfColumns:@[@"set_num", @"name", @"year", @"theme_id",
 																		 @"num_parts"]
-																error:error];
+																 error:error];
 	NSUInteger					 setLast	= [LDrawRebrickableCSVReader lastIndexOfColumns:setIndex];
 	NSUInteger					 imageColumn	= [reader indexOfColumn:@"img_url"];
 
@@ -149,9 +149,9 @@ static const NSUInteger MaximumThemeDepth = 16;
 			set.themeName		= themeNames[theme];
 			set.partCount		= (NSUInteger)MAX(parts, 0);
 			set.isDatabaseSet	= [self theme:theme
-								  isUnder:DatabaseSetsThemeName
-									names:themeNames
-								  parents:themeParents];
+									  isUnder:DatabaseSetsThemeName
+										names:themeNames
+									  parents:themeParents];
 			if (imageColumn < [fields count] && [fields[imageColumn] length] > 0)
 				set.imageURL = fields[imageColumn];
 

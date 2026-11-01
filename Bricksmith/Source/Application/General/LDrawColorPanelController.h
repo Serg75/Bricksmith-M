@@ -34,6 +34,7 @@
 				// Parts limit
 				NSArray				*selectedPartNames;	// parts selected in the document
 				NSString			*browserPartName;	// the Part Browser's part, for when none are
+				BOOL				 hasSelection;		// the document's selection holds anything
 				NSArray				*allowedColorCodes;	// the colors those parts may take, or nil for any
 				NSTextField			*footerField;		// says why the list is short
 				BOOL				 isRefiltering;		// the limit changes the list; no color is applied

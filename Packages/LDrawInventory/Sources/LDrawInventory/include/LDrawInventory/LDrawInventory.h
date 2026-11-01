@@ -24,3 +24,4 @@
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawPartLimitTable.h>
 #import <LDrawInventory/LDrawSetInventory.h>
+#import <LDrawInventory/LDrawShortcutMap.h>

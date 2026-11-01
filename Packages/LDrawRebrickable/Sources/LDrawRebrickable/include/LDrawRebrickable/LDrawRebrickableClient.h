@@ -19,7 +19,8 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @discussion Calls go out one at a time, a second apart, as Rebrickable
 ///             asks. A 429 is retried after the wait the server names, a few
-///             times. The key goes in the Authorization header only.
+///             times. The key goes in the Authorization header only. The
+///             spacing holds within one client, so a host keeps one.
 ///
 ///             Rebrickable's docs ask apps to read full lists from the
 ///             downloads, not page through the API, so this is meant for a

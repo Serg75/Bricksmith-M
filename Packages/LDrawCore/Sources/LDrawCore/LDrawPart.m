@@ -398,11 +398,12 @@ int floatNearGrid(double v, double grid, double epsi)
 
 		[self resolvePart];
 
-		// Every part without a mark dims, so the marked ones stand out. Only
-		// parts from the library: a submodel's own parts dim themselves, and
-		// its marked parts must not.
+		// Every checked part without a mark dims, so the marked ones stand out.
+		// Only parts from the library: a submodel's own parts dim themselves,
+		// and its marked parts must not.
 		if(		sDimsAllowedParts
 		   &&	sLimitMarkStyle != LDrawRenderMarkNone
+		   &&	self.isLimitChecked
 		   &&	isMarked == NO
 		   &&	drawAsGhost == NO
 		   &&	[self referencedMPDSubmodel] == nil

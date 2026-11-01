@@ -78,7 +78,8 @@
 									  force:force
 							completionQueue:dispatch_get_main_queue()
 								 completion:^(NSArray<NSString *> *changedNames, NSError *error) {
-		BOOL needsCatalog = ([changedNames count] > 0 || self.hasCatalog == NO);
+		// Files stored by an earlier run whose build failed count as new.
+		BOOL needsCatalog = (self.hasCatalog == NO || [self.downloads hasNewFilesNamed:names]);
 
 		if (error != nil || needsCatalog == NO || [self.downloads hasFilesNamed:names] == NO)
 		{
@@ -90,7 +91,7 @@
 		dispatch_async(self->workQueue, ^{
 			NSError					*buildError	= nil;
 			LDrawRebrickableCatalog	*catalog	= [LDrawRebrickableCatalog catalogFromDownloads:self.downloads
-																					  error:&buildError];
+																						  error:&buildError];
 			dispatch_async(dispatch_get_main_queue(), ^{
 				NSError	*saveError	= nil;
 				BOOL	 saved		= NO;
@@ -103,6 +104,8 @@
 															  self.downloads.folderURL]
 													   error:&saveError];
 				}
+				if (saved)
+					[self.downloads markFilesNamedAsUsed:names];
 				self.isUpdating = NO;
 				completion(saved, buildError ?: saveError);
 			});
@@ -154,7 +157,8 @@
 		[LDrawRebrickableSetImporter fetchSetInventoryForNumber:setNumber
 														 client:client
 														setList:self->setList
-													 completion:^(LDrawSetInventory *set, NSDictionary *links, NSError *error) {
+													 completion:^(LDrawSetInventory *set, NSDictionary *links,
+																  NSError *error) {
 			NSError *saveError = nil;
 
 			if (set != nil)

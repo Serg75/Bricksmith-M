@@ -22,21 +22,26 @@
 #import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawInventory/LDrawCombinedInventory.h>
 #import <LDrawInventory/LDrawInventoryStore.h>
+#import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawPartLimitTable.h>
 #import <LDrawInventory/LDrawSetInventory.h>
+#import <LDrawInventory/LDrawShortcutMap.h>
 #import <LDrawRebrickable/LDrawRebrickableCSVReader.h>
 #import <LDrawRebrickable/LDrawRebrickableClient.h>
+#import <LDrawRebrickable/LDrawRebrickableColors.h>
 #import <LDrawRebrickable/LDrawRebrickableDownloads.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "ImportSetController.h"
 #import "InventoriesWindowController.h"
 #import "LDrawDocument.h"
+#import "PartsLimitController.h"
 #import "PartsLimitOptionsController.h"
 
 NSString * const PartsLimitBrowserSettingDidChangeNotification = @"PartsLimitBrowserSettingDidChangeNotification";
 NSString * const PartsLimitMarksDidChangeNotification = @"PartsLimitMarksDidChangeNotification";
+NSString * const PartsDataUpdateDidEndNotification = @"PartsDataUpdateDidEndNotification";
 
 static NSString * const KeychainService	= @"Bricksmith Rebrickable API Key";
 static NSString * const KeychainAccount	= @"Rebrickable";
@@ -196,6 +201,13 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 	LDrawRebrickableDownloads	*downloads;
 	PartsDataProgressPanel		*progressPanel;
 	NSArray						*partRecords;
+	NSUInteger					 shortcutsGeneration;	// the newest read of the library's shortcuts
+	BOOL						 shortcutsAreCurrent;	// a read of partRecords' shortcuts was started
+	NSArray						*appliedMarkSettings;	// what the drawing code was last given
+	NSMutableArray				*waitingCompletions;	// asked for an update while one ran
+	LDrawRebrickableClient		*sharedClient;			// one for the key, so calls keep a second apart
+	BOOL						 isFetchingColors;
+	BOOL						 isAskingToDownload;	// the first download's question is up
 }
 
 
@@ -271,6 +283,10 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 											 selector:@selector(applyMarkSettings)
 												 name:LDrawPartLimitDidChangeNotification
 											   object:self.session];
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(readShortcutsIfNeeded)
+												 name:LDrawPartLimitDidChangeNotification
+											   object:self.session];
 	[self applyMarkSettings];
 
 	// Only data the user already asked for is kept up to date, quietly.
@@ -281,6 +297,7 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 		[self.updater updateCatalogForcing:NO completion:^(BOOL changed, NSError *error) {
 			if(error != nil)
 				NSLog(@"Parts data update failed: %@", error);
+			[self updateDidEndWithSuccess:(error == nil && [self.updater hasCatalog])];
 		}];
 	}
 
@@ -290,7 +307,7 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 //========== partLibraryDidChange: =============================================
 //
 // Purpose:		Gives the session the part library's records, whose keywords
-//				link parts to Rebrickable.
+//				link parts to Rebrickable, and then its shortcuts.
 //
 // Notes:		The library also posts this when favorites change, which leaves
 //				the records as they were.
@@ -302,11 +319,63 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 
 	if([records count] > 0 && [records isEqualToArray:self->partRecords] == NO)
 	{
-		self->partRecords = records;
+		self->partRecords			= records;
+		self->shortcutsAreCurrent	= NO;
 		[self.session setCatalogRecords:records];
+		[self readShortcutsIfNeeded];
 	}
 
 }//end partLibraryDidChange:
+
+
+//========== readShortcutsIfNeeded =============================================
+//
+// Purpose:		Reads the library's shortcuts once something can use them: a
+//				limit, a set or an inventory.
+//
+// Notes:		The read opens every part file, so a user who never limits parts
+//				does not pay for it.
+//
+//==============================================================================
+- (void) readShortcutsIfNeeded
+{
+	LDrawInventoryStore *store = self.store;
+
+	if(self->shortcutsAreCurrent || [self->partRecords count] == 0)
+		return;
+	if(		[self.session limit].kind == LDrawPartLimitKindNone
+	   &&	[[store setNumbers] count] == 0
+	   &&	[[store combinedInventories] count] == 0 )
+		return;
+
+	self->shortcutsAreCurrent = YES;
+	[self readShortcutsOfParts:[NSSet setWithArray:[self->partRecords valueForKey:PART_NUMBER_KEY]]];
+
+}//end readShortcutsIfNeeded
+
+
+//========== readShortcutsOfParts: =============================================
+//
+// Purpose:		Reads which parts are shortcuts on a background queue, since it
+//				opens every part file, then gives the map to the session.
+//
+//==============================================================================
+- (void) readShortcutsOfParts:(NSSet<NSString *> *)partNames
+{
+	NSUInteger generation = ++self->shortcutsGeneration;
+
+	dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+		LDrawShortcutMap *map = [LDrawShortcutMap libraryMapWithPartNames:partNames];
+
+		[map readPartsNamed:partNames];
+		dispatch_async(dispatch_get_main_queue(), ^{
+			// A newer library replaces this one.
+			if(generation == self->shortcutsGeneration)
+				[self.session setShortcuts:map];
+		});
+	});
+
+}//end readShortcutsOfParts:
 
 
 #pragma mark -
@@ -451,10 +520,11 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 //========== applyMarkSettings =================================================
 //
 // Purpose:		Gives the drawing code the marks the settings ask for, and
-//				redraws every model.
+//				redraws every model when they changed.
 //
 // Notes:		The other parts dim only while a limit is on, since with none
-//				every part would.
+//				every part would. A change of the parts' marks redraws through
+//				each document's check.
 //
 //==============================================================================
 - (void) applyMarkSettings
@@ -464,11 +534,21 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 	BOOL			 restricts	= [[self.session table] limit].isRestricting;
 	BOOL			 dims		= [defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
 	NSInteger		 style		= [defaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	NSArray			*settings	= nil;
 	float			 rgb[3];
 
 	// Settings offer stripes, a tint or an outline.
 	if(style != LDrawRenderMarkTint && style != LDrawRenderMarkOutline)
 		style = LDrawRenderMarkStripes;
+
+	settings = @[ @(marks ? style : LDrawRenderMarkNone),
+				  @(marks && restricts && dims),
+				  [defaults objectForKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY] ?: [NSNull null],
+				  [defaults objectForKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY] ?: [NSNull null] ];
+
+	if([settings isEqualToArray:self->appliedMarkSettings])
+		return;
+	self->appliedMarkSettings = settings;
 
 	[LDrawPart setLimitMarkStyle:marks ? style : LDrawRenderMarkNone];
 	[LDrawPart setDimsAllowedParts:(marks && restricts && dims)];
@@ -481,7 +561,7 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
 	{
 		if([document isKindOfClass:[LDrawDocument class]])
-			[[(LDrawDocument *)document documentContents] noteNeedsDisplay];
+			[[(LDrawDocument *)document partsLimitController] redrawMarks];
 	}
 
 }//end applyMarkSettings
@@ -527,29 +607,63 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 //==============================================================================
 - (void) updateDataForcing:(BOOL)force window:(NSWindow *)window completion:(void (^)(BOOL success))completion
 {
-	if([self.updater isUpdating])
-		return;
+	NSAlert *alert = nil;
 
-	if([self.updater hasCatalog] == NO)
+	// The update under way, or the question about it, answers this one too.
+	if([self.updater isUpdating] || self->isAskingToDownload)
 	{
-		NSAlert *alert = [[NSAlert alloc] init];
-
-		[alert setMessageText:NSLocalizedString(@"Download parts data from Rebrickable.com?", nil)];
-		[alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(
-			@"Bricksmith needs the parts of every LEGO set to know which parts are made now and to import "
-			@"sets. Rebrickable.com offers them free: %@, kept in Application Support and updated at most "
-			@"once a day.", nil), DownloadSizeText]];
-		[alert addButtonWithTitle:NSLocalizedString(@"Download", nil)];
-		[alert addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
-
-		if([alert runModal] != NSAlertFirstButtonReturn)
+		if(completion != nil)
 		{
-			if(completion != nil)
-				completion(NO);
-			return;
+			if(self->waitingCompletions == nil)
+				self->waitingCompletions = [NSMutableArray array];
+			[self->waitingCompletions addObject:[completion copy]];
 		}
+		return;
 	}
 
+	if([self.updater hasCatalog])
+	{
+		[self startUpdateForcing:force window:window completion:completion];
+		return;
+	}
+
+	alert = [[NSAlert alloc] init];
+	[alert setMessageText:NSLocalizedString(@"Download parts data from Rebrickable.com?", nil)];
+	[alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(
+		@"Bricksmith needs the parts of every LEGO set to know which parts are made now and to import "
+		@"sets. Rebrickable.com offers them free: %@, kept in Application Support and updated at most "
+		@"once a day.", nil), DownloadSizeText]];
+	[alert addButtonWithTitle:NSLocalizedString(@"Download", nil)];
+	[alert addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
+
+	void (^answer)(NSModalResponse) = ^(NSModalResponse response) {
+		self->isAskingToDownload = NO;
+		if(response == NSAlertFirstButtonReturn)
+		{
+			[self startUpdateForcing:force window:window completion:completion];
+			return;
+		}
+		if(completion != nil)
+			completion(NO);
+		[self updateDidEndWithSuccess:NO];
+	};
+
+	self->isAskingToDownload = YES;
+	if(window != nil)
+		[alert beginSheetModalForWindow:window completionHandler:answer];
+	else
+		answer([alert runModal]);
+
+}//end updateDataForcing:window:completion:
+
+
+//========== startUpdateForcing:window:completion: =============================
+//
+// Purpose:		Updates the parts data, showing the progress on the window.
+//
+//==============================================================================
+- (void) startUpdateForcing:(BOOL)force window:(NSWindow *)window completion:(void (^)(BOOL success))completion
+{
 	NSProgress *progress = [self.updater updateCatalogForcing:force completion:^(BOOL changed, NSError *error) {
 		[self->progressPanel close];
 		self->progressPanel = nil;
@@ -561,11 +675,81 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 			[[NSAlert alertWithError:error] runModal];
 		if(completion != nil)
 			completion(error == nil && [self.updater hasCatalog]);
+		[self updateDidEndWithSuccess:(error == nil && [self.updater hasCatalog])];
 	}];
 
 	self->progressPanel = [[PartsDataProgressPanel alloc] initWithProgress:progress window:window];
 
-}//end updateDataForcing:window:completion:
+}//end startUpdateForcing:window:completion:
+
+
+//========== updateDidEndWithSuccess: ==========================================
+//
+// Purpose:		Answers the requests that came while the update ran, and tells
+//				the windows that show the data.
+//
+//==============================================================================
+- (void) updateDidEndWithSuccess:(BOOL)success
+{
+	NSArray *waiting = self->waitingCompletions;
+
+	self->waitingCompletions = nil;
+	for(void (^completion)(BOOL) in waiting)
+		completion(success);
+
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartsDataUpdateDidEndNotification object:nil];
+
+	if(success)
+		[self fetchColorLinksIfNeeded];
+
+}//end updateDidEndWithSuccess:
+
+
+//========== fetchColorLinksIfNeeded ===========================================
+//
+// Purpose:		With a key, fetches Rebrickable's own color links once. They
+//				then win over the table that ships with the app.
+//
+//==============================================================================
+- (void) fetchColorLinksIfNeeded
+{
+	LDrawRebrickableClient	*client	= [self client];
+	NSURL					*folder	= [self->downloads folderURL];
+
+	if(		client == nil
+	   ||	self->isFetchingColors
+	   ||	[LDrawRebrickableColors fetchedColorLinksInFolder:folder] != nil )
+		return;
+
+	self->isFetchingColors	= YES;
+	client.completionQueue	= dispatch_get_main_queue();
+	[LDrawRebrickableColors fetchColorLinksWithClient:client completion:^(NSDictionary *links, NSError *error) {
+		NSDictionary	*data		= [self.store rebrickableIdentityData];
+		NSError			*saveError	= nil;
+
+		self->isFetchingColors = NO;
+		if([links count] == 0)
+		{
+			NSLog(@"Could not fetch the colors from Rebrickable: %@", error);
+			return;
+		}
+
+		// The catalog's next build reads the folder; one already built gets the links now.
+		if(		[LDrawRebrickableColors saveFetchedColorLinks:links inFolder:folder error:&saveError]
+		   &&	data != nil )
+		{
+			data = [LDrawPartIdentity rebrickableDataByUpdating:data
+													  partLinks:nil
+													 colorLinks:links
+													  relations:nil
+											   knownPartNumbers:nil];
+			[self.store saveRebrickableIdentityData:data error:&saveError];
+		}
+		if(saveError != nil)
+			NSLog(@"Could not keep the colors from Rebrickable: %@", saveError);
+	}];
+
+}//end fetchColorLinksIfNeeded
 
 
 #pragma mark -
@@ -596,24 +780,46 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 //
 // Purpose:		Keeps the key in the Keychain, or removes it for an empty one.
 //
+// Notes:		The old key is changed in place, so a failed save keeps it.
+//
 //==============================================================================
 - (void) setApiKey:(NSString *)apiKey
 {
 	NSCharacterSet	*spaces		= [NSCharacterSet whitespaceAndNewlineCharacterSet];
-	NSString		*trimmed	= [apiKey stringByTrimmingCharactersInSet:spaces];
+	NSString		*trimmed	= [apiKey stringByTrimmingCharactersInSet:spaces] ?: @"";
 	NSDictionary	*query		= @{ (__bridge id)kSecClass			: (__bridge id)kSecClassGenericPassword,
 									 (__bridge id)kSecAttrService	: KeychainService,
 									 (__bridge id)kSecAttrAccount	: KeychainAccount };
+	NSDictionary	*changes	= nil;
+	OSStatus		 status		= errSecSuccess;
 
-	SecItemDelete((__bridge CFDictionaryRef)query);
+	if([trimmed isEqualToString:[self apiKey] ?: @""])
+		return;
 
-	if([trimmed length] > 0)
+	if([trimmed length] == 0)
 	{
-		NSMutableDictionary *item = [query mutableCopy];
-
-		item[(__bridge id)kSecValueData] = [trimmed dataUsingEncoding:NSUTF8StringEncoding];
-		SecItemAdd((__bridge CFDictionaryRef)item, NULL);
+		status = SecItemDelete((__bridge CFDictionaryRef)query);
+		if(status == errSecItemNotFound)
+			status = errSecSuccess;
 	}
+	else
+	{
+		changes	= @{ (__bridge id)kSecValueData : [trimmed dataUsingEncoding:NSUTF8StringEncoding] };
+		status	= SecItemUpdate((__bridge CFDictionaryRef)query, (__bridge CFDictionaryRef)changes);
+
+		if(status == errSecItemNotFound)
+		{
+			NSMutableDictionary *item = [query mutableCopy];
+
+			[item addEntriesFromDictionary:changes];
+			status = SecItemAdd((__bridge CFDictionaryRef)item, NULL);
+		}
+	}
+
+	if(status != errSecSuccess)
+		NSLog(@"Could not save the Rebrickable key in the Keychain: %d", (int)status);
+	else if([trimmed length] > 0)
+		[self fetchColorLinksIfNeeded];
 
 }//end setApiKey:
 
@@ -622,11 +828,19 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 //
 // Purpose:		A client with the user's key, or nil without one.
 //
+// Notes:		The same client while the key stays, since a client spaces only
+//				its own calls.
+//
 //==============================================================================
 - (LDrawRebrickableClient *) client
 {
 	NSString *key = [self apiKey];
-	return ([key length] > 0) ? [[LDrawRebrickableClient alloc] initWithAPIKey:key] : nil;
+
+	if([key length] == 0)
+		return nil;
+	if([self->sharedClient.apiKey isEqualToString:key] == NO)
+		self->sharedClient = [[LDrawRebrickableClient alloc] initWithAPIKey:key];
+	return self->sharedClient;
 }
 
 

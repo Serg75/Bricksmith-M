@@ -45,13 +45,36 @@ struct LDrawRebrickableCSVReaderTests {
         #expect(file.rows == [["1", "2"], ["3", "4"]])
     }
 
-    @Test("A file cut off partway is an error")
+    @Test("A file cut off in its header is an error")
     func truncated() throws {
         #expect(throws: (any Error).self) {
             let url = RebrickableFixtures.root.appendingPathComponent("truncated.csv.gz")
             let reader = try LDrawRebrickableCSVReader(url: url)
             try reader.enumerateRows { _, _ in }
         }
+    }
+
+    @Test("A file whose header reads but whose rows are cut off is an error once the rows run out")
+    func truncatedRows() throws {
+        var text = "n,name\n"
+        for index in 0..<20000 {
+            text += "\(index),part number \(index)\n"
+        }
+        // A gzip file is a fixed header, then the deflated data, then a trailer the cut leaves out.
+        let deflated = try (Data(text.utf8) as NSData).compressed(using: .zlib) as Data
+        var gzip = Data([0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03])
+        gzip.append(deflated.prefix(deflated.count / 2))
+        let url = RebrickableFixtures.temporaryFolder().appendingPathComponent("cut.csv.gz")
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try gzip.write(to: url)
+
+        let reader = try LDrawRebrickableCSVReader(url: url)
+        #expect(reader.columnNames == ["n", "name"])
+        var count = 0
+        #expect(throws: (any Error).self) {
+            try reader.enumerateRows { _, _ in count += 1 }
+        }
+        #expect(count > 0 && count < 20000)
     }
 
     @Test("A missing file, or a missing column, is an error")

@@ -133,7 +133,9 @@ static NSString * const SetsGroupName			= @"Sets";
 		self.activeTable	= [self.limitSession tableForInventoryIdentifier:inventoryID];
 		records				= [self inventoryRowsInCategory:Category_All];
 	}
-	else if (limitTable.limit.kind == LDrawPartLimitKindInventory && self.hidesDisallowedParts)
+	else if (	limitTable.limit.kind == LDrawPartLimitKindInventory
+			 &&	self.hidesDisallowedParts
+			 &&	[self isUnfilteredCategory:category] == NO )
 	{
 		records = [self inventoryRowsInCategory:category];
 	}
@@ -349,6 +351,29 @@ static NSString * const SetsGroupName			= @"Sets";
 		currentIndex++;
 	}
 	return NSNotFound;
+}
+
+
+//========== indexOfRecord:inRecords: ==========================================
+//
+// Purpose:		The row for the same part and color, else the part's first row.
+//
+//==============================================================================
++ (NSUInteger)indexOfRecord:(NSDictionary *)record inRecords:(NSArray *)records
+{
+	NSString	*partName	= [record objectForKey:PART_NUMBER_KEY];
+	NSNumber	*color		= [record objectForKey:LDrawPartBrowserColorCodeKey];
+
+	if (partName != nil && color != nil)
+	{
+		NSUInteger index = [records indexOfObjectPassingTest:^BOOL(NSDictionary *row, NSUInteger idx, BOOL *stop) {
+			return	[[row objectForKey:PART_NUMBER_KEY] isEqual:partName]
+				&&	[[row objectForKey:LDrawPartBrowserColorCodeKey] isEqual:color];
+		}];
+		if (index != NSNotFound)
+			return index;
+	}
+	return [self indexOfPartNamed:partName inRecords:records];
 }
 
 
