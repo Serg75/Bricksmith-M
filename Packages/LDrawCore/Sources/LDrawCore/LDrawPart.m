@@ -53,7 +53,7 @@
 #define SHRINK_SEAMS 0
 #define SHRINK_AMOUNT 0.125		// in LDU
 
-// The parts limit's marks: style, colors and dimming. See +setLimitMarkStyle:.
+// The parts limit's marks: style, colors and dimming. The host sets them.
 static LDrawRenderMarkStyle	sLimitMarkStyle			= LDrawRenderMarkStripes;
 static float				sNotAvailableMark[3]	= { 0.90f, 0.10f, 0.10f };
 static float				sTooManyMark[3]			= { 1.00f, 0.55f, 0.00f };
@@ -354,7 +354,7 @@ int floatNearGrid(double v, double grid, double epsi)
 	LDrawRenderMarkStyle	style	= sLimitMarkStyle;
 	const float				*rgb	= sNotAvailableMark;
 
-	if(style == LDrawRenderMarkNone || status < LDrawPartLimitStatusTooMany)
+	if(style == LDrawRenderMarkNone || LDrawPartLimitStatusIsProblem(status) == NO)
 		return NO;
 
 	if(status == LDrawPartLimitStatusTooMany)

@@ -24,6 +24,9 @@ typedef NS_ERROR_ENUM(LDrawInventoryErrorDomain, LDrawInventoryError)
 	LDrawInventoryErrorUnknownFormat	= 2
 };
 
+/// An error of the package, with the reason as its description.
+NSError *LDrawInventoryMakeError(LDrawInventoryError code, NSString *reason);
+
 
 //------------------------------------------------------------------------------
 ///
@@ -44,9 +47,12 @@ typedef NS_ERROR_ENUM(LDrawInventoryErrorDomain, LDrawInventoryError)
 //------------------------------------------------------------------------------
 @interface LDrawInventoryPartsFile : NSObject
 
+/// The loose parts in a piece count export or a Rebrickable CSV list. Nil, with
+/// an error, when the text is neither or lists no parts.
 + (nullable NSArray<LDrawInventoryItem *> *) itemsFromString:(NSString *)text
 													   error:(NSError **)error NS_SWIFT_NAME(items(from:));
 
+/// The same for a file. Nil, with an error, when it cannot be read as text.
 + (nullable NSArray<LDrawInventoryItem *> *) itemsFromFileAtURL:(NSURL *)url
 														  error:(NSError **)error NS_SWIFT_NAME(items(contentsOf:));
 

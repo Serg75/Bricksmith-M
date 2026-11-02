@@ -14,27 +14,21 @@
 #import <LDrawInventory/LDrawInventoryJSON.h>
 #import <LDrawRebrickable/LDrawRebrickableCSVReader.h>
 
-static NSString * const DefaultBaseURL = @"https://rebrickable.com/api/v3/";
+static NSString * const BaseURL = @"https://rebrickable.com/api/v3/";
+
+/// How many times a 429 is retried.
+static const NSUInteger MaximumRetries = 3;
 
 /// The longest wait a 429 may ask for before the call gives up instead.
 static const NSTimeInterval MaximumRetryWait = 60;
 
 
-//========== ClientError =======================================================
-//==============================================================================
-static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
-{
-	NSDictionary *userInfo = (reason != nil) ? @{ NSLocalizedDescriptionKey : reason } : nil;
-	return [NSError errorWithDomain:LDrawRebrickableErrorDomain code:code userInfo:userInfo];
-}
-
-
 @implementation LDrawRebrickableClient
 {
 	NSURLSession		*session;		// made on the first call, from sessionConfiguration
+	NSURL				*baseURL;
 	dispatch_queue_t	 scheduleQueue;	// keeps the calls apart
 	CFAbsoluteTime		 nextSlot;		// the earliest time the next call may go out
-	NSUInteger			 generation;	// cancelAll counts up, so waiting calls know
 }
 
 
@@ -48,10 +42,9 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 	self = [super init];
 	if (self) {
 		self->_apiKey				= [apiKey copy];
-		self->_baseURL				= [NSURL URLWithString:DefaultBaseURL];
 		self->_sessionConfiguration	= [NSURLSessionConfiguration ephemeralSessionConfiguration];
 		self->_minimumInterval		= 1.0;
-		self->_maximumRetries		= 3;
+		self->baseURL				= [NSURL URLWithString:BaseURL];
 		self->scheduleQueue			= dispatch_queue_create("LDrawRebrickableClient", DISPATCH_QUEUE_SERIAL);
 	}
 	return self;
@@ -69,13 +62,12 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 // MARK: - CALLS -
 
 
-//========== fetchObjectAtPath:parameters:completion: ==========================
+//========== fetchObjectAtPath:completion: =====================================
 //==============================================================================
 - (void) fetchObjectAtPath:(NSString *)path
-				parameters:(NSDictionary<NSString *, NSString *> *)parameters
 				completion:(void (^)(NSDictionary *object, NSError *error))completion
 {
-	NSURL				*url	= [self urlForPath:path parameters:parameters];
+	NSURL				*url	= [self urlForPath:path parameters:nil];
 	dispatch_queue_t	 queue	= self.completionQueue ?: dispatch_get_main_queue();
 
 	[self sendRequestForURL:url attempt:0 completion:^(NSDictionary *object, NSError *error) {
@@ -84,7 +76,7 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 		});
 	}];
 
-}//end fetchObjectAtPath:parameters:completion:
+}//end fetchObjectAtPath:completion:
 
 
 //========== fetchAllResultsAtPath:parameters:completion: ======================
@@ -122,7 +114,7 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 
 		if (client == nil)
 		{
-			finish(nil, ClientError(LDrawRebrickableErrorCancelled, nil));
+			finish(nil, LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil));
 			return;
 		}
 		[client sendRequestForURL:url attempt:0 completion:^(NSDictionary *page, NSError *error) {
@@ -142,9 +134,10 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 
 			if (nextURL == nil)
 				finish(results, nil);
-			else if ([nextURL.host isEqualToString:weakSelf.baseURL.host] == NO)
+			else if ([nextURL.host isEqualToString:client->baseURL.host] == NO)
 				// The key must not go anywhere but Rebrickable.
-				finish(nil, ClientError(LDrawRebrickableErrorBadResponse, @"The next page is on another server."));
+				finish(nil, LDrawRebrickableMakeError(LDrawRebrickableErrorBadResponse,
+													  @"The next page is on another server.", nil));
 			else
 				next(nextURL);
 		}];
@@ -153,20 +146,6 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 	fetchPage([self urlForPath:path parameters:query]);
 
 }//end fetchAllResultsAtPath:parameters:completion:
-
-
-//========== cancelAll =========================================================
-//==============================================================================
-- (void) cancelAll
-{
-	dispatch_sync(self->scheduleQueue, ^{
-		self->generation += 1;
-	});
-	[self->session getAllTasksWithCompletionHandler:^(NSArray<__kindof NSURLSessionTask *> *tasks) {
-		for (NSURLSessionTask *task in tasks)
-			[task cancel];
-	}];
-}
 
 
 // MARK: - UTILITIES -
@@ -179,7 +158,7 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 //==============================================================================
 - (NSURL *) urlForPath:(NSString *)path parameters:(NSDictionary<NSString *, NSString *> *)parameters
 {
-	NSURL			*url		= [NSURL URLWithString:path relativeToURL:self.baseURL];
+	NSURL			*url		= [NSURL URLWithString:path relativeToURL:self->baseURL];
 	NSURLComponents	*components	= [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:YES];
 	NSMutableArray	*items		= [NSMutableArray array];
 
@@ -209,7 +188,7 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 //========== sendRequestForURL:attempt:completion: =============================
 ///
 /// @abstract	Waits for the call's turn, sends it, and reads the answer. The
-/// 			completion runs on the session's queue.
+/// 			completion runs on a background queue.
 ///
 //==============================================================================
 - (void) sendRequestForURL:(NSURL *)url
@@ -217,21 +196,13 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 				completion:(void (^)(NSDictionary *object, NSError *error))completion
 {
 	dispatch_async(self->scheduleQueue, ^{
-		CFAbsoluteTime	now			= CFAbsoluteTimeGetCurrent();
-		CFAbsoluteTime	start		= MAX(now, self->nextSlot);
-		NSUInteger		calledIn	= self->generation;
+		CFAbsoluteTime	now		= CFAbsoluteTimeGetCurrent();
+		CFAbsoluteTime	start	= MAX(now, self->nextSlot);
+		dispatch_time_t	when	= dispatch_time(DISPATCH_TIME_NOW, (int64_t)((start - now) * NSEC_PER_SEC));
 
 		self->nextSlot = start + self.minimumInterval;
 
-		dispatch_time_t	when		= dispatch_time(DISPATCH_TIME_NOW, (int64_t)((start - now) * NSEC_PER_SEC));
-
 		dispatch_after(when, self->scheduleQueue, ^{
-			if (calledIn != self->generation)
-			{
-				completion(nil, ClientError(LDrawRebrickableErrorCancelled, nil));
-				return;
-			}
-
 			NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
 			[request setValue:[@"key " stringByAppendingString:self.apiKey] forHTTPHeaderField:@"Authorization"];
 			[request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
@@ -267,7 +238,7 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 	if (error != nil)
 	{
 		BOOL isCancelled = [error.domain isEqualToString:NSURLErrorDomain] && error.code == NSURLErrorCancelled;
-		completion(nil, isCancelled ? ClientError(LDrawRebrickableErrorCancelled, nil) : error);
+		completion(nil, isCancelled ? LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil) : error);
 		return;
 	}
 
@@ -278,10 +249,10 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 		if (wait <= 0)
 			wait = pow(2.0, (double)attempt) * MAX(self.minimumInterval, 0.01);
 
-		if (attempt >= self.maximumRetries || wait > MaximumRetryWait)
+		if (attempt >= MaximumRetries || wait > MaximumRetryWait)
 		{
-			completion(nil, ClientError(LDrawRebrickableErrorTooManyRequests,
-										@"Rebrickable asks to slow down. Try again in a minute."));
+			completion(nil, LDrawRebrickableMakeError(LDrawRebrickableErrorTooManyRequests,
+													  @"Rebrickable asks to slow down. Try again in a minute.", nil));
 			return;
 		}
 
@@ -294,20 +265,23 @@ static NSError *ClientError(LDrawRebrickableError code, NSString *reason)
 
 	if (status == 401 || status == 403)
 	{
-		completion(nil, ClientError(LDrawRebrickableErrorBadKey, @"Rebrickable did not accept the API key."));
+		completion(nil, LDrawRebrickableMakeError(LDrawRebrickableErrorBadKey,
+												  @"Rebrickable did not accept the API key.", nil));
 		return;
 	}
 	if (status == 404)
 	{
-		completion(nil, ClientError(LDrawRebrickableErrorNotFound, @"Rebrickable has no such item."));
+		completion(nil, LDrawRebrickableMakeError(LDrawRebrickableErrorNotFound,
+												  @"Rebrickable has no such item.", nil));
 		return;
 	}
 
 	object = LDrawJSONDictionary([NSJSONSerialization JSONObjectWithData:data ?: [NSData data] options:0 error:NULL]);
 	if (status != 200 || object == nil)
 	{
-		completion(nil, ClientError(LDrawRebrickableErrorBadResponse,
-									[NSString stringWithFormat:@"Rebrickable answered %ld.", (long)status]));
+		NSString *reason = [NSString stringWithFormat:@"Rebrickable answered %ld.", (long)status];
+
+		completion(nil, LDrawRebrickableMakeError(LDrawRebrickableErrorBadResponse, reason, nil));
 		return;
 	}
 	completion(object, nil);

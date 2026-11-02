@@ -76,7 +76,8 @@ struct LDrawUnmatchedPartsTests {
         let shortcuts = LDrawShortcutMap(fileReader: { ["73983.dat": hinge, "3001d01.dat": stickered][$0] })
         let files = [file(["3001.dat", "custom.dat", "73983.dat", "3001d01.dat"]), file(["custom.dat"])]
 
-        let parts = LDrawUnmatchedParts.parts(in: files, identity: identity(), shortcuts: shortcuts)
+        let parts = LDrawUnmatchedParts.parts(in: files.map { LDrawPartUsage(file: $0) }, identity: identity(),
+                                              shortcuts: shortcuts)
         #expect(parts.map { $0.partName } == ["custom.dat", "3001d01s.dat"])
         #expect(parts.map { $0.count } == [2, 1])
         #expect(parts.allSatisfy { $0.rebrickablePartNumber == nil })
@@ -92,7 +93,7 @@ struct LDrawUnmatchedPartsTests {
         step.add(part("other.dat") as LDrawDirective)
         file.addSubmodel(spare)
 
-        let parts = LDrawUnmatchedParts.parts(in: [file], identity: identity(), shortcuts: nil)
+        let parts = LDrawUnmatchedParts.parts(in: [LDrawPartUsage(file: file)], identity: identity(), shortcuts: nil)
         #expect(parts.map { $0.partName } == ["custom.dat", "other.dat"])
         #expect(parts.map { $0.count } == [1, 0])
     }

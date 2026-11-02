@@ -187,7 +187,7 @@ struct LDrawDLSortedInstanceLink {
 	float									transform[16];
 	int										ghost_id;			// Non-zero for ghosts; all DLs of one ghosted part share an id.
 	float									ghost_alpha;		// Alpha scale for the above; 1 for a plain transparent part.
-	float									mark[4];			// See InstanceInput.mark.
+	float									mark[4];			// RGB and style; zero for no mark.
 };
 
 

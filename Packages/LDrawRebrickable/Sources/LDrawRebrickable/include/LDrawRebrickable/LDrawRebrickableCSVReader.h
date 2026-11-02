@@ -34,9 +34,13 @@ typedef NS_ERROR_ENUM(LDrawRebrickableErrorDomain, LDrawRebrickableError)
 	/// The server answered with something unexpected.
 	LDrawRebrickableErrorBadResponse		= 6,
 
-	/// The work was cancelled.
+	/// The work was canceled.
 	LDrawRebrickableErrorCancelled			= 7
 };
+
+/// An error of the package, with the reason as its description and the file
+/// it is about, when given.
+NSError *LDrawRebrickableMakeError(LDrawRebrickableError code, NSString * _Nullable reason, NSURL * _Nullable url);
 
 
 //------------------------------------------------------------------------------

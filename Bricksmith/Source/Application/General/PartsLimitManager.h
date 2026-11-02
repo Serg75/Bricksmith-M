@@ -53,10 +53,12 @@ typedef NS_OPTIONS(NSUInteger, PartsLimitMenuCommands)
 // The limit
 - (void) setLimit:(LDrawPartLimit *)limit window:(nullable NSWindow *)window;
 - (void) populateLimitMenu:(NSMenu *)menu commands:(PartsLimitMenuCommands)commands;
+- (void) populatePullDownLimitMenu:(NSMenu *)menu commands:(PartsLimitMenuCommands)commands;
 - (nullable NSString *) titleForLimit:(LDrawPartLimit *)limit;
 
 // The marks
 - (void) applyMarkSettings;
++ (nullable NSColor *) markColorForKey:(NSString *)key;
 
 // The data
 - (void) updateDataForcing:(BOOL)force

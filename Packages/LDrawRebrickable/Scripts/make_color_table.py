@@ -60,6 +60,7 @@ def from_names(colors_path, ldconfig_path):
 
     by_name, by_rgb = {}, {}
     for code, name, rgb, is_trans in ldraw:
+        # 16 and 24 are the main and edge colors, not real colors.
         if code in (16, 24):
             continue
         by_name.setdefault(normalized(name), []).append(code)
@@ -72,6 +73,7 @@ def from_names(colors_path, ldconfig_path):
     used = set()
     pending = []
     for color_id, name, rgb, is_trans in rebrickable:
+        # -1 is Unknown and 9999 is Any Color; neither is an LDraw color.
         if color_id < 0 or color_id == 9999:
             continue
         codes = by_name.get(normalized(name))

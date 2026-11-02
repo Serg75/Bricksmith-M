@@ -30,10 +30,10 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 ///
 /// @discussion A host makes one, gives it the store and the part library's
 ///             records, and sets the limit it keeps in its own settings. The
-///             session builds the identity map and the table again whenever
-///             one of them changes, and posts
-///             `LDrawPartLimitDidChangeNotification`; every document checks
-///             itself again then. Used on the main thread.
+///             session builds the table again whenever one of them changes,
+///             and posts `LDrawPartLimitDidChangeNotification`; every
+///             document checks itself again then. The identity map is built
+///             when first needed. Used on the main thread.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPartLimitSession : NSObject
@@ -54,6 +54,10 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 @property (nonatomic, readonly) LDrawPartLimitTable *table;
 @property (nonatomic, readonly) LDrawPartIdentity *identity;
 
+/// The table when its limit restricts and it has the data it needs, else nil.
+/// Only such a table narrows what the editor offers.
+@property (nonatomic, readonly, nullable) LDrawPartLimitTable *restrictingTable;
+
 /// The year Available now counts back from. Default the current year.
 @property (nonatomic) NSInteger currentYear;
 
@@ -70,10 +74,6 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 /// The part library's shortcuts, so assemblies and their pieces count alike.
 /// Setting it builds the tables again and posts the notification.
 @property (nonatomic, nullable) LDrawShortcutMap *shortcuts;
-
-/// Builds the identity map and the table again from the store, and posts the
-/// notification. The session does this itself when the store changes.
-- (void) reload;
 
 @end
 

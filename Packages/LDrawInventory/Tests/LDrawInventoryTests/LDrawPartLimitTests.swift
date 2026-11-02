@@ -76,7 +76,7 @@ struct LDrawPartLimitTests {
         let limit = LDrawPartLimit.none()
         #expect(limit.kind == .none)
         #expect(limit.isRestricting == false)
-        #expect(limit.yearsBack == 2)
+        #expect(limit.yearsBack == 5)
         #expect(limit.includesSpares == true)
         #expect(limit.matchesMoldVariants == true)
         #expect(limit.matchesAnyPrint == false)
@@ -90,7 +90,7 @@ struct LDrawPartLimitTests {
         let written = limit {
             $0.kind = .inventory
             $0.inventoryIdentifier = "42115-1"
-            $0.yearsBack = 3
+            $0.yearsBack = 10
             $0.includesSpares = false
             $0.matchesAnyPrint = true
             $0.warnsOnly = true
@@ -110,7 +110,7 @@ struct LDrawPartLimitTests {
 
         let options = LDrawPartLimit.fromDictionary(["kind": "availableNow", "yearsBack": "x", "warnsOnly": true])
         #expect(options.kind == .availableNow)
-        #expect(options.yearsBack == 2)
+        #expect(options.yearsBack == 5)
         #expect(options.warnsOnly == true)
     }
 
@@ -118,10 +118,10 @@ struct LDrawPartLimitTests {
     func copies() {
         let mutable = LDrawPartLimit.availableNow().mutableCopy() as! LDrawMutablePartLimit
         let frozen = mutable.copy() as! LDrawPartLimit
-        mutable.yearsBack = 5
+        mutable.yearsBack = 10
 
         #expect(type(of: frozen) == LDrawPartLimit.self)
-        #expect(frozen.yearsBack == 2)
+        #expect(frozen.yearsBack == 5)
         #expect(frozen != (mutable as LDrawPartLimit))
         #expect((frozen.copy() as AnyObject) === frozen)
     }

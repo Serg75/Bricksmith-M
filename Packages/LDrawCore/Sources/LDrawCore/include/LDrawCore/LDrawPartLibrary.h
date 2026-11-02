@@ -94,6 +94,9 @@ extern NSString	*Category_Subparts;
 - (NSArray *)partCatalogRecordsInCategory:(NSString *)category;
 - (nullable NSString *)categoryForPartName:(NSString *)partName;
 
+/// The catalog's record of the part, such as "3001.dat", or nil.
+- (nullable NSDictionary *)partCatalogRecordForPartName:(NSString *)partName;
+
 - (void)setDelegate:(nullable id<LDrawPartLibraryDelegate>)delegateIn;
 - (void)setFavorites:(NSArray *)favoritesIn;
 - (void)setPartCatalog:(NSDictionary *)newCatalog;

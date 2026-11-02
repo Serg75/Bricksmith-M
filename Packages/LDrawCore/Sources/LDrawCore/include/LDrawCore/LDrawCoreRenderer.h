@@ -169,10 +169,9 @@ typedef NS_ENUM(NSInteger, LDrawRenderMarkStyle)
 - (void)pushAlphaModulation:(float)factor;
 - (void)popAlphaModulation;
 
-// Mark stack.  A mark draws every part below it with stripes or a tint in its color, baked-in mesh
-// colors included, and their edges in its color.  It shows a part that breaks the parts limit.  The
-// mark is red, green, blue and an LDrawRenderMarkStyle.  The innermost mark wins.  Like the alpha
-// modulation, it travels with each draw call and is never baked into a display list.
+// Mark stack. A mark draws the parts below it in its style and color, edges and baked-in mesh colors included,
+// to show parts that break the parts limit. The mark is red, green, blue and an LDrawRenderMarkStyle; the innermost
+// wins. It goes with each draw call and is never kept in a display list.
 - (void)pushMark:(const float *)mark;
 - (void)popMark;
 

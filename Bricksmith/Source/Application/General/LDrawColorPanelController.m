@@ -172,9 +172,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	//Try to find the color we are after in the current list.
 	NSInteger rowToSelect = [self indexOfColor:newColor]; //will be the row index for the color we want.
 	
-	// A parts limit's list keeps its filter. The color shows in the bar, and
-	// the windows that follow the color learn of it. The selected parts keep
-	// theirs, since the list leaves the color out for them.
+	// With a limit filter on, a color the list leaves out shows in the bar and
+	// is posted, but the selected parts keep their colors.
 	if([LDrawColorPanelModel shouldClearColorFilterWhenIndexNotFound:rowToSelect] && [self isLimitFilterOn])
 	{
 		[self->colorListController setSelectionIndexes:[NSIndexSet indexSet]];
@@ -400,28 +399,15 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 //========== updateColorFilter =================================================
 //
-// Purpose:		Searches the global color list for colors matching the selected 
-//				parameters.
+// Purpose:		Filters the color list by the search, the material and the
+//				parts limit.
+//
+// Notes:		When the current color is filtered out, the first color that
+//				can be picked is selected, except while the limit refilters the
+//				list, which must not change any part.
 //
 //==============================================================================
 - (void) updateColorFilter
-{
-	[self applyColorFilterSelectingFirst:YES];
-
-}//end updateColorFilter
-
-
-//========== applyColorFilterSelectingFirst: ===================================
-//
-// Purpose:		Filters the color list by the search, the material, and the
-//				parts limit.
-//
-// Parameters:	selectsFirst - when the current color is filtered out, picks
-//						the first color that can be picked. NO when the list
-//						changes by itself, which must not change any part.
-//
-//==============================================================================
-- (void) applyColorFilterSelectingFirst:(BOOL)selectsFirst
 {
 	NSString			*searchString				= [searchField stringValue];
 	LDrawColorFilter	materialType				= (LDrawColorFilter)[[materialPopUpButton selectedItem] tag];
@@ -445,7 +431,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	// The list keeps the selection if it is still listed. If not, come up
 	// with a reasonable new answer: the first color the parts may take.
 	indexOfPreviousSelection = [self indexOfColor:currentColor];
-	if(		selectsFirst
+	if(		self->isRefiltering == NO
 	   &&	[LDrawColorPanelModel shouldSelectFirstColorAfterFilterWhenPreviousIndex:indexOfPreviousSelection])
 	{
 		NSArray		*colors	= [self->colorListController arrangedObjects];
@@ -464,7 +450,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 		[self->colorListController setSelectionIndex:indexOfPreviousSelection];
 	}
 
-}//end applyColorFilterSelectingFirst:
+}//end updateColorFilter
 
 
 #pragma mark -
@@ -561,15 +547,10 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 
 //========== restrictingTable ==================================================
-//
-// Purpose:		The limit's table, when it limits anything and has its data.
-//
 //==============================================================================
 - (LDrawPartLimitTable *) restrictingTable
 {
-	LDrawPartLimitTable *table = [[[PartsLimitManager sharedManager] session] table];
-
-	return (table.limit.isRestricting && table.hasData) ? table : nil;
+	return [[[PartsLimitManager sharedManager] session] restrictingTable];
 }
 
 
@@ -620,7 +601,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	[self updateLimitMenuItems:table];
 
 	self->isRefiltering = YES;
-		[self applyColorFilterSelectingFirst:NO];
+		[self updateColorFilter];
 	self->isRefiltering = NO;
 
 	[self updateFooterForPartNames:names];
@@ -631,8 +612,9 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 //========== updateLimitMenuItems: =============================================
 //
-// Purpose:		With a limit on, the material pop-up starts with For Selected
-//				Part, which it then shows, and the limit's own item.
+// Purpose:		While a limit is on, puts For Selected Part and the limit's own
+//				item at the top of the material pop-up, and selects For Selected
+//				Part. Takes both out when the limit is off.
 //
 //==============================================================================
 - (void) updateLimitMenuItems:(LDrawPartLimitTable *)table
@@ -680,7 +662,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 //========== updateFooterForPartNames: =========================================
 //
-// Purpose:		Colors for Brick 2 x 4 (3001): 14 of 92.
+// Purpose:		Says how many colors the parts may take, such as "Colors for
+//				Brick 2 x 4 (3001): 14 of 92". Hidden when any color goes.
 //
 //==============================================================================
 - (void) updateFooterForPartNames:(NSArray *)names
@@ -759,7 +742,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //========== tableView:willDisplayCell:forTableColumn:row: =====================
 //
 // Purpose:		Fades and crosses out the colors the selected parts are not made
-//				in. Warn Only still shows them so, though they can be picked.
+//				in, even when Warn Only lets them be picked.
 //
 //==============================================================================
 - (void) tableView:(NSTableView *)tableView

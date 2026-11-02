@@ -35,9 +35,8 @@ typedef void (^LDrawRebrickablePartRowBlock)(NSString *inventoryID, NSString *pa
 /// The sets and minifigures an inventory holds, as rows of number and count.
 - (NSArray<NSArray *> *) childrenOfInventoryID:(NSString *)inventoryID;
 
-/// The inventories whose children include this set or minifigure, as rows of
-/// inventory id and count.
-- (NSArray<NSArray *> *) parentsOfNumber:(NSString *)number;
+/// The inventories whose children include this set or minifigure.
+- (NSArray<NSString *> *) parentInventoryIDsOfNumber:(NSString *)number;
 
 /// Reads `inventory_parts` a row at a time.
 - (BOOL) enumeratePartsUsingBlock:(NS_NOESCAPE LDrawRebrickablePartRowBlock)block error:(NSError **)error;

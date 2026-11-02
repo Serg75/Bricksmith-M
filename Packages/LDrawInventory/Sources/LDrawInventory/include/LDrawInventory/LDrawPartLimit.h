@@ -41,7 +41,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitKind)
 
 /// Available now: how many years back a set may be, this one included. 2 is
 /// this year and last. 0 is any year, which then only rules out colors a
-/// part never came in. Default 2.
+/// part never came in. Default 5.
 @property (nonatomic, readonly) NSInteger yearsBack;
 
 /// Available now: whether parts found only in Rebrickable's Database Sets,

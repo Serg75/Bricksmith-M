@@ -59,7 +59,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///   LDraw's black and rubber black.
 /// - `relations`: rows of relation code, child, parent, as Rebrickable's
 ///   `part_relationships` has them: "P" print, "T" pattern, "M" mold,
-///   "A" alternate. "B" sub-part and "R" pair are kept but not used yet.
+///   "A" alternate. "B" sub-part and "R" pair are kept but not used.
 /// - `knownPartNumbers`: every part Rebrickable has, or nil when not known. A
 ///   part outside it has no data.
 + (NSDictionary *) rebrickableDataWithPartLinks:(nullable NSDictionary<NSString *, NSString *> *)partLinks
@@ -76,19 +76,16 @@ NS_ASSUME_NONNULL_BEGIN
 								   relations:(nullable NSArray<NSArray<NSString *> *> *)relations
 							knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers;
 
-/// The color links in Rebrickable data, each as a list of LDraw codes, or an
-/// empty dictionary.
-+ (NSDictionary<NSNumber *, NSArray<NSNumber *> *> *) colorLinksInRebrickableData:(nullable NSDictionary *)data;
-
 /// An LDraw part name as the map keys it: lowercase, no ".dat", and "/" for a
 /// path. "3001.DAT" is "3001". Nil for an empty name.
 + (nullable NSString *) normalizedPartName:(nullable NSString *)partName;
 
+/// A part's file name as the part library lists it: lowercase, with ".dat"
+/// when it has no extension. " 3001 " is "3001.dat". Nil for an empty name.
++ (nullable NSString *) libraryPartName:(nullable NSString *)partName;
+
 /// "Rebrickable <number>" keywords: normalized LDraw name → number.
 + (NSDictionary<NSString *, NSString *> *) keywordLinksFromCatalogRecords:(NSArray<NSDictionary *> *)catalogRecords;
-
-/// "~Moved to <name>" descriptions: normalized LDraw name → normalized target.
-+ (NSDictionary<NSString *, NSString *> *) movedPartsFromCatalogRecords:(NSArray<NSDictionary *> *)catalogRecords;
 
 /// Rebrickable's number for an LDraw part, following moved parts. Nil when
 /// Rebrickable does not have the part, as far as is known.
@@ -108,6 +105,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Every Rebrickable color an LDraw color can be, lowest id first. Several
 /// Rebrickable colors can share one LDraw color. Empty when none links.
 - (NSArray<NSNumber *> *) rebrickableColorIDsForColorCode:(LDrawColorT)colorCode;
+
+/// The lowest of those, or `LDrawRebrickableColorNone`.
+- (NSInteger) rebrickableColorIDForColorCode:(LDrawColorT)colorCode;
 
 /// The LDraw color for a Rebrickable color, the first when it has several,
 /// or `LDrawColorBogus`.

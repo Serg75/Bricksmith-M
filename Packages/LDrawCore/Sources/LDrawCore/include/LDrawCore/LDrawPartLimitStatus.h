@@ -31,3 +31,12 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 	/// The part is not allowed in any color.
 	LDrawPartLimitStatusNotAvailable	= 4
 };
+
+/// Whether the status breaks the limit and earns a mark. No data does not,
+/// since nothing could be checked.
+static inline BOOL LDrawPartLimitStatusIsProblem(LDrawPartLimitStatus status)
+{
+	return		status == LDrawPartLimitStatusTooMany
+			||	status == LDrawPartLimitStatusNotInColor
+			||	status == LDrawPartLimitStatusNotAvailable;
+}

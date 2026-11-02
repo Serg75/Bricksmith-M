@@ -85,6 +85,10 @@ extern NSString * const LDrawInventoryStoreDidChangeNotification;
 
 // MARK: - What a limit reads
 
+/// The name of a combined inventory, or a set's number and name. Nil when the
+/// store has neither.
+- (nullable NSString *) titleForInventoryIdentifier:(NSString *)identifier;
+
 /// Every item of a combined inventory, its sets counted as many times as it
 /// says, or of one set. Sets the store does not have are left out. Nil when
 /// the identifier names neither.
@@ -112,6 +116,9 @@ extern NSString * const LDrawInventoryStoreDidChangeNotification;
 
 /// Nil until a catalog is saved.
 - (nullable LDrawPartAvailability *) availability;
+
+/// Whether a catalog is saved. Cheap, since it does not read the catalog.
+- (BOOL) hasAvailability;
 - (BOOL) saveAvailability:(LDrawPartAvailability *)availability error:(NSError **)error
 	NS_SWIFT_NAME(saveAvailability(_:));
 
@@ -124,6 +131,9 @@ extern NSString * const LDrawInventoryStoreDidChangeNotification;
 - (NSDictionary<NSString *, NSString *> *) identityOverrides;
 - (BOOL) saveIdentityOverrides:(NSDictionary<NSString *, NSString *> *)overrides error:(NSError **)error
 	NS_SWIFT_NAME(saveIdentityOverrides(_:));
+
+/// Runs saves that belong together, posting one change at the end.
+- (void) performChanges:(void (^NS_NOESCAPE)(void))changes;
 
 /// The identity map from the store's data and the part library's records.
 - (LDrawPartIdentity *) identityWithCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords;

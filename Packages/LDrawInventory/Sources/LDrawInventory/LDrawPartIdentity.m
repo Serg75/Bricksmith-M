@@ -15,6 +15,7 @@
 #import <LDrawCore/LDrawKeywords.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 
+#import <LDrawInventory/LDrawInventoryItem.h>
 #import <LDrawInventory/LDrawInventoryJSON.h>
 
 static NSString * const IdentityPartLinksKey	= @"partLinks";
@@ -26,39 +27,6 @@ static NSString * const RebrickableKeywordPrefix = @"rebrickable ";
 
 /// A loop in moved parts or prints must not hang a lookup.
 static const NSUInteger MaximumChainLength = 8;
-
-
-//========== NormalizedColorLinks ==============================================
-///
-/// @abstract	Color links with every value a list of LDraw codes. A value
-/// 			may come as one code or as a list; anything else is dropped.
-///
-//==============================================================================
-static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSDictionary *links)
-{
-	NSMutableDictionary *normalized = [NSMutableDictionary dictionary];
-
-	for (id colorID in links)
-	{
-		id				 value	= links[colorID];
-		NSArray			*values	= [value isKindOfClass:[NSArray class]] ? value : @[value];
-		NSMutableArray	*codes	= [NSMutableArray array];
-
-		if ([colorID isKindOfClass:[NSNumber class]] == NO)
-			continue;
-
-		for (id code in values)
-		{
-			NSInteger number = LDrawJSONInteger(code, NSNotFound);
-			if (number != NSNotFound && [codes containsObject:@(number)] == NO)
-				[codes addObject:@(number)];
-		}
-		if ([codes count] > 0)
-			normalized[colorID] = codes;
-	}
-	return normalized;
-
-}//end NormalizedColorLinks
 
 
 @interface LDrawPartIdentity ()
@@ -79,8 +47,7 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 	NSDictionary<NSString *, NSString *>			*partLinks;			// normalized LDraw name → Rebrickable number
 	NSDictionary<NSString *, NSString *>			*handLinks;			// the user's matches, also in partLinks
 	NSSet<NSString *>								*libraryParts;		// normalized names in the catalog
-	NSDictionary<NSString *, NSString *>			*reverseLinks;		// Rebrickable number → LDraw name with ".dat"
-	NSDictionary<NSString *, NSArray<NSString *> *>	*allReverseLinks;	// the same, every LDraw name
+	NSDictionary<NSString *, NSArray<NSString *> *>	*reverseLinks;		// Rebrickable number → LDraw names
 	NSDictionary<NSString *, NSString *>			*movedParts;		// normalized LDraw name → normalized target
 	NSDictionary<NSNumber *, NSArray<NSNumber *> *>	*colorLinks;		// Rebrickable color → LDraw codes
 	NSDictionary<NSNumber *, NSArray<NSNumber *> *>	*reverseColors;		// LDraw code → Rebrickable colors
@@ -113,7 +80,7 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 		self->handLinks			= [hand copy];
 		self->libraryParts		= [library copy];
 		self->movedParts		= [moved copy];
-		self->colorLinks		= NormalizedColorLinks(colors);
+		self->colorLinks		= LDrawJSONColorLinks(colors);
 		self->knownPartNumbers	= [known copy];
 
 		[self buildReverseLinks];
@@ -191,16 +158,11 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 									  relations:(NSArray<NSArray<NSString *> *> *)relations
 							   knownPartNumbers:(NSSet<NSString *> *)knownPartNumbers
 {
-	NSMutableDictionary *data	= [NSMutableDictionary dictionary];
-	NSMutableDictionary *colors	= [NSMutableDictionary dictionary];
-
-	NSDictionary *normalized = NormalizedColorLinks(colorLinks);
-	for (NSNumber *colorID in normalized)
-		colors[[colorID stringValue]] = normalized[colorID];
+	NSMutableDictionary *data = [NSMutableDictionary dictionary];
 
 	data[@"version"]				= @(LDrawInventoryFileVersion);
 	data[IdentityPartLinksKey]		= partLinks ?: @{};
-	data[IdentityColorLinksKey]		= colors;
+	data[IdentityColorLinksKey]		= LDrawJSONColorLinksObject(LDrawJSONColorLinks(colorLinks));
 	data[IdentityRelationsKey]		= relations ?: @[];
 	if (knownPartNumbers != nil)
 		data[IdentityKnownPartsKey] = [[knownPartNumbers allObjects] sortedArrayUsingSelector:@selector(compare:)];
@@ -238,24 +200,13 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 
 //---------- colorLinksInRebrickableData: ----------------------------[static]--
 ///
-/// @abstract	Rebrickable color → LDraw codes. The keys are written as
-/// 			strings.
+/// @abstract	Rebrickable color → LDraw codes, or an empty dictionary.
 ///
 //------------------------------------------------------------------------------
 + (NSDictionary<NSNumber *, NSArray<NSNumber *> *> *) colorLinksInRebrickableData:(NSDictionary *)data
 {
-	NSDictionary		*colorData	= LDrawJSONDictionary(LDrawJSONDictionary(data)[IdentityColorLinksKey]);
-	NSMutableDictionary	*colors		= [NSMutableDictionary dictionary];
-
-	for (id key in colorData)
-	{
-		NSInteger colorID = LDrawJSONInteger(key, NSNotFound);
-		if (colorID != NSNotFound)
-			colors[@(colorID)] = colorData[key];
-	}
-	return NormalizedColorLinks(colors);
-
-}//end colorLinksInRebrickableData:
+	return LDrawJSONColorLinks(LDrawJSONDictionary(data)[IdentityColorLinksKey]);
+}
 
 
 //---------- relationsInRebrickableData: -----------------------------[static]--
@@ -381,6 +332,22 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 }//end normalizedPartName:
 
 
+//---------- libraryPartName: ----------------------------------------[static]--
+//------------------------------------------------------------------------------
++ (NSString *) libraryPartName:(NSString *)partName
+{
+	NSString *name = [[partName stringByTrimmingCharactersInSet:
+					   [NSCharacterSet whitespaceAndNewlineCharacterSet]] lowercaseString];
+
+	if ([name length] == 0)
+		return nil;
+	if ([[name pathExtension] length] == 0)
+		name = [name stringByAppendingPathExtension:@"dat"];
+	return name;
+
+}//end libraryPartName:
+
+
 //---------- keywordLinksFromCatalogRecords: -------------------------[static]--
 ///
 /// @abstract	The "Rebrickable <number>" keywords of the library's parts.
@@ -495,7 +462,7 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 		&&	(link == nil || [link isEqualToString:partNumber]) )
 		return [same stringByAppendingString:@".dat"];
 
-	return self->reverseLinks[partNumber] ?: [same stringByAppendingString:@".dat"];
+	return [self->reverseLinks[partNumber] firstObject] ?: [same stringByAppendingString:@".dat"];
 }
 
 
@@ -503,7 +470,7 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 //==============================================================================
 - (NSArray<NSString *> *) partNamesForRebrickablePartNumber:(NSString *)partNumber
 {
-	NSArray		*linked	= self->allReverseLinks[partNumber] ?: @[];
+	NSArray		*linked	= self->reverseLinks[partNumber] ?: @[];
 	NSString	*same	= [partNumber lowercaseString];
 	NSString	*link	= self->partLinks[same];
 	NSString	*name	= [same stringByAppendingString:@".dat"];
@@ -531,6 +498,15 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 - (NSArray<NSNumber *> *) rebrickableColorIDsForColorCode:(LDrawColorT)colorCode
 {
 	return self->reverseColors[@(colorCode)] ?: @[];
+}
+
+
+//========== rebrickableColorIDForColorCode: ===================================
+//==============================================================================
+- (NSInteger) rebrickableColorIDForColorCode:(LDrawColorT)colorCode
+{
+	NSNumber *colorID = [self->reverseColors[@(colorCode)] firstObject];
+	return (colorID != nil) ? [colorID integerValue] : LDrawRebrickableColorNone;
 }
 
 
@@ -572,50 +548,34 @@ static NSDictionary<NSNumber *, NSArray<NSNumber *> *> *NormalizedColorLinks(NSD
 
 //========== buildReverseLinks =================================================
 ///
-/// @abstract	Rebrickable number → LDraw name. When several LDraw parts link
-/// 			to one number, the one with the same number wins, then the
-/// 			first in sort order, so the choice does not change from run to
-/// 			run.
+/// @abstract	Rebrickable number → the LDraw names linked to it, the chosen
+/// 			one first: the one with the same number, else the first in sort
+/// 			order, so the choice does not change from run to run.
 ///
 //==============================================================================
 - (void) buildReverseLinks
 {
-	NSMutableDictionary	*reverse	= [NSMutableDictionary dictionary];
-	NSArray				*names		= [[self->partLinks allKeys] sortedArrayUsingSelector:@selector(compare:)];
+	NSMutableDictionary *reverse = [NSMutableDictionary dictionary];
 
-	NSMutableDictionary	*all		= [NSMutableDictionary dictionary];
-
-	for (NSString *name in names)
+	for (NSString *name in [[self->partLinks allKeys] sortedArrayUsingSelector:@selector(compare:)])
 	{
-		NSString		*number		= self->partLinks[name];
-		NSString		*current	= reverse[number];
-		NSMutableArray	*linked		= all[number];
-
-		if (current == nil || [name isEqualToString:[number lowercaseString]])
-			reverse[number] = name;
+		NSString		*number	= self->partLinks[name];
+		NSString		*file	= [name stringByAppendingString:@".dat"];
+		NSMutableArray	*linked	= reverse[number];
 
 		if (linked == nil)
 		{
 			linked = [NSMutableArray array];
-			all[number] = linked;
+			reverse[number] = linked;
 		}
-		[linked addObject:[name stringByAppendingString:@".dat"]];
+
+		// The same number is chosen first; else the names stay in order.
+		if ([name isEqualToString:[number lowercaseString]])
+			[linked insertObject:file atIndex:0];
+		else
+			[linked addObject:file];
 	}
-
-	for (NSString *number in [reverse allKeys])
-	{
-		NSString		*name	= [reverse[number] stringByAppendingString:@".dat"];
-		NSMutableArray	*linked	= all[number];
-
-		reverse[number] = name;
-
-		// The chosen name first.
-		[linked removeObject:name];
-		[linked insertObject:name atIndex:0];
-	}
-
-	self->reverseLinks		= reverse;
-	self->allReverseLinks	= all;
+	self->reverseLinks = reverse;
 
 }//end buildReverseLinks
 

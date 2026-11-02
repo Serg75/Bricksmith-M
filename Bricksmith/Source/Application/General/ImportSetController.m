@@ -20,6 +20,7 @@
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "PartsLimitManager.h"
+#import "PreferencesForm.h"
 
 // How many matches the table lists.
 static const NSUInteger ImportSetMatchLimit = 200;
@@ -147,17 +148,18 @@ static ImportSetController *runningController = nil;
 	[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
 	[stack setAlignment:NSLayoutAttributeLeading];
 	[stack setSpacing:10];
-	[stack setEdgeInsets:NSEdgeInsetsMake(20, 20, 20, 20)];
 	[[searchField widthAnchor] constraintEqualToAnchor:[scrollView widthAnchor]].active = YES;
 	[[buttons widthAnchor] constraintEqualToAnchor:[scrollView widthAnchor]].active = YES;
+
+	NSView *content = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(20, 20, 20, 20)];
 
 	panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 520, 400)
 									   styleMask:NSWindowStyleMaskTitled
 										 backing:NSBackingStoreBuffered
 										   defer:YES];
 	[panel setTitle:NSLocalizedString(@"Import Set Parts", nil)];
-	[panel setContentView:stack];
-	[panel setContentSize:[stack fittingSize]];
+	[panel setContentView:content];
+	[panel setContentSize:[content fittingSize]];
 	[panel setInitialFirstResponder:searchField];
 
 	if(parent != nil)
@@ -309,7 +311,8 @@ static ImportSetController *runningController = nil;
 		[parent endSheet:panel];
 	[panel orderOut:nil];
 
-	// A sheet opened after this one was cancelled is not this one.
+	// Clears the running sheet only if it is this one, since another may have
+	// opened.
 	if(runningController == self)
 		runningController = nil;
 

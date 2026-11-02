@@ -22,15 +22,11 @@
 static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 
 
-//========== PieceColor ========================================================
-///
-/// @abstract	A piece's color in an assembly of this color.
-///
-//==============================================================================
-static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyColor)
-{
-	return (piece.colorCode == LDrawCurrentColor) ? assemblyColor : piece.colorCode;
-}
+@interface LDrawPartLimitTable ()
+
+@property (nonatomic, readonly) LDrawShortcutMap *shortcuts;
+
+@end
 
 
 @implementation LDrawPartLimitTable
@@ -44,6 +40,7 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 	NSArray<LDrawInventoryItem *>	*rows;
 	NSArray<LDrawInventoryItem *>	*unmatched;
 	NSArray<NSNumber *>				*allowedColorCodes;	// worked out when first asked
+	NSMutableDictionary				*poolsByName;		// part name → pool, or NSNull for none
 }
 
 
@@ -63,6 +60,7 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 		self->identity		= partIdentity;
 		self->rows			= @[];
 		self->unmatched		= @[];
+		self->poolsByName	= [NSMutableDictionary dictionary];
 	}
 	return self;
 }
@@ -143,10 +141,23 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 
 	for (NSString *partNumber in [availability partNumbers])
 	{
-		NSString	*pool	= [self->identity poolKeyForRebrickablePartNumber:partNumber
-														  matchesMoldVariants:limit.matchesMoldVariants
-															  matchesAnyPrint:limit.matchesAnyPrint];
-		NSArray		*pieces	= [self piecesOfRebrickablePartNumber:partNumber partName:nil];
+		NSString		*pool		= [self->identity poolKeyForRebrickablePartNumber:partNumber
+																 matchesMoldVariants:limit.matchesMoldVariants
+																	 matchesAnyPrint:limit.matchesAnyPrint];
+		NSMutableArray	*piecePools	= [NSMutableArray array];	// pool, and color or NSNull for the record's
+
+		for (LDrawShortcutPiece *piece in [self piecesOfRebrickablePartNumber:partNumber partName:nil])
+		{
+			NSString	*piecePool	= [self poolKeyForFillingPartNamed:piece.partName];
+			NSInteger	 colorID	= [self->identity rebrickableColorIDForColorCode:piece.colorCode];
+
+			if (piecePool == nil)
+				continue;
+			if (piece.colorCode == LDrawCurrentColor)
+				[piecePools addObject:@[piecePool, [NSNull null]]];
+			else if (colorID != LDrawRebrickableColorNone)
+				[piecePools addObject:@[piecePool, @(colorID)]];
+		}
 
 		[availability enumerateRecordsForPartNumber:partNumber usingBlock:^(LDrawPartAvailabilityRecord record) {
 			BOOL isRecent	= (limit.yearsBack == 0 || record.lastYear >= firstYear);
@@ -157,18 +168,10 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 
 			[self addCount:record.setCount colorID:record.colorID pool:pool to:pools];
 
-			for (LDrawShortcutPiece *piece in pieces)
+			for (NSArray *piece in piecePools)
 			{
-				NSString	*piecePool	= [self poolKeyForFillingPartNamed:piece.partName];
-				NSInteger	 colorID	= record.colorID;
-
-				if (piece.colorCode != LDrawCurrentColor)
-				{
-					NSArray *colorIDs = [self->identity rebrickableColorIDsForColorCode:piece.colorCode];
-					colorID = [colorIDs count] > 0 ? [colorIDs[0] integerValue] : LDrawRebrickableColorNone;
-				}
-				if (piecePool != nil && colorID != LDrawRebrickableColorNone)
-					[self addCount:record.setCount colorID:colorID pool:piecePool to:pools];
+				NSInteger colorID = (piece[1] == [NSNull null]) ? record.colorID : [piece[1] integerValue];
+				[self addCount:record.setCount colorID:colorID pool:piece[0] to:pools];
 			}
 		}];
 	}
@@ -226,10 +229,7 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 		if (partNumber == nil && item.ldrawPartName != nil)
 			partNumber = [self->identity rebrickablePartNumberForPartName:item.ldrawPartName];
 		if (colorID == LDrawRebrickableColorNone && item.ldrawColorCode != LDrawColorBogus)
-		{
-			NSArray *colorIDs = [self->identity rebrickableColorIDsForColorCode:item.ldrawColorCode];
-			colorID = [colorIDs count] > 0 ? [colorIDs[0] integerValue] : LDrawRebrickableColorNone;
-		}
+			colorID = [self->identity rebrickableColorIDForColorCode:item.ldrawColorCode];
 		if (limit.matchesAnyColor)
 			colorID = LDrawRebrickableColorAny;
 
@@ -432,7 +432,8 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 		return status;
 
 	for (LDrawShortcutPiece *piece in pieces)
-		ofPieces = MAX(ofPieces, [self statusOfOnePartNamed:piece.partName colorCode:PieceColor(piece, colorCode)]);
+		ofPieces = MAX(ofPieces, [self statusOfOnePartNamed:piece.partName
+												  colorCode:[piece colorCodeInAssemblyColor:colorCode]]);
 
 	if (isInventory || status == LDrawPartLimitStatusNoData)
 		return ofPieces;
@@ -452,7 +453,7 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 	if (self.limit.isRestricting == NO)
 		return YES;
 
-	// An inventory's pieces decide for an assembly, as in the status.
+	// An inventory decides an assembly by its pieces alone.
 	pieces = (self->colorsByPool != nil) ? [self.shortcuts piecesOfPartNamed:partName] : nil;
 	if (pieces == nil || self.limit.kind != LDrawPartLimitKindInventory)
 	{
@@ -495,7 +496,7 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 
 	needed = [NSCountedSet set];
 	for (LDrawShortcutPiece *piece in pieces)
-		[needed addObject:@[piece.partName, @(PieceColor(piece, colorCode))]];
+		[needed addObject:@[piece.partName, @([piece colorCodeInAssemblyColor:colorCode])]];
 
 	for (NSArray *piece in needed)
 	{
@@ -510,7 +511,8 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 //========== colorCodesForPartNamed: ===========================================
 ///
 /// @abstract	The colors the part is allowed in. An assembly adds the colors
-/// 			its pieces are all allowed in.
+/// 			its pieces are all allowed in; under an inventory it has only
+/// 			those.
 ///
 //==============================================================================
 - (NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName
@@ -563,21 +565,31 @@ static LDrawColorT PieceColor(LDrawShortcutPiece *piece, LDrawColorT assemblyCol
 //========== poolKeyForPartNamed: ==============================================
 ///
 /// @abstract	The pool of the part's Rebrickable number, or else of its LDraw
-/// 			name when the table has one.
+/// 			name when the table has one. Each name is worked out once, since
+/// 			every lookup starts here.
 ///
 //==============================================================================
 - (NSString *) poolKeyForPartNamed:(NSString *)partName
 {
-	NSString *partNumber	= [self->identity rebrickablePartNumberForPartName:partName];
-	NSString *namePool		= nil;
+	id pool = nil;
 
-	if (partNumber != nil)
-		return [self->identity poolKeyForRebrickablePartNumber:partNumber
-										   matchesMoldVariants:self.limit.matchesMoldVariants
-											   matchesAnyPrint:self.limit.matchesAnyPrint];
+	if (partName == nil)
+		return nil;
 
-	namePool = [self poolKeyForFillingPartNamed:partName];
-	return (namePool != nil && self->colorsByPool[namePool] != nil) ? namePool : nil;
+	@synchronized (self->poolsByName) {
+		pool = self->poolsByName[partName];
+	}
+	if (pool == nil)
+	{
+		pool = [self poolKeyForFillingPartNamed:partName];
+		if ([pool hasPrefix:LDrawNamePoolPrefix] && self->colorsByPool[pool] == nil)
+			pool = nil;
+
+		@synchronized (self->poolsByName) {
+			self->poolsByName[partName] = pool ?: [NSNull null];
+		}
+	}
+	return (pool == [NSNull null]) ? nil : pool;
 
 }//end poolKeyForPartNamed:
 

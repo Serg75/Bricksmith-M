@@ -2,8 +2,8 @@
 //
 // File:		InventoriesWindowController.m
 //
-// Purpose:		The Inventories window: the imported sets, and the inventories
-//				made of sets and loose parts.
+// Purpose:		The Inventories window: the imported sets, the inventories made
+//				of sets and loose parts, and the parts matched by hand.
 //
 // Notes:		The list is on the left, the selected set or inventory on the
 //				right. Every change is saved in the store at once, and the
@@ -25,6 +25,7 @@
 #import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawSetInventory.h>
+#import <LDrawRebrickable/LDrawRebrickableSetImporter.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "ImportSetController.h"
@@ -230,8 +231,7 @@ static const CGFloat DetailInset	= 20;
 	[newRows addObject:@{@"kind": RowKindGroup, @"title": NSLocalizedString(@"Sets", nil)}];
 	for(NSString *number in [store setNumbers])
 	{
-		LDrawSetInventory *set = [store setInventoryForNumber:number];
-		NSString *title = (set != nil) ? [NSString stringWithFormat:@"%@ %@", number, set.name] : number;
+		NSString *title = [store setInventoryForNumber:number].title ?: number;
 
 		[newRows addObject:@{@"kind": RowKindSet, @"identifier": number, @"title": title}];
 	}
@@ -458,7 +458,7 @@ static const CGFloat DetailInset	= 20;
 	if(set == nil)
 		return nil;
 
-	if([set.source isEqualToString:@"rebrickable-api"])
+	if([set.source isEqualToString:LDrawRebrickableSourceAPI])
 		source = NSLocalizedString(@"Rebrickable API", nil);
 
 	if(set.fetchDate != nil)
@@ -469,7 +469,7 @@ static const CGFloat DetailInset	= 20;
 	parts = [NSString localizedStringWithFormat:NSLocalizedString(@"%lu, and %lu spares", nil),
 			 (unsigned long)set.partCount, (unsigned long)set.spareCount];
 
-	title = [NSTextField wrappingLabelWithString:[NSString stringWithFormat:@"%@ %@", set.setNumber, set.name]];
+	title = [NSTextField wrappingLabelWithString:set.title];
 	[title setFont:[NSFont boldSystemFontOfSize:[NSFont systemFontSize] + 2]];
 
 	grid = [self gridWithRows:@[
@@ -499,7 +499,7 @@ static const CGFloat DetailInset	= 20;
 {
 	LDrawInventoryStore	*store			= [[PartsLimitManager sharedManager] store];
 	NSTextField			*nameField		= nil;
-	NSScrollView		*scrollView		= [[NSScrollView alloc] init];
+	NSScrollView		*scrollView		= nil;
 	NSPopUpButton		*addSet			= [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:YES];
 	NSButton			*removeSet		= nil;
 	NSUInteger			 looseTotal		= 0;
@@ -519,22 +519,8 @@ static const CGFloat DetailInset	= 20;
 
 	// The sets
 	setCountNumbers = [[inventory.setCounts allKeys] sortedArrayUsingSelector:@selector(localizedStandardCompare:)];
-	setCountsTable	= [[NSTableView alloc] init];
-	for(NSArray *spec in columns)
-	{
-		NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:spec[0]];
-		[[column headerCell] setStringValue:spec[1]];
-		[column setWidth:[spec[2] doubleValue]];
-		[setCountsTable addTableColumn:column];
-	}
-	[setCountsTable setUsesAlternatingRowBackgroundColors:YES];
-	[setCountsTable setDataSource:self];
-	[setCountsTable setDelegate:self];
-	[scrollView setDocumentView:setCountsTable];
-	[scrollView setHasVerticalScroller:YES];
-	[scrollView setBorderType:NSBezelBorder];
-	[[scrollView heightAnchor] constraintEqualToConstant:160].active = YES;
-	[[scrollView widthAnchor] constraintGreaterThanOrEqualToConstant:400].active = YES;
+	setCountsTable	= [self tableWithColumns:columns];
+	scrollView		= [self scrollViewForTable:setCountsTable height:160];
 
 	[addSet addItemWithTitle:NSLocalizedString(@"Add Set", nil)];
 	for(NSString *number in [store setNumbers])
@@ -686,15 +672,20 @@ static const CGFloat DetailInset	= 20;
 	LDrawInventoryStore		*store		= [manager store];
 	LDrawPartLimit			*limit		= [session effectiveLimit];
 	LDrawPartLibrary		*library	= [LDrawPartLibrary sharedPartLibrary];
-	NSMutableArray			*files		= [NSMutableArray array];
+	NSMutableArray			*usages		= [NSMutableArray array];
 	NSArray					*parts		= nil;
 
+	// Each document keeps its walk of the model.
 	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
 	{
+		LDrawPartUsage *usage = nil;
+
 		if([document isKindOfClass:[LDrawDocument class]])
-			[files addObject:[(LDrawDocument *)document documentContents]];
+			usage = [[(LDrawDocument *)document partsLimitController] usage];
+		if(usage != nil)
+			[usages addObject:usage];
 	}
-	parts = [LDrawUnmatchedParts partsInFiles:files identity:[session identity] shortcuts:[session shortcuts]];
+	parts = [LDrawUnmatchedParts partsInUsages:usages identity:[session identity] shortcuts:[session shortcuts]];
 
 	inventoryName = nil;
 	if(limit.kind == LDrawPartLimitKindInventory)
@@ -825,10 +816,9 @@ static const CGFloat DetailInset	= 20;
 									  toPartNumber:typed];
 	else
 	{
-		NSString *name = [[typed lowercaseString] stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+		NSString *name = [LDrawPartIdentity libraryPartName:
+						  [typed stringByReplacingOccurrencesOfString:@"\\" withString:@"/"]];
 
-		if([[name pathExtension] length] == 0)
-			name = [name stringByAppendingPathExtension:@"dat"];
 		if([[LDrawPartLibrary sharedPartLibrary] categoryForPartName:name] == nil)
 		{
 			NSAlert		*alert		= [[NSAlert alloc] init];
@@ -1023,7 +1013,7 @@ static const CGFloat DetailInset	= 20;
 
 //========== setCountChanged: ==================================================
 //
-// Purpose:		How many copies of a set the inventory holds.
+// Purpose:		Saves the count typed for one of the inventory's sets.
 //
 //==============================================================================
 - (IBAction) setCountChanged:(id)sender

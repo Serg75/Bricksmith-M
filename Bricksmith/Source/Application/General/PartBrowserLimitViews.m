@@ -21,8 +21,8 @@ static const NSUInteger StripMaxRows	= 2;
 
 //========== PartBrowserSwatchImage ============================================
 //
-// Purpose:		A rounded square of the color. A ring leaves room around it; a
-//				line through it says the part is not made in it.
+// Purpose:		A rounded square of the color, with a ring around it when
+//				ringed, or a red line through it when struck.
 //
 //==============================================================================
 NSImage *PartBrowserSwatchImage(LDrawColorT colorCode, NSSize size, BOOL ringed, BOOL struck)
@@ -32,7 +32,7 @@ NSImage *PartBrowserSwatchImage(LDrawColorT colorCode, NSSize size, BOOL ringed,
 
 	[color getColorRGBA:rgba];
 
-	// A block cannot take the array itself.
+	// A block cannot capture a C array, so the color is made here.
 	NSColor *fill = [NSColor colorWithSRGBRed:rgba[0] green:rgba[1] blue:rgba[2] alpha:MAX(rgba[3], 0.35f)];
 
 	return [NSImage imageWithSize:size flipped:NO drawingHandler:^BOOL(NSRect bounds) {
@@ -154,7 +154,7 @@ static NSString *ColorName(LDrawColorT colorCode)
 
 //========== drawRect: =========================================================
 //
-// Purpose:		A quiet background and a line under it.
+// Purpose:		Fills the background and draws a line under it.
 //
 //==============================================================================
 - (void) drawRect:(NSRect)dirtyRect

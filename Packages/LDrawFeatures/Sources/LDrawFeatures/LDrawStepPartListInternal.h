@@ -13,6 +13,7 @@
 
 @class LDrawColor;
 @class LDrawDirective;
+@protocol LDrawColorable;
 @class LDrawPart;
 @class LDrawPartLibrary;
 
@@ -61,7 +62,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL) isPrimitiveOrSubpartName:(NSString *)partName library:(nullable LDrawPartLibrary *)library;
 
 /// A part's color, or `inheritedColor` when the part is in the main color.
-+ (nullable LDrawColor *) colorOfPart:(LDrawPart *)part inheriting:(nullable LDrawColor *)inheritedColor;
++ (nullable LDrawColor *) colorOfPart:(id<LDrawColorable>)part inheriting:(nullable LDrawColor *)inheritedColor;
 
 /// A one-instance row that shows a whole submodel as one part, with its
 /// outline. Listed whatever the submodel preference says.

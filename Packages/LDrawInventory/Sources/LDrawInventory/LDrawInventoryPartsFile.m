@@ -14,17 +14,18 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawInventory/LDrawInventoryItem.h>
+#import <LDrawInventory/LDrawPartIdentity.h>
 
 NSString * const LDrawInventoryErrorDomain = @"LDrawInventoryErrorDomain";
 
 
-//========== PartsFileError ====================================================
+//========== LDrawInventoryMakeError ===========================================
 //==============================================================================
-static NSError *PartsFileError(LDrawInventoryError code, NSString *description)
+NSError *LDrawInventoryMakeError(LDrawInventoryError code, NSString *reason)
 {
 	return [NSError errorWithDomain:LDrawInventoryErrorDomain
 							   code:code
-						   userInfo:@{NSLocalizedDescriptionKey: description}];
+						   userInfo:@{NSLocalizedDescriptionKey: reason}];
 }
 
 
@@ -104,8 +105,8 @@ static NSArray<NSString *> *CSVFields(NSString *line)
 	if (text == nil)
 	{
 		if (error != NULL)
-			*error = PartsFileError(LDrawInventoryErrorUnreadableFile,
-									NSLocalizedString(@"The file could not be read as text.", nil));
+			*error = LDrawInventoryMakeError(LDrawInventoryErrorUnreadableFile,
+											 NSLocalizedString(@"The file could not be read as text.", nil));
 		return nil;
 	}
 
@@ -137,9 +138,9 @@ static NSArray<NSString *> *CSVFields(NSString *line)
 		items = [self itemsFromCSVLines:lines];
 
 	if (items == nil && error != NULL)
-		*error = PartsFileError(LDrawInventoryErrorUnknownFormat,
-								NSLocalizedString(@"The file is not a Bricksmith piece count or a Rebrickable "
-												  @"parts list.", nil));
+		*error = LDrawInventoryMakeError(LDrawInventoryErrorUnknownFormat,
+										 NSLocalizedString(@"The file is not a Bricksmith piece count or a Rebrickable "
+														   @"parts list.", nil));
 	return items;
 
 }//end itemsFromString:error:
@@ -170,14 +171,10 @@ static NSArray<NSString *> *CSVFields(NSString *line)
 
 		quantity	= PositiveInteger([fields[0] stringByTrimmingCharactersInSet:spaces]);
 		colorCode	= PositiveInteger([fields[2] stringByTrimmingCharactersInSet:spaces]);
-		partName	= [[fields[1] stringByTrimmingCharactersInSet:spaces] lowercaseString];
+		partName	= [LDrawPartIdentity libraryPartName:fields[1]];	// the export leaves off the extension
 
-		if (quantity <= 0 || colorCode < 0 || [partName length] == 0)
+		if (quantity <= 0 || colorCode < 0 || partName == nil)
 			continue;
-
-		// The export leaves off the extension.
-		if ([[partName pathExtension] length] == 0)
-			partName = [partName stringByAppendingPathExtension:@"dat"];
 
 		item = [[LDrawInventoryItem alloc] initWithRebrickablePartNumber:nil
 													  rebrickableColorID:LDrawRebrickableColorNone

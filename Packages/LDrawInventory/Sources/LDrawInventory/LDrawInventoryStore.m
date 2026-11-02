@@ -46,6 +46,8 @@ static NSString * const OverridesKey			= @"links";
 	BOOL													 identityDataWasRead;
 	NSDictionary<NSString *, NSString *>					*handMatches;	// nil until read
 	NSMutableSet<NSString *>								*lockedFiles;	// unreadable and still in place
+	NSUInteger												 batchDepth;	// saves under -performChanges:
+	BOOL													 changeIsWaiting;
 }
 
 
@@ -197,12 +199,17 @@ static NSString * const OverridesKey			= @"links";
 // MARK: - WHAT A LIMIT READS -
 
 
+//========== titleForInventoryIdentifier: ======================================
+//==============================================================================
+- (NSString *) titleForInventoryIdentifier:(NSString *)identifier
+{
+	return [self combinedInventoryWithIdentifier:identifier].name ?: [self setInventoryForNumber:identifier].title;
+}
+
+
 //========== itemsForInventoryIdentifier: ======================================
 ///
 /// @abstract	Every item of a combined inventory or a set.
-///
-/// @discussion	A combined inventory wins over a set, though a UUID and a set
-/// 			number cannot look alike.
 ///
 //==============================================================================
 - (NSArray<LDrawInventoryItem *> *) itemsForInventoryIdentifier:(NSString *)identifier
@@ -262,14 +269,19 @@ static NSString * const OverridesKey			= @"links";
 							  shortcuts:(LDrawShortcutMap *)shortcuts
 								   year:(NSInteger)currentYear
 {
-	LDrawPartLimit			*resolved		= [self resolvedLimit:limit];
+	LDrawPartLimit			*resolved		= limit;
 	LDrawPartAvailability	*availability	= nil;
 	NSArray					*items			= nil;
 
-	if (resolved.kind == LDrawPartLimitKindAvailableNow)
+	// The items are read once, and say whether the store has the inventory.
+	if (limit.kind == LDrawPartLimitKindAvailableNow)
 		availability = [self availability];
-	else if (resolved.kind == LDrawPartLimitKindInventory)
-		items = [self itemsForInventoryIdentifier:resolved.inventoryIdentifier];
+	else if (limit.kind == LDrawPartLimitKindInventory)
+	{
+		items = [self itemsForInventoryIdentifier:limit.inventoryIdentifier];
+		if (items == nil)
+			resolved = [limit limitWithKind:LDrawPartLimitKindNone inventoryIdentifier:nil];
+	}
 
 	return [LDrawPartLimitTable tableForLimit:resolved
 								 availability:availability
@@ -299,6 +311,16 @@ static NSString * const OverridesKey			= @"links";
 		self->catalogWasRead	= YES;
 	}
 	return self->catalog;
+}
+
+
+//========== hasAvailability ===================================================
+//==============================================================================
+- (BOOL) hasAvailability
+{
+	if (self->catalogWasRead)
+		return self->catalog != nil;
+	return [[NSFileManager defaultManager] fileExistsAtPath:[[self urlForFile:CatalogFileName] path]];
 }
 
 
@@ -377,6 +399,8 @@ static NSString * const OverridesKey			= @"links";
 {
 	NSDictionary *file = @{ VersionKey : @(LDrawInventoryFileVersion), OverridesKey : overrides };
 
+	// Reads the file first, so an unreadable one is moved aside or locked
+	// before this save.
 	[self identityOverrides];
 	if (	[self refusesToWriteFile:OverridesFileName error:error]
 		||	LDrawJSONWriteFile(file, [self urlForFile:OverridesFileName], YES, error) == NO )
@@ -569,9 +593,7 @@ static NSString * const OverridesKey			= @"links";
 	{
 		reason = [NSString stringWithFormat:@"%@ in %@ cannot be read. Fix it or move it away, then try again.",
 				  fileName, [self.folderURL path]];
-		*error = [NSError errorWithDomain:LDrawInventoryErrorDomain
-									 code:LDrawInventoryErrorUnreadableFile
-								 userInfo:@{ NSLocalizedDescriptionKey : reason }];
+		*error = LDrawInventoryMakeError(LDrawInventoryErrorUnreadableFile, reason);
 	}
 	return YES;
 
@@ -605,8 +627,33 @@ static NSString * const OverridesKey			= @"links";
 //==============================================================================
 - (void) postChange
 {
+	if (self->batchDepth > 0)
+	{
+		self->changeIsWaiting = YES;
+		return;
+	}
 	[[NSNotificationCenter defaultCenter] postNotificationName:LDrawInventoryStoreDidChangeNotification
 														object:self];
+}
+
+
+//========== performChanges: ===================================================
+///
+/// @abstract	Runs saves that belong together, and posts one change at the
+/// 			end, so what follows the store builds once.
+///
+//==============================================================================
+- (void) performChanges:(void (^NS_NOESCAPE)(void))changes
+{
+	self->batchDepth += 1;
+	changes();
+	self->batchDepth -= 1;
+
+	if (self->batchDepth == 0 && self->changeIsWaiting)
+	{
+		self->changeIsWaiting = NO;
+		[self postChange];
+	}
 }
 
 @end

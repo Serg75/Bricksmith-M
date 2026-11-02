@@ -119,7 +119,8 @@
 {
 	NSMutableSet *allowed = nil;
 
-	for (NSString *partName in partNames)
+	// A selection often holds many copies of one part.
+	for (NSString *partName in [NSOrderedSet orderedSetWithArray:partNames])
 	{
 		NSArray *codes = [table colorCodesForPartNamed:partName];
 
@@ -147,25 +148,13 @@
 }
 
 
-//---------- predicateForSearchString:material: ----------------------[static]--
+//---------- predicateForSearchString:material:allowedColorCodes: ----[static]--
 //
 // Purpose:		Returns a search predicate suitable for finding colors based on
-//				the given search string.
+//				the given search string, narrowed to the allowed colors.
 //
 //				If the search string consists entirely of numerals, the
 //				predicate will search for colors having that exact integer code.
-//
-//------------------------------------------------------------------------------
-+ (NSPredicate *)predicateForSearchString:(NSString *)searchString
-								 material:(LDrawColorFilter)material
-{
-	return [self predicateForSearchString:searchString material:material allowedColorCodes:nil];
-}
-
-
-//---------- predicateForSearchString:material:allowedColorCodes: ----[static]--
-//
-// Purpose:		The search predicate, narrowed to the allowed colors.
 //
 //------------------------------------------------------------------------------
 + (NSPredicate *)predicateForSearchString:(NSString *)searchString

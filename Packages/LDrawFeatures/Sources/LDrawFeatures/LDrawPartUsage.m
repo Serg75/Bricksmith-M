@@ -55,6 +55,15 @@
 	return self;
 }
 
+
+//========== isLEGOPart ========================================================
+//==============================================================================
+- (BOOL) isLEGOPart
+{
+	return self.kind == LDrawPartUsageKindPart || self.kind == LDrawPartUsageKindSubstitute;
+}
+
+
 //========== description =======================================================
 //==============================================================================
 - (NSString *) description
@@ -102,8 +111,8 @@
 	if (first != nil)
 		[usage walkModel:first inheritingColor:nil counted:YES];
 
-	// Models nothing places, first those no other model places, so a model
-	// placed only by one of them takes its color from there.
+	// Then the models the walk did not reach, those no model places first, so
+	// a model placed only by one of them takes its color from it.
 	NSHashTable<LDrawModel *> *placed = [usage modelsPlacedInFile:file];
 
 	for (LDrawModel *model in [file submodels])
@@ -208,10 +217,7 @@
 		if ([directive isKindOfClass:[LDrawLSynth class]])
 		{
 			LDrawLSynth	*synthesized	= (LDrawLSynth *)directive;
-			LDrawColor	*color			= [synthesized LDrawColor];
-
-			if (inheritedColor != nil && [color colorCode] == LDrawCurrentColor)
-				color = inheritedColor;
+			LDrawColor	*color			= [LDrawStepPartList colorOfPart:synthesized inheriting:inheritedColor];
 
 			[self addCopyNamed:[[synthesized lsynthType] lowercaseString] ?: @""
 						 color:[color colorCode]
@@ -308,19 +314,16 @@
 //========== addSubstituteOfRange:counted: =====================================
 ///
 /// @abstract	What a SUB range lists, standing for the parts inside it. An IGN
-/// 			range, and a SUB inside a range that lists nothing, add nothing.
-/// 			A name with spaces comes in quotes, which are dropped.
+/// 			range, and a SUB inside another range, add nothing.
 ///
 //==============================================================================
 - (void) addSubstituteOfRange:(LDrawLPubRange *)range counted:(BOOL)counted
 {
-	LPubPliSubstitute	*substitute	= range.substitute;
-	NSCharacterSet		*quotes		= [NSCharacterSet characterSetWithCharactersInString:@"\""];
-	NSString			*name		= [[substitute.partName lowercaseString] stringByTrimmingCharactersInSet:quotes];
-	NSString			*extension	= [name pathExtension];
-	LDrawColorT			 colorCode	= (LDrawColorT)substitute.partColorCode;
+	NSString	*name		= range.listedPartName;
+	NSString	*extension	= [name pathExtension];
+	LDrawColorT	 colorCode	= (LDrawColorT)range.substitute.partColorCode;
 
-	if (substitute == nil || range.suppressed || [name length] == 0)
+	if (name == nil)
 		return;
 
 	// LPub3D takes "2429c01.ldr" for the library's "2429c01.dat".

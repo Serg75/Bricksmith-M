@@ -30,6 +30,19 @@
 	return self;
 }
 
+
+//========== listedPartName ====================================================
+//==============================================================================
+- (NSString *) listedPartName
+{
+	NSCharacterSet	*quotes	= [NSCharacterSet characterSetWithCharactersInString:@"\""];
+	NSString		*name	= [[self.substitute.partName lowercaseString] stringByTrimmingCharactersInSet:quotes];
+
+	if (self.substitute == nil || self.suppressed || [name length] == 0)
+		return nil;
+	return name;
+}
+
 @end
 
 

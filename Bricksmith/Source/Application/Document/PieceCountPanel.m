@@ -277,7 +277,7 @@ static NSString * const LimitStatusTextKey	= @"LimitStatusText";
 		[_pieceCountTable addTableColumn:owned];
 		[_pieceCountTable addTableColumn:status];
 
-		// The description gives up what the table lacks, so both columns show.
+		// Shrinks the description column so the two new columns fit.
 		NSTableColumn	*name		= [_pieceCountTable tableColumnWithIdentifier:PART_REPORT_NAME_KEY];
 		CGFloat			 needed		= 0.0;
 		CGFloat			 spacing	= [_pieceCountTable intercellSpacing].width;
@@ -308,9 +308,9 @@ static NSString * const LimitStatusTextKey	= @"LimitStatusText";
 //========== rowsWithLimit: ====================================================
 //
 // Purpose:		Each row with the limit's keys, and only the problems when
-//				Problems Only is on. A row takes the status of what it counts
-//				with, so molds and colors that are one LEGO color share it. An
-//				assembly takes the worst status of its pieces.
+//				Problems Only is on. Molds and colors that count as one LEGO
+//				part and color share a status; an assembly takes the worst
+//				status of its pieces.
 //
 //==============================================================================
 - (NSMutableArray *) rowsWithLimit:(NSArray *)rows
@@ -327,7 +327,7 @@ static NSString * const LimitStatusTextKey	= @"LimitStatusText";
 		LDrawPartLimitStatus	 status		= [self->limitReport statusForPartNamed:partName colorCode:colorCode];
 		NSUInteger				 owned		= [table ownedCountForPartNamed:partName colorCode:colorCode];
 
-		if(onlyBad && status < LDrawPartLimitStatusTooMany)
+		if(onlyBad && LDrawPartLimitStatusIsProblem(status) == NO)
 			continue;
 
 		copy[LimitStatusKey]		= @(status);

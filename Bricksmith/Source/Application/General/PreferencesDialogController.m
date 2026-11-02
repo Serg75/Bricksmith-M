@@ -234,26 +234,6 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 }//end RotateStyleNote
 
 
-//========== MarkColor =========================================================
-//
-// Purpose:		A mark color kept as red, green and blue, or gray for anything
-//				else.
-//
-//==============================================================================
-static NSColor *MarkColor(NSUserDefaults *defaults, NSString *key)
-{
-	NSArray *components = [defaults arrayForKey:key];
-
-	if([components count] != 3)
-		return [NSColor grayColor];
-
-	return [NSColor colorWithSRGBRed:[components[0] doubleValue]
-							   green:[components[1] doubleValue]
-								blue:[components[2] doubleValue]
-							   alpha:1.0];
-}
-
-
 //========== MarkColorComponents ===============================================
 //
 // Purpose:		Red, green and blue of a color well's color, as the key keeps
@@ -834,8 +814,8 @@ PreferencesDialogController *preferencesDialog = nil;
 
 //========== makePartsPane =====================================================
 //
-// Purpose:		The parts limit, the Rebrickable data it is built from, and the
-//				inventories.
+// Purpose:		The parts limit, how its problems are marked, the Rebrickable
+//				data it is built from, and the inventories.
 //
 //==============================================================================
 - (NSScrollView *) makePartsPane
@@ -1326,7 +1306,8 @@ PreferencesDialogController *preferencesDialog = nil;
 												: NSLocalizedString(@"Download", nil)];
 	[partsDataButton setEnabled:([[manager updater] isUpdating] == NO)];
 
-	// A value saved by hand that the menu lacks shows as the nearest longer one.
+	// A value saved by hand that the menu lacks shows as the next longer choice,
+	// or as Every month.
 	if([partsDataIntervalPopUp selectItemWithTag:interval] == NO)
 		[partsDataIntervalPopUp selectItemWithTag:(interval <= 0) ? 0 : (interval <= 7) ? 7 : 30];
 
@@ -1953,16 +1934,18 @@ PreferencesDialogController *preferencesDialog = nil;
 //==============================================================================
 - (void) setPartsMarksValues
 {
-	NSUserDefaults	*defaults	= [NSUserDefaults standardUserDefaults];
-	BOOL			 marks		= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+	NSUserDefaults	*defaults		= [NSUserDefaults standardUserDefaults];
+	BOOL			 marks			= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+	NSColor			*notAvailable	= [PartsLimitManager markColorForKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	NSColor			*tooMany		= [PartsLimitManager markColorForKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
 
 	[partsLimitMarksSwitch setState:marks ? NSControlStateValueOn : NSControlStateValueOff];
 	[partsLimitDimsSwitch setState:[defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY]
 								   ? NSControlStateValueOn : NSControlStateValueOff];
 	if([partsLimitMarkStylePopUp selectItemWithTag:[defaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY]] == NO)
 		[partsLimitMarkStylePopUp selectItemWithTag:LDrawRenderMarkStripes];
-	[partsLimitNotAvailableWell setColor:MarkColor(defaults, PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY)];
-	[partsLimitTooManyWell setColor:MarkColor(defaults, PARTS_LIMIT_TOO_MANY_COLOR_KEY)];
+	[partsLimitNotAvailableWell setColor:notAvailable ?: [NSColor grayColor]];
+	[partsLimitTooManyWell setColor:tooMany ?: [NSColor grayColor]];
 
 	for(NSControl *control in @[partsLimitMarkStylePopUp, partsLimitNotAvailableWell, partsLimitTooManyWell,
 								partsLimitDimsSwitch])
@@ -2059,10 +2042,7 @@ PreferencesDialogController *preferencesDialog = nil;
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
-	NSMenuItem *titleItem = [menu itemAtIndex:0];
-
-	[[PartsLimitManager sharedManager] populateLimitMenu:menu commands:PartsLimitMenuNoCommands];
-	[menu insertItem:titleItem atIndex:0];
+	[[PartsLimitManager sharedManager] populatePullDownLimitMenu:menu commands:PartsLimitMenuNoCommands];
 
 }//end menuNeedsUpdate:
 

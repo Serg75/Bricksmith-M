@@ -118,7 +118,7 @@ struct	LDrawDragHandleInstance;
     int                                ghost_stack_top;
     int                                ghost_serial;
 
-	// Mark stack: red, green, blue and style for each frame. Empty means no mark.
+	// Mark stack: red, green, blue and style for each push. Empty means no mark.
 	float							mark_stack[COLOR_STACK_DEPTH*4];
 	int								mark_stack_top;
 

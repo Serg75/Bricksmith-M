@@ -32,13 +32,15 @@ typedef struct CSVState
 } CSVState;
 
 
-//========== ReaderError =======================================================
+//========== LDrawRebrickableMakeError =========================================
 //==============================================================================
-static NSError *ReaderError(NSURL *url, NSString *reason)
+NSError *LDrawRebrickableMakeError(LDrawRebrickableError code, NSString *reason, NSURL *url)
 {
-	return [NSError errorWithDomain:LDrawRebrickableErrorDomain
-							   code:LDrawRebrickableErrorUnreadableFile
-						   userInfo:@{ NSLocalizedDescriptionKey : reason, NSURLErrorKey : url }];
+	NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+
+	userInfo[NSLocalizedDescriptionKey]	= reason;
+	userInfo[NSURLErrorKey]				= url;
+	return [NSError errorWithDomain:LDrawRebrickableErrorDomain code:code userInfo:userInfo];
 }
 
 
@@ -88,7 +90,7 @@ static void AppendByte(CSVState *state, char byte)
 	if (header == nil)
 	{
 		if (error != NULL)
-			*error = ReaderError(url, @"The file has no rows.");
+			*error = LDrawRebrickableMakeError(LDrawRebrickableErrorUnreadableFile, @"The file has no rows.", url);
 		return nil;
 	}
 
@@ -131,13 +133,10 @@ static void AppendByte(CSVState *state, char byte)
 		{
 			if (error != NULL)
 			{
-				NSString		*reason		= [NSString stringWithFormat:@"%@ has no column \"%@\".",
-											   [self->fileURL lastPathComponent], name];
-				NSDictionary	*userInfo	= @{ NSLocalizedDescriptionKey : reason, NSURLErrorKey : self->fileURL };
+				NSString *reason = [NSString stringWithFormat:@"%@ has no column \"%@\".",
+									[self->fileURL lastPathComponent], name];
 
-				*error = [NSError errorWithDomain:LDrawRebrickableErrorDomain
-											 code:LDrawRebrickableErrorMissingColumn
-										 userInfo:userInfo];
+				*error = LDrawRebrickableMakeError(LDrawRebrickableErrorMissingColumn, reason, self->fileURL);
 			}
 			return nil;
 		}
@@ -207,7 +206,8 @@ static void AppendByte(CSVState *state, char byte)
 	if (file == NULL)
 	{
 		if (error != NULL)
-			*error = ReaderError(self->fileURL, @"The file cannot be opened.");
+			*error = LDrawRebrickableMakeError(LDrawRebrickableErrorUnreadableFile,
+											   @"The file cannot be opened.", self->fileURL);
 		return NO;
 	}
 
@@ -219,7 +219,8 @@ static void AppendByte(CSVState *state, char byte)
 	{
 		fclose(file);
 		if (error != NULL)
-			*error = ReaderError(self->fileURL, @"The file cannot be inflated.");
+			*error = LDrawRebrickableMakeError(LDrawRebrickableErrorUnreadableFile,
+											   @"The file cannot be inflated.", self->fileURL);
 		return NO;
 	}
 
@@ -285,7 +286,8 @@ static void AppendByte(CSVState *state, char byte)
 	free(state.field);
 
 	if (failed && error != NULL)
-		*error = ReaderError(self->fileURL, @"The file stops partway, or is not gzipped right.");
+		*error = LDrawRebrickableMakeError(LDrawRebrickableErrorUnreadableFile,
+										   @"The file stops partway, or is not gzipped right.", self->fileURL);
 
 	return failed == NO;
 

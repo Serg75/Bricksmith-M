@@ -12,6 +12,8 @@
 
 #import <LDrawInventory/LDrawShortcutMap.h>
 
+#import <LDrawInventory/LDrawPartIdentity.h>
+
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawUtilities.h>
 
@@ -46,6 +48,19 @@ static NSArray<NSString *> *Fields(NSString *line)
 }//end Fields
 
 
+//========== MayHavePieces =====================================================
+///
+/// @abstract	Whether the text can be a shortcut or a moved part. Most parts
+/// 			are neither, and this skips reading their headers line by line.
+///
+//==============================================================================
+static BOOL MayHavePieces(NSString *text)
+{
+	return		[text rangeOfString:@"~Moved"].location != NSNotFound
+			||	[text rangeOfString:@"Shortcut" options:NSCaseInsensitiveSearch].location != NSNotFound;
+}
+
+
 @interface LDrawShortcutPiece ()
 
 - (instancetype) initWithPartName:(NSString *)partName colorCode:(LDrawColorT)colorCode;
@@ -65,6 +80,14 @@ static NSArray<NSString *> *Fields(NSString *line)
 		self->_colorCode	= colorCode;
 	}
 	return self;
+}
+
+
+//========== colorCodeInAssemblyColor: =========================================
+//==============================================================================
+- (LDrawColorT) colorCodeInAssemblyColor:(LDrawColorT)assemblyColor
+{
+	return (self.colorCode == LDrawCurrentColor) ? assemblyColor : self.colorCode;
 }
 
 
@@ -150,7 +173,7 @@ static NSArray<NSString *> *Fields(NSString *line)
 //==============================================================================
 - (NSArray<LDrawShortcutPiece *> *) piecesOfPartNamed:(NSString *)partName
 {
-	NSString	*name	= [self normalizedName:partName];
+	NSString	*name	= [LDrawPartIdentity libraryPartName:partName];
 	id			 cached	= (name != nil) ? self->cache[name] : [NSNull null];
 	NSString	*text	= nil;
 	NSArray		*pieces	= nil;
@@ -161,8 +184,9 @@ static NSArray<NSString *> *Fields(NSString *line)
 		return nil;
 
 	[self->opening addObject:name];
-	text	= self->reader(name);
-	pieces	= (text != nil) ? [self piecesInText:text] : nil;
+	text = self->reader(name);
+	if (text != nil && MayHavePieces(text))
+		pieces = [self piecesInText:text];
 	[self->opening removeObject:name];
 
 	if (text != nil)
@@ -178,30 +202,12 @@ static NSArray<NSString *> *Fields(NSString *line)
 //==============================================================================
 - (BOOL) hasPartNamed:(NSString *)partName
 {
-	NSString *name = [self normalizedName:partName];
+	NSString *name = [LDrawPartIdentity libraryPartName:partName];
 
 	if (name == nil)
 		return NO;
 	[self piecesOfPartNamed:name];
 	return [self->present containsObject:name];
-}
-
-
-//========== normalizedName: ===================================================
-///
-/// @abstract	Lowercase, with ".dat" when it has no extension. Nil for none.
-///
-//==============================================================================
-- (NSString *) normalizedName:(NSString *)partName
-{
-	NSString *name = [[partName stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]
-					  lowercaseString];
-
-	if ([name length] == 0)
-		return nil;
-	if ([[name pathExtension] length] == 0)
-		name = [name stringByAppendingPathExtension:@"dat"];
-	return name;
 }
 
 
@@ -265,20 +271,20 @@ static NSArray<NSString *> *Fields(NSString *line)
 	for (NSArray *reference in references)
 	{
 		LDrawColorT	 color	= (LDrawColorT)[reference[1] intValue];
+		NSString	*name	= [LDrawPartIdentity libraryPartName:reference[0]];
 		NSArray		*inner	= [self piecesOfPartNamed:reference[0]];
 
 		if (inner == nil)
 		{
 			if (isMoved && isShortcut == NO)
 				return nil;
-			[pieces addObject:[[LDrawShortcutPiece alloc] initWithPartName:[self normalizedName:reference[0]]
-																 colorCode:color]];
+			[pieces addObject:[[LDrawShortcutPiece alloc] initWithPartName:name colorCode:color]];
 			continue;
 		}
 
 		for (LDrawShortcutPiece *piece in inner)
 		{
-			LDrawColorT innerColor = (piece.colorCode == LDrawCurrentColor) ? color : piece.colorCode;
+			LDrawColorT innerColor = [piece colorCodeInAssemblyColor:color];
 			[pieces addObject:[[LDrawShortcutPiece alloc] initWithPartName:piece.partName colorCode:innerColor]];
 		}
 	}

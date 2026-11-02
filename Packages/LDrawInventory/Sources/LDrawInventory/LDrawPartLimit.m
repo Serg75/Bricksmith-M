@@ -27,7 +27,7 @@ static NSString * const LimitKindNone			= @"none";
 static NSString * const LimitKindAvailableNow	= @"availableNow";
 static NSString * const LimitKindInventory		= @"inventory";
 
-static const NSInteger DefaultYearsBack = 2;
+static const NSInteger DefaultYearsBack = 5;
 
 
 // The ivars are declared here, so the mutable subclass can set them.

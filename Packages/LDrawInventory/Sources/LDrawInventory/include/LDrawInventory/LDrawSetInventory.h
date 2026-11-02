@@ -50,6 +50,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// The parts of the set, spares not included.
 @property (nonatomic, readonly) NSUInteger partCount;
 
+/// The number and the name, e.g. "42115-1 Lamborghini Sián FKP 37".
+@property (nonatomic, readonly) NSString *title;
+
 /// The spares that come on top.
 @property (nonatomic, readonly) NSUInteger spareCount;
 

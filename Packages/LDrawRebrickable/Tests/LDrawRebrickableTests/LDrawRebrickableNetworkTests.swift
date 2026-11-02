@@ -197,7 +197,7 @@ struct LDrawRebrickableNetworkTests {
                                     : .init(status: 200, body: self.json(["set_num": "42115-1"]))
         }
         let object: [AnyHashable: Any]? = await withCheckedContinuation { continuation in
-            client().fetchObject(atPath: "lego/sets/42115-1/", parameters: nil) { object, _ in
+            client().fetchObject(atPath: "lego/sets/42115-1/") { object, _ in
                 continuation.resume(returning: object)
             }
         }
@@ -210,7 +210,7 @@ struct LDrawRebrickableNetworkTests {
     func tooLongAWait() async throws {
         StubURLProtocol.answer { _ in .init(status: 429, headers: ["Retry-After": "3600"]) }
         let error: Error? = await withCheckedContinuation { continuation in
-            client().fetchObject(atPath: "lego/sets/42115-1/", parameters: nil) { _, error in
+            client().fetchObject(atPath: "lego/sets/42115-1/") { _, error in
                 continuation.resume(returning: error)
             }
         }
@@ -227,7 +227,7 @@ struct LDrawRebrickableNetworkTests {
     func errors(status: Int, expected: LDrawRebrickableError.Code) async throws {
         StubURLProtocol.answer { _ in .init(status: status) }
         let error: Error? = await withCheckedContinuation { continuation in
-            client().fetchObject(atPath: "lego/sets/1-1/", parameters: nil) { _, error in
+            client().fetchObject(atPath: "lego/sets/1-1/") { _, error in
                 continuation.resume(returning: error)
             }
         }

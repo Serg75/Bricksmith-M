@@ -57,19 +57,10 @@
 //				the palette, but I have not tested it with models that use
 //				custom colors in an LDraw directive in their MPD file.
 //
+//				With allowedColors, each directive picks only among the colors
+//				it may take.
+//
 //==============================================================================
-+ (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
-{
-	return [self randomizedColorsForDirectives:colorable allowedColors:nil];
-}
-
-
-//---------- randomizedColorsForDirectives:allowedColors: ------------[static]--
-//
-// Purpose:		Randomizes each directive among the selection's colors that it
-//				is allowed to take.
-//
-//------------------------------------------------------------------------------
 + (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
 							 allowedColors:(BOOL (^)(id directive, LDrawColor *color))allowedColors
 {

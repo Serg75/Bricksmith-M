@@ -16,6 +16,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// The `source` of a set imported from the downloads, or through the API.
+extern NSString * const LDrawRebrickableSourceDownloads;
+extern NSString * const LDrawRebrickableSourceAPI;
+
 //------------------------------------------------------------------------------
 ///
 /// @class      LDrawRebrickableSetImporter
@@ -50,14 +54,6 @@ NS_ASSUME_NONNULL_BEGIN
 											  NSDictionary<NSString *, NSString *> *partLinks,
 											  NSError * _Nullable error))completion
 	NS_SWIFT_NAME(fetchSetInventory(number:client:setList:completion:));
-
-/// The set inventory in the API's answers: the set, and the rows of its parts.
-/// `partLinks`, when not NULL, gets the LDraw links. Exposed for tests.
-+ (LDrawSetInventory *) setInventoryFromSetObject:(NSDictionary *)setObject
-										 partRows:(NSArray<NSDictionary *> *)partRows
-										  setList:(nullable LDrawRebrickableSetList *)setList
-										partLinks:(NSDictionary * _Nullable * _Nullable)partLinks
-	NS_SWIFT_NAME(setInventory(setObject:partRows:setList:partLinks:));
 
 @end
 

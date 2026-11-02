@@ -90,7 +90,8 @@ varying vec4	mark_v;
 
 	uniform sampler2D	u_tex;
 
-	//	How marked faces look, as in shaders.metal. The stripes are in pixels.
+	//	How marked faces look. The stripes are in pixels, so they look the
+	//	same at any zoom.
 	const float MARK_STRIPE_PERIOD		= 14.0;
 	const float MARK_STRIPE_WIDTH		= 5.0;
 	const float MARK_STRIPE_STRENGTH	= 0.8;

@@ -36,6 +36,11 @@ extern const CGFloat PreferencesFormPaneWidth;
 + (NSView *) rowWithContent:(NSView *)content;
 + (NSStackView *) controlGroup:(NSArray<NSView *> *)views;
 
+// A view that holds another with margins around it, for a window or popover
+// sized to fit. A stack view's own edge insets do not do: once it holds two
+// views or more, its fitting size leaves out its side insets.
++ (NSView *) containerForView:(NSView *)view margins:(NSEdgeInsets)margins;
+
 // Controls
 + (NSSwitch *) switchWithTarget:(nullable id)target action:(nullable SEL)action;
 + (NSPopUpButton *) popUpWithTitles:(NSArray<NSString *> *)titles

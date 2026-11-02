@@ -64,7 +64,7 @@ static NSString * const ItemSparesKey		= @"spares";
 //------------------------------------------------------------------------------
 + (instancetype) itemWithDictionary:(NSDictionary<NSString *, id> *)dictionary
 {
-	if ([dictionary isKindOfClass:[NSDictionary class]] == NO)
+	if (LDrawJSONDictionary(dictionary) == nil)
 		return nil;
 
 	NSString	*partNumber		= LDrawJSONString(dictionary[ItemPartKey]);

@@ -19,19 +19,6 @@
 #import <LDrawInventory/LDrawShortcutMap.h>
 
 
-//========== IsProblem =========================================================
-///
-/// @abstract	A status worth a mark: anything but allowed or no data.
-///
-//==============================================================================
-static BOOL IsProblem(LDrawPartLimitStatus status)
-{
-	return status == LDrawPartLimitStatusTooMany
-		|| status == LDrawPartLimitStatusNotInColor
-		|| status == LDrawPartLimitStatusNotAvailable;
-}
-
-
 @interface LDrawPartLimitRow ()
 
 @property (nonatomic, readwrite, copy) NSString *partName;
@@ -101,8 +88,7 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 
 	for (LDrawPartUsageCopy *copy in usage.copies)
 	{
-		BOOL					 isPart	= (	copy.kind == LDrawPartUsageKindPart
-											||	copy.kind == LDrawPartUsageKindSubstitute );
+		BOOL					 isPart	= copy.isLEGOPart;
 		NSArray					*pieces	= isPart ? [table countedPiecesOfPartNamed:copy.partName] : nil;
 		LDrawPartLimitStatus	 worst	= LDrawPartLimitStatusAllowed;
 
@@ -114,7 +100,7 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 
 		for (LDrawShortcutPiece *piece in pieces)
 		{
-			LDrawColorT color = (piece.colorCode == LDrawCurrentColor) ? copy.colorCode : piece.colorCode;
+			LDrawColorT color = [piece colorCodeInAssemblyColor:copy.colorCode];
 
 			worst = MAX(worst, [self addCopyOfPartNamed:piece.partName colorCode:color isPart:YES from:copy]);
 		}
@@ -252,6 +238,22 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 }//end partsWithStatus:
 
 
+//========== problemParts ======================================================
+//==============================================================================
+- (NSArray<LDrawPart *> *) problemParts
+{
+	NSMutableArray *parts = [NSMutableArray array];
+
+	for (LDrawPart *part in self->statusByPart)
+	{
+		if (LDrawPartLimitStatusIsProblem([self statusForPart:part]))
+			[parts addObject:part];
+	}
+	return parts;
+
+}//end problemParts
+
+
 //========== problemCountInContainer: ==========================================
 //==============================================================================
 - (NSUInteger) problemCountInContainer:(LDrawContainer *)container
@@ -306,19 +308,16 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 
 	if (summary == nil)
 	{
-		NSUInteger				problems	= 0;
-		LDrawPartLimitStatus	worst		= LDrawPartLimitStatusAllowed;
+		__block NSUInteger				problems	= 0;
+		__block LDrawPartLimitStatus	worst		= LDrawPartLimitStatusAllowed;
 
-		for (id element in [container allEnclosedElements])
-		{
-			if ([element isKindOfClass:[LDrawPart class]] == NO)
-				continue;
+		[container applyToAllParts:^(LDrawPart *part) {
+			LDrawPartLimitStatus status = [self statusForPart:part];
 
-			LDrawPartLimitStatus status = [self statusForPart:element];
-			if (IsProblem(status))
+			if (LDrawPartLimitStatusIsProblem(status))
 				problems += 1;
 			worst = MAX(worst, status);
-		}
+		}];
 
 		summary = @[@(problems), @(worst)];
 		[self->containerCache setObject:summary forKey:container];
@@ -352,30 +351,27 @@ static BOOL IsProblem(LDrawPartLimitStatus status)
 //---------- applyReport:toFile: -------------------------------------[static]--
 ///
 /// @abstract	Sets every part's status, including the parts the report does
-/// 			not know, which are allowed, and marks each part as checked.
+/// 			not know, which are allowed. A part is checked only while the
+/// 			limit restricts.
 ///
 //------------------------------------------------------------------------------
 + (NSArray<LDrawPart *> *) applyReport:(LDrawPartLimitReport *)report toFile:(LDrawFile *)file
 {
-	NSMutableArray<LDrawPart *> *changed = [NSMutableArray array];
+	NSMutableArray<LDrawPart *>	*changed	= [NSMutableArray array];
+	BOOL						 checked	= report.table.limit.isRestricting;
 
 	for (LDrawContainer *model in [file submodels])
 	{
-		for (id element in [model allEnclosedElements])
-		{
-			if ([element isKindOfClass:[LDrawPart class]] == NO)
-				continue;
+		[model applyToAllParts:^(LDrawPart *part) {
+			LDrawPartLimitStatus status = [report statusForPart:part];
 
-			LDrawPart				*part	= element;
-			LDrawPartLimitStatus	 status	= [report statusForPart:part];
-
-			if (part.limitStatus != status || part.isLimitChecked == NO)
+			if (part.limitStatus != status || part.isLimitChecked != checked)
 			{
 				part.limitStatus	= status;
-				part.isLimitChecked	= YES;
+				part.isLimitChecked	= checked;
 				[changed addObject:part];
 			}
-		}
+		}];
 	}
 	return changed;
 

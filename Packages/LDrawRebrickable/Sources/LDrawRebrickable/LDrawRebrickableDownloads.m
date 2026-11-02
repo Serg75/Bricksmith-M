@@ -15,7 +15,7 @@
 #import <LDrawInventory/LDrawInventoryJSON.h>
 #import <LDrawRebrickable/LDrawRebrickableCSVReader.h>
 
-static NSString * const DefaultBaseURL		= @"https://cdn.rebrickable.com/media/downloads/";
+static NSString * const BaseURL				= @"https://cdn.rebrickable.com/media/downloads/";
 static NSString * const RecordsFileName		= @"downloads.json";
 static NSString * const RecordsFilesKey		= @"files";
 static NSString * const RecordETagKey		= @"etag";
@@ -25,14 +25,6 @@ static NSString * const RecordNewKey		= @"new";
 static NSString * const StagingPrefix		= @".incoming-";
 
 static const NSTimeInterval OneDay = 24 * 60 * 60;
-
-
-//========== CancelledError ====================================================
-//==============================================================================
-static NSError *CancelledError(void)
-{
-	return [NSError errorWithDomain:LDrawRebrickableErrorDomain code:LDrawRebrickableErrorCancelled userInfo:nil];
-}
 
 
 //========== ApproximateKilobytes ==============================================
@@ -77,9 +69,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 		NSDictionary *file = LDrawJSONReadFile([folderURL URLByAppendingPathComponent:RecordsFileName]);
 
 		self->_folderURL			= [folderURL copy];
-		self->_baseURL				= [NSURL URLWithString:DefaultBaseURL];
 		self->_sessionConfiguration	= [NSURLSessionConfiguration defaultSessionConfiguration];
-		self->_minimumCheckInterval	= OneDay;
 		self->records				= [NSMutableDictionary dictionary];
 
 		NSDictionary *files = LDrawJSONDictionary(file[RecordsFilesKey]);
@@ -247,7 +237,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 		NSError						*failure	= error;
 
 		if (failure == nil && downloads == nil)
-			failure = CancelledError();
+			failure = LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil);
 		if (failure == nil)
 			failure = [downloads storeStagedFiles:staged stored:stored];
 		[downloads saveRecords];
@@ -266,7 +256,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 
 		if (downloads == nil)
 		{
-			finish(CancelledError());
+			finish(LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil));
 			return;
 		}
 		if (name == nil)
@@ -276,7 +266,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 		}
 		if ([progress isCancelled])
 		{
-			finish(CancelledError());
+			finish(LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil));
 			return;
 		}
 		if (force == NO && [downloads isFreshFileNamed:name])
@@ -295,7 +285,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 			NSError						*failure	= nil;
 
 			if (strongSelf == nil)
-				failure = CancelledError();
+				failure = LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil);
 			else
 				failure = [strongSelf takeFileNamed:name
 											   from:location
@@ -335,7 +325,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 
 	return	[self hasFilesNamed:@[name]]
 		&&	checked != nil
-		&&	-[checked timeIntervalSinceNow] < self.minimumCheckInterval;
+		&&	-[checked timeIntervalSinceNow] < OneDay;
 }
 
 
@@ -347,7 +337,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 - (NSURLRequest *) requestForFileNamed:(NSString *)name
 {
 	NSString			*fileName	= [name stringByAppendingString:@".csv.gz"];
-	NSURL				*url		= [self.baseURL URLByAppendingPathComponent:fileName];
+	NSURL				*url		= [[NSURL URLWithString:BaseURL] URLByAppendingPathComponent:fileName];
 	NSMutableURLRequest	*request	= [NSMutableURLRequest requestWithURL:url];
 	NSDictionary		*record		= nil;
 
@@ -373,8 +363,8 @@ static int64_t ApproximateKilobytes(NSString *name)
 //========== takeFileNamed:from:response:error: ================================
 ///
 /// @abstract	Moves a changed file into the staging folder, and notes what the
-/// 			server said about it. Returns an error when there is nothing to
-/// 			keep.
+/// 			server said about it. Returns nil for a 200 or a 304, else an
+/// 			error.
 ///
 //==============================================================================
 - (NSError *) takeFileNamed:(NSString *)name
@@ -394,7 +384,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 	if (error != nil)
 	{
 		if ([error.domain isEqualToString:NSURLErrorDomain] && error.code == NSURLErrorCancelled)
-			return CancelledError();
+			return LDrawRebrickableMakeError(LDrawRebrickableErrorCancelled, nil, nil);
 		return error;
 	}
 
@@ -402,9 +392,7 @@ static int64_t ApproximateKilobytes(NSString *name)
 	{
 		NSString *reason = [NSString stringWithFormat:@"Rebrickable answered %ld for %@.",
 							(long)http.statusCode, name];
-		return [NSError errorWithDomain:LDrawRebrickableErrorDomain
-								   code:LDrawRebrickableErrorBadResponse
-							   userInfo:@{ NSLocalizedDescriptionKey : reason }];
+		return LDrawRebrickableMakeError(LDrawRebrickableErrorBadResponse, reason, nil);
 	}
 
 	@synchronized (self) {

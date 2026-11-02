@@ -441,6 +441,30 @@ static NSView *InsetView(NSView *view)
 }//end pinView:inRow:
 
 
+//---------- containerForView:margins: -------------------------------[static]--
+//
+// Purpose:		Holds the view with the margins around it, so the container's
+//				fitting size includes them.
+//
+//------------------------------------------------------------------------------
++ (NSView *) containerForView:(NSView *)view margins:(NSEdgeInsets)margins
+{
+	NSView *container = [[NSView alloc] init];
+
+	[view setTranslatesAutoresizingMaskIntoConstraints:NO];
+	[container addSubview:view];
+	[NSLayoutConstraint activateConstraints:@[
+		[[view leadingAnchor] constraintEqualToAnchor:[container leadingAnchor] constant:margins.left],
+		[[view trailingAnchor] constraintEqualToAnchor:[container trailingAnchor] constant:-margins.right],
+		[[view topAnchor] constraintEqualToAnchor:[container topAnchor] constant:margins.top],
+		[[view bottomAnchor] constraintEqualToAnchor:[container bottomAnchor] constant:-margins.bottom],
+	]];
+
+	return container;
+
+}//end containerForView:margins:
+
+
 //---------- controlGroup: -------------------------------------------[static]--
 //
 // Purpose:		Lines up controls side by side, centered on one line.

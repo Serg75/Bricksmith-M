@@ -20,7 +20,7 @@ enum RebrickableFixtures {
         LDrawRebrickableDownloads(folderURL: root.appendingPathComponent("downloads"))
     }
 
-    /// A new, empty folder that is removed when the process ends.
+    /// A new, empty folder in the temporary directory.
     static func temporaryFolder() -> URL {
         let folder = FileManager.default.temporaryDirectory
             .appendingPathComponent("LDrawRebrickableTests-\(UUID().uuidString)", isDirectory: true)

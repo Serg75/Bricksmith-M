@@ -55,7 +55,7 @@
 //==============================================================================
 - (BOOL) hasCatalog
 {
-	return [self.store availability] != nil;
+	return [self.store hasAvailability];
 }
 
 
@@ -78,8 +78,9 @@
 									  force:force
 							completionQueue:dispatch_get_main_queue()
 								 completion:^(NSArray<NSString *> *changedNames, NSError *error) {
-		// Files stored by an earlier run whose build failed count as new.
-		BOOL needsCatalog = (self.hasCatalog == NO || [self.downloads hasNewFilesNamed:names]);
+		// Files stored by an earlier run whose build failed count as new. A
+		// catalog that cannot be read is built again too.
+		BOOL needsCatalog = ([self.store availability] == nil || [self.downloads hasNewFilesNamed:names]);
 
 		if (error != nil || needsCatalog == NO || [self.downloads hasFilesNamed:names] == NO)
 		{
@@ -159,20 +160,25 @@
 														setList:self->setList
 													 completion:^(LDrawSetInventory *set, NSDictionary *links,
 																  NSError *error) {
-			NSError *saveError = nil;
+			__block NSError *saveError = nil;
 
 			if (set != nil)
 			{
-				NSDictionary *data = [LDrawPartIdentity rebrickableDataByUpdating:[self.store rebrickableIdentityData]
-																		partLinks:links
-																	   colorLinks:nil
-																		relations:nil
-																 knownPartNumbers:nil];
+				[self.store performChanges:^{
+					NSDictionary *data = nil;
 
-				if ([links count] > 0)
-					[self.store saveRebrickableIdentityData:data error:&saveError];
-				if (saveError == nil)
-					[self.store saveSetInventory:set error:&saveError];
+					if ([links count] > 0)
+					{
+						data = [LDrawPartIdentity rebrickableDataByUpdating:[self.store rebrickableIdentityData]
+																  partLinks:links
+																 colorLinks:nil
+																  relations:nil
+														   knownPartNumbers:nil];
+						[self.store saveRebrickableIdentityData:data error:&saveError];
+					}
+					if (saveError == nil)
+						[self.store saveSetInventory:set error:&saveError];
+				}];
 			}
 			completion(saveError == nil ? set : nil, error ?: saveError);
 		}];

@@ -70,8 +70,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// found it. Neither saved nor copied.
 @property (nonatomic) LDrawPartLimitStatus limitStatus;
 
-/// Whether a check set `limitStatus`. Only checked parts dim, so a part drawn
-/// outside a model, such as in a preview, looks as it always did.
+/// Whether a check under a limit set `limitStatus`. Only checked parts dim, so
+/// a part drawn outside a model, such as in a preview, never dims.
 @property (nonatomic) BOOL isLimitChecked;
 
 // Marks for the parts limit. The host sets them from its settings, then

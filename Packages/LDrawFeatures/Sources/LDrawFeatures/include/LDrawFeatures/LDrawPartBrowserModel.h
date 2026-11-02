@@ -30,7 +30,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// part has no LDraw match.
 extern NSString * const LDrawPartBrowserColorCodeKey;		// NSNumber, the row's LDraw color
 extern NSString * const LDrawPartBrowserLEGONumberKey;		// NSString, Rebrickable's part number
-extern NSString * const LDrawPartBrowserUsedKey;			// NSNumber, copies the model uses
 extern NSString * const LDrawPartBrowserOwnedKey;			// NSNumber, copies the inventory holds
 extern NSString * const LDrawPartBrowserSparesKey;			// NSNumber, spares among the owned
 extern NSString * const LDrawPartBrowserLeftKey;			// NSNumber, owned less used; below zero when over
@@ -74,7 +73,7 @@ typedef NS_ENUM(NSInteger, LDrawPartBrowserSearchMode)
 
 @property (nonatomic, readonly) LDrawColorT colorCode;
 
-/// Whether the chip shows how many are left.
+/// Whether the chip shows how many are left: when it has an inventory row.
 @property (nonatomic, readonly) BOOL hasCount;
 
 /// Owned less used. Below zero when the model uses more than the inventory

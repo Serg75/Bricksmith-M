@@ -9,10 +9,10 @@
 
 #import <Foundation/Foundation.h>
 
-@class LDrawFile;
 @class LDrawInventoryItem;
 @class LDrawPartIdentity;
 @class LDrawPartLimit;
+@class LDrawPartUsage;
 @class LDrawShortcutMap;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -53,13 +53,13 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LDrawUnmatchedParts : NSObject
 
-/// The library parts the files place that have no Rebrickable part, the most
+/// The library parts the models use that have no Rebrickable part, the most
 /// used first. An assembly with no match of its own lists its pieces that
 /// have none. A part only in a model nothing places is listed with a count
 /// of 0.
-+ (NSArray<LDrawUnmatchedPart *> *) partsInFiles:(NSArray<LDrawFile *> *)files
-										identity:(LDrawPartIdentity *)identity
-									   shortcuts:(nullable LDrawShortcutMap *)shortcuts
++ (NSArray<LDrawUnmatchedPart *> *) partsInUsages:(NSArray<LDrawPartUsage *> *)usages
+										 identity:(LDrawPartIdentity *)identity
+										shortcuts:(nullable LDrawShortcutMap *)shortcuts
 	NS_SWIFT_NAME(parts(in:identity:shortcuts:));
 
 /// The Rebrickable parts the items hold that have no LDraw part in the

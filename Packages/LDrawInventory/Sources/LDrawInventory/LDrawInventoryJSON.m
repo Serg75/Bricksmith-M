@@ -117,6 +117,46 @@ NSString *LDrawJSONStringFromDate(NSDate *date)
 }
 
 
+//========== LDrawJSONColorLinks ===============================================
+//==============================================================================
+NSDictionary<NSNumber *, NSArray<NSNumber *> *> *LDrawJSONColorLinks(id value)
+{
+	NSDictionary		*links	= LDrawJSONDictionary(value);
+	NSMutableDictionary	*result	= [NSMutableDictionary dictionary];
+
+	for (id key in links)
+	{
+		NSInteger		 colorID	= LDrawJSONInteger(key, NSNotFound);
+		NSArray			*values		= LDrawJSONArray(links[key]) ?: @[links[key]];
+		NSMutableArray	*codes		= [NSMutableArray array];
+
+		for (id code in values)
+		{
+			NSInteger number = LDrawJSONInteger(code, NSNotFound);
+			if (number != NSNotFound && [codes containsObject:@(number)] == NO)
+				[codes addObject:@(number)];
+		}
+		if (colorID != NSNotFound && [codes count] > 0)
+			result[@(colorID)] = codes;
+	}
+	return result;
+
+}//end LDrawJSONColorLinks
+
+
+//========== LDrawJSONColorLinksObject =========================================
+//==============================================================================
+NSDictionary<NSString *, NSArray<NSNumber *> *> *LDrawJSONColorLinksObject(
+	NSDictionary<NSNumber *, NSArray<NSNumber *> *> *links)
+{
+	NSMutableDictionary *object = [NSMutableDictionary dictionary];
+
+	for (NSNumber *colorID in links)
+		object[[colorID stringValue]] = links[colorID];
+	return object;
+}
+
+
 //========== LDrawJSONReadFile =================================================
 ///
 /// @abstract	The top-level dictionary of a JSON file, or nil.
@@ -139,13 +179,13 @@ NSDictionary *LDrawJSONReadFile(NSURL *url)
 //========== LDrawJSONWriteFile ================================================
 ///
 /// @abstract	Writes a dictionary as JSON, atomically, making the folder
-/// 			first. Keys are sorted so a file changes only where its data
-/// 			does.
+/// 			first. A pretty file has its keys sorted, so it changes only
+/// 			where its data does. Large caches skip the sort.
 ///
 //==============================================================================
 BOOL LDrawJSONWriteFile(NSDictionary *dictionary, NSURL *url, BOOL pretty, NSError **error)
 {
-	NSJSONWritingOptions	 options	= NSJSONWritingSortedKeys | (pretty ? NSJSONWritingPrettyPrinted : 0);
+	NSJSONWritingOptions	 options	= pretty ? (NSJSONWritingSortedKeys | NSJSONWritingPrettyPrinted) : 0;
 	NSData					*data		= nil;
 	NSURL					*folder		= [url URLByDeletingLastPathComponent];
 

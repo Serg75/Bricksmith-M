@@ -29,10 +29,11 @@
 #import "IconTextCell.h"
 #import "LDrawDocument.h"
 #import "PartsLimitManager.h"
+#import "PreferencesForm.h"
 
 NSString * const PartsLimitDidCheckNotification = @"PartsLimitDidCheckNotification";
 
-// Gaps in the scope bar, as the arranging controls use.
+// Sizes in the scope bar. The gaps match the arranging controls.
 static const CGFloat	PartsLimitGroupGap		= 10.0;
 static const CGFloat	PartsLimitButtonGap		= 4.0;
 static const CGFloat	PartsLimitPopUpMaxWidth	= 200.0;
@@ -59,7 +60,6 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 	BOOL					 isHidden;
 	BOOL					 hasMarks;		// some part may hold a status from an earlier limit
-	BOOL					 isRedrawing;	// the redraw reaches the document as an edit
 	LDrawPartUsage			*usage;			// nil after an edit until asked for
 }
 
@@ -198,7 +198,8 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	popUp.origin.y		= NSMidY(modelFrame) - NSHeight(popUp) / 2;
 	[self->limitPopUp setFrame:popUp];
 
-	// The model menu keeps where it starts, and gives up what the limit needs.
+	// The model menu keeps its left edge and shrinks to make room for the
+	// limit's controls.
 	modelFrame.size.width = MAX(NSMinX(popUp) - PartsLimitGroupGap - NSMinX(modelFrame), PartsLimitModelMinWidth);
 	[model setFrame:modelFrame];
 
@@ -257,9 +258,6 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //==============================================================================
 - (void) setNeedsCheck
 {
-	if(self->isRedrawing)
-		return;
-
 	self->usage = nil;
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(check) object:nil];
 	[self performSelector:@selector(check) withObject:nil afterDelay:0];
@@ -267,16 +265,10 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 
 //========== redrawMarks =======================================================
-//
-// Purpose:		Redraws the model. The document takes the redraw for an edit,
-//				which would walk the model again for nothing.
-//
 //==============================================================================
 - (void) redrawMarks
 {
-	self->isRedrawing = YES;
 	[[self->document documentContents] noteNeedsDisplay];
-	self->isRedrawing = NO;
 }
 
 
@@ -315,7 +307,8 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 		[self redrawMarks];
 
 	[self updateControls];
-	[self updatePopover];
+	if([self->popover isShown])
+		[self fillPopover];
 	[self postCheck];
 
 }//end check
@@ -365,36 +358,41 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 		[self->popover setContentViewController:[[NSViewController alloc] init]];
 	}
 
-	[self updatePopover];
+	[self fillPopover];
 	[self->popover showRelativeToRect:[sender bounds] ofView:sender preferredEdge:NSRectEdgeMinY];
 
 }//end showProblems:
 
 
-//========== updatePopover =====================================================
+//========== fillPopover =======================================================
 //
 // Purpose:		Fills the popover from the last report: one row per status the
 //				model has, then Show Piece Count.
 //
 //==============================================================================
-- (void) updatePopover
+- (void) fillPopover
 {
 	NSViewController		*content	= [self->popover contentViewController];
 	LDrawPartLimitReport	*report		= self.report;
 	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
 	NSString				*title		= [manager titleForLimit:[[manager session] limit]] ?: @"";
-	NSTextField				*heading	= [NSTextField labelWithString:title];
-	NSGridView				*grid		= [NSGridView gridViewWithViews:@[]];
-	NSButton				*pieceCount	= [NSButton buttonWithTitle:NSLocalizedString(@"Show Piece Count…", nil)
-														  target:self
-														  action:@selector(showPieceCount:)];
+	NSTextField				*heading	= nil;
+	NSGridView				*grid		= nil;
+	NSButton				*pieceCount	= nil;
 
 	if(content == nil)
 		return;
 
+	heading		= [NSTextField labelWithString:title];
+	grid		= [NSGridView gridViewWithViews:@[]];
+	pieceCount	= [NSButton buttonWithTitle:NSLocalizedString(@"Show Piece Count…", nil)
+									 target:self
+									 action:@selector(showPieceCount:)];
+
 	[heading setFont:[NSFont boldSystemFontOfSize:[NSFont systemFontSize]]];
 	[grid setColumnSpacing:12];
 	[grid setRowSpacing:6];
+	[grid setRowAlignment:NSGridRowAlignmentFirstBaseline];
 
 	for(size_t index = 0; index < sizeof(PartsLimitListedStatuses) / sizeof(PartsLimitListedStatuses[0]); index++)
 	{
@@ -438,11 +436,12 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
 	[stack setAlignment:NSLayoutAttributeLeading];
 	[stack setSpacing:10];
-	[stack setEdgeInsets:NSEdgeInsetsMake(14, 16, 14, 16)];
-	[content setView:stack];
-	[content setPreferredContentSize:[stack fittingSize]];
 
-}//end updatePopover
+	NSView *view = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(14, 16, 14, 16)];
+	[content setView:view];
+	[content setPreferredContentSize:[view fittingSize]];
+
+}//end fillPopover
 
 
 //========== formatForStatus: ==================================================
@@ -485,8 +484,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 //========== selectPartsWithStatus: ============================================
 //
-// Purpose:		Selects the parts with the button's status: in the model being
-//				edited when it has some, else in the first model that does.
+// Purpose:		Selects the parts with the button's status, in every model.
 //
 //==============================================================================
 - (void) selectPartsWithStatus:(id)sender
@@ -499,68 +497,61 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 //========== selectProblemParts ================================================
 //
-// Purpose:		Selects every part that breaks the limit, as -selectParts:
-//				does. NO when there is none.
+// Purpose:		Selects every part that breaks the limit. NO when there is none.
 //
 //==============================================================================
 - (BOOL) selectProblemParts
 {
-	NSMutableArray *parts = [NSMutableArray array];
-
-	for(LDrawPartLimitStatus status = LDrawPartLimitStatusTooMany; status <= LDrawPartLimitStatusNotAvailable; status++)
-		[parts addObjectsFromArray:[self.report partsWithStatus:status] ?: @[]];
-
-	return [self selectParts:parts];
-
-}//end selectProblemParts
+	return [self selectParts:[self.report problemParts] ?: @[]];
+}
 
 
 //========== selectParts: ======================================================
 //
-// Purpose:		Selects the parts in the model being edited when it has some,
-//				else in the first model that does. NO when there are none.
+// Purpose:		Selects the parts in every model of the file, and shows the
+//				model being edited when it has some, else the first model that
+//				does. NO when there are none.
+//
+// Notes:		Selecting rows in File Contents shows the last row's model, so
+//				the model to show is set after the selection.
 //
 //==============================================================================
 - (BOOL) selectParts:(NSArray<LDrawPart *> *)parts
 {
-	LDrawDocument			*owner		= self->document;
-	LDrawFile				*file		= [owner documentContents];
-	NSMutableDictionary		*byModel	= [NSMutableDictionary dictionary];
-	LDrawMPDModel			*chosen		= nil;
+	LDrawDocument	*owner		= self->document;
+	LDrawFile		*file		= [owner documentContents];
+	NSArray			*models		= [file submodels];
+	NSMutableArray	*selected	= [NSMutableArray array];
+	NSHashTable		*holders	= [NSHashTable weakObjectsHashTable];	// models with a selected part
+	LDrawMPDModel	*shown		= nil;
 
 	for(LDrawPart *part in parts)
 	{
-		LDrawModel		*model	= [part enclosingModel];
-		NSValue			*key	= [NSValue valueWithNonretainedObject:model];
-		NSMutableArray	*list	= byModel[key];
+		LDrawModel *model = [part enclosingModel];
 
-		if(model == nil)
+		if([models containsObject:model] == NO)
 			continue;
-		if(list == nil)
-			byModel[key] = list = [NSMutableArray array];
-		[list addObject:part];
+		[selected addObject:part];
+		[holders addObject:model];
 	}
+	if([selected count] == 0)
+		return NO;
 
-	if(byModel[[NSValue valueWithNonretainedObject:[file activeModel]]] != nil)
-		chosen = [file activeModel];
-	else
+	shown = [file activeModel];
+	if([holders containsObject:shown] == NO)
 	{
-		for(LDrawMPDModel *model in [file submodels])
+		for(LDrawMPDModel *model in models)
 		{
-			if(byModel[[NSValue valueWithNonretainedObject:model]] != nil)
+			if([holders containsObject:model])
 			{
-				chosen = model;
+				shown = model;
 				break;
 			}
 		}
 	}
 
-	if(chosen == nil)
-		return NO;
-
-	if(chosen != [file activeModel])
-		[owner setActiveModel:chosen];
-	[owner selectDirectives:byModel[[NSValue valueWithNonretainedObject:chosen]]];
+	[owner selectDirectives:selected];
+	[owner setActiveModel:shown];
 	return YES;
 
 }//end selectParts:
@@ -636,7 +627,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 {
 	return		self.report != nil
 			&&	[[self.report table] limit].isRestricting
-			&&	[[NSUserDefaults standardUserDefaults] boolForKey:PARTS_LIMIT_MARKS_KEY];
+			&&	[LDrawPart limitMarkStyle] != LDrawRenderMarkNone;
 }
 
 
@@ -681,8 +672,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //==============================================================================
 - (NSColor *) colorForBadgeTint:(LDrawPartLimitBadgeTint)tint
 {
-	NSString	*key		= nil;
-	NSArray		*components	= nil;
+	NSString *key = nil;
 
 	if(tint == LDrawPartLimitBadgeTintNotAvailable)
 		key = PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY;
@@ -691,14 +681,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	else
 		return [NSColor secondaryLabelColor];
 
-	components = [[NSUserDefaults standardUserDefaults] arrayForKey:key];
-	if([components count] != 3)
-		return [NSColor systemRedColor];
-
-	return [NSColor colorWithSRGBRed:[components[0] doubleValue]
-							   green:[components[1] doubleValue]
-								blue:[components[2] doubleValue]
-							   alpha:1.0];
+	return [PartsLimitManager markColorForKey:key] ?: [NSColor systemRedColor];
 
 }//end colorForBadgeTint:
 
@@ -886,11 +869,9 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
-	NSMenuItem				*titleItem	= [menu itemAtIndex:0];
-	PartsLimitMenuCommands	 commands	= PartsLimitMenuLimitOptions | PartsLimitMenuImportSetParts;
+	PartsLimitMenuCommands commands = PartsLimitMenuLimitOptions | PartsLimitMenuImportSetParts;
 
-	[[PartsLimitManager sharedManager] populateLimitMenu:menu commands:commands];
-	[menu insertItem:titleItem atIndex:0];
+	[[PartsLimitManager sharedManager] populatePullDownLimitMenu:menu commands:commands];
 
 }//end menuNeedsUpdate:
 

@@ -129,9 +129,9 @@ static const NSUInteger MaximumNesting = 6;
 
 	if (depth < MaximumNesting)
 	{
-		for (NSArray *parent in [index parentsOfNumber:number])
+		for (NSString *parentID in [index parentInventoryIDsOfNumber:number])
 		{
-			NSString *parentNumber = [index numberOfLatestInventoryID:parent[0]];
+			NSString *parentNumber = [index numberOfLatestInventoryID:parentID];
 
 			if (parentNumber != nil && [parentNumber isEqualToString:number] == NO)
 			{
@@ -187,13 +187,13 @@ static const NSUInteger MaximumNesting = 6;
 //==============================================================================
 - (BOOL) readKnownPartsFromDownloads:(LDrawRebrickableDownloads *)downloads error:(NSError **)error
 {
-	NSURL						*url	= [downloads localURLForFileNamed:@"parts"];
-	LDrawRebrickableCSVReader	*reader	= [[LDrawRebrickableCSVReader alloc] initWithURL:url error:error];
-	NSUInteger					 column	= [[[reader indexesOfColumns:@[@"part_num"] error:error] firstObject]
-										   unsignedIntegerValue];
-	NSMutableSet				*known	= [NSMutableSet set];
+	NSURL						*url		= [downloads localURLForFileNamed:@"parts"];
+	LDrawRebrickableCSVReader	*reader		= [[LDrawRebrickableCSVReader alloc] initWithURL:url error:error];
+	NSArray						*columns	= [reader indexesOfColumns:@[@"part_num"] error:error];
+	NSUInteger					 column		= [[columns firstObject] unsignedIntegerValue];
+	NSMutableSet				*known		= [NSMutableSet set];
 
-	if (reader == nil || [reader indexOfColumn:@"part_num"] == NSNotFound)
+	if (columns == nil)
 		return NO;
 
 	if ([reader enumerateRowsUsingBlock:^(NSArray<NSString *> *fields, BOOL *stop) {
@@ -221,14 +221,18 @@ static const NSUInteger MaximumNesting = 6;
 			colorLinks:(NSDictionary<NSNumber *, id> *)colorLinks
 				 error:(NSError **)error
 {
-	NSDictionary *data = [LDrawPartIdentity rebrickableDataByUpdating:[store rebrickableIdentityData]
-															partLinks:nil
-														   colorLinks:colorLinks
-															relations:self.relations
-													 knownPartNumbers:self.knownPartNumbers];
+	NSDictionary	*data	= [LDrawPartIdentity rebrickableDataByUpdating:[store rebrickableIdentityData]
+																 partLinks:nil
+																colorLinks:colorLinks
+																 relations:self.relations
+														  knownPartNumbers:self.knownPartNumbers];
+	__block BOOL	 saved	= NO;
 
-	return	[store saveAvailability:self.availability error:error]
-		&&	[store saveRebrickableIdentityData:data error:error];
+	[store performChanges:^{
+		saved =		[store saveAvailability:self.availability error:error]
+				&&	[store saveRebrickableIdentityData:data error:error];
+	}];
+	return saved;
 
 }//end saveIntoStore:colorLinks:error:
 

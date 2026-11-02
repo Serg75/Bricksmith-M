@@ -20,8 +20,8 @@
 
 #import "LDrawRebrickableInventoryIndex.h"
 
-static NSString * const SourceDownloads	= @"rebrickable-downloads";
-static NSString * const SourceAPI		= @"rebrickable-api";
+NSString * const LDrawRebrickableSourceDownloads	= @"rebrickable-downloads";
+NSString * const LDrawRebrickableSourceAPI			= @"rebrickable-api";
 
 /// Sets inside sets go only a few levels deep; a loop must not hang.
 static const NSUInteger MaximumNesting = 6;
@@ -127,9 +127,7 @@ static const NSUInteger MaximumNesting = 6;
 		NSString *reason = [NSString stringWithFormat:@"Rebrickable has no set %@.", setNumber];
 
 		if (error != NULL)
-			*error = [NSError errorWithDomain:LDrawRebrickableErrorDomain
-										 code:LDrawRebrickableErrorNotFound
-									 userInfo:@{ NSLocalizedDescriptionKey : reason }];
+			*error = LDrawRebrickableMakeError(LDrawRebrickableErrorNotFound, reason, nil);
 		return nil;
 	}
 
@@ -157,9 +155,7 @@ static const NSUInteger MaximumNesting = 6;
 		NSString *reason = [NSString stringWithFormat:@"Rebrickable lists no parts for set %@.", set.setNumber];
 
 		if (error != NULL)
-			*error = [NSError errorWithDomain:LDrawRebrickableErrorDomain
-										 code:LDrawRebrickableErrorNotFound
-									 userInfo:@{ NSLocalizedDescriptionKey : reason }];
+			*error = LDrawRebrickableMakeError(LDrawRebrickableErrorNotFound, reason, nil);
 		return nil;
 	}
 
@@ -170,7 +166,7 @@ static const NSUInteger MaximumNesting = 6;
 											   imageURL:set.imageURL
 												  items:[tally items]
 											  fetchDate:[NSDate date]
-												 source:SourceDownloads];
+												 source:LDrawRebrickableSourceDownloads];
 
 }//end setInventoryForNumber:fromDownloads:setList:error:
 
@@ -225,7 +221,7 @@ static const NSUInteger MaximumNesting = 6;
 						   [NSCharacterSet URLPathAllowedCharacterSet]];
 	NSString *setPath	= [NSString stringWithFormat:@"lego/sets/%@/", escaped];
 
-	[client fetchObjectAtPath:setPath parameters:nil completion:^(NSDictionary *setObject, NSError *error) {
+	[client fetchObjectAtPath:setPath completion:^(NSDictionary *setObject, NSError *error) {
 		if (setObject == nil)
 		{
 			completion(nil, @{}, error);
@@ -306,8 +302,7 @@ static const NSUInteger MaximumNesting = 6;
 					 isSpare:LDrawJSONBool(row[@"is_spare"], NO)];
 	}
 
-	if (partLinks != NULL)
-		*partLinks = links;
+	*partLinks = links;
 
 	return [[LDrawSetInventory alloc] initWithSetNumber:number
 												   name:LDrawJSONString(setObject[@"name"]) ?: number
@@ -316,7 +311,7 @@ static const NSUInteger MaximumNesting = 6;
 											   imageURL:LDrawJSONString(setObject[@"set_img_url"])
 												  items:[tally items]
 											  fetchDate:[NSDate date]
-												 source:SourceAPI];
+												 source:LDrawRebrickableSourceAPI];
 
 }//end setInventoryFromSetObject:partRows:setList:partLinks:
 

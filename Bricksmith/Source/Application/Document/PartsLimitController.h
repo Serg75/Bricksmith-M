@@ -40,7 +40,7 @@ extern NSString * const PartsLimitDidCheckNotification;
 // Checks the model again once the current event is done.
 - (void) setNeedsCheck;
 
-// Redraws the model for new marks, without the redraw asking for a check.
+// Redraws the model for new marks.
 - (void) redrawMarks;
 
 // The last check, or nil before the first.

@@ -21,9 +21,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 
 @interface LDrawPartLimitSession ()
 
-@property (nonatomic, readwrite) LDrawPartLimit *effectiveLimit;
 @property (nonatomic, readwrite) LDrawPartLimitTable *table;
-@property (nonatomic, readwrite) LDrawPartIdentity *identity;
 
 @end
 
@@ -32,6 +30,11 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 {
 	NSArray<NSDictionary *>								*catalogRecords;
 	NSMutableDictionary<NSString *, LDrawPartLimitTable *>	*inventoryTables;	// by identifier
+
+	// The identity map, and the store's data it was built from.
+	LDrawPartIdentity									*builtIdentity;
+	NSDictionary										*identityData;
+	NSDictionary										*identityOverrides;
 }
 
 
@@ -51,7 +54,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 		self->_limit		= [LDrawPartLimit noLimit];
 		self->_currentYear	= [[NSCalendar currentCalendar] component:NSCalendarUnitYear fromDate:[NSDate date]];
 
-		[self rebuild];
+		[self rebuildTable];
 
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(storeDidChange:)
@@ -118,17 +121,16 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 - (LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier
 {
 	LDrawPartLimitTable	*table		= self->inventoryTables[identifier];
-	LDrawPartLimit		*limit		= nil;
+	LDrawPartLimit		*limit		= [self.limit limitWithKind:LDrawPartLimitKindInventory
+											 inventoryIdentifier:identifier];
 
 	if (table != nil)
 		return table;
 
-	limit = [self.store resolvedLimit:[self.limit limitWithKind:LDrawPartLimitKindInventory
-											inventoryIdentifier:identifier]];
-	if (limit.kind != LDrawPartLimitKindInventory)
+	table = [self.store tableForLimit:limit identity:self.identity shortcuts:self.shortcuts year:self.currentYear];
+	if (table.limit.kind != LDrawPartLimitKindInventory)
 		return nil;
 
-	table = [self.store tableForLimit:limit identity:self.identity shortcuts:self.shortcuts year:self.currentYear];
 	if (self->inventoryTables == nil)
 		self->inventoryTables = [NSMutableDictionary dictionary];
 	self->inventoryTables[identifier] = table;
@@ -142,19 +144,67 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 //==============================================================================
 - (void) setCatalogRecords:(NSArray<NSDictionary *> *)records
 {
-	self->catalogRecords = [records copy];
+	self->catalogRecords	= [records copy];
+	self->builtIdentity		= nil;
 	[self reload];
 }
+
+
+//========== effectiveLimit ====================================================
+//==============================================================================
+- (LDrawPartLimit *) effectiveLimit
+{
+	return self.table.limit;
+}
+
+
+//========== restrictingTable ==================================================
+//==============================================================================
+- (LDrawPartLimitTable *) restrictingTable
+{
+	LDrawPartLimitTable *table = self.table;
+
+	return (table.limit.isRestricting && table.hasData) ? table : nil;
+}
+
+
+//========== identity ==========================================================
+///
+/// @abstract	Built when first asked, and again when the records or the
+/// 			store's data change. The store keeps what it read, so the same
+/// 			objects mean the same data.
+///
+//==============================================================================
+- (LDrawPartIdentity *) identity
+{
+	NSDictionary *data		= [self.store rebrickableIdentityData];
+	NSDictionary *overrides	= [self.store identityOverrides];
+
+	if (self->builtIdentity == nil || data != self->identityData || overrides != self->identityOverrides)
+	{
+		self->identityData		= data;
+		self->identityOverrides	= overrides;
+		self->builtIdentity		= [LDrawPartIdentity identityWithCatalogRecords:self->catalogRecords
+																 rebrickableData:data
+																	   overrides:overrides];
+	}
+	return self->builtIdentity;
+
+}//end identity
 
 
 // MARK: - BUILDING -
 
 
 //========== reload ============================================================
+///
+/// @abstract	Builds the identity map and the table again, and posts the
+/// 			notification.
+///
 //==============================================================================
 - (void) reload
 {
-	[self rebuild];
+	[self rebuildTable];
 	[self postChange];
 }
 
@@ -171,25 +221,22 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 }
 
 
-//========== rebuild ===========================================================
-//==============================================================================
-- (void) rebuild
-{
-	self.identity = [self.store identityWithCatalogRecords:self->catalogRecords];
-	[self rebuildTable];
-}
-
-
 //========== rebuildTable ======================================================
+///
+/// @abstract	The table for the limit. No limit needs no identity map, so a
+/// 			user who never limits parts never builds one.
+///
 //==============================================================================
 - (void) rebuildTable
 {
-	self->inventoryTables = nil;
-	self.effectiveLimit	= [self.store resolvedLimit:self.limit];
-	self.table			= [self.store tableForLimit:self.effectiveLimit
-										   identity:self.identity
-										  shortcuts:self.shortcuts
-											   year:self.currentYear];
+	BOOL				 limits		= (self.limit.kind != LDrawPartLimitKindNone);
+	LDrawPartIdentity	*identity	= limits ? self.identity : [LDrawPartIdentity emptyIdentity];
+
+	self->inventoryTables	= nil;
+	self.table				= [self.store tableForLimit:self.limit
+											   identity:identity
+											  shortcuts:self.shortcuts
+												   year:self.currentYear];
 }
 
 

@@ -57,6 +57,10 @@ typedef NS_ENUM(NSInteger, LDrawPartUsageKind)
 
 @property (nonatomic, readonly) LDrawPartUsageKind kind;
 
+/// Whether the copy is a LEGO part the limit can check: a part or a
+/// substitute. Every other kind has no data.
+@property (nonatomic, readonly) BOOL isLEGOPart;
+
 /// The directives that stand for this copy: the part itself, or the parts
 /// inside a SUB range. Empty for LSynth. A part inside a submodel placed more
 /// than once stands for a copy each time.

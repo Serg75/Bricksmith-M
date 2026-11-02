@@ -411,7 +411,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 
 	[self makeSharedContext];
 
-	// Before the part catalog loads, so the limit hears of it.
+	// Before the part catalog loads, so the manager gets the library's change
+	// notice.
 	[[PartsLimitManager sharedManager] start];
 	
 	//Try to define an LDraw path before the application even finishes starting.
@@ -762,7 +763,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 //========== addPartsLimitMenus ================================================
 //
 // Purpose:		Adds View > Parts Limit, which the limit manager fills as it
-//				opens, File > Import Set Parts and Window > Inventories.
+//				opens, File > Import Set Parts, Edit > Select Parts with Limit
+//				Problems and Window > Inventories.
 //
 //==============================================================================
 - (void) addPartsLimitMenus

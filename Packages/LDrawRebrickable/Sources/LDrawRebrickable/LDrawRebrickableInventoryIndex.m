@@ -23,7 +23,7 @@
 	NSMutableDictionary<NSString *, NSString *>					*latestByNumber;	// number → inventory id
 	NSMutableDictionary<NSString *, NSString *>					*numberByLatest;	// inventory id → number
 	NSMutableDictionary<NSString *, NSMutableArray<NSArray *> *>	*children;		// inventory id → [number, count]
-	NSMutableDictionary<NSString *, NSMutableArray<NSArray *> *>	*parents;		// number → [inventory id, count]
+	NSMutableDictionary<NSString *, NSMutableArray<NSString *> *>	*parents;		// number → inventory ids
 }
 
 
@@ -124,7 +124,7 @@
 
 		if (self->parents[number] == nil)
 			self->parents[number] = [NSMutableArray array];
-		[self->parents[number] addObject:@[inventoryID, @(count)]];
+		[self->parents[number] addObject:inventoryID];
 	} error:error];
 
 }//end readChildrenFromFileNamed:numberColumn:error:
@@ -157,9 +157,9 @@
 }
 
 
-//========== parentsOfNumber: ==================================================
+//========== parentInventoryIDsOfNumber: =======================================
 //==============================================================================
-- (NSArray<NSArray *> *) parentsOfNumber:(NSString *)number
+- (NSArray<NSString *> *) parentInventoryIDsOfNumber:(NSString *)number
 {
 	return self->parents[number] ?: @[];
 }

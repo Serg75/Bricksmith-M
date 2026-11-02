@@ -59,23 +59,23 @@
 @implementation LDrawUnmatchedParts
 
 
-//---------- partsInFiles:identity:shortcuts: ------------------------[static]--
+//---------- partsInUsages:identity:shortcuts: -----------------------[static]--
 //------------------------------------------------------------------------------
-+ (NSArray<LDrawUnmatchedPart *> *) partsInFiles:(NSArray<LDrawFile *> *)files
-										identity:(LDrawPartIdentity *)identity
-									   shortcuts:(LDrawShortcutMap *)shortcuts
++ (NSArray<LDrawUnmatchedPart *> *) partsInUsages:(NSArray<LDrawPartUsage *> *)usages
+										 identity:(LDrawPartIdentity *)identity
+										shortcuts:(LDrawShortcutMap *)shortcuts
 {
 	NSMutableOrderedSet	*names	= [NSMutableOrderedSet orderedSet];
 	NSCountedSet		*placed	= [NSCountedSet set];	// copies the models place, not those of unplaced models
 
-	for (LDrawFile *file in files)
+	for (LDrawPartUsage *usage in usages)
 	{
-		for (LDrawPartUsageCopy *copy in [LDrawPartUsage usageOfFile:file].copies)
+		for (LDrawPartUsageCopy *copy in usage.copies)
 		{
 			NSMutableArray	*unmatched	= [NSMutableArray array];
 			NSArray			*pieces		= nil;
 
-			if (copy.kind != LDrawPartUsageKindPart && copy.kind != LDrawPartUsageKindSubstitute)
+			if (copy.isLEGOPart == NO)
 				continue;
 			if ([identity rebrickablePartNumberForPartName:copy.partName] != nil)
 				continue;
@@ -108,7 +108,7 @@
 	}
 	return [self sortedParts:parts];
 
-}//end partsInFiles:identity:shortcuts:
+}//end partsInUsages:identity:shortcuts:
 
 
 //---------- partsInItems:limit:identity:libraryHasPart: -------------[static]--

@@ -32,8 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// The substitute this range lists in its place, or nil for an IGN range.
 @property (nonatomic, strong, nullable) LPubPliSubstitute *substitute;
 
-/// This range sits inside one that lists nothing, so its substitute is not
-/// listed either.
+/// This range sits inside another range, so its substitute is not listed.
 @property (nonatomic) BOOL suppressed;
 
 /// The color of the first part inside, for a substitute that names none.
@@ -41,6 +40,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// The parts inside, which the substitute stands for.
 @property (nonatomic, readonly) NSMutableArray<LDrawPart *> *enclosedParts;
+
+/// The part the range lists in its place, lowercase, without the quotes a
+/// name with spaces comes in. Nil when it lists none: an IGN range, a
+/// suppressed one, or a substitute that names no part.
+@property (nonatomic, readonly, nullable) NSString *listedPartName;
 
 @end
 

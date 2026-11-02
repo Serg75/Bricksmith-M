@@ -57,11 +57,9 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 /// If the search string parses as an integer, it matches colorCode exactly;
 /// otherwise localizedName CONTAINS[cd]. The host still applies the predicate
 /// to NSArrayController.
-+ (nullable NSPredicate *)predicateForSearchString:(nullable NSString *)searchString
-										  material:(LDrawColorFilter)material;
-
-/// The same, keeping only allowedColorCodes when they are given. The two
-/// limit filters match any material.
+///
+/// Keeps only allowedColorCodes when they are given. The two limit filters
+/// match any material.
 + (nullable NSPredicate *)predicateForSearchString:(nullable NSString *)searchString
 										  material:(LDrawColorFilter)material
 								 allowedColorCodes:(nullable NSArray<NSNumber *> *)allowedColorCodes;

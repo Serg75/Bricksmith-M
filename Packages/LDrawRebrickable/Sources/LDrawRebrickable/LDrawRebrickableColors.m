@@ -68,7 +68,7 @@ static NSString * const TableSourceKey		= @"source";
 //------------------------------------------------------------------------------
 + (NSDictionary<NSNumber *, NSArray<NSNumber *> *> *) builtInColorLinks
 {
-	return [self colorLinksInTable:[self builtInTable]];
+	return LDrawJSONColorLinks([self builtInTable][TableColorsKey]);
 }
 
 
@@ -140,7 +140,7 @@ static NSString * const TableSourceKey		= @"source";
 
 	if (file == nil)
 		return nil;
-	return [self colorLinksInTable:file];
+	return LDrawJSONColorLinks(file[TableColorsKey]);
 }
 
 
@@ -153,16 +153,11 @@ static NSString * const TableSourceKey		= @"source";
 					  inFolder:(NSURL *)folderURL
 						 error:(NSError **)error
 {
-	NSMutableDictionary *colors = [NSMutableDictionary dictionary];
-
-	for (NSNumber *colorID in links)
-		colors[[colorID stringValue]] = links[colorID];
-
 	NSDictionary *file = @{
 		@"version"		: @(LDrawInventoryFileVersion),
 		TableSourceKey	: @"api",
 		@"made"			: LDrawJSONStringFromDate([NSDate date]),
-		TableColorsKey	: colors,
+		TableColorsKey	: LDrawJSONColorLinksObject(links),
 	};
 	return LDrawJSONWriteFile(file, [folderURL URLByAppendingPathComponent:FetchedFileName], YES, error);
 
@@ -176,40 +171,5 @@ static NSString * const TableSourceKey		= @"source";
 	NSDictionary *fetched = [self fetchedColorLinksInFolder:folderURL];
 	return ([fetched count] > 0) ? fetched : [self builtInColorLinks];
 }
-
-
-// MARK: - UTILITIES -
-
-
-//---------- colorLinksInTable: --------------------------------------[static]--
-///
-/// @abstract	A table's links. Ids are written as strings, and a color may
-/// 			have one code or a list.
-///
-//------------------------------------------------------------------------------
-+ (NSDictionary<NSNumber *, NSArray<NSNumber *> *> *) colorLinksInTable:(NSDictionary *)table
-{
-	NSDictionary		*colors	= LDrawJSONDictionary(table[TableColorsKey]);
-	NSMutableDictionary	*links	= [NSMutableDictionary dictionary];
-
-	for (id key in colors)
-	{
-		NSInteger		 colorID	= LDrawJSONInteger(key, NSNotFound);
-		id				 value		= colors[key];
-		NSArray			*values		= [value isKindOfClass:[NSArray class]] ? value : @[value];
-		NSMutableArray	*codes		= [NSMutableArray array];
-
-		for (id code in values)
-		{
-			NSInteger number = LDrawJSONInteger(code, NSNotFound);
-			if (number != NSNotFound)
-				[codes addObject:@(number)];
-		}
-		if (colorID != NSNotFound && [codes count] > 0)
-			links[@(colorID)] = codes;
-	}
-	return links;
-
-}//end colorLinksInTable:
 
 @end

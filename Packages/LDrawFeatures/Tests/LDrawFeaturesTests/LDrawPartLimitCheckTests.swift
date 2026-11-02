@@ -324,7 +324,7 @@ struct LDrawPartLimitCheckTests {
 
     // Copying a part looks up the shared part library, which package tests do
     // not have, so the copy's status is not tested here.
-    @Test("Applying a report sets each part's status and returns only the parts that changed or were new")
+    @Test("Applying a report sets each part's status and checked mark and returns the parts where they changed")
     func applying() throws {
         let file = LDrawFile()
         let good = part("3001.dat")
@@ -342,8 +342,9 @@ struct LDrawPartLimitCheckTests {
         #expect(LDrawPartLimitCheck.apply(LDrawPartLimitCheck.report(for: file, table: table), to: file).isEmpty)
 
         let cleared = LDrawPartLimitCheck.apply(LDrawPartLimitCheck.report(for: file, table: .unrestricted()), to: file)
-        #expect(cleared == [bad])
+        #expect(Set(cleared) == [good, bad])
         #expect(bad.limitStatus == .allowed)
+        #expect(good.isLimitChecked == false && bad.isLimitChecked == false)
         _ = main
     }
 

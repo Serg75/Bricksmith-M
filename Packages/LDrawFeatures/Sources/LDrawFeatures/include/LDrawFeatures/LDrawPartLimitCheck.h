@@ -53,7 +53,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// @abstract   How every part of a model stands against a limit.
 ///
-/// @discussion A part is *too many* when it is a copy past what the inventory
+/// @discussion A part is too many when it is a copy past what the inventory
 ///             holds, counted in build order: if the sets hold 10, the 11th
 ///             copy built and those after it are too many. A part inside a
 ///             submodel stands for every copy of the submodel, and takes the
@@ -90,6 +90,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// The parts with this status, in no set order.
 - (NSArray<LDrawPart *> *) partsWithStatus:(LDrawPartLimitStatus)status;
 
+/// The parts that break the limit, in no set order.
+- (NSArray<LDrawPart *> *) problemParts;
+
 /// How many parts inside the container are too many, not in their color, or
 /// not available. Parts with no data are not problems.
 - (NSUInteger) problemCountInContainer:(LDrawContainer *)container;
@@ -115,9 +118,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// The same for a usage already walked.
 + (LDrawPartLimitReport *) reportForUsage:(LDrawPartUsage *)usage table:(LDrawPartLimitTable *)table;
 
-/// Sets every part's `limitStatus` in the file from the report, and marks it
-/// checked. Returns the parts whose status changed or that were not checked
-/// before, which the host redraws.
+/// Sets every part's `limitStatus` in the file from the report, and its
+/// `isLimitChecked` to whether the limit restricts. Returns the parts where
+/// either changed, which the host redraws.
 + (NSArray<LDrawPart *> *) applyReport:(LDrawPartLimitReport *)report toFile:(LDrawFile *)file;
 
 @end

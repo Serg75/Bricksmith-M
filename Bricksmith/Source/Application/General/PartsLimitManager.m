@@ -16,7 +16,6 @@
 #import <Security/Security.h>
 
 #import <LDrawCore/LDrawKeys.h>
-#import <LDrawCore/LDrawFile.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
@@ -24,8 +23,6 @@
 #import <LDrawInventory/LDrawInventoryStore.h>
 #import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
-#import <LDrawInventory/LDrawPartLimitTable.h>
-#import <LDrawInventory/LDrawSetInventory.h>
 #import <LDrawInventory/LDrawShortcutMap.h>
 #import <LDrawRebrickable/LDrawRebrickableCSVReader.h>
 #import <LDrawRebrickable/LDrawRebrickableClient.h>
@@ -38,6 +35,7 @@
 #import "LDrawDocument.h"
 #import "PartsLimitController.h"
 #import "PartsLimitOptionsController.h"
+#import "PreferencesForm.h"
 
 NSString * const PartsLimitBrowserSettingDidChangeNotification = @"PartsLimitBrowserSettingDidChangeNotification";
 NSString * const PartsLimitMarksDidChangeNotification = @"PartsLimitMarksDidChangeNotification";
@@ -104,11 +102,12 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 		NSStackView *stack = [NSStackView stackViewWithViews:@[self->label, self->indicator, cancel]];
 		[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
 		[stack setAlignment:NSLayoutAttributeTrailing];
-		[stack setEdgeInsets:NSEdgeInsetsMake(20, 20, 20, 20)];
-		[stack setTranslatesAutoresizingMaskIntoConstraints:NO];
 		[[self->indicator widthAnchor] constraintEqualToConstant:340].active = YES;
 		[[self->label leadingAnchor] constraintEqualToAnchor:[self->indicator leadingAnchor]].active = YES;
-		[self->panel setContentView:stack];
+
+		NSView *content = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(20, 20, 20, 20)];
+		[self->panel setContentView:content];
+		[self->panel setContentSize:[content fittingSize]];
 
 		[self->progress addObserver:self forKeyPath:@"fractionCompleted" options:0 context:NULL];
 
@@ -172,30 +171,6 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 @end
 
 
-//========== ReadColor =========================================================
-//
-// Purpose:		Reads a mark color kept as red, green and blue. NO for anything
-//				else.
-//
-//==============================================================================
-static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
-{
-	NSArray *components = [defaults arrayForKey:key];
-
-	if([components count] != 3)
-		return NO;
-
-	for(NSUInteger index = 0; index < 3; index++)
-	{
-		if([components[index] isKindOfClass:[NSNumber class]] == NO)
-			return NO;
-		rgb[index] = [components[index] floatValue];
-	}
-	return YES;
-
-}//end ReadColor
-
-
 @implementation PartsLimitManager
 {
 	LDrawRebrickableDownloads	*downloads;
@@ -203,10 +178,11 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 	NSArray						*partRecords;
 	NSUInteger					 shortcutsGeneration;	// the newest read of the library's shortcuts
 	BOOL						 shortcutsAreCurrent;	// a read of partRecords' shortcuts was started
-	NSArray						*appliedMarkSettings;	// what the drawing code was last given
 	NSMutableArray				*waitingCompletions;	// asked for an update while one ran
 	LDrawRebrickableClient		*sharedClient;			// one for the key, so calls keep a second apart
 	BOOL						 isFetchingColors;
+	NSString					*apiKeyRead;			// the Keychain's key, once read
+	BOOL						 apiKeyWasRead;
 	BOOL						 isAskingToDownload;	// the first download's question is up
 }
 
@@ -278,11 +254,6 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 											   object:nil];
 	[self partLibraryDidChange:nil];
 
-	// Dimming the other parts waits for a limit.
-	[[NSNotificationCenter defaultCenter] addObserver:self
-											 selector:@selector(applyMarkSettings)
-												 name:LDrawPartLimitDidChangeNotification
-											   object:self.session];
 	[[NSNotificationCenter defaultCenter] addObserver:self
 											 selector:@selector(readShortcutsIfNeeded)
 												 name:LDrawPartLimitDidChangeNotification
@@ -291,8 +262,8 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 
 	// Only data the user already asked for is kept up to date, quietly.
 	if(		days > 0
-	   &&	[self.updater hasCatalog]
-	   &&	(checked == nil || -[checked timeIntervalSinceNow] > days * 24 * 60 * 60) )
+	   &&	(checked == nil || -[checked timeIntervalSinceNow] > days * 24 * 60 * 60)
+	   &&	[self.updater hasCatalog] )
 	{
 		[self.updater updateCatalogForcing:NO completion:^(BOOL changed, NSError *error) {
 			if(error != nil)
@@ -333,8 +304,8 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 // Purpose:		Reads the library's shortcuts once something can use them: a
 //				limit, a set or an inventory.
 //
-// Notes:		The read opens every part file, so a user who never limits parts
-//				does not pay for it.
+// Notes:		The read opens every part file, so it never runs for a user who
+//				never limits parts.
 //
 //==============================================================================
 - (void) readShortcutsIfNeeded
@@ -349,33 +320,34 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 		return;
 
 	self->shortcutsAreCurrent = YES;
-	[self readShortcutsOfParts:[NSSet setWithArray:[self->partRecords valueForKey:PART_NUMBER_KEY]]];
+	[self readShortcutsOfRecords:self->partRecords];
 
 }//end readShortcutsIfNeeded
 
 
-//========== readShortcutsOfParts: =============================================
+//========== readShortcutsOfRecords: ===========================================
 //
 // Purpose:		Reads which parts are shortcuts on a background queue, since it
 //				opens every part file, then gives the map to the session.
 //
 //==============================================================================
-- (void) readShortcutsOfParts:(NSSet<NSString *> *)partNames
+- (void) readShortcutsOfRecords:(NSArray<NSDictionary *> *)records
 {
 	NSUInteger generation = ++self->shortcutsGeneration;
 
 	dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-		LDrawShortcutMap *map = [LDrawShortcutMap libraryMapWithPartNames:partNames];
+		NSSet				*partNames	= [NSSet setWithArray:[records valueForKey:PART_NUMBER_KEY]];
+		LDrawShortcutMap	*map		= [LDrawShortcutMap libraryMapWithPartNames:partNames];
 
 		[map readPartsNamed:partNames];
 		dispatch_async(dispatch_get_main_queue(), ^{
-			// A newer library replaces this one.
+			// Drops this map when a newer read has started.
 			if(generation == self->shortcutsGeneration)
 				[self.session setShortcuts:map];
 		});
 	});
 
-}//end readShortcutsOfParts:
+}//end readShortcutsOfRecords:
 
 
 #pragma mark -
@@ -423,17 +395,7 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 			return NSLocalizedString(@"Available Now", nil);
 
 		case LDrawPartLimitKindInventory:
-		{
-			NSString				*identifier	= limit.inventoryIdentifier;
-			LDrawCombinedInventory	*inventory	= [self.store combinedInventoryWithIdentifier:identifier];
-			LDrawSetInventory		*set		= [self.store setInventoryForNumber:identifier];
-
-			if(inventory != nil)
-				return inventory.name;
-			if(set != nil)
-				return [NSString stringWithFormat:@"%@ %@", set.setNumber, set.name];
-			return nil;
-		}
+			return [self.store titleForInventoryIdentifier:limit.inventoryIdentifier];
 	}
 	return nil;
 
@@ -495,6 +457,21 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 }//end populateLimitMenu:commands:
 
 
+//========== populatePullDownLimitMenu:commands: ===============================
+//
+// Purpose:		The same for a pull-down, whose first item is its title and
+//				stays.
+//
+//==============================================================================
+- (void) populatePullDownLimitMenu:(NSMenu *)menu commands:(PartsLimitMenuCommands)commands
+{
+	NSMenuItem *titleItem = [menu itemAtIndex:0];
+
+	[self populateLimitMenu:menu commands:commands];
+	[menu insertItem:titleItem atIndex:0];
+}
+
+
 //========== menuNeedsUpdate: ==================================================
 //
 // Purpose:		The View menu's Parts Limit submenu is filled when it opens. It
@@ -525,43 +502,38 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 //========== applyMarkSettings =================================================
 //
 // Purpose:		Gives the drawing code the marks the settings ask for, and
-//				redraws every model when they changed.
+//				redraws every model.
 //
-// Notes:		The other parts dim only while a limit is on, since with none
-//				every part would. A change of the parts' marks redraws through
-//				each document's check.
+// Notes:		Only parts a check under a limit has seen dim, so with no limit
+//				nothing does.
 //
 //==============================================================================
 - (void) applyMarkSettings
 {
-	NSUserDefaults	*defaults	= [NSUserDefaults standardUserDefaults];
-	BOOL			 marks		= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
-	BOOL			 restricts	= [[self.session table] limit].isRestricting;
-	BOOL			 dims		= [defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
-	NSInteger		 style		= [defaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY];
-	NSArray			*settings	= nil;
-	float			 rgb[3];
+	NSUserDefaults	*defaults		= [NSUserDefaults standardUserDefaults];
+	BOOL			 marks			= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+	BOOL			 dims			= [defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
+	NSInteger		 style			= [defaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	NSColor			*notAvailable	= [PartsLimitManager markColorForKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	NSColor			*tooMany		= [PartsLimitManager markColorForKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
 
 	// Settings offer stripes, a tint or an outline.
 	if(style != LDrawRenderMarkTint && style != LDrawRenderMarkOutline)
 		style = LDrawRenderMarkStripes;
 
-	settings = @[ @(marks ? style : LDrawRenderMarkNone),
-				  @(marks && restricts && dims),
-				  [defaults objectForKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY] ?: [NSNull null],
-				  [defaults objectForKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY] ?: [NSNull null] ];
-
-	if([settings isEqualToArray:self->appliedMarkSettings])
-		return;
-	self->appliedMarkSettings = settings;
-
 	[LDrawPart setLimitMarkStyle:marks ? style : LDrawRenderMarkNone];
-	[LDrawPart setDimsAllowedParts:(marks && restricts && dims)];
+	[LDrawPart setDimsAllowedParts:(marks && dims)];
 
-	if(ReadColor(defaults, PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY, rgb))
+	if(notAvailable != nil)
+	{
+		float rgb[3] = { notAvailable.redComponent, notAvailable.greenComponent, notAvailable.blueComponent };
 		[LDrawPart setLimitMarkColor:rgb forStatus:LDrawPartLimitStatusNotAvailable];
-	if(ReadColor(defaults, PARTS_LIMIT_TOO_MANY_COLOR_KEY, rgb))
+	}
+	if(tooMany != nil)
+	{
+		float rgb[3] = { tooMany.redComponent, tooMany.greenComponent, tooMany.blueComponent };
 		[LDrawPart setLimitMarkColor:rgb forStatus:LDrawPartLimitStatusTooMany];
+	}
 
 	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
 	{
@@ -570,6 +542,31 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 	}
 
 }//end applyMarkSettings
+
+
+//---------- markColorForKey: ----------------------------------------[static]--
+//
+// Purpose:		A mark color kept as red, green and blue, or nil for anything
+//				else.
+//
+//------------------------------------------------------------------------------
++ (NSColor *) markColorForKey:(NSString *)key
+{
+	NSArray *components = [[NSUserDefaults standardUserDefaults] arrayForKey:key];
+
+	if([components count] != 3)
+		return nil;
+	for(id component in components)
+	{
+		if([component isKindOfClass:[NSNumber class]] == NO)
+			return nil;
+	}
+	return [NSColor colorWithSRGBRed:[components[0] doubleValue]
+							   green:[components[1] doubleValue]
+								blue:[components[2] doubleValue]
+							   alpha:1.0];
+
+}//end markColorForKey:
 
 
 //========== toggleLimitMarks: =================================================
@@ -772,11 +769,16 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 								 (__bridge id)kSecMatchLimit	: (__bridge id)kSecMatchLimitOne };
 	CFTypeRef		 result	= NULL;
 
-	if(SecItemCopyMatching((__bridge CFDictionaryRef)query, &result) != errSecSuccess || result == NULL)
-		return nil;
+	if(self->apiKeyWasRead)
+		return self->apiKeyRead;
 
-	NSData *data = (__bridge_transfer NSData *)result;
-	return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+	self->apiKeyWasRead = YES;
+	if(SecItemCopyMatching((__bridge CFDictionaryRef)query, &result) == errSecSuccess && result != NULL)
+	{
+		NSData *data = (__bridge_transfer NSData *)result;
+		self->apiKeyRead = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+	}
+	return self->apiKeyRead;
 
 }//end apiKey
 
@@ -822,8 +824,13 @@ static BOOL ReadColor(NSUserDefaults *defaults, NSString *key, float *rgb)
 	}
 
 	if(status != errSecSuccess)
+	{
 		NSLog(@"Could not save the Rebrickable key in the Keychain: %d", (int)status);
-	else if([trimmed length] > 0)
+		return;
+	}
+
+	self->apiKeyRead = ([trimmed length] > 0) ? trimmed : nil;
+	if(self->apiKeyRead != nil)
 		[self fetchColorLinksIfNeeded];
 
 }//end setApiKey:

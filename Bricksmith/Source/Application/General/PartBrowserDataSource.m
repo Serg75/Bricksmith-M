@@ -248,18 +248,8 @@ static const CGFloat SwatchSize				= 14.0;
 //==============================================================================
 - (NSString *) selectedPartName
 {
-	NSInteger       rowIndex    = [partsTable selectedRow];
-	NSDictionary    *partRecord = nil;
-	NSString        *partName   = nil;
-	
-	if(rowIndex >= 0)
-	{
-		partRecord	= [tableDataSource objectAtIndex:rowIndex];
-		partName	= [partRecord objectForKey:PART_NUMBER_KEY];
-	}
-	
-	return partName;
-	
+	return [[self selectedRecord] objectForKey:PART_NUMBER_KEY];
+
 }//end selectedPartName
 
 
@@ -957,7 +947,7 @@ static const CGFloat SwatchSize				= 14.0;
 	[self->searchSelectedCategoryButton setTitle:[self->browserModel displayNameForCategory:self->selectedCategory]];
 	[self->searchSelectedCategoryButton sizeToFit];
 
-	// A part not made in the current color waits for another color.
+	// Insert stays off while the part is not made in the current color.
 	NSString	*colorProblem		= [self colorProblemForSelectedPart];
 
 	[self->insertButton				setEnabled:(partActionsEnabled && colorProblem == nil)];
@@ -1210,7 +1200,8 @@ static const CGFloat SwatchSize				= 14.0;
 		[self->partsTable removeTableColumn:colorColumn];
 		[self->partsTable removeTableColumn:countColumn];
 
-		// What is left means nothing without counts.
+		// A sort by what is left needs the Count column, so it goes back to the
+		// name.
 		if([[sort key] isEqualToString:LDrawPartBrowserLeftKey] && [nameColumn sortDescriptorPrototype] != nil)
 			[self->partsTable setSortDescriptors:@[[nameColumn sortDescriptorPrototype]]];
 	}
@@ -1241,8 +1232,8 @@ static const CGFloat SwatchSize				= 14.0;
 
 //========== setLimitBarShown: =================================================
 //
-// Purpose:		Puts the bar over the parts list, which gives up the room, or
-//				takes it away.
+// Purpose:		Shows the bar over the parts list, which shrinks to make room,
+//				or hides it and gives the room back.
 //
 //==============================================================================
 - (void) setLimitBarShown:(BOOL)shown
@@ -1349,9 +1340,9 @@ static const CGFloat SwatchSize				= 14.0;
 
 //========== colorProblemForSelectedPart =======================================
 //
-// Purpose:		Why the selected part cannot go in in the current color, or nil
-//				when it can. An inventory row brings its own color, and Warn
-//				Only lets any color through.
+// Purpose:		Why the selected part cannot be inserted in the current color,
+//				or nil when it can. An inventory row brings its own color, and
+//				Warn Only lets any color through.
 //
 //==============================================================================
 - (NSString *) colorProblemForSelectedPart
@@ -1628,32 +1619,24 @@ static const CGFloat SwatchSize				= 14.0;
 //==============================================================================
 - (void) partsLimitDidChange:(NSNotification *)notification
 {
-	NSString	*category	= self->selectedCategory;
-	NSString	*search		= [self->searchField stringValue];
-
-	// A filter color makes no sense once the limit offers none.
-	if(self->browserModel.colorFilter != nil)
-	{
-		[self prepareModel];
-		[self->browserModel reloadFilter];
-		if([[self->browserModel filterColorCodes] containsObject:self->browserModel.colorFilter] == NO)
-		{
-			self->browserModel.colorFilter	= nil;
-			self->filtersByCurrentColor		= NO;
-		}
-	}
-
 	[self setCategoryList:[self->browserModel categoryHierarchy]];
-	if([self->browserModel hasCategory:category] == NO)
-		category = Category_All;
+	if([self->browserModel hasCategory:self->selectedCategory] == NO)
+		self->selectedCategory = Category_All;
 
-	[self loadCategory:category];
-	if([search length] > 0)
+	// The category and the search stay. A filter color the limit no longer
+	// offers is dropped, which takes a second reload.
+	[self reloadRows];
+	if(		self->browserModel.colorFilter != nil
+	   &&	[[self->browserModel filterColorCodes] containsObject:self->browserModel.colorFilter] == NO )
 	{
-		[self->searchField setStringValue:search];
-		[self performSearch];
+		self->browserModel.colorFilter	= nil;
+		self->filtersByCurrentColor		= NO;
+		[self reloadRows];
 	}
+
+	[self syncSelectionAndCategoryDisplayed];
 	[self syncSelectionAndPartDisplayed];
+	[self setConstraints];
 
 }//end partsLimitDidChange:
 

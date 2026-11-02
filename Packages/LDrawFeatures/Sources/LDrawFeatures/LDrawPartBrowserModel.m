@@ -24,7 +24,6 @@
 
 NSString * const LDrawPartBrowserColorCodeKey	= @"LDrawPartBrowserColorCode";
 NSString * const LDrawPartBrowserLEGONumberKey	= @"LDrawPartBrowserLEGONumber";
-NSString * const LDrawPartBrowserUsedKey		= @"LDrawPartBrowserUsed";
 NSString * const LDrawPartBrowserOwnedKey		= @"LDrawPartBrowserOwned";
 NSString * const LDrawPartBrowserSparesKey		= @"LDrawPartBrowserSpares";
 NSString * const LDrawPartBrowserLeftKey		= @"LDrawPartBrowserLeft";
@@ -39,7 +38,6 @@ static NSString * const SetsGroupName			= @"Sets";
 @interface LDrawPartBrowserColorChip ()
 
 - (instancetype)initWithColorCode:(LDrawColorT)colorCode
-						 hasCount:(BOOL)hasCount
 						leftCount:(NSInteger)leftCount
 						   record:(nullable NSDictionary *)record;
 
@@ -48,10 +46,9 @@ static NSString * const SetsGroupName			= @"Sets";
 
 @implementation LDrawPartBrowserColorChip
 
-//========== initWithColorCode:hasCount:leftCount:record: ======================
+//========== initWithColorCode:leftCount:record: ===============================
 //==============================================================================
 - (instancetype)initWithColorCode:(LDrawColorT)colorCode
-						 hasCount:(BOOL)hasCount
 						leftCount:(NSInteger)leftCount
 						   record:(NSDictionary *)record
 {
@@ -59,11 +56,18 @@ static NSString * const SetsGroupName			= @"Sets";
 	if (self)
 	{
 		_colorCode	= colorCode;
-		_hasCount	= hasCount;
 		_leftCount	= leftCount;
 		_record		= record;
 	}
 	return self;
+}
+
+
+//========== hasCount ==========================================================
+//==============================================================================
+- (BOOL)hasCount
+{
+	return self.record != nil;
 }
 
 @end
@@ -72,13 +76,20 @@ static NSString * const SetsGroupName			= @"Sets";
 @interface LDrawPartBrowserModel ()
 @property (nonatomic, strong, readwrite) NSArray *filteredParts;
 @property (nonatomic, strong, readwrite, nullable) LDrawPartLimitTable *activeTable;
-@property (nonatomic, assign, readwrite) BOOL showsInventoryRows;
 @end
 
 
 @implementation LDrawPartBrowserModel
 {
 	NSArray<NSDictionary *> *inventoryRows;		// every row of the inventory shown, before any filter
+}
+
+
+//========== showsInventoryRows ================================================
+//==============================================================================
+- (BOOL)showsInventoryRows
+{
+	return self->inventoryRows != nil;
 }
 
 //========== initWithPartLibrary: =============================================
@@ -116,7 +127,7 @@ static NSString * const SetsGroupName			= @"Sets";
 										   && self.searchMode == LDrawPartBrowserSearchAllCategories);
 	NSString			*inventoryID	= [[self class] inventoryIdentifierForCategory:self.currentCategory];
 	NSString			*category		= self.currentCategory;
-	LDrawPartLimitTable	*limitTable		= [self restrictingTable];
+	LDrawPartLimitTable	*limitTable		= self.limitSession.restrictingTable;
 	NSArray				*records		= nil;
 	NSSet				*excluded		= nil;
 
@@ -125,8 +136,7 @@ static NSString * const SetsGroupName			= @"Sets";
 		category = Category_All;
 
 	self.activeTable		= limitTable;
-	self.showsInventoryRows	= NO;
-	self->inventoryRows		= nil;
+	self->inventoryRows = nil;
 
 	if (inventoryID != nil && searchesAll == NO)
 	{
@@ -151,22 +161,6 @@ static NSString * const SetsGroupName			= @"Sets";
 	self.filteredParts = [self filterPartRecords:records
 								  bySearchString:search
 									excludeParts:excluded];
-}
-
-
-//========== restrictingTable ==================================================
-//
-// Purpose:		The limit's table when it limits anything and has its data.
-//				Without data nothing could be listed.
-//
-//==============================================================================
-- (LDrawPartLimitTable *)restrictingTable
-{
-	LDrawPartLimitTable *table = self.limitSession.table;
-
-	if (table.limit.isRestricting && table.hasData)
-		return table;
-	return nil;
 }
 
 
@@ -227,8 +221,7 @@ static NSString * const SetsGroupName			= @"Sets";
 	NSNumber		*color		= self.colorFilter;
 	NSMutableArray	*rows		= [NSMutableArray array];
 
-	self.showsInventoryRows	= YES;
-	self->inventoryRows		= [self buildInventoryRows];
+	self->inventoryRows = [self buildInventoryRows];
 
 	for (NSDictionary *row in self->inventoryRows)
 	{
@@ -263,7 +256,6 @@ static NSString * const SetsGroupName			= @"Sets";
 {
 	LDrawPartLimitTable		*table		= self.activeTable;
 	LDrawPartLimitReport	*report		= nil;
-	NSMutableDictionary		*library	= [NSMutableDictionary dictionary];
 	NSMutableArray			*rows		= [NSMutableArray array];
 	BOOL					 spares		= table.limit.includesSpares;
 
@@ -273,17 +265,12 @@ static NSString * const SetsGroupName			= @"Sets";
 	if (self.partUsage != nil)
 		report = [LDrawPartLimitCheck reportForUsage:self.partUsage table:table];
 
-	for (NSDictionary *record in [self.partLibrary allPartCatalogRecords])
-	{
-		NSString *partName = [record objectForKey:PART_NUMBER_KEY];
-		if (partName != nil)
-			library[partName] = record;
-	}
-
 	for (LDrawInventoryItem *item in [[table items] arrayByAddingObjectsFromArray:[table unmatchedItems]])
 	{
+		NSString			*partName	= item.ldrawPartName;
 		NSMutableDictionary	*row		= [NSMutableDictionary dictionary];
-		NSDictionary		*record		= (item.ldrawPartName != nil) ? library[item.ldrawPartName] : nil;
+		NSDictionary		*record		= (partName != nil) ? [self.partLibrary partCatalogRecordForPartName:partName]
+														   : nil;
 		BOOL				 hasColor	= (item.ldrawColorCode != LDrawColorBogus);
 		NSUInteger			 owned		= item.quantity + (spares ? item.spareQuantity : 0);
 		NSUInteger			 used		= 0;
@@ -301,7 +288,6 @@ static NSString * const SetsGroupName			= @"Sets";
 		if (item.rebrickablePartNumber != nil)
 			row[LDrawPartBrowserLEGONumberKey] = item.rebrickablePartNumber;
 
-		row[LDrawPartBrowserUsedKey]		= @(used);
 		row[LDrawPartBrowserOwnedKey]		= @(owned);
 		row[LDrawPartBrowserSparesKey]		= @(spares ? item.spareQuantity : 0);
 		row[LDrawPartBrowserLeftKey]		= @((NSInteger)owned - (NSInteger)used);
@@ -496,7 +482,7 @@ static NSString * const SetsGroupName			= @"Sets";
 	{
 		[children addObject:@{
 			CategoryNameKey: [[self class] categoryForInventoryIdentifier:identifier],
-			CategoryDisplayNameKey: [self titleForInventoryIdentifier:identifier] ?: identifier,
+			CategoryDisplayNameKey: [self.limitSession.store titleForInventoryIdentifier:identifier] ?: identifier,
 		}];
 	}
 
@@ -521,7 +507,7 @@ static NSString * const SetsGroupName			= @"Sets";
 	if (category == nil)
 		return NO;
 	if (identifier != nil)
-		return [self titleForInventoryIdentifier:identifier] != nil;
+		return [self.limitSession.store titleForInventoryIdentifier:identifier] != nil;
 	return [self.partLibrary partCatalogRecordsInCategory:category] != nil;
 }
 
@@ -533,26 +519,8 @@ static NSString * const SetsGroupName			= @"Sets";
 	NSString *identifier = [[self class] inventoryIdentifierForCategory:category];
 
 	if (identifier != nil)
-		return [self titleForInventoryIdentifier:identifier] ?: identifier;
+		return [self.limitSession.store titleForInventoryIdentifier:identifier] ?: identifier;
 	return [self.partLibrary displayNameForCategory:category];
-}
-
-
-//========== titleForInventoryIdentifier: ======================================
-//
-// Purpose:		A set's number and name, or an inventory's name. Nil when the
-//				store has neither.
-//
-//==============================================================================
-- (NSString *)titleForInventoryIdentifier:(NSString *)identifier
-{
-	LDrawInventoryStore		*store		= self.limitSession.store;
-	LDrawSetInventory		*set		= [store setInventoryForNumber:identifier];
-	LDrawCombinedInventory	*inventory	= [store combinedInventoryWithIdentifier:identifier];
-
-	if (set != nil)
-		return [NSString stringWithFormat:@"%@ %@", set.setNumber, set.name];
-	return inventory.name;
 }
 
 
@@ -640,7 +608,6 @@ static NSString * const SetsGroupName			= @"Sets";
 			if (color == nil || [row[PART_NUMBER_KEY] isEqualToString:partName] == NO)
 				continue;
 			[chips addObject:[[LDrawPartBrowserColorChip alloc] initWithColorCode:(LDrawColorT)[color intValue]
-																		 hasCount:YES
 																		leftCount:left
 																		   record:row]];
 		}
@@ -653,7 +620,6 @@ static NSString * const SetsGroupName			= @"Sets";
 	for (NSNumber *color in [self.activeTable colorCodesForPartNamed:partName])
 	{
 		[chips addObject:[[LDrawPartBrowserColorChip alloc] initWithColorCode:(LDrawColorT)[color intValue]
-																	 hasCount:NO
 																	leftCount:0
 																	   record:nil]];
 	}

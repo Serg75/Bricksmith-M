@@ -31,15 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, readonly, copy) NSURL *folderURL;
 
-/// Where the files come from. Default
-/// https://cdn.rebrickable.com/media/downloads/
-@property (nonatomic, copy) NSURL *baseURL;
-
-/// The session's configuration. Tests give one with a stub protocol.
+/// The URL session's configuration. Default `defaultSessionConfiguration`.
 @property (nonatomic, copy) NSURLSessionConfiguration *sessionConfiguration;
-
-/// How long after asking for a file it is not asked for again. Default a day.
-@property (nonatomic) NSTimeInterval minimumCheckInterval;
 
 - (instancetype) initWithFolderURL:(NSURL *)folderURL NS_DESIGNATED_INITIALIZER;
 - (instancetype) init NS_UNAVAILABLE;
@@ -57,7 +50,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// again.
 - (BOOL) hasNewFilesNamed:(NSArray<NSString *> *)names NS_SWIFT_NAME(hasNewFiles(named:));
 
-/// Notes that the files as they are now were built from.
+/// Notes that a build used the files as they are now.
 - (void) markFilesNamedAsUsed:(NSArray<NSString *> *)names NS_SWIFT_NAME(markFilesAsUsed(named:));
 
 /// When the server was last asked for the file, or nil.
@@ -66,8 +59,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// The date the server gave the file, or nil.
 - (nullable NSDate *) dataDateForFileNamed:(NSString *)name;
 
-/// Fetches the files one after another. A file asked for within
-/// `minimumCheckInterval` is skipped, unless `force`. The changed files replace
+/// Fetches the files one after another. A file asked for within a day is
+/// skipped, unless `force`. The changed files replace
 /// the old ones only when all have come, so after an error or a cancel the
 /// folder holds the old files. The completion gets the names of the files that
 /// changed, or an error, on `completionQueue` (main when nil). Cancel through

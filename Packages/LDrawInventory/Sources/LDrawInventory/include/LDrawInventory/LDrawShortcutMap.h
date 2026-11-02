@@ -28,6 +28,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Its color. 16 takes the color of the assembly.
 @property (nonatomic, readonly) LDrawColorT colorCode;
 
+/// Its color in an assembly of this color.
+- (LDrawColorT) colorCodeInAssemblyColor:(LDrawColorT)assemblyColor;
+
 @end
 
 

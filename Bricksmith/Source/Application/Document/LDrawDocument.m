@@ -2469,17 +2469,30 @@ void AppendChoicesToNewItem(
 - (void) randomizeLDrawColors:(id)sender
 {
 	NSArray				*colorable	= [LDrawSelection colorableDirectivesInSelection:[self selectedObjects]];
-	LDrawPartLimitTable	*table		= [[[PartsLimitManager sharedManager] session] table];
+	LDrawPartLimitTable	*table		= [[[PartsLimitManager sharedManager] session] restrictingTable];
+	NSMutableDictionary	*answers	= [NSMutableDictionary dictionary];	// part and color → allowed
 	BOOL				(^allowed)(id, LDrawColor *) = nil;
 
-	// Under a parts limit each part draws only on the colors it is made in.
-	if(table.limit.isRestricting && table.hasData && table.limit.warnsOnly == NO)
+	// Under a parts limit that does more than warn, each part gets only colors
+	// it is made in. Many parts share a name, so each answer is kept.
+	if(table != nil && table.limit.warnsOnly == NO)
 	{
 		allowed = ^BOOL(id directive, LDrawColor *color) {
+			NSString	*key	= nil;
+			NSNumber	*answer	= nil;
+
 			if([directive isKindOfClass:[LDrawPart class]] == NO)
 				return YES;
-			return [table statusForPartNamed:[directive displayName] colorCode:[color colorCode]]
-				   != LDrawPartLimitStatusNotInColor;
+
+			key		= [NSString stringWithFormat:@"%@\n%d", [directive displayName], (int)[color colorCode]];
+			answer	= answers[key];
+			if(answer == nil)
+			{
+				answer = @([table statusForPartNamed:[directive displayName] colorCode:[color colorCode]]
+						   != LDrawPartLimitStatusNotInColor);
+				answers[key] = answer;
+			}
+			return [answer boolValue];
 		};
 	}
 
@@ -4853,9 +4866,27 @@ void AppendChoicesToNewItem(
 	if([self wantsStepPartList] != ([self->stepPartListController hostView] != nil))
 		[self updateStepPartList];
 
-	[self->partsLimitController setNeedsCheck];
-
 }//end docChanged:
+
+
+//========== updateChangeCount: ================================================
+//
+// Purpose:		Every edit, undo and redo reaches the document here, so the
+//				parts limit checks the model again. A redraw for a selection or
+//				a step does not.
+//
+//==============================================================================
+- (void) updateChangeCount:(NSDocumentChangeType)change
+{
+	NSDocumentChangeType kind = change & ~NSChangeDiscardable;
+
+	[super updateChangeCount:change];
+
+	// A save changes nothing in the model.
+	if(kind != NSChangeCleared && kind != NSChangeAutosaved)
+		[self->partsLimitController setNeedsCheck];
+
+}//end updateChangeCount:
 
 
 //========== stepChanged: ======================================================

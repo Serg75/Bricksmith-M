@@ -51,7 +51,7 @@
 //---------- nearestColorTo:amongColors: -----------------------------[static]--
 ///
 /// @abstract	The color whose red, green and blue are the least distance away.
-/// 			Alpha does not count, so a part keeps whether it is clear.
+/// 			Alpha does not count, so a solid part may get a clear color.
 ///
 //------------------------------------------------------------------------------
 + (LDrawColor *)nearestColorTo:(LDrawColor *)color amongColors:(NSArray<LDrawColor *> *)colors

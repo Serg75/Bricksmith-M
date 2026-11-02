@@ -90,12 +90,11 @@ static PartsLimitOptionsController *runningController = nil;
 	NSView		*inventory		= nil;
 	NSView		*matching		= nil;
 
-	yearsPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"This year", nil),
-													NSLocalizedString(@"This year and last", nil),
-													NSLocalizedString(@"The last 3 years", nil),
+	yearsPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"The last 3 years", nil),
 													NSLocalizedString(@"The last 5 years", nil),
+													NSLocalizedString(@"The last 10 years", nil),
 													NSLocalizedString(@"Any year", nil)]
-											 tags:@[@1, @2, @3, @5, @0]
+											 tags:@[@3, @5, @10, @0]
 										   target:nil
 										   action:NULL];
 	pickABrickSwitch	= [PreferencesForm switchWithTarget:nil action:NULL];
@@ -105,8 +104,13 @@ static PartsLimitOptionsController *runningController = nil;
 	colorsSwitch		= [PreferencesForm switchWithTarget:nil action:NULL];
 	warnsSwitch			= [PreferencesForm switchWithTarget:nil action:NULL];
 
+	// A value the menu lacks, from an older choice, shows as the next longer one.
 	if([yearsPopUp selectItemWithTag:limit.yearsBack] == NO)
-		[yearsPopUp selectItemWithTag:2];
+	{
+		NSInteger years = limit.yearsBack;
+
+		[yearsPopUp selectItemWithTag:(years <= 3) ? 3 : (years <= 5) ? 5 : (years <= 10) ? 10 : 0];
+	}
 	[pickABrickSwitch	setState:limit.countsPickABrickParts];
 	[sparesSwitch		setState:limit.includesSpares];
 	[moldsSwitch		setState:limit.matchesMoldVariants];
@@ -156,15 +160,16 @@ static PartsLimitOptionsController *runningController = nil;
 	[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
 	[stack setAlignment:NSLayoutAttributeTrailing];
 	[stack setSpacing:18];
-	[stack setEdgeInsets:NSEdgeInsetsMake(20, 20, 20, 20)];
+
+	NSView *content = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(20, 20, 20, 20)];
 
 	panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 500, 400)
 									   styleMask:NSWindowStyleMaskTitled
 										 backing:NSBackingStoreBuffered
 										   defer:YES];
 	[panel setTitle:NSLocalizedString(@"Limit Options", nil)];
-	[panel setContentView:stack];
-	[panel setContentSize:[stack fittingSize]];
+	[panel setContentView:content];
+	[panel setContentSize:[content fittingSize]];
 
 	if(parent != nil)
 		[parent beginSheet:panel completionHandler:nil];

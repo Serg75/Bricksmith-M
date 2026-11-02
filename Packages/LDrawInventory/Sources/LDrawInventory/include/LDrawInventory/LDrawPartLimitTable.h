@@ -70,8 +70,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, readonly) LDrawPartLimit *limit;
 
-@property (nonatomic, readonly, nullable) LDrawShortcutMap *shortcuts;
-
 /// Whether the limit has the data it needs. Without it, every part has no
 /// data.
 @property (nonatomic, readonly) BOOL hasData;
@@ -100,10 +98,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// Every LDraw color some part is allowed in, lowest code first. Nil when
 /// the limit does not restrict colors.
 - (nullable NSArray<NSNumber *> *) allowedColorCodes;
-
-/// The pool the part counts in under this limit's options, or nil when the
-/// part has no match.
-- (nullable NSString *) poolKeyForPartNamed:(NSString *)partName;
 
 /// What copies of the part in this color are counted under: its pool and the
 /// Rebrickable colors its color is, so LDraw colors that are one Rebrickable

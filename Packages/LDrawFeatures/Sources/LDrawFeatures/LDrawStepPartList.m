@@ -538,11 +538,11 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 
 //---------- colorOfPart:inheriting: ---------------------------------[static]--
 ///
-/// @abstract	A part's color, or the color its submodel is placed in when the
-/// 			part is in the main color.
+/// @abstract	The color of a part or an LSynth part, or the color its submodel
+/// 			is placed in when it is in the main color.
 ///
 //------------------------------------------------------------------------------
-+ (nullable LDrawColor *) colorOfPart:(LDrawPart *)part inheriting:(nullable LDrawColor *)inheritedColor
++ (nullable LDrawColor *) colorOfPart:(id<LDrawColorable>)part inheriting:(nullable LDrawColor *)inheritedColor
 {
 	LDrawColor *color = [part LDrawColor];
 
@@ -566,11 +566,13 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 					 toGroups:(NSMutableDictionary<NSString *, LDrawStepPartListEntry *> *)entriesByKey
 						order:(NSMutableArray<NSString *> *)keyOrder
 {
-	if (range.substitute == nil || range.suppressed) {
+	if (range.listedPartName == nil) {
 		return;
 	}
 
-	LDrawStepPartListEntry *entry = [self entryForSubstitute:range.substitute fallbackColor:range.firstColor];
+	LDrawStepPartListEntry *entry = [self entryForSubstitute:range.substitute
+													   named:range.listedPartName
+											   fallbackColor:range.firstColor];
 
 	if (entry != nil) {
 		[self addEntry:entry toGroups:entriesByKey order:keyOrder];
@@ -602,7 +604,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 }//end addEntry:toGroups:order:
 
 
-//---------- entryForSubstitute:fallbackColor: -----------------------[static]--
+//---------- entryForSubstitute:named:fallbackColor: -----------------[static]--
 ///
 /// @abstract	A one-instance entry for the part a `PLI BEGIN SUB` lists.
 ///
@@ -613,22 +615,13 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 ///
 //------------------------------------------------------------------------------
 + (nullable LDrawStepPartListEntry *) entryForSubstitute:(LPubPliSubstitute *)substitute
+												   named:(NSString *)partName
 										   fallbackColor:(nullable LDrawColor *)fallbackColor
 {
-	if (substitute.partName.length == 0) {
-		return nil;
-	}
-
-	// A name with spaces comes in quotes, which are dropped.
 	LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
-	NSCharacterSet		*quotes		= [NSCharacterSet characterSetWithCharactersInString:@"\""];
-	NSString			*name		= [[substitute.partName lowercaseString] stringByTrimmingCharactersInSet:quotes];
+	NSString			*name		= partName;
 	NSString			*extension	= [name pathExtension];
 	LDrawColor			*color		= fallbackColor;
-
-	if (name.length == 0) {
-		return nil;
-	}
 
 	// Parsed like a part line's color, so an unknown code still gets one.
 	if (substitute.partColorCode != LDrawColorBogus) {
@@ -662,7 +655,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 	// A stand-in has no file, so it never resolves to a submodel and needs no path.
 	return [self entryForPart:standInPart path:nil];
 
-}//end entryForSubstitute:fallbackColor:
+}//end entryForSubstitute:named:fallbackColor:
 
 
 //---------- entryForSubmodel:named:color: ---------------------------[static]--
