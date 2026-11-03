@@ -1,0 +1,2 @@
+# Show UTF-16 strings files as text in diffs (needs diff.utf16.textconv).
+*.strings diff=utf16
