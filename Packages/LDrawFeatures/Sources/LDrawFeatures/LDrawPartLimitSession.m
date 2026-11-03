@@ -40,6 +40,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 	LDrawPartIdentity										*builtIdentity;
 	NSDictionary											*identityData;
 	NSDictionary											*identityOverrides;
+	NSMutableArray<void (^)(void)>							*identityHandlers;		// waiting for a build, or nil
 
 	NSUInteger												 shortcutsGeneration;	// the newest read of shortcuts
 	BOOL													 shortcutsAreCurrent;	// a read of the records was started
@@ -97,7 +98,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 	NSDictionary *data		= [self.store rebrickableIdentityData];
 	NSDictionary *overrides	= [self.store identityOverrides];
 
-	if (self->builtIdentity == nil || data != self->identityData || overrides != self->identityOverrides)
+	if ([self preparedIdentity] == nil)
 	{
 		self->identityData		= data;
 		self->identityOverrides	= overrides;
@@ -109,6 +110,72 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 	return self->builtIdentity;
 
 }//end identity
+
+
+//========== preparedIdentity ==================================================
+//==============================================================================
+- (LDrawPartIdentity *) preparedIdentity
+{
+	if (	self->builtIdentity == nil
+		||	[self.store rebrickableIdentityData] != self->identityData
+		||	[self.store identityOverrides] != self->identityOverrides )
+		return nil;
+
+	return self->builtIdentity;
+}
+
+
+//========== prepareIdentityThen: ==============================================
+///
+/// @abstract	Builds the identity map on another thread, since it takes a
+/// 			while. A map built from data that changed meanwhile is dropped.
+/// 			Callers that come during a build wait for it.
+///
+//==============================================================================
+- (void) prepareIdentityThen:(void (^)(void))handler
+{
+	NSArray			*records	= self->catalogRecords;
+	NSSet			*rubber		= self->rubberColorCodes;
+	NSDictionary	*data		= [self.store rebrickableIdentityData];
+	NSDictionary	*overrides	= [self.store identityOverrides];
+
+	if ([self preparedIdentity] != nil)
+	{
+		handler();
+		return;
+	}
+	if (self->identityHandlers != nil)
+	{
+		[self->identityHandlers addObject:handler];
+		return;
+	}
+	self->identityHandlers = [NSMutableArray arrayWithObject:handler];
+
+	dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+		LDrawPartIdentity *identity = [LDrawPartIdentity identityWithCatalogRecords:records
+																	rebrickableData:data
+																		  overrides:overrides
+																   rubberColorCodes:rubber];
+		dispatch_async(dispatch_get_main_queue(), ^{
+			NSArray *waiting = self->identityHandlers;
+
+			self->identityHandlers = nil;
+			if (	[self preparedIdentity] == nil
+				&&	records == self->catalogRecords
+				&&	rubber == self->rubberColorCodes
+				&&	data == [self.store rebrickableIdentityData]
+				&&	overrides == [self.store identityOverrides] )
+			{
+				self->identityData		= data;
+				self->identityOverrides	= overrides;
+				self->builtIdentity		= identity;
+			}
+			for (void (^each)(void) in waiting)
+				each();
+		});
+	});
+
+}//end prepareIdentityThen:
 
 
 //========== needsPartsData ====================================================

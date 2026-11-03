@@ -39,6 +39,17 @@ static NSString *TrimmedLowercase(NSString *partName)
 }
 
 
+//========== NumberOrder =======================================================
+///
+/// @abstract	Part numbers in counting order, so "2555" comes before "12825".
+///
+//==============================================================================
+static NSComparator const NumberOrder = ^NSComparisonResult(NSString *first, NSString *second)
+{
+	return [first compare:second options:NSNumericSearch];
+};
+
+
 @implementation LDrawPartIdentity
 {
 	NSDictionary<NSString *, NSString *>			*partLinks;			// normalized LDraw name → Rebrickable number
@@ -49,7 +60,9 @@ static NSString *TrimmedLowercase(NSString *partName)
 	NSDictionary<NSNumber *, NSArray<NSNumber *> *>	*colorLinks;		// Rebrickable color → LDraw codes
 	NSDictionary<NSNumber *, NSArray<NSNumber *> *>	*reverseColors;		// LDraw code → Rebrickable colors
 	NSDictionary<NSString *, NSString *>			*printParents;		// print or pattern → its plain part
+	NSDictionary<NSString *, NSArray<NSString *> *>	*printChildren;		// part → its prints, in number order
 	NSDictionary<NSString *, NSString *>			*moldRoots;			// part → the key of its mold group
+	NSDictionary<NSString *, NSArray<NSString *> *>	*moldGroups;		// part → its mold group, in number order
 	NSSet<NSString *>								*knownPartNumbers;	// nil when not known
 	NSSet<NSString *>								*rubberPartNumbers;	// nil when not known
 	NSSet<NSNumber *>								*rubberColorCodes;
@@ -610,6 +623,38 @@ static NSString *TrimmedLowercase(NSString *partName)
 }//end poolKeyForRebrickablePartNumber:...
 
 
+//========== moldVariantsOfRebrickablePartNumber: ==============================
+//==============================================================================
+- (NSArray<NSString *> *) moldVariantsOfRebrickablePartNumber:(NSString *)partNumber
+{
+	NSMutableArray *variants = [self->moldGroups[partNumber] mutableCopy] ?: [NSMutableArray array];
+
+	[variants removeObject:partNumber];
+	return variants;
+}
+
+
+//========== plainPartNumberOfRebrickablePartNumber: ===========================
+//==============================================================================
+- (NSString *) plainPartNumberOfRebrickablePartNumber:(NSString *)partNumber
+{
+	NSString *plain = self->printParents[partNumber];
+
+	for (NSUInteger step = 0; plain != nil && self->printParents[plain] != nil && step < MaximumChainLength; step++)
+		plain = self->printParents[plain];
+
+	return plain;
+}
+
+
+//========== printPartNumbersOfRebrickablePartNumber: ==========================
+//==============================================================================
+- (NSArray<NSString *> *) printPartNumbersOfRebrickablePartNumber:(NSString *)partNumber
+{
+	return self->printChildren[partNumber] ?: @[];
+}
+
+
 // MARK: - UTILITIES -
 
 
@@ -708,16 +753,19 @@ static NSString *TrimmedLowercase(NSString *partName)
 
 //========== buildPoolsFromRelations: ==========================================
 ///
-/// @abstract	Prints and patterns point at their plain part. Molds and
-/// 			alternates join one group, keyed by the first part number in
-/// 			sort order.
+/// @abstract	Prints and patterns point at their plain part, and each part
+/// 			lists the prints made on it. Molds and alternates join one
+/// 			group, keyed by the first part number in sort order.
 ///
 //==============================================================================
 - (void) buildPoolsFromRelations:(NSArray<NSArray<NSString *> *> *)relations
 {
 	NSMutableDictionary	*parents	= [NSMutableDictionary dictionary];
+	NSMutableDictionary	*children	= [NSMutableDictionary dictionary];	// part → its prints, a mutable set
 	NSMutableDictionary	*groupOf	= [NSMutableDictionary dictionary];	// part → its group, a mutable set
 	NSMutableDictionary	*roots		= [NSMutableDictionary dictionary];
+	NSMutableDictionary	*groups		= [NSMutableDictionary dictionary];
+	NSHashTable			*sorted		= [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
 
 	for (NSArray<NSString *> *relation in relations)
 	{
@@ -748,14 +796,53 @@ static NSString *TrimmedLowercase(NSString *partName)
 		}
 	}
 
-	for (NSString *part in groupOf)
+	// Each group is sorted once, and its members share the result.
+	for (NSSet *group in [groupOf objectEnumerator])
 	{
-		NSSet *group = groupOf[part];
-		roots[part] = [[group allObjects] sortedArrayUsingSelector:@selector(compare:)][0];
+		NSArray		*members	= [group allObjects];
+		NSString	*root		= nil;
+		NSArray		*inOrder	= nil;
+
+		if ([sorted containsObject:group])
+			continue;
+		[sorted addObject:group];
+
+		root	= [members sortedArrayUsingSelector:@selector(compare:)][0];
+		inOrder	= [members sortedArrayUsingComparator:NumberOrder];
+		for (NSString *part in members)
+		{
+			roots[part]		= root;
+			groups[part]	= inOrder;
+		}
 	}
 
+	// A print of a print is listed with every part it is made on, down to the
+	// plain part.
+	for (NSString *print in parents)
+	{
+		NSString	*plain	= parents[print];
+		NSUInteger	 steps	= 0;
+
+		while (plain != nil && [plain isEqualToString:print] == NO && steps++ < MaximumChainLength)
+		{
+			NSMutableSet *prints = children[plain];
+
+			if (prints == nil)
+			{
+				prints = [NSMutableSet set];
+				children[plain] = prints;
+			}
+			[prints addObject:print];
+			plain = parents[plain];
+		}
+	}
+	for (NSString *plain in [children allKeys])
+		children[plain] = [[children[plain] allObjects] sortedArrayUsingComparator:NumberOrder];
+
 	self->printParents	= parents;
+	self->printChildren	= children;
 	self->moldRoots		= roots;
+	self->moldGroups	= groups;
 
 }//end buildPoolsFromRelations:
 

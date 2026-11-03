@@ -221,4 +221,30 @@ struct LDrawPartIdentityTests {
         #expect(pool("3062bpat01", molds: false, prints: true) == "3062b")
         #expect(pool("2429c01", molds: true, prints: true) == "2429c01")
     }
+
+    @Test("A part's molds, and its plain part and prints past a print of a print, in counting order")
+    func relatedParts() {
+        let relations = [["M", "12825", "2555"], ["M", "15712", "2555"], ["A", "93794", "15712"],
+                         ["P", "3069bpr0002", "3069b"], ["P", "3069bpr0010", "3069b"],
+                         ["P", "3069bpr0010a", "3069bpr0010"], ["B", "2429c01", "2429"],
+                         ["P", "loop1", "loop2"], ["P", "loop2", "loop1"]]
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: nil,
+                                                     relations: relations, knownPartNumbers: nil,
+                                                     rubberPartNumbers: nil)
+        let identity = LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil)
+
+        #expect(identity.moldVariants(ofPartNumber: "2555") == ["12825", "15712", "93794"])
+        #expect(identity.moldVariants(ofPartNumber: "93794") == ["2555", "12825", "15712"])
+        #expect(identity.moldVariants(ofPartNumber: "3001").isEmpty)
+
+        #expect(identity.plainPartNumber(ofPartNumber: "3069bpr0010a") == "3069b")
+        #expect(identity.plainPartNumber(ofPartNumber: "3069bpr0002") == "3069b")
+        #expect(identity.plainPartNumber(ofPartNumber: "3069b") == nil)
+        #expect(identity.plainPartNumber(ofPartNumber: "2429c01") == nil)
+
+        #expect(identity.printPartNumbers(ofPartNumber: "3069b") == ["3069bpr0002", "3069bpr0010", "3069bpr0010a"])
+        #expect(identity.printPartNumbers(ofPartNumber: "3069bpr0010") == ["3069bpr0010a"])
+        #expect(identity.printPartNumbers(ofPartNumber: "3001").isEmpty)
+        #expect(identity.printPartNumbers(ofPartNumber: "loop1") == ["loop2"])
+    }
 }

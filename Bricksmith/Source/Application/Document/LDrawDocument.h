@@ -42,6 +42,7 @@
 @class LDrawStepPartListPageAnchor;
 @class LDrawStepPartListPageFitter;
 @class PartBrowserDataSource;
+@class PartReplacementMenu;
 @class PartsLimitController;
 @class StepPartListController;
 
@@ -106,6 +107,7 @@
 		__weak LDrawView *pageFitViewport;			// viewport whose size the page is kept against. Weak link.
 		StepPartListController *stepPartListController;	// owns the parts list overlay, or nil until one is wanted
 		PartsLimitController *partsLimitController;	// the Parts menu in the scope bar, and the check of the model
+		PartReplacementMenu *partReplacementMenu;	// the Replace With menus; use -partReplacementMenu
 		LDrawStepPartListPageAnchor *pageAnchor;	// the model point the page is pinned to
 		LDrawStepPartListPageFitter *pageFitter;	// fits the page to pageFitViewport, and keeps the size it fitted
 		LDrawStepCalloutPath *calloutPath;			// the steps left through callouts, to lead back to
@@ -128,6 +130,7 @@
 // Accessors
 - (LDrawFile *) documentContents;
 - (PartsLimitController *) partsLimitController;
+- (PartReplacementMenu *) partReplacementMenu;
 - (NSWindow *)foremostWindow;
 - (LDrawGridSpacingMode) gridSpacingMode;
 - (LDrawGridOrientationMode) gridOrientationMode;
@@ -255,6 +258,7 @@
 - (BOOL) replaceDirective:(LDrawDirective *)oldDirective withDirective:(LDrawDirective *)newDirective;
 - (void) moveDirective:(LDrawDrawableElement *)object inDirection:(Vector3)moveVector;
 - (void) preserveDirectiveState:(LDrawDirective *)directive;
+- (void) replaceParts:(NSArray<LDrawPart *> *)parts withPartNamed:(NSString *)partName color:(LDrawColor *)color;
 - (void) rotatePart:(LDrawPart *)part byDegrees:(Tuple3)rotationDegrees aroundPoint:(Point3)rotationCenter;
 - (void) setElement:(LDrawDrawableElement *)element toHidden:(BOOL)hideFlag;
 - (void) setObject:(LDrawDirective <LDrawColorable>* )object toColor:(LDrawColor *)newColor;

@@ -21,6 +21,7 @@
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
+#import "PartReplacementMenu.h"
 #import "PartsLimitController.h"
 #import "PartsLimitManager.h"
 
@@ -35,6 +36,7 @@
 
 @property (nonatomic, weak) IBOutlet	NSTextField*		partDescriptionField;
 @property (nonatomic, weak) IBOutlet	NSTextField*		partNameField;
+@property (nonatomic, weak) IBOutlet	NSButton*			replaceButton;
 @property (nonatomic, weak) IBOutlet	LDrawColorWell*		colorWell;
 @property (nonatomic, weak) IBOutlet	NSPopUpButton*		rotationTypePopUp;
 
@@ -91,7 +93,14 @@
 //==============================================================================
 - (void) awakeFromNib
 {
+	NSImageSymbolConfiguration	*size	= [NSImageSymbolConfiguration configurationWithPointSize:10
+																						  weight:NSFontWeightSemibold];
+	NSImage						*arrow	= [NSImage imageWithSystemSymbolName:@"chevron.down"
+													accessibilityDescription:NSLocalizedString(@"Replace With", nil)];
+
 	[super awakeFromNib];
+
+	[_replaceButton setImage:[arrow imageWithSymbolConfiguration:size]];
 }
 
 
@@ -290,6 +299,24 @@
 	}
 	
 }//end partNameEndedEditing:
+
+
+//========== showReplacements: =================================================
+//
+// Purpose:		Opens the parts that can replace this one just under the part
+//				name, lined up with it.
+//
+//==============================================================================
+- (IBAction) showReplacements:(id)sender
+{
+	NSMenu	*menu	= [[NSMenu alloc] initWithTitle:@""];
+	NSRect	 field	= [_partNameField bounds];
+	CGFloat	 below	= [_partNameField isFlipped] ? NSMaxY(field) + 2 : NSMinY(field) - 2;
+
+	[[[self documentOfObject] partReplacementMenu] fillMenu:menu forParts:@[[self object]]];
+	[menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(NSMinX(field), below) inView:_partNameField];
+
+}//end showReplacements:
 
 
 //========== rotationTypeChanged: ==============================================

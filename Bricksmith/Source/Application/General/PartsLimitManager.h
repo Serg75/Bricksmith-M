@@ -72,6 +72,7 @@ extern NSString * const PartsLimitFrontLimitDidChangeNotification;
 					window:(nullable NSWindow *)window
 				completion:(nullable void (^)(BOOL success))completion;
 - (nullable NSDate *) dataDate;
++ (BOOL (^)(NSString *partName)) libraryHasPartTest;
 
 // Actions
 - (IBAction) choosePartsLimit:(nullable id)sender;

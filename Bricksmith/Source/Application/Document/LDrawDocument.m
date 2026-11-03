@@ -91,6 +91,7 @@
 #import "MovePanel.h"
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
+#import "PartReplacementMenu.h"
 #import "PartsLimitController.h"
 #import "PartsLimitManager.h"
 #import "PieceCountPanel.h"
@@ -297,6 +298,8 @@ void AppendChoicesToNewItem(
 	[toCallout setToolTip:NSLocalizedString(@"CalloutConversionScope", nil)];
 	[toParts setTarget:self];
 	[toParts setToolTip:NSLocalizedString(@"CalloutFlattenScope", nil)];
+	[conversionMenu addItem:[NSMenuItem separatorItem]];
+	[conversionMenu addItem:[[self partReplacementMenu] replaceWithItem]];
 	[fileContentsOutline setMenu:conversionMenu];
 	[fileContentsOutline setDoubleAction:@selector(showInspector:)];
 	[fileContentsOutline setVerticalMotionCanBeginDrag:YES];
@@ -701,6 +704,17 @@ void AppendChoicesToNewItem(
 	return self->partsLimitController;
 
 }//end partsLimitController
+
+
+//========== partReplacementMenu ===============================================
+//==============================================================================
+- (PartReplacementMenu *) partReplacementMenu
+{
+	if(self->partReplacementMenu == nil)
+		self->partReplacementMenu = [[PartReplacementMenu alloc] initWithDocument:self];
+	return self->partReplacementMenu;
+
+}//end partReplacementMenu
 
 
 //========== foremostWindow ====================================================
@@ -3812,6 +3826,36 @@ void AppendChoicesToNewItem(
 }//end preserveDirectiveState:
 
 
+//========== replaceParts:withPartNamed:color: =================================
+//
+// Purpose:		Undo-aware swap of the parts for another part, as one edit. Each
+//				part keeps where it is and how it is turned, and its color
+//				unless a color is given.
+//
+//==============================================================================
+- (void) replaceParts:(NSArray<LDrawPart *> *)parts withPartNamed:(NSString *)partName color:(LDrawColor *)color
+{
+	NSUndoManager *undoManager = [self undoManager];
+
+	[undoManager beginUndoGrouping];
+
+	for(LDrawPart *part in parts)
+	{
+		[self preserveDirectiveState:part];
+		[part setDisplayName:partName];
+		if(color != nil)
+			[self setObject:part toColor:color];
+
+		[part noteNeedsDisplay];
+		[part sendMessageToObservers:LDrawObserverObservedChanged];
+	}
+
+	[undoManager setActionName:NSLocalizedString(@"Replace Part", nil)];
+	[undoManager endUndoGrouping];
+
+}//end replaceParts:withPartNamed:color:
+
+
 //========== rotatePart:onAxis:byDegrees: ======================================
 //
 // Purpose:		Undo-aware call to rotate the object in the direction indicated. 
@@ -5677,6 +5721,16 @@ void AppendChoicesToNewItem(
 	[glView setNudgeAction:@selector(nudge:)];
 	
 	[glView setGridSpacingMode:[self gridSpacingMode]];
+	
+	// The view's contextual menu gets Replace With once.
+	NSMenu		*menu			= [glView menu];
+	NSMenuItem	*replaceWith	= [[self partReplacementMenu] replaceWithItem];
+
+	if(menu != nil && [menu itemWithTitle:[replaceWith title]] == nil)
+	{
+		[menu addItem:[NSMenuItem separatorItem]];
+		[menu addItem:replaceWith];
+	}
 	
 }//end connectLDrawView:
 

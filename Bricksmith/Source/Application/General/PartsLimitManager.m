@@ -503,6 +503,23 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 }
 
 
+//---------- libraryHasPartTest --------------------------------------[static]--
+//
+// Purpose:		Answers whether the part library has a part, such as
+//				"3001.dat".
+//
+//------------------------------------------------------------------------------
++ (BOOL (^)(NSString *partName)) libraryHasPartTest
+{
+	LDrawPartLibrary *library = [LDrawPartLibrary sharedPartLibrary];
+
+	return ^BOOL(NSString *partName) {
+		return [library categoryForPartName:partName] != nil;
+	};
+
+}//end libraryHasPartTest
+
+
 //========== updateIdentityDataIfNeeded ========================================
 //
 // Purpose:		Brings the saved color links and rubber parts up to date with

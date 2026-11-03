@@ -17,6 +17,7 @@
                 <outlet property="locationZField" destination="USU-T7-GzG" id="HCt-DU-iwv"/>
                 <outlet property="partDescriptionField" destination="152" id="154"/>
                 <outlet property="partNameField" destination="137" id="155"/>
+                <outlet property="replaceButton" destination="Rpl-aR-Btn" id="Rpl-aR-Out"/>
                 <outlet property="rotationTypePopUp" destination="76" id="126"/>
                 <outlet property="rotationXField" destination="88" id="128"/>
                 <outlet property="rotationYField" destination="87" id="127"/>
@@ -209,7 +210,7 @@
                         </connections>
                     </popUpButton>
                     <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" id="137">
-                        <rect key="frame" x="20" y="279" width="102" height="19"/>
+                        <rect key="frame" x="20" y="279" width="84" height="19"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="195">
                             <font key="font" metaFont="smallSystem"/>
@@ -221,6 +222,17 @@
                             <outlet property="nextKeyView" destination="BX3-2Z-Vcn" id="CF2-Ia-y1k"/>
                         </connections>
                     </textField>
+                    <button toolTip="Replace with a mold, the plain part, or a print." verticalHuggingPriority="750" id="Rpl-aR-Btn">
+                        <rect key="frame" x="109" y="279" width="17" height="19"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="Rpl-aR-Cel">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="showReplacements:" target="-2" id="Rpl-aR-Act"/>
+                        </connections>
+                    </button>
                     <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" preferredMaxLayoutWidth="59" id="138">
                         <rect key="frame" x="17" y="306" width="63" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>

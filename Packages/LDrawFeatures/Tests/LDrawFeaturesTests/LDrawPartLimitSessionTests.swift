@@ -81,6 +81,28 @@ final class LDrawPartLimitSessionTests {
         #expect(session.identity.rebrickablePartNumber(forPartName: "2431px7.dat") == "2431pr0014")
     }
 
+    @Test("The identity map built off the main thread is kept, and later callers get it at once")
+    @MainActor
+    func preparingTheIdentity() async throws {
+        let store = LDrawInventoryStore(folderURL: folder)
+        try store.saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
+            withPartLinks: nil, colorLinks: nil, relations: [["M", "12825", "2555"]], knownPartNumbers: nil,
+            rubberPartNumbers: nil))
+        let session = LDrawPartLimitSession(store: store)
+
+        #expect(session.preparedIdentity == nil)
+        await withCheckedContinuation { done in
+            session.prepareIdentity { done.resume() }
+        }
+        let prepared = try #require(session.preparedIdentity)
+        #expect(prepared.moldVariants(ofPartNumber: "2555") == ["12825"])
+        #expect(session.identity === prepared)
+
+        var calledAtOnce = false
+        session.prepareIdentity { calledAtOnce = true }
+        #expect(calledAtOnce)
+    }
+
     @Test("The year Available now counts back from can be set")
     func year() {
         let session = LDrawPartLimitSession(store: LDrawInventoryStore(folderURL: folder))

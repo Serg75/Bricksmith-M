@@ -53,8 +53,16 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 /// What the default limit allows, as `tableForLimit:` gives it.
 @property (nonatomic, readonly) LDrawPartLimitTable *table;
 
-/// How LDraw parts and colors match Rebrickable's.
+/// How LDraw parts and colors match Rebrickable's. Built when first asked.
 @property (nonatomic, readonly) LDrawPartIdentity *identity;
+
+/// The identity map when it is built for the current data, else nil.
+@property (nonatomic, readonly, nullable) LDrawPartIdentity *preparedIdentity;
+
+/// Builds the identity map off the main thread, then calls the handler on the
+/// main thread. Calls it at once when the map is ready. Without this, the map
+/// is built on first use, which can stall the caller.
+- (void) prepareIdentityThen:(void (^)(void))handler NS_SWIFT_NAME(prepareIdentity(then:));
 
 /// The year Available now counts back from. Default the current year.
 @property (nonatomic) NSInteger currentYear;

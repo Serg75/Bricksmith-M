@@ -18,6 +18,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawFeatures/LDrawPartLimitCheck.h>
+#import <LDrawFeatures/LDrawPartReplacements.h>
 #import <LDrawInventory/LDrawInventoryStore.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawPartLimitTable.h>
@@ -152,28 +153,88 @@ static const NSUInteger ListedColorCount = 3;
 					store:(LDrawInventoryStore *)store
 					fully:(BOOL)fully
 {
-	LDrawPartLimitTable	*table		= report.table;
-	BOOL				 isNow		= (table.limit.kind == LDrawPartLimitKindAvailableNow);
-	NSString			*inventory	= [self titleForLimit:table.limit store:store];
-	NSString			*partName	= [part displayName];
-	LDrawColor			*color		= [part LDrawColor];
-	LDrawColorT			 checked	= [report colorCodeForPart:part];
-	NSString			*colorName	= nil;
-	NSString			*line		= nil;
-	NSString			*key		= nil;
+	LDrawPartLimitTable		*table		= report.table;
+	LDrawPartLimitStatus	 status		= [report statusForPart:part];
+	NSString				*partName	= [part displayName];
+	LDrawColor				*color		= [part LDrawColor];
+	LDrawColorT				 checked	= [report colorCodeForPart:part];
 
 	if (checked != LDrawColorBogus && checked != [color colorCode])
 		color = [[LDrawColorLibrary sharedColorLibrary] colorForCode:checked] ?: color;
-	colorName = [color localizedName];
 
-	switch ([report statusForPart:part])
+	if (status == LDrawPartLimitStatusTooMany)
+	{
+		LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
+		NSString			*inventory	= [self titleForLimit:table.limit store:store];
+		NSUInteger			 used		= [report usedCountForPartNamed:partName colorCode:[color colorCode]];
+		NSUInteger			 owned		= [table ownedCountForPartNamed:partName colorCode:[color colorCode]];
+		NSString			*what		= [library descriptionForPartName:partName] ?: partName;
+		NSString			*format		= nil;
+
+		if (fully == NO)
+			return [NSString stringWithFormat:[LDrawLocalization stringForKey:@"Uses %lu of %lu in %@"],
+					(unsigned long)used, (unsigned long)owned, inventory];
+		format = [LDrawLocalization stringForKey:@"The model uses %lu %@ %@; %@ holds %lu."];
+		return [NSString stringWithFormat:format,
+				(unsigned long)used, [color localizedName], what, inventory, (unsigned long)owned];
+	}
+	return [self lineForStatus:status partName:partName color:color table:table store:store fully:fully];
+}
+
+
+//---------- lineForReplacement:table:store: -------------------------[static]--
+//------------------------------------------------------------------------------
++ (NSString *)lineForReplacement:(LDrawPartReplacement *)replacement
+						   table:(LDrawPartLimitTable *)table
+						   store:(LDrawInventoryStore *)store
+{
+	LDrawColor *color = nil;
+
+	if (replacement.usedCount != NSNotFound)
+		return [NSString stringWithFormat:[LDrawLocalization stringForKey:@"Uses %lu of %lu in %@"],
+				(unsigned long)replacement.usedCount, (unsigned long)replacement.ownedCount,
+				[self titleForLimit:table.limit store:store]];
+
+	if (replacement.colorCode != LDrawColorBogus)
+		color = [[LDrawColorLibrary sharedColorLibrary] colorForCode:replacement.colorCode];
+	return [self lineForStatus:replacement.status
+					  partName:replacement.partName
+						 color:color
+						 table:table
+						 store:store
+						 fully:NO];
+}
+
+
+//---------- lineForStatus:partName:color:table:store:fully: ---------[static]--
+///
+/// @abstract	Why the limit does not allow the part in the color. Nil when it
+/// 			does, and for too many, which needs the counts. The color is nil
+/// 			when not known.
+///
+//------------------------------------------------------------------------------
++ (NSString *)lineForStatus:(LDrawPartLimitStatus)status
+				   partName:(NSString *)partName
+					  color:(LDrawColor *)color
+					  table:(LDrawPartLimitTable *)table
+					  store:(LDrawInventoryStore *)store
+					  fully:(BOOL)fully
+{
+	BOOL		 isNow		= (table.limit.kind == LDrawPartLimitKindAvailableNow);
+	NSString	*inventory	= [self titleForLimit:table.limit store:store];
+	NSString	*colorName	= [color localizedName];
+	NSString	*line		= nil;
+	NSString	*key		= nil;
+
+	switch (status)
 	{
 		case LDrawPartLimitStatusAllowed:
+		case LDrawPartLimitStatusTooMany:
 			return nil;
 
 		case LDrawPartLimitStatusNoData:
 			// In a color with no match, every part has no data.
-			if ([table hasData] && [table matchesColorCode:[color colorCode]] == NO)
+			if (color != nil && [table hasData] && [table matchesColorCode:[color colorCode]] == NO)
 			{
 				key = fully ? @"Bricksmith cannot match %@ to a LEGO color." : @"No LEGO color matches %@";
 				return [NSString stringWithFormat:[LDrawLocalization stringForKey:key], colorName];
@@ -195,22 +256,6 @@ static const NSUInteger ListedColorCount = 3;
 			key = isNow ? @"%@. Made in %@." : @"%@. It has %@.";
 			return [NSString stringWithFormat:[LDrawLocalization stringForKey:key],
 					line, [self listOfColorCodes:[table colorCodesForPartNamed:partName]]];
-
-		case LDrawPartLimitStatusTooMany:
-		{
-			LDrawPartLibrary	*library	= [LDrawPartLibrary sharedPartLibraryIfRegistered];
-			NSUInteger			 used		= [report usedCountForPartNamed:partName colorCode:[color colorCode]];
-			NSUInteger			 owned		= [table ownedCountForPartNamed:partName colorCode:[color colorCode]];
-			NSString			*what		= [library descriptionForPartName:partName] ?: partName;
-			NSString			*format		= nil;
-
-			if (fully == NO)
-				return [NSString stringWithFormat:[LDrawLocalization stringForKey:@"Uses %lu of %lu in %@"],
-						(unsigned long)used, (unsigned long)owned, inventory];
-			format = [LDrawLocalization stringForKey:@"The model uses %lu %@ %@; %@ holds %lu."];
-			return [NSString stringWithFormat:format,
-					(unsigned long)used, colorName, what, inventory, (unsigned long)owned];
-		}
 	}
 	return nil;
 }

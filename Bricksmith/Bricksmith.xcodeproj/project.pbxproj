@@ -414,6 +414,8 @@
 		BB11000000000000000017 /* PartsLimitOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000017 /* PartsLimitOptionsController.m */; };
 		BB11000000000000000018 /* PartsLimitController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000018 /* PartsLimitController.h */; };
 		BB11000000000000000019 /* PartsLimitController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000019 /* PartsLimitController.m */; };
+		BB11000000000000000022 /* PartReplacementMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000022 /* PartReplacementMenu.h */; };
+		BB11000000000000000023 /* PartReplacementMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000023 /* PartReplacementMenu.m */; };
 		BB12000000000000000000 /* StepPartListView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000000 /* StepPartListView.h */; };
 		BB12000000000000000001 /* StepPartListView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000001 /* StepPartListView.m */; };
 		BB12000000000000000002 /* StepPartListChromeView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000002 /* StepPartListChromeView.h */; };
@@ -432,6 +434,8 @@
 		BB12000000000000000017 /* PartsLimitOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000017 /* PartsLimitOptionsController.m */; };
 		BB12000000000000000018 /* PartsLimitController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000018 /* PartsLimitController.h */; };
 		BB12000000000000000019 /* PartsLimitController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000019 /* PartsLimitController.m */; };
+		BB12000000000000000022 /* PartReplacementMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000022 /* PartReplacementMenu.h */; };
+		BB12000000000000000023 /* PartReplacementMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000023 /* PartReplacementMenu.m */; };
 		D687D424170A6DF3007300E2 /* related.ldr in Resources */ = {isa = PBXBuildFile; fileRef = D687D423170A6DF3007300E2 /* related.ldr */; };
 /* End PBXBuildFile section */
 
@@ -762,6 +766,8 @@
 		BB10000000000000000017 /* PartsLimitOptionsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitOptionsController.m; sourceTree = "<group>"; };
 		BB10000000000000000018 /* PartsLimitController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartsLimitController.h; sourceTree = "<group>"; };
 		BB10000000000000000019 /* PartsLimitController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitController.m; sourceTree = "<group>"; };
+		BB10000000000000000022 /* PartReplacementMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartReplacementMenu.h; sourceTree = "<group>"; };
+		BB10000000000000000023 /* PartReplacementMenu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartReplacementMenu.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -1004,6 +1010,8 @@
 				2BF2E3000AB0FC5E0026D5DB /* MovePanel.m */,
 				BB10000000000000000018 /* PartsLimitController.h */,
 				BB10000000000000000019 /* PartsLimitController.m */,
+				BB10000000000000000022 /* PartReplacementMenu.h */,
+				BB10000000000000000023 /* PartReplacementMenu.m */,
 				0B356AEF08D385B900695EEB /* PieceCountPanel.h */,
 				BB10000000000000000004 /* StepPartListController.h */,
 				0B356AEE08D385B900695EEB /* PieceCountPanel.m */,
@@ -1464,6 +1472,7 @@
 				BB11000000000000000014 /* PartsLimitManager.h in Headers */,
 				BB11000000000000000016 /* PartsLimitOptionsController.h in Headers */,
 				BB11000000000000000018 /* PartsLimitController.h in Headers */,
+				BB11000000000000000022 /* PartReplacementMenu.h in Headers */,
 				9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */,
 				9526F9892A0BA1A50083A86A /* LDrawApplicationGL.h in Headers */,
 				0B6770EE0817588D0044A0E0 /* Mac LDraw_Prefix.pch in Headers */,
@@ -1541,6 +1550,7 @@
 				BB12000000000000000014 /* PartsLimitManager.h in Headers */,
 				BB12000000000000000016 /* PartsLimitOptionsController.h in Headers */,
 				BB12000000000000000018 /* PartsLimitController.h in Headers */,
+				BB12000000000000000022 /* PartReplacementMenu.h in Headers */,
 				956D9B872A30768000FA956B /* SearchPanelController.h in Headers */,
 				18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */,
 				956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */,
@@ -1883,6 +1893,7 @@
 				BB11000000000000000015 /* PartsLimitManager.m in Sources */,
 				BB11000000000000000017 /* PartsLimitOptionsController.m in Sources */,
 				BB11000000000000000019 /* PartsLimitController.m in Sources */,
+				BB11000000000000000023 /* PartReplacementMenu.m in Sources */,
 				8D15AC320486D014006FF6A4 /* main.m in Sources */,
 				0BF729B908AD849300E3DA53 /* DocumentToolbarController.m in Sources */,
 				B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */,
@@ -1962,6 +1973,7 @@
 				BB12000000000000000015 /* PartsLimitManager.m in Sources */,
 				BB12000000000000000017 /* PartsLimitOptionsController.m in Sources */,
 				BB12000000000000000019 /* PartsLimitController.m in Sources */,
+				BB12000000000000000023 /* PartReplacementMenu.m in Sources */,
 				956D9C1D2A30768000FA956B /* main.m in Sources */,
 				956D9CA12A30A72300FA956B /* LDrawApplicationMTL.m in Sources */,
 				18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */,

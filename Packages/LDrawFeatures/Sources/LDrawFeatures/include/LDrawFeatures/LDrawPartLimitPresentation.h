@@ -16,6 +16,8 @@
 @class LDrawPart;
 @class LDrawPartLimit;
 @class LDrawPartLimitReport;
+@class LDrawPartLimitTable;
+@class LDrawPartReplacement;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -76,6 +78,14 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitBadgeTint)
 							 store:(nullable LDrawInventoryStore *)store
 							 fully:(BOOL)fully
 	NS_SWIFT_NAME(line(for:report:store:fully:));
+
+/// How a replacement would stand against the table, in a short line: how
+/// many the model would use of what the inventory holds, or why the limit
+/// does not allow it. Nil when there is nothing to say.
++ (nullable NSString *)lineForReplacement:(LDrawPartReplacement *)replacement
+									table:(LDrawPartLimitTable *)table
+									store:(nullable LDrawInventoryStore *)store
+	NS_SWIFT_NAME(line(for:table:store:));
 
 /// The color among `colors` nearest to `color` in RGB, or nil when there are
 /// none. A color among them is its own nearest.

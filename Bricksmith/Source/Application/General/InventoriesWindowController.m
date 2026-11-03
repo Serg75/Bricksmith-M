@@ -654,7 +654,7 @@ static const CGFloat TableColumnMinWidth	= 40;
 		NSArray		*missing	= [LDrawUnmatchedParts partsInItems:items
 															  limit:limit
 														   identity:[session identity]
-													 libraryHasPart:[self libraryHasPartTest]];
+													 libraryHasPart:[PartsLimitManager libraryHasPartTest]];
 
 		inventoryName	= [store titleForInventoryIdentifier:identifier];
 		parts			= [parts arrayByAddingObjectsFromArray:missing];
@@ -990,7 +990,7 @@ static const CGFloat TableColumnMinWidth	= 40;
 	overrides = [LDrawUnmatchedParts overrides:[store identityOverrides]
 								byMatchingPart:unmatchedParts[row]
 										toText:[sender stringValue]
-								libraryHasPart:[self libraryHasPartTest]
+								libraryHasPart:[PartsLimitManager libraryHasPartTest]
 										 error:&error];
 	if(overrides != nil && [overrides isEqualToDictionary:[store identityOverrides] ?: @{}] == NO)
 		[store saveIdentityOverrides:overrides error:&error];
@@ -1164,23 +1164,6 @@ static const CGFloat TableColumnMinWidth	= 40;
 	if(error != nil)
 		[[NSAlert alertWithError:error] beginSheetModalForWindow:[self window] completionHandler:nil];
 }
-
-
-//========== libraryHasPartTest ================================================
-//
-// Purpose:		Answers whether the part library has a part, such as
-//				"3001.dat".
-//
-//==============================================================================
-- (BOOL (^)(NSString *partName)) libraryHasPartTest
-{
-	LDrawPartLibrary *library = [LDrawPartLibrary sharedPartLibrary];
-
-	return ^BOOL(NSString *partName) {
-		return [library categoryForPartName:partName] != nil;
-	};
-
-}//end libraryHasPartTest
 
 
 //========== gridWithRows: =====================================================

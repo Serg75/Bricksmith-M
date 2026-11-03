@@ -148,6 +148,20 @@ NS_ASSUME_NONNULL_BEGIN
 						   matchesMoldVariants:(BOOL)matchesMoldVariants
 							   matchesAnyPrint:(BOOL)matchesAnyPrint;
 
+/// The other molds and alternates of a Rebrickable part, in number order.
+- (NSArray<NSString *> *) moldVariantsOfRebrickablePartNumber:(NSString *)partNumber
+	NS_SWIFT_NAME(moldVariants(ofPartNumber:));
+
+/// The plain part a print or pattern is made on, past prints of prints, or
+/// nil for a plain part.
+- (nullable NSString *) plainPartNumberOfRebrickablePartNumber:(NSString *)partNumber
+	NS_SWIFT_NAME(plainPartNumber(ofPartNumber:));
+
+/// The prints and patterns made on a Rebrickable part, prints of its prints
+/// included, in number order.
+- (NSArray<NSString *> *) printPartNumbersOfRebrickablePartNumber:(NSString *)partNumber
+	NS_SWIFT_NAME(printPartNumbers(ofPartNumber:));
+
 @end
 
 NS_ASSUME_NONNULL_END
