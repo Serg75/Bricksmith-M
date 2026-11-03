@@ -39,6 +39,7 @@
 #import "LDrawHostChrome.h"
 #import "PartBrowserPanelController.h"
 #import "PartLibraryController.h"
+#import "PartsLimitManager.h"
 #import "PreferencesDialogController.h"
 #import "ToolPalette.h"
 #import "TransformerIntMinus1.h"
@@ -409,6 +410,10 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
         bundledExecutablePath:[LDrawLSynthRuntime bundledExecutablePathInBundle:bundle]]];
 
 	[self makeSharedContext];
+
+	// Before the part catalog loads, so the manager gets the library's change
+	// notice.
+	[[PartsLimitManager sharedManager] start];
 	
 	//Try to define an LDraw path before the application even finishes starting.
 	[self findLDrawPath];
@@ -749,7 +754,61 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		}
 	}
 #endif
+
+	[self addPartsLimitMenus];
+
 }//end buildMainMenu
+
+
+//========== addPartsLimitMenus ================================================
+//
+// Purpose:		Adds View > Parts Limit, Edit > Select Parts with Limit
+//				Problems and Window > Inventories. The limit manager fills the
+//				Parts Limit menu as it opens.
+//
+//==============================================================================
+- (void) addPartsLimitMenus
+{
+	PartsLimitManager	*manager	= [PartsLimitManager sharedManager];
+	NSMenu				*mainMenu	= [NSApp mainMenu];
+	NSMenu				*viewMenu	= [[mainMenu itemWithTag:LDrawViewsMenuTag] submenu];
+	NSMenu				*windowMenu	= [[mainMenu itemWithTag:LDrawWindowMenuTag] submenu];
+	NSMenu				*editMenu	= [[mainMenu itemWithTag:LDrawEditMenuTag] submenu];
+	NSMenu				*limitMenu	= [[NSMenu alloc] initWithTitle:NSLocalizedString(@"Parts Limit", nil)];
+	NSMenuItem			*item		= nil;
+	NSInteger			 index		= 0;
+
+	if(viewMenu == nil || [viewMenu itemWithTag:LDrawPartsLimitMenuTag] != nil)
+		return;
+
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Parts Limit", nil) action:NULL keyEquivalent:@""];
+	[limitMenu setDelegate:manager];
+	[item setTag:LDrawPartsLimitMenuTag];
+	[item setSubmenu:limitMenu];
+	[viewMenu addItem:[NSMenuItem separatorItem]];
+	[viewMenu addItem:item];
+
+	// After Select All.
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Select Parts with Limit Problems", nil)
+									  action:@selector(selectPartsWithLimitProblems:)
+							   keyEquivalent:@""];
+	index = [editMenu indexOfItemWithTag:LDrawSelectAllMenuTag];
+	[editMenu insertItem:item atIndex:(index >= 0) ? index + 1 : [editMenu numberOfItems]];
+
+	// After Minimize and Zoom.
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Inventories", nil)
+									  action:@selector(showInventories:)
+							   keyEquivalent:@""];
+	[item setTarget:manager];
+	for(index = 0; index < [windowMenu numberOfItems]; index++)
+	{
+		if([[windowMenu itemAtIndex:index] isSeparatorItem])
+			break;
+	}
+	[windowMenu insertItem:[NSMenuItem separatorItem] atIndex:index];
+	[windowMenu insertItem:item atIndex:index + 1];
+
+}//end addPartsLimitMenus
 
 
 //========== userName ==========================================================

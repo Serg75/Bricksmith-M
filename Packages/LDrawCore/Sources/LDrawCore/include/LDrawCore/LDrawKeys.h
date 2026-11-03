@@ -47,6 +47,22 @@
 /// Path to LPub3D's PLI control file. Absent means LPub3D's own file, if it is
 /// installed.
 #define STEP_PART_LIST_ORIENTATIONS_FILE_KEY		@"Step Part List Orientations File"
+// The parts limit, as -[LDrawPartLimit dictionaryRepresentation] gives it.
+// Absent means no limit.
+#define PARTS_LIMIT_KEY								@"Parts Limit"
+// Days between automatic updates of the parts data. 0 means never.
+#define PARTS_DATA_UPDATE_INTERVAL_KEY				@"Parts Data Update Interval"
+// Whether the Part Browser lists the parts the limit does not allow, dimmed.
+#define PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY			@"Parts Limit Browser Shows All"
+// Whether parts that break the limit are marked in the model.
+#define PARTS_LIMIT_MARKS_KEY						@"Parts Limit Marks"
+// How they are marked: an LDrawRenderMarkStyle.
+#define PARTS_LIMIT_MARK_STYLE_KEY					@"Parts Limit Mark Style"
+// The marks' colors, as arrays of red, green and blue from 0 to 1.
+#define PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY			@"Parts Limit Not Available Color"
+#define PARTS_LIMIT_TOO_MANY_COLOR_KEY				@"Parts Limit Too Many Color"
+// Whether the parts without a mark draw see-through.
+#define PARTS_LIMIT_DIMS_OTHER_PARTS_KEY			@"Parts Limit Dims Other Parts"
 #define LDRAW_PATH_KEY								@"LDraw Path"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
@@ -215,6 +231,7 @@ typedef NS_ENUM(NSInteger, LDrawMenuTag)
 	LDrawArrangeTurnRightMenuTag		= 431,
 	LDrawArrangeTurnAroundMenuTag		= 432,
 	LDrawArrangeTurnUpsideDownMenuTag	= 433,
+	LDrawPartsLimitMenuTag				= 434,
 
 	// Piece Menu
 	LDrawPieceMenuTag					= 5,

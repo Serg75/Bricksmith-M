@@ -13,15 +13,22 @@
 
 #import "LDrawView.h"
 
+@class LDrawColor;
 @class LDrawViewerContainer;
 @class LDrawPartLibrary;
+@class PartBrowserLimitBar;
+@class PartColorStripView;
+
+// Posted when a browser's selected part changes. Object is the browser.
+extern NSString * const PartBrowserSelectionDidChangeNotification;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
 // class PartBrowserDataSource
 //
 ////////////////////////////////////////////////////////////////////////////////
-@interface PartBrowserDataSource : NSObject <NSOutlineViewDelegate, NSOutlineViewDataSource>
+@interface PartBrowserDataSource : NSObject <NSOutlineViewDelegate, NSOutlineViewDataSource, NSTableViewDelegate,
+											 NSMenuDelegate>
 {
 	__weak IBOutlet NSButton		*searchAllCategoriesButton;
 	__weak IBOutlet NSButton		*searchSelectedCategoryButton;
@@ -40,16 +47,25 @@
 	NSArray				*topLevelObjects;	// holds NIB objects
 
 	__weak LDrawPartLibrary	*partLibrary; //weak reference to the shared part catalog.
-	__weak NSString			*selectedCategory;
-	__weak NSArray 			*categoryList;
+	NSString				*selectedCategory;
+	NSArray 				*categoryList;
 	NSMutableArray  		*tableDataSource;
 	LDrawPartBrowserSearchMode	searchMode;
 	LDrawPartBrowserModel	*browserModel;
+
+	// Parts limit
+	PartBrowserLimitBar		*limitBar;			// over the list while a limit or a set is shown
+	PartColorStripView		*colorStrip;		// under the preview
+	NSPopUpButton			*colorFilterButton;	// in the bottom bar
+	BOOL					 showsAllParts;		// the bar's Show All
+	BOOL					 filtersByCurrentColor;	// the color filter follows the Colors window
+	NSMutableDictionary		*swatches;			// images by color code
 }
 
 //Accessors
 - (NSString *) category;
 - (NSString *) selectedPartName;
+- (LDrawColor *) insertionColor;
 
 - (void) setPartLibrary:(LDrawPartLibrary *)partLibraryIn;
 - (BOOL) loadCategory:(NSString *)newCategory;

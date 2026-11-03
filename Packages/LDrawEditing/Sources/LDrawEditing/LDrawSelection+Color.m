@@ -57,8 +57,12 @@
 //				the palette, but I have not tested it with models that use
 //				custom colors in an LDraw directive in their MPD file.
 //
+//				With allowedColors, each directive picks only among the colors
+//				it may take.
+//
 //==============================================================================
 + (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
+							 allowedColors:(BOOL (^)(id directive, LDrawColor *color))allowedColors
 {
 	NSUInteger count = [colorable count];
 	if (count == 0)
@@ -73,29 +77,52 @@
 		[allColors addObject:[currentObject LDrawColor]];
 	}
 
-	NSUInteger colorCount = [allColors count];
-	if (colorCount == 0)
+	if ([allColors count] == 0)
 	{
 		return @[];
 	}
 
 	NSArray        *palette = [allColors allObjects];
 	NSMutableArray *result  = [NSMutableArray arrayWithCapacity:count];
-	int             last    = -1;
+	LDrawColor     *last    = nil;
 
-	for (NSUInteger counter = 0; counter < count; ++counter)
+	for (id directive in colorable)
 	{
-		int r = rand() % (int)colorCount;
+		NSArray    *choices     = palette;
+		NSUInteger  choiceCount = 0;
+		LDrawColor *pick        = nil;
+
+		if (allowedColors != nil)
+		{
+			NSMutableArray *allowed = [NSMutableArray array];
+
+			for (LDrawColor *color in palette)
+			{
+				if (allowedColors(directive, color))
+					[allowed addObject:color];
+			}
+			choices = allowed;
+		}
+
+		choiceCount = [choices count];
+		if (choiceCount == 0)
+		{
+			[result addObject:[directive LDrawColor]];
+			continue;
+		}
+
 		// Try to avoid consecutives if we have enough palette --
 		// this technically makes the distribution not random, but
 		// it probably looks better unless the parts are just super
 		// tiny.
-		while (colorCount > 1 && r == last)
+		do
 		{
-			r = rand() % (int)colorCount;
+			pick = [choices objectAtIndex:(NSUInteger)(rand() % (int)choiceCount)];
 		}
-		last = r;
-		[result addObject:[palette objectAtIndex:(NSUInteger)r]];
+		while (choiceCount > 1 && pick == last);
+
+		last = pick;
+		[result addObject:pick];
 	}
 	return result;
 }

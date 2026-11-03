@@ -27,6 +27,9 @@
 
 #import <LDrawEditing/LDrawPartTransformUpdate.h>
 
+@class LDrawColor;
+@class LDrawFile;
+@class LDrawMPDModel;
 @class LDrawPart;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -201,6 +204,13 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 /// Shared LDrawPart referenceName among selected parts, or nil if none or mixed.
 + (nullable NSString *)sharedReferenceNameInSelection:(NSArray *)selection;
 
+/// The model to show the parts in: the active model when it holds some, else
+/// the first model of the file that does. The parts in the file's models go
+/// into foundParts. Nil when none is in them.
++ (nullable LDrawMPDModel *)modelShowingParts:(NSArray<LDrawPart *> *)parts
+									   inFile:(LDrawFile *)file
+								   foundParts:(NSArray<LDrawPart *> * _Nullable * _Nullable)foundParts;
+
 @end
 
 
@@ -250,7 +260,12 @@ typedef NS_ENUM(NSInteger, LDrawQuickRotationAxis) {
 /// One color per colorable directive, drawn from the unique colors already in
 /// the set. Consecutive repeats are avoided when the palette has more than one
 /// color. The host still applies the colors (undo).
-+ (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable;
+///
+/// Each directive picks only from the colors allowedColors lets it take, such
+/// as those a parts limit allows. A directive allowed none of them keeps its
+/// own color. Nil allows every color.
++ (NSArray *)randomizedColorsForDirectives:(NSArray *)colorable
+							 allowedColors:(nullable BOOL (^)(id directive, LDrawColor *color))allowedColors;
 
 @end
 

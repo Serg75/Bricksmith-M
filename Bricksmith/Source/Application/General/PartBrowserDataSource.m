@@ -23,6 +23,8 @@
 //==============================================================================
 #import "PartBrowserDataSource.h"
 
+#import <LDrawCore/LDrawColorLibrary.h>
+#import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
@@ -31,12 +33,31 @@
 #import <LDrawEditing/LDrawClipboard.h>
 #import <LDrawEditing/LDrawInsertion.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
+#import <LDrawFeatures/LDrawPartLimitSession.h>
+#import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
 
 #import "IconTextCell.h"
 #import "LDrawApplication.h"
 #import "LDrawColorPanelController.h"
+#import "LDrawDocument.h"
 #import "LDrawViewerContainer.h"
+#import "PartBrowserLimitViews.h"
+#import "PartsLimitController.h"
+#import "PartsLimitManager.h"
 #import "TableViewCategory.h"
+
+NSString * const PartBrowserSelectionDidChangeNotification = @"PartBrowserSelectionDidChangeNotification";
+
+// Columns added for an inventory's rows.
+static NSString * const LimitColorColumn	= @"LimitColor";
+static NSString * const LimitCountColumn	= @"LimitCount";
+
+static const CGFloat LimitBarHeight			= 22.0;
+static const CGFloat SwatchSize				= 14.0;
+
+// The tag of the color filter's Current Color item.
+static const NSInteger CurrentColorFilterTag	= 1;
 
 
 @implementation PartBrowserDataSource
@@ -146,6 +167,12 @@
 		[self->partsTable setMenu:self->contextualMenu];
 		
 		
+		//---------- Parts limit -----------------------------------------------
+
+		self->showsAllParts = [userDefaults boolForKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
+		[self installLimitControls];
+
+
 		//---------- Set Data --------------------------------------------------
 		
 		[self setPartLibrary:[LDrawPartLibrary sharedPartLibrary]];
@@ -165,6 +192,8 @@
 												 selector: @selector(sharedPartCatalogDidChange:)
 													 name: LDrawPartLibraryDidChangeNotification
 												   object: nil ];
+
+		[self observeLimit];
 	}
 	// Loading "PartBrowserAccessories.nib"
 	else
@@ -192,6 +221,7 @@
 	categoryList	= [NSArray array];
 	tableDataSource	= [NSMutableArray array];
 	searchMode		= (LDrawPartBrowserSearchMode)[[NSUserDefaults standardUserDefaults] integerForKey:PART_BROWSER_SEARCH_MODE];
+	swatches		= [NSMutableDictionary dictionary];
 	
 	return self;
 	
@@ -222,19 +252,55 @@
 //==============================================================================
 - (NSString *) selectedPartName
 {
-	NSInteger       rowIndex    = [partsTable selectedRow];
-	NSDictionary    *partRecord = nil;
-	NSString        *partName   = nil;
-	
-	if(rowIndex >= 0)
-	{
-		partRecord	= [tableDataSource objectAtIndex:rowIndex];
-		partName	= [partRecord objectForKey:PART_NUMBER_KEY];
-	}
-	
-	return partName;
+	return [[self selectedRecord] objectForKey:PART_NUMBER_KEY];
 	
 }//end selectedPartName
+
+
+//========== selectedRecord ====================================================
+//
+// Purpose:		The selected row's record, or nil.
+//
+//==============================================================================
+- (NSDictionary *) selectedRecord
+{
+	return [self recordAtRow:[partsTable selectedRow]];
+
+}//end selectedRecord
+
+
+//========== recordAtRow: ======================================================
+//
+// Purpose:		The record of the parts table's row, or nil when there is no
+//				such row.
+//
+//==============================================================================
+- (NSDictionary *) recordAtRow:(NSInteger)rowIndex
+{
+	if(rowIndex < 0 || rowIndex >= (NSInteger)[tableDataSource count])
+		return nil;
+	return [tableDataSource objectAtIndex:rowIndex];
+
+}//end recordAtRow:
+
+
+//========== insertionColor ====================================================
+//
+// Purpose:		The color a part is inserted in: an inventory row's own, else
+//				the Colors window's.
+//
+//==============================================================================
+- (LDrawColor *) insertionColor
+{
+	LDrawColor	*current	= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
+	LDrawColorT	 colorCode	= [LDrawPartBrowserModel colorCodeForRecord:[self selectedRecord]
+													   currentColorCode:[current colorCode]];
+
+	if(colorCode == [current colorCode])
+		return current;
+	return [[LDrawColorLibrary sharedColorLibrary] colorForCode:colorCode];
+
+}//end insertionColor
 
 
 #pragma mark -
@@ -247,32 +313,23 @@
 //==============================================================================
 - (BOOL) loadCategory:(NSString *)newCategory
 {
-	NSArray 		*partsInCategory	= nil;
-	NSMutableArray	*allPartRecords 	= [NSMutableArray array];
-	BOOL			success 			= NO;
-	
-	// Get the part list for the category:
-	partsInCategory = [self->partLibrary partCatalogRecordsInCategory:newCategory];
-	success = (partsInCategory != nil);
+	BOOL success = [self->browserModel hasCategory:newCategory];
 	
 	// Assign instance variable
 	self->selectedCategory = newCategory;
+	[self->searchField setStringValue:@""];
 	
 	if(success == YES)
 	{
-		// Build the (sortable) list of part records.
-		allPartRecords = [partsInCategory mutableCopy];
-		
-		// Update data
-		[self setTableDataSource:allPartRecords];
+		[self reloadRows];
 		[self syncSelectionAndCategoryDisplayed];
 	}
 	else
 	{	// The user entered an invalid category; display no list.
 		[self setTableDataSource:[NSMutableArray array]];
+		[self updateLimitControls];
 	}
 	
-	[self->searchField setStringValue:@""];
 	[self setConstraints];
 	
 	return success;
@@ -295,14 +352,15 @@
 	if(self->browserModel == nil)
 	{
 		self->browserModel = [[LDrawPartBrowserModel alloc] initWithPartLibrary:partLibraryIn];
+		self->browserModel.limitSession = [[PartsLimitManager sharedManager] session];
 	}
 	else
 	{
 		self->browserModel.partLibrary = partLibraryIn;
 	}
 	
-	// Get all the categories.
-	categories = [partLibrary categoryHierarchy];
+	// Get all the categories, and the sets.
+	categories = [self->browserModel categoryHierarchy];
 	[self setCategoryList:categories];
 	
 	//And set the current category to show everything
@@ -345,7 +403,7 @@
 //==============================================================================
 - (void) setTableDataSource:(NSMutableArray *)allPartRecords
 {
-	NSString        *originalSelectedPartName   = [self selectedPartName];
+	NSDictionary    *originalSelectedRecord     = [self selectedRecord];
 	NSUInteger      newSelectedIndex            = NSNotFound;
 
 	[allPartRecords sortUsingDescriptors:[partsTable sortDescriptors]];
@@ -356,8 +414,8 @@
 	
 	// Attempt to restore the original selection (happens especially if clearing 
 	// the search field) 
-	newSelectedIndex = [LDrawPartBrowserModel indexOfPartNamed:originalSelectedPartName
-													 inRecords:self->tableDataSource];
+	newSelectedIndex = [LDrawPartBrowserModel indexOfRecord:originalSelectedRecord
+												  inRecords:self->tableDataSource];
 	newSelectedIndex = [LDrawPartBrowserModel tableSelectionIndexPreferring:newSelectedIndex];
 	
 	// Scroll to the new selection
@@ -408,6 +466,12 @@
 //==============================================================================
 - (IBAction) addPartClicked:(id)sender
 {
+	if([self colorProblemForSelectedPart] != nil)
+	{
+		NSBeep();
+		return;
+	}
+
 	//anyone who implements this message will know what to do.
 	[NSApp sendAction:@selector(insertLDrawPart:) to:nil from:self];
 
@@ -473,6 +537,68 @@
 }//end searchFieldChanged:
 
 
+//========== toggleShowsAllParts: ==============================================
+//
+// Purpose:		The limit bar's button. Lists every part, or hides again the
+//				parts the limit does not allow.
+//
+//==============================================================================
+- (IBAction) toggleShowsAllParts:(id)sender
+{
+	self->showsAllParts = (self->showsAllParts == NO);
+	[self performSearch];
+}
+
+
+//========== chooseColorFilter: ================================================
+//
+// Purpose:		An item of the color filter's menu: any color, the current
+//				color, or the item's own color.
+//
+//==============================================================================
+- (IBAction) chooseColorFilter:(id)sender
+{
+	self->filtersByCurrentColor		= ([sender tag] == CurrentColorFilterTag);
+	self->browserModel.colorFilter	= [sender representedObject];
+	[self performSearch];
+}
+
+
+//========== colorChipClicked: =================================================
+//
+// Purpose:		An inventory's chip selects its row; any other chip makes its
+//				color the current one, as a click in the Colors window does.
+//
+//==============================================================================
+- (void) colorChipClicked:(id)sender
+{
+	LDrawPartBrowserColorChip	*chip	= [self->colorStrip clickedChip];
+	NSUInteger					 row	= NSNotFound;
+
+	if(chip == nil)
+		return;
+
+	if(chip.record != nil)
+	{
+		row = [self->tableDataSource indexOfObjectIdenticalTo:chip.record];
+		if(row == NSNotFound)
+		{
+			NSBeep();
+			return;
+		}
+		[self->partsTable selectRowIndexes:[NSIndexSet indexSetWithIndex:row] byExtendingSelection:NO];
+		[self->partsTable scrollRowToVisible:row];
+	}
+	else
+	{
+		LDrawColor *color = [[LDrawColorLibrary sharedColorLibrary] colorForCode:chip.colorCode];
+
+		[[LDrawColorPanelController sharedColorPanel] setLDrawColor:color];
+	}
+
+}//end colorChipClicked:
+
+
 #pragma mark -
 #pragma mark DATA SOURCES
 
@@ -533,12 +659,24 @@
 {
 	NSDictionary	*partRecord			= [self->tableDataSource objectAtIndex:rowIndex];
 	NSString		*columnIdentifier	= [tableColumn identifier];
+	NSNumber		*colorCode			= [partRecord objectForKey:LDrawPartBrowserColorCodeKey];
 	
 	NSString		*cellValue			= [partRecord objectForKey:columnIdentifier];
 	
-	//If it's a part, get rid of the file extension on its name.
+	if([columnIdentifier isEqualToString:LimitColorColumn])
+		return (colorCode != nil) ? [self swatchForColorCode:(LDrawColorT)[colorCode intValue]] : nil;
+
+	if([columnIdentifier isEqualToString:LimitCountColumn])
+		return [partRecord objectForKey:LDrawPartBrowserCountTextKey];
+
+	//If it's a part, get rid of the file extension on its name. A row of an
+	// inventory with no LDraw part shows its LEGO number.
 	if([columnIdentifier isEqualToString:PART_NUMBER_KEY])
-		cellValue = [cellValue stringByDeletingPathExtension];
+	{
+		NSString *legoNumber = [partRecord objectForKey:LDrawPartBrowserLEGONumberKey];
+
+		cellValue = [cellValue stringByDeletingPathExtension] ?: legoNumber;
+	}
 	
 	return cellValue;
 	
@@ -553,9 +691,20 @@
 //==============================================================================
 - (void)tableView:(NSTableView *)tableView sortDescriptorsDidChange:(NSArray *)oldDescriptors
 {
-	NSArray *newDescriptors = [tableView sortDescriptors];
+	NSArray			*newDescriptors	= [tableView sortDescriptors];
+	NSDictionary	*selected		= [self selectedRecord];
+	NSUInteger		 row			= NSNotFound;
+
 	[tableDataSource sortUsingDescriptors:newDescriptors];
 	[tableView reloadData];
+
+	// The selected part stays selected where it moved to.
+	row = (selected != nil) ? [tableDataSource indexOfObjectIdenticalTo:selected] : NSNotFound;
+	if(row != NSNotFound)
+	{
+		[tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:row] byExtendingSelection:NO];
+		[tableView scrollRowToVisible:row];
+	}
 	
 }//end tableView:sortDescriptorsDidChange:
 
@@ -726,6 +875,10 @@
 	[self syncSelectionAndPartDisplayed];
 	[self setConstraints];
 	
+	// The Colors window narrows its list to the selected part.
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartBrowserSelectionDidChangeNotification
+														object:self];
+	
 	//save for posterity.
 	if(newRow != -1)
 	{
@@ -733,6 +886,120 @@
 	}
 	
 }//end tableViewSelectionDidChange
+
+
+//**** NSTableView ****
+//========== tableView:willDisplayCell:forTableColumn:row: =====================
+//
+// Purpose:		Grays parts the limit does not allow and rows with nothing
+//				left, and makes rows past their count red.
+//
+//==============================================================================
+- (void) tableView:(NSTableView *)tableView
+   willDisplayCell:(id)cell
+	forTableColumn:(NSTableColumn *)tableColumn
+			   row:(NSInteger)row
+{
+	NSDictionary	*record	= [self recordAtRow:row];
+	NSColor			*color	= [NSColor controlTextColor];
+
+	if(tableView != self->partsTable || [cell isKindOfClass:[NSTextFieldCell class]] == NO)
+		return;
+
+	// A selected row keeps the selection's colors.
+	if([tableView isRowSelected:row] == NO && record != nil)
+	{
+		switch([self->browserModel stateForRecord:record])
+		{
+			case LDrawPartBrowserRowDimmed:
+			case LDrawPartBrowserRowAllUsed:
+			case LDrawPartBrowserRowNoPart:
+				color = [NSColor secondaryLabelColor];
+				break;
+			case LDrawPartBrowserRowOver:
+				color = [NSColor systemRedColor];
+				break;
+			case LDrawPartBrowserRowNormal:
+				break;
+		}
+	}
+	[cell setTextColor:color];
+
+}//end tableView:willDisplayCell:forTableColumn:row:
+
+
+//**** NSTableView ****
+//========== tableView:toolTipForCell:rect:tableColumn:row:mouseLocation: ======
+//
+// Purpose:		The spares in a count, and why a row cannot be inserted.
+//
+//==============================================================================
+- (NSString *) tableView:(NSTableView *)tableView
+		  toolTipForCell:(NSCell *)cell
+					rect:(NSRectPointer)rect
+			 tableColumn:(NSTableColumn *)tableColumn
+					 row:(NSInteger)row
+		   mouseLocation:(NSPoint)mouseLocation
+{
+	return [self->browserModel toolTipForRecord:[self recordAtRow:row]
+								  inCountColumn:[[tableColumn identifier] isEqualToString:LimitCountColumn]];
+
+}//end tableView:toolTipForCell:rect:tableColumn:row:mouseLocation:
+
+
+#pragma mark -
+#pragma mark NSMenu
+
+//========== menuNeedsUpdate: ==================================================
+//
+// Purpose:		Fills the color filter's menu: any color, the current color,
+//				then every color the list can be filtered by.
+//
+//==============================================================================
+- (void) menuNeedsUpdate:(NSMenu *)menu
+{
+	LDrawColor	*current	= [[LDrawColorPanelController sharedColorPanel] LDrawColor];
+	NSNumber	*filter		= self->browserModel.colorFilter;
+	NSString	*title		= nil;
+	NSMenuItem	*item		= nil;
+	NSMenuItem	*titleItem	= nil;
+
+	if(menu != [self->colorFilterButton menu])
+		return;
+
+	// A pull-down's first item is its title, not a choice. It holds the
+	// button's image, so it is kept.
+	titleItem = [menu itemAtIndex:0];
+	[menu removeAllItems];
+	[menu addItem:titleItem];
+
+	item = [menu addItemWithTitle:NSLocalizedString(@"Any Color", nil)
+						   action:@selector(chooseColorFilter:)
+					keyEquivalent:@""];
+	[item setState:(filter == nil)];
+
+	title	= [NSString stringWithFormat:NSLocalizedString(@"Current Color (%@)", nil), [current localizedName]];
+	item	= [menu addItemWithTitle:title action:@selector(chooseColorFilter:) keyEquivalent:@""];
+	[item setTag:CurrentColorFilterTag];
+	[item setState:self->filtersByCurrentColor];
+
+	[menu addItem:[NSMenuItem separatorItem]];
+
+	for(NSNumber *colorCode in [self->browserModel filterColorCodes])
+	{
+		LDrawColorT	 code	= (LDrawColorT)[colorCode intValue];
+		NSString	*name	= [[[LDrawColorLibrary sharedColorLibrary] colorForCode:code] localizedName];
+
+		item = [menu addItemWithTitle:name action:@selector(chooseColorFilter:) keyEquivalent:@""];
+		[item setImage:[self swatchForColorCode:code]];
+		[item setRepresentedObject:colorCode];
+		[item setState:(self->filtersByCurrentColor == NO && [filter isEqual:colorCode])];
+	}
+
+	for(NSMenuItem *each in [menu itemArray])
+		[each setTarget:self];
+
+}//end menuNeedsUpdate:
 
 
 #pragma mark -
@@ -772,6 +1039,88 @@
 }//end sharedPartCatalogDidChange:
 
 
+//========== partsLimitDidChange: ==============================================
+//
+// Purpose:		The limit, or the sets in the store, changed. Lists the Sets
+//				group again, and reloads the list where it was.
+//
+//==============================================================================
+- (void) partsLimitDidChange:(NSNotification *)notification
+{
+	[self setCategoryList:[self->browserModel categoryHierarchy]];
+	if([self->browserModel hasCategory:self->selectedCategory] == NO)
+		self->selectedCategory = Category_All;
+
+	// The category and the search stay. A filter color the limit no longer
+	// offers is dropped, which takes a second reload.
+	[self reloadRows];
+	if([self->browserModel clearUnofferedColorFilter])
+	{
+		self->filtersByCurrentColor = NO;
+		[self reloadRows];
+	}
+
+	[self syncSelectionAndCategoryDisplayed];
+	[self syncSelectionAndPartDisplayed];
+	[self setConstraints];
+
+}//end partsLimitDidChange:
+
+
+//========== documentDidCheck: =================================================
+//
+// Purpose:		The counted model changed, so an inventory's counts do too.
+//
+//==============================================================================
+- (void) documentDidCheck:(NSNotification *)notification
+{
+	if(self->browserModel.showsInventoryRows && [notification object] == [self countedDocument])
+		[self performSearch];
+}
+
+
+//========== mainWindowDidChange: ==============================================
+//
+// Purpose:		The shared panel counts the main window's model.
+//
+//==============================================================================
+- (void) mainWindowDidChange:(NSNotification *)notification
+{
+	NSWindow	*window		= [self->partsTable window];
+	BOOL		 isPanel	= ([[[window windowController] document] isKindOfClass:[LDrawDocument class]] == NO);
+
+	if(isPanel && self->browserModel.showsInventoryRows && [notification object] != window)
+		[self performSearch];
+}
+
+
+//========== currentColorDidChange: ============================================
+//
+// Purpose:		The Colors window's color decides what can be inserted, and
+//				what the Current Color filter keeps.
+//
+//==============================================================================
+- (void) currentColorDidChange:(NSNotification *)notification
+{
+	if(self->filtersByCurrentColor)
+		[self performSearch];
+	else
+	{
+		[self updateColorStrip];
+		[self setConstraints];
+	}
+}
+
+
+//========== browserSettingDidChange: ==========================================
+//==============================================================================
+- (void) browserSettingDidChange:(NSNotification *)notification
+{
+	self->showsAllParts = [[NSUserDefaults standardUserDefaults] boolForKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
+	[self performSearch];
+}
+
+
 #pragma mark -
 #pragma mark UTILITIES
 #pragma mark -
@@ -795,14 +1144,54 @@
 //==============================================================================
 - (void) performSearch
 {
-	self->browserModel.searchString    = [self->searchField stringValue];
-	self->browserModel.currentCategory = self->selectedCategory;
-	self->browserModel.searchMode      = self->searchMode;
-	[self->browserModel reloadFilter];
-	[self setTableDataSource:[self->browserModel.filteredParts mutableCopy]];
+	[self reloadRows];
 
 	[self syncSelectionAndPartDisplayed];
 	[self setConstraints];
+}
+
+
+//========== reloadRows ========================================================
+//
+// Purpose:		Lists the category, or the search, as the parts limit allows.
+//
+//==============================================================================
+- (void) reloadRows
+{
+	[self prepareModel];
+	[self->browserModel reloadFilter];
+	[self updateLimitColumns];
+	[self setTableDataSource:[self->browserModel.filteredParts mutableCopy]];
+	[self updateLimitControls];
+}
+
+
+//========== prepareModel ======================================================
+//
+// Purpose:		Gives the browser model the search, the category and the limit
+//				settings, and the document's part usage when an inventory's
+//				rows need counts.
+//
+//==============================================================================
+- (void) prepareModel
+{
+	LDrawPartBrowserModel	*model		= self->browserModel;
+	NSString				*inventory	= [LDrawPartBrowserModel inventoryIdentifierForCategory:self->selectedCategory];
+	LDrawPartLimitTable		*table		= [[[PartsLimitManager sharedManager] session] table];
+
+	model.searchString			= [self->searchField stringValue];
+	model.currentCategory		= self->selectedCategory ?: Category_All;
+	model.searchMode			= self->searchMode;
+	model.hidesDisallowedParts	= (self->showsAllParts == NO);
+
+	if(self->filtersByCurrentColor)
+		model.colorFilter = @([[[LDrawColorPanelController sharedColorPanel] LDrawColor] colorCode]);
+
+	// The document keeps the usage until the next edit, so asking costs little.
+	if(inventory != nil || table.limit.kind == LDrawPartLimitKindInventory)
+		model.partUsage = [[[self countedDocument] partsLimitController] usage];
+	else
+		model.partUsage = nil;
 }
 
 
@@ -822,6 +1211,7 @@
 	BOOL		partActionsEnabled	= (selectedPart != nil);
 	BOOL		showAddFavorite		= (partIsInFavorites == NO);
 	BOOL		showRemoveFavorite	= (partIsInFavorites == YES);
+	NSString	*colorProblem		= [self colorProblemForSelectedPart];
 	
 	//---------- Set constraints -----------------------------------------------
 	
@@ -831,10 +1221,12 @@
 	[self->searchAllCategoriesButton	setState:(self->searchMode == LDrawPartBrowserSearchAllCategories)];
 	[self->searchSelectedCategoryButton	setState:(self->searchMode == LDrawPartBrowserSearchSelectedCategory)];
 	
-	[self->searchSelectedCategoryButton setTitle:[partLibrary displayNameForCategory:self->selectedCategory]];
+	[self->searchSelectedCategoryButton setTitle:[self->browserModel displayNameForCategory:self->selectedCategory]];
 	[self->searchSelectedCategoryButton sizeToFit];
 
-	[self->insertButton				setEnabled:partActionsEnabled];
+	// Insert stays off while the part is not made in the current color.
+	[self->insertButton				setEnabled:(partActionsEnabled && colorProblem == nil)];
+	[self->insertButton				setToolTip:colorProblem];
 	
 	// Favorites Add/Remove button
 	[self->addRemoveFavoriteButton	setEnabled:partActionsEnabled];
@@ -904,12 +1296,16 @@
 		// the model.
 //		modelToView = [self->partLibrary modelForName:selectedPartName];
 
+		LDrawColorT colorCode = [LDrawPartBrowserModel colorCodeForRecord:[self selectedRecord]
+														 currentColorCode:LDrawCurrentColor];
+
 		newPart = [LDrawInsertion partNamed:selectedPartName
-									  color:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]
+									  color:[[LDrawColorLibrary sharedColorLibrary] colorForCode:colorCode]
 					   copyingTransformFrom:nil];
 		[LDrawApplication makeCurrentSharedContext];
 	}
 	[partPreview setLDrawDirective:newPart];
+	[self updateColorStrip];
 	
 }//end syncSelectionAndPartDisplayed
 
@@ -922,9 +1318,13 @@
 - (BOOL) writeSelectedPartToPasteboard:(NSPasteboard *)pasteboard
 {
 	NSString   *partName      = [self selectedPartName];
-	LDrawColor *selectedColor = [[LDrawColorPanelController sharedColorPanel] LDrawColor];
-	NSArray    *archivedParts = [LDrawClipboard archivedDraggingDataForPartNamed:partName
-																		   color:selectedColor];
+	LDrawColor *selectedColor = [self insertionColor];
+	NSArray    *archivedParts = nil;
+
+	if([self colorProblemForSelectedPart] != nil)
+		return NO;
+
+	archivedParts = [LDrawClipboard archivedDraggingDataForPartNamed:partName color:selectedColor];
 
 	if(archivedParts != nil)
 	{
@@ -943,6 +1343,297 @@
 	return NO;
 	
 }//end writeSelectedPartToPasteboard:
+
+
+#pragma mark -
+#pragma mark PARTS LIMIT
+#pragma mark -
+
+//========== installLimitControls ==============================================
+//
+// Purpose:		Adds the bar over the parts list, the color strip under the
+//				preview and the color filter button after Favorites. All stay
+//				hidden until a limit needs them.
+//
+//==============================================================================
+- (void) installLimitControls
+{
+	NSScrollView	*scrollView		= [self->partsTable enclosingScrollView];
+	NSView			*listView		= [scrollView superview];
+	NSUInteger		 marginBelow	= [listView isFlipped] ? NSViewMaxYMargin : NSViewMinYMargin;
+	NSRect			 barFrame		= NSMakeRect(0, 0, NSWidth([scrollView frame]), LimitBarHeight);
+	NSRect			 favorite		= [self->addRemoveFavoriteButton frame];
+	NSRect			 filter			= NSMakeRect(NSMaxX(favorite) + 2, NSMinY(favorite), 30, NSHeight(favorite));
+
+	self->limitBar = [[PartBrowserLimitBar alloc] initWithFrame:barFrame];
+	[self->limitBar setAutoresizingMask:NSViewWidthSizable | marginBelow];
+	[[self->limitBar button] setTarget:self];
+	[[self->limitBar button] setAction:@selector(toggleShowsAllParts:)];
+	[self->limitBar setHidden:YES];
+	[listView addSubview:self->limitBar];
+
+	self->colorStrip = [[PartColorStripView alloc] initWithFrame:NSMakeRect(0, 0, 100, 28)];
+	[self->colorStrip setTarget:self];
+	[self->colorStrip setAction:@selector(colorChipClicked:)];
+	[self->colorStrip setHidden:YES];
+	[self->partPreviewViewport setBottomAccessory:self->colorStrip];
+
+	// Keep the filter button clear of the insert button when they share a bar.
+	if([self->insertButton superview] == [self->addRemoveFavoriteButton superview])
+		filter.size.width = MAX(MIN(NSWidth(filter), NSMinX([self->insertButton frame]) - NSMinX(filter)), 20);
+
+	self->colorFilterButton = [[NSPopUpButton alloc] initWithFrame:filter pullsDown:YES];
+	[self->colorFilterButton setBordered:NO];
+	[[self->colorFilterButton cell] setArrowPosition:NSPopUpNoArrow];
+	[[self->colorFilterButton cell] setImagePosition:NSImageOnly];
+	[self->colorFilterButton addItemWithTitle:@""];
+	[[self->colorFilterButton menu] setDelegate:self];
+	[self->colorFilterButton setToolTip:NSLocalizedString(@"Show only the parts in a color", nil)];
+	[self->colorFilterButton setAutoresizingMask:[self->addRemoveFavoriteButton autoresizingMask]];
+	[self->colorFilterButton setHidden:YES];
+	[[self->addRemoveFavoriteButton superview] addSubview:self->colorFilterButton];
+	[self updateColorFilterButton];
+
+}//end installLimitControls
+
+
+//========== observeLimit ======================================================
+//
+// Purpose:		The list follows the limit, the counted document's edits, the
+//				Colors window and the setting in Settings.
+//
+//==============================================================================
+- (void) observeLimit
+{
+	NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+
+	[center addObserver:self
+			   selector:@selector(partsLimitDidChange:)
+				   name:LDrawPartLimitDidChangeNotification
+				 object:[[PartsLimitManager sharedManager] session]];
+	[center addObserver:self
+			   selector:@selector(documentDidCheck:)
+				   name:PartsLimitDidCheckNotification
+				 object:nil];
+	[center addObserver:self
+			   selector:@selector(mainWindowDidChange:)
+				   name:NSWindowDidBecomeMainNotification
+				 object:nil];
+	[center addObserver:self
+			   selector:@selector(currentColorDidChange:)
+				   name:LDrawColorDidChangeNotification
+				 object:nil];
+	[center addObserver:self
+			   selector:@selector(browserSettingDidChange:)
+				   name:PartsLimitBrowserSettingDidChangeNotification
+				 object:nil];
+
+}//end observeLimit
+
+
+//========== updateLimitColumns ================================================
+//
+// Purpose:		An inventory's rows get a swatch column first and a Count column
+//				last. Other rows go without them.
+//
+//==============================================================================
+- (void) updateLimitColumns
+{
+	BOOL			 wantsColumns	= self->browserModel.showsInventoryRows;
+	NSTableColumn	*colorColumn	= [self->partsTable tableColumnWithIdentifier:LimitColorColumn];
+	NSTableColumn	*countColumn	= [self->partsTable tableColumnWithIdentifier:LimitCountColumn];
+	NSTableColumn	*nameColumn		= [self->partsTable tableColumnWithIdentifier:PART_NAME_KEY];
+	CGFloat			 colorWidth		= SwatchSize + 6;
+
+	if(wantsColumns && colorColumn == nil)
+	{
+		NSSortDescriptor *leftSort = [NSSortDescriptor sortDescriptorWithKey:LDrawPartBrowserLeftKey ascending:YES];
+
+		colorColumn = [[NSTableColumn alloc] initWithIdentifier:LimitColorColumn];
+		[colorColumn setDataCell:[[NSImageCell alloc] init]];
+		[colorColumn setWidth:colorWidth];
+		[colorColumn setMinWidth:colorWidth];
+		[colorColumn setMaxWidth:colorWidth];
+		[colorColumn setResizingMask:NSTableColumnNoResizing];
+		[colorColumn setEditable:NO];
+		[[colorColumn headerCell] setStringValue:@""];
+		[self->partsTable addTableColumn:colorColumn];
+		[self->partsTable moveColumn:[self->partsTable numberOfColumns] - 1 toColumn:0];
+
+		countColumn = [[NSTableColumn alloc] initWithIdentifier:LimitCountColumn];
+		[[countColumn headerCell] setStringValue:NSLocalizedString(@"Count", nil)];
+		[[countColumn dataCell] setAlignment:NSTextAlignmentRight];
+		[[countColumn dataCell] setFont:[[nameColumn dataCell] font]];
+		[countColumn setWidth:64];
+		[countColumn setMinWidth:44];
+		[countColumn setEditable:NO];
+		[countColumn setSortDescriptorPrototype:leftSort];
+		[self->partsTable addTableColumn:countColumn];
+	}
+	else if(wantsColumns == NO && colorColumn != nil)
+	{
+		NSSortDescriptor *sort = [[self->partsTable sortDescriptors] firstObject];
+
+		[self->partsTable removeTableColumn:colorColumn];
+		[self->partsTable removeTableColumn:countColumn];
+
+		// Sorting by what is left needs the Count column, so sort by name.
+		if([[sort key] isEqualToString:LDrawPartBrowserLeftKey] && [nameColumn sortDescriptorPrototype] != nil)
+			[self->partsTable setSortDescriptors:@[[nameColumn sortDescriptorPrototype]]];
+	}
+
+}//end updateLimitColumns
+
+
+//========== updateLimitControls ===============================================
+//
+// Purpose:		Shows the bar while something limits the list, and the color
+//				filter while the limit restricts colors.
+//
+//==============================================================================
+- (void) updateLimitControls
+{
+	NSString	*text			= [self->browserModel limitBarTextForCategory:self->selectedCategory];
+	NSString	*buttonTitle	= [LDrawPartBrowserModel limitBarButtonTitleShowingAll:self->showsAllParts];
+
+	[self setLimitBarShown:(text != nil)];
+	if(text != nil)
+		[self->limitBar setText:text buttonTitle:buttonTitle];
+
+	[self->colorFilterButton setHidden:([self->browserModel filterColorCodes] == nil)];
+	[self updateColorFilterButton];
+
+}//end updateLimitControls
+
+
+//========== setLimitBarShown: =================================================
+//
+// Purpose:		Shows the bar over the parts list, which shrinks to make room,
+//				or hides it and gives the room back.
+//
+//==============================================================================
+- (void) setLimitBarShown:(BOOL)shown
+{
+	NSScrollView	*scrollView	= [self->partsTable enclosingScrollView];
+	BOOL			 isFlipped	= [[scrollView superview] isFlipped];
+	NSRect			 list		= [scrollView frame];
+	NSRect			 bar		= [self->limitBar frame];
+	CGFloat			 barRoom	= shown ? LimitBarHeight : -LimitBarHeight;
+
+	if(shown == ([self->limitBar isHidden] == NO))
+		return;
+
+	list.size.height -= barRoom;
+	if(isFlipped)
+		list.origin.y += barRoom;
+
+	bar.origin.x	= NSMinX(list);
+	bar.origin.y	= isFlipped ? NSMinY(list) - LimitBarHeight : NSMaxY(list);
+	bar.size.width	= NSWidth(list);
+
+	[scrollView setFrame:list];
+	[self->limitBar setFrame:bar];
+	[self->limitBar setHidden:(shown == NO)];
+
+}//end setLimitBarShown:
+
+
+//========== updateColorStrip ==================================================
+//
+// Purpose:		Shows the selected part's colors under the preview. When the
+//				current color is not among them, it comes first, crossed out.
+//
+//==============================================================================
+- (void) updateColorStrip
+{
+	NSDictionary	*record			= [self selectedRecord];
+	LDrawColorT		 panelColor		= [[[LDrawColorPanelController sharedColorPanel] LDrawColor] colorCode];
+	NSArray			*chips			= [self->browserModel colorChipsForPartNamed:[self selectedPartName]];
+	NSString		*colorProblem	= [self colorProblemForSelectedPart];
+
+	[self->colorStrip setChips:chips
+				  currentColor:[LDrawPartBrowserModel colorCodeForRecord:record currentColorCode:panelColor]
+				   struckColor:(colorProblem != nil) ? @(panelColor) : nil
+				 struckTooltip:colorProblem];
+
+}//end updateColorStrip
+
+
+//========== updateColorFilterButton ===========================================
+//
+// Purpose:		Shows the filter's color on the button while a filter is on,
+//				else a filter icon.
+//
+//==============================================================================
+- (void) updateColorFilterButton
+{
+	NSNumber	*filter	= self->browserModel.colorFilter;
+	NSImage		*image	= nil;
+
+	if(filter != nil)
+		image = PartBrowserSwatchImage((LDrawColorT)[filter intValue], NSMakeSize(18, 18), YES, NO);
+	else
+		image = [NSImage imageWithSystemSymbolName:@"line.3.horizontal.decrease.circle"
+						  accessibilityDescription:NSLocalizedString(@"Color filter", nil)];
+
+	[[self->colorFilterButton itemAtIndex:0] setImage:image];
+
+}//end updateColorFilterButton
+
+
+//========== colorProblemForSelectedPart =======================================
+//
+// Purpose:		Why the selected part cannot be inserted in the current color,
+//				or nil when it can. An inventory row brings its own color, and
+//				Pick Any Color lets any color through.
+//
+//==============================================================================
+- (NSString *) colorProblemForSelectedPart
+{
+	return [self->browserModel insertionProblemForRecord:[self selectedRecord]
+											currentColor:[[LDrawColorPanelController sharedColorPanel] LDrawColor]];
+
+}//end colorProblemForSelectedPart
+
+
+//========== swatchForColorCode: ===============================================
+//
+// Purpose:		A small swatch of the color, made once and kept.
+//
+//==============================================================================
+- (NSImage *) swatchForColorCode:(LDrawColorT)colorCode
+{
+	NSImage *swatch = [self->swatches objectForKey:@(colorCode)];
+
+	if(swatch == nil)
+	{
+		swatch = PartBrowserSwatchImage(colorCode, NSMakeSize(SwatchSize, SwatchSize), NO, NO);
+		[self->swatches setObject:swatch forKey:@(colorCode)];
+	}
+	return swatch;
+
+}//end swatchForColorCode:
+
+
+//========== countedDocument ===================================================
+//
+// Purpose:		The document whose model the counts are for: the window's own,
+//				or for the shared panel, the main window's. With the app in the
+//				background there is no main window, so the frontmost document.
+//
+//==============================================================================
+- (LDrawDocument *) countedDocument
+{
+	id document = [[[self->partsTable window] windowController] document];
+
+	if([document isKindOfClass:[LDrawDocument class]] == NO)
+		document = [[NSDocumentController sharedDocumentController] currentDocument];
+	if(document == nil)
+		document = [[NSApp orderedDocuments] firstObject];
+
+	return [document isKindOfClass:[LDrawDocument class]] ? document : nil;
+
+}//end countedDocument
 
 
 #pragma mark -

@@ -13,6 +13,7 @@
 
 @class LDrawFile;
 @class LDrawMPDModel;
+@class LDrawPartLimitReport;
 @class LDrawPartReport;
 
 @interface PieceCountPanel : DialogPanel
@@ -21,6 +22,8 @@
 	__weak LDrawMPDModel	*activeModel;
 	LDrawPartReport			*partReport;
 	NSMutableArray			*flattenedReport;
+	LDrawPartLimitReport	*limitReport;		// the document's last check, or nil
+	NSButton				*problemsOnlyCheckbox;
 }
 
 //Initialization
@@ -36,6 +39,10 @@
 - (void) setFile:(LDrawFile *)newFile;
 - (void) setPartReport:(LDrawPartReport *)newPartReport;
 - (void) setTableDataSource:(NSMutableArray *) newReport;
+
+// With a limit on, adds Owned and Status columns and Problems Only, and lists
+// the problems first.
+- (void) setLimitReport:(LDrawPartLimitReport *)report;
 
 //Actions
 - (IBAction) exportButtonClicked:(id)sender;

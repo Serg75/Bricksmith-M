@@ -56,6 +56,9 @@ NS_ASSUME_NONNULL_BEGIN
 // Accessors
 - (NSArray *)colors;
 - (LDrawColor *)colorForCode:(LDrawColorT)colorCode;
+
+/// The codes of the colors of a material, such as rubber.
+- (NSSet<NSNumber *> *)colorCodesWithMaterial:(LDrawColorMaterialT)material;
 - (void)getComplementRGBA:(float * _Nonnull)complementRGBA forCode:(LDrawColorT)colorCode;
 
 // Registering Colors

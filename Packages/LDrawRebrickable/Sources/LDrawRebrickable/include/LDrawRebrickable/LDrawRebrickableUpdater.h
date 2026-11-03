@@ -1,0 +1,79 @@
+//==============================================================================
+//
+//  File:       LDrawRebrickableUpdater.h
+//  Package:    LDrawRebrickable
+//
+//  Created by Sergey Slobodenyuk on 2026-10-26.
+//
+//==============================================================================
+
+#import <Foundation/Foundation.h>
+
+@class LDrawInventoryStore;
+@class LDrawRebrickableDownloads;
+@class LDrawRebrickableSetList;
+@class LDrawSetInventory;
+
+NS_ASSUME_NONNULL_BEGIN
+
+//------------------------------------------------------------------------------
+///
+/// @class      LDrawRebrickableUpdater
+///
+/// @abstract   Keeps a store's Rebrickable data up to date: the downloads, the
+///             catalog built from them, and imported sets.
+///
+/// @discussion The slow work runs on a background queue. Every completion
+///             runs on the main queue, where the store is used.
+///
+//------------------------------------------------------------------------------
+@interface LDrawRebrickableUpdater : NSObject
+
+/// Keeps the store's data up to date from these downloads.
+- (instancetype) initWithDownloads:(LDrawRebrickableDownloads *)downloads
+							 store:(LDrawInventoryStore *)store NS_DESIGNATED_INITIALIZER;
+- (instancetype) init NS_UNAVAILABLE;
+
+@property (nonatomic, readonly) LDrawRebrickableDownloads *downloads;
+@property (nonatomic, readonly) LDrawInventoryStore *store;
+
+/// Whether the store has a catalog.
+@property (nonatomic, readonly) BOOL hasCatalog;
+
+/// Whether an update is under way.
+@property (nonatomic, readonly) BOOL isUpdating;
+
+/// When the data was last checked with Rebrickable, or nil when there is no
+/// catalog.
+@property (nonatomic, readonly, nullable) NSDate *lastCheckDate;
+
+/// Whether data the user already has is due for an update: days is over 0
+/// and the last check is older than that.
+- (BOOL) isUpdateDueAfterDays:(NSInteger)days;
+
+/// Fetches the downloads that are due, or all when forced, then builds and
+/// saves the catalog when a file changed since the last build, or the store
+/// has none. The progress covers the downloads; building takes a few seconds
+/// more. `changed` says whether the catalog was saved.
+- (NSProgress *) updateCatalogForcing:(BOOL)force
+						   completion:(void (^)(BOOL changed, NSError * _Nullable error))completion
+	NS_SWIFT_NAME(updateCatalog(forcing:completion:));
+
+/// Brings the store's Rebrickable data up to date: the shipped color links,
+/// and the rubber parts from the downloads when the data has none. A store
+/// with no Rebrickable data is left alone.
+- (BOOL) updateIdentityData:(NSError **)error;
+
+/// The set list from the downloads, read once.
+- (void) loadSetListWithCompletion:(void (^)(LDrawRebrickableSetList * _Nullable setList,
+											 NSError * _Nullable error))completion
+	NS_SWIFT_NAME(loadSetList(completion:));
+
+/// Imports a set from the downloads and saves it in the store.
+- (void) importSetNumber:(NSString *)setNumber
+			  completion:(void (^)(LDrawSetInventory * _Nullable setInventory, NSError * _Nullable error))completion
+	NS_SWIFT_NAME(importSet(number:completion:));
+
+@end
+
+NS_ASSUME_NONNULL_END

@@ -20,6 +20,7 @@
 
 #import <Foundation/Foundation.h>
 
+#import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawFeatures/LDrawHostKeys.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -50,6 +51,21 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Document 3D viewport autosave name at index (fileGraphicView_N).
 + (NSString *)documentViewportAutosaveNameAtIndex:(NSUInteger)index;
+
+/// The parts limit's mark style: stripes, a tint or an outline. Any other
+/// stored value reads as stripes.
++ (LDrawRenderMarkStyle)partsLimitMarkStyleInDefaults:(NSUserDefaults *)userDefaults;
+
+/// A parts limit mark color as red, green and blue, for
+/// PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY or PARTS_LIMIT_TOO_MANY_COLOR_KEY. A
+/// stored value that is not three numbers reads as the factory color.
++ (void)getPartsLimitMarkColor:(float[_Nonnull 3])rgb
+						forKey:(NSString *)key
+					inDefaults:(NSUserDefaults *)userDefaults;
+
+/// Gives the drawing code the marks the settings ask for: whether parts are
+/// marked and how, the colors, and whether other parts dim. The host redraws.
++ (void)applyPartsLimitMarksFromDefaults:(NSUserDefaults *)userDefaults;
 
 @end
 

@@ -460,6 +460,30 @@ static NSView *InsetView(NSView *view)
 }//end controlGroup:
 
 
+//---------- containerForView:margins: -------------------------------[static]--
+//
+// Purpose:		Holds the view with the margins around it, so the container's
+//				fitting size includes them.
+//
+//------------------------------------------------------------------------------
++ (NSView *) containerForView:(NSView *)view margins:(NSEdgeInsets)margins
+{
+	NSView *container = [[NSView alloc] init];
+
+	[view setTranslatesAutoresizingMaskIntoConstraints:NO];
+	[container addSubview:view];
+	[NSLayoutConstraint activateConstraints:@[
+		[[view leadingAnchor] constraintEqualToAnchor:[container leadingAnchor] constant:margins.left],
+		[[view trailingAnchor] constraintEqualToAnchor:[container trailingAnchor] constant:-margins.right],
+		[[view topAnchor] constraintEqualToAnchor:[container topAnchor] constant:margins.top],
+		[[view bottomAnchor] constraintEqualToAnchor:[container bottomAnchor] constant:-margins.bottom],
+	]];
+
+	return container;
+
+}//end containerForView:margins:
+
+
 #pragma mark -
 #pragma mark CONTROLS
 #pragma mark -
@@ -656,5 +680,24 @@ static NSView *InsetView(NSView *view)
 	return container;
 
 }//end chooserAccessoryViewWithText:
+
+
+//---------- tableCellWithField: -------------------------------------[static]--
+//------------------------------------------------------------------------------
++ (NSTableCellView *) tableCellWithField:(NSTextField *)field
+{
+	NSTableCellView *cell = [[NSTableCellView alloc] init];
+
+	[field setTranslatesAutoresizingMaskIntoConstraints:NO];
+	[cell addSubview:field];
+	[cell setTextField:field];
+	[NSLayoutConstraint activateConstraints:@[
+		[[field leadingAnchor] constraintEqualToAnchor:[cell leadingAnchor]],
+		[[field trailingAnchor] constraintEqualToAnchor:[cell trailingAnchor]],
+		[[field centerYAnchor] constraintEqualToAnchor:[cell centerYAnchor]],
+	]];
+	return cell;
+
+}//end tableCellWithField:
 
 @end

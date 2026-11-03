@@ -33,8 +33,21 @@
 										  alpha:1.0 ];
 	
 	// Draw
+	if(self.struck)
+		cellColor = [cellColor colorWithAlphaComponent:0.35];
 	[cellColor set];
 	NSRectFillUsingOperation(cellFrame, NSCompositingOperationSourceOver);
+
+	if(self.struck)
+	{
+		NSBezierPath *line = [NSBezierPath bezierPath];
+
+		[line moveToPoint:NSMakePoint(NSMinX(cellFrame), NSMaxY(cellFrame))];
+		[line lineToPoint:NSMakePoint(NSMaxX(cellFrame), NSMinY(cellFrame))];
+		[[NSColor systemRedColor] setStroke];
+		[line setLineWidth:1.5];
+		[line stroke];
+	}
 	
 }//end drawInteriorWithFrame:inView:
 

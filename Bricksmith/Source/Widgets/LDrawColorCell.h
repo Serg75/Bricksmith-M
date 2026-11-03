@@ -14,4 +14,8 @@
 
 }
 
+// The swatch is drawn faded and crossed out, for a color that cannot be
+// picked.
+@property (nonatomic, assign) BOOL struck;
+
 @end

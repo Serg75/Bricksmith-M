@@ -65,6 +65,9 @@
 	//The pitfall is that it releases it too. So we have to  retain our 
 	// instance variables here.
     cell->image = image;
+	cell.badgeImage	= self.badgeImage;
+	cell.badgeText	= self.badgeText;
+	cell.badgeColor	= self.badgeColor;
 	
 	return cell;
 	
@@ -163,11 +166,59 @@
  		[inverter concat];
    }
 	
+	textFrame = [self drawBadgeInFrame:textFrame];
+
 	//Now draw the text.
 	NSRect titleRect = [self titleRectForBounds:textFrame];
 	[super drawInteriorWithFrame:titleRect inView:controlView];
 
 }//end drawInteriorWithFrame:inView:
+
+
+//========== drawBadgeInFrame: =================================================
+//
+// Purpose:		Draws the badge at the end of the frame, and returns what is
+//				left of it for the title.
+//
+//==============================================================================
+- (NSRect) drawBadgeInFrame:(NSRect)frame
+{
+	NSImage			*badge		= self.badgeImage;
+	NSString		*text		= self.badgeText;
+	NSFont			*font		= [NSFont systemFontOfSize:[NSFont smallSystemFontSize]];
+	NSDictionary	*attributes	= @{NSFontAttributeName: font,
+									NSForegroundColorAttributeName: self.badgeColor ?: [NSColor secondaryLabelColor]};
+	NSSize			 textSize	= (text != nil) ? [text sizeWithAttributes:attributes] : NSZeroSize;
+	NSSize			 imageSize	= (badge != nil) ? [badge size] : NSZeroSize;
+	CGFloat			 width		= 0.0;
+	NSRect			 badgeFrame	= NSZeroRect;
+	NSRect			 rest		= frame;
+
+	if(badge == nil && text == nil)
+		return frame;
+
+	width = imageSize.width + ceil(textSize.width) + ((badge != nil && text != nil) ? 2.0 : 0.0) + imagePadding;
+	NSDivideRect(frame, &badgeFrame, &rest, width, NSMaxXEdge);
+
+	if(badge != nil)
+	{
+		NSRect imageFrame = NSMakeRect(NSMinX(badgeFrame),
+									   NSMidY(badgeFrame) - imageSize.height / 2,
+									   imageSize.width, imageSize.height);
+		[badge drawInRect:imageFrame fromRect:NSZeroRect operation:NSCompositingOperationSourceOver
+				 fraction:1.0 respectFlipped:YES hints:nil];
+	}
+
+	if(text != nil)
+	{
+		NSPoint origin = NSMakePoint(NSMaxX(badgeFrame) - imagePadding - ceil(textSize.width),
+									 NSMidY(badgeFrame) - textSize.height / 2);
+		[text drawAtPoint:origin withAttributes:attributes];
+	}
+
+	return rest;
+
+}//end drawBadgeInFrame:
 
 
 //========== selectWithFrame:inView:editor:delegate:start:length: ==============

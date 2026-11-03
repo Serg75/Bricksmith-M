@@ -33,7 +33,12 @@
 #import <LDrawFeatures/LDrawMinifigureSpec.h>
 #import <LDrawFeatures/LDrawMLCadIni.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
+#import <LDrawFeatures/LDrawPartLimitCheck.h>
+#import <LDrawFeatures/LDrawPartLimitChecker.h>
+#import <LDrawFeatures/LDrawPartLimitPresentation.h>
+#import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawFeatures/LDrawPartListOrientations.h>
+#import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawRelatedParts.h>
 #import <LDrawFeatures/LDrawStepCallout.h>
@@ -52,4 +57,5 @@
 #import <LDrawFeatures/LDrawStepPartListResizeTracker.h>
 #import <LDrawFeatures/LDrawStepPartListStyle.h>
 #import <LDrawFeatures/LDrawToolMode.h>
+#import <LDrawFeatures/LDrawUnmatchedParts.h>
 #import <LDrawFeatures/LSynthConfiguration.h>

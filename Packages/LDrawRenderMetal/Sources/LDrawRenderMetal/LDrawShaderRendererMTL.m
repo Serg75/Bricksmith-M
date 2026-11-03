@@ -281,6 +281,8 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 
 		// Copy on transpose to get matrix into right form!
 		copy_matrix_transposed(inst_data, transform_now);
+		// Clears the colors and the mark, so a handle never keeps a part's mark.
+		memset(inst_data + 16, 0, sizeof(float) * (InstanceInputLength - 16));
 
 		[self popMatrix];
 

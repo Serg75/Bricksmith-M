@@ -11,6 +11,13 @@
 
 #import <LDrawFeatures/LDrawColorPanelModel.h>
 
+#import <LDrawCore/LDrawLocalization.h>
+#import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawFeatures/LDrawPartLimitPresentation.h>
+#import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
+
 
 @implementation LDrawColorPanelModel
 
@@ -107,10 +114,10 @@
 }
 
 
-//---------- predicateForSearchString:material: ----------------------[static]--
+//---------- predicateForSearchString:material:allowedColorCodes: ----[static]--
 //
 // Purpose:		Returns a search predicate suitable for finding colors based on
-//				the given search string.
+//				the given search string, narrowed to the allowed colors.
 //
 //				If the search string consists entirely of numerals, the
 //				predicate will search for colors having that exact integer code.
@@ -118,6 +125,7 @@
 //------------------------------------------------------------------------------
 + (NSPredicate *)predicateForSearchString:(NSString *)searchString
 								 material:(LDrawColorFilter)material
+						allowedColorCodes:(NSArray<NSNumber *> *)allowedColorCodes
 {
 	NSString        *keywordFormat      = nil;
 	NSArray         *keywordArguments   = nil;
@@ -164,6 +172,8 @@
 	switch (material)
 	{
 		case LDrawColorFilterAll:
+		case LDrawColorFilterSelectedPart:
+		case LDrawColorFilterLimit:
 			break;
 		case LDrawColorFilterSolid:
 			materialFormat    = @"(%K == %@) AND (%K == 1.0)";
@@ -197,6 +207,24 @@
 			break;
 	}
 
+	if (allowedColorCodes != nil)
+	{
+		NSString *allowedFormat = @"(%K IN %@)";
+		NSArray  *allowedArgs   = @[NSStringFromSelector(@selector(colorCode)), allowedColorCodes];
+
+		// Kept in the material clause, so the join below covers it.
+		if (materialFormat)
+		{
+			materialFormat    = [NSString stringWithFormat:@"(%@) AND %@", materialFormat, allowedFormat];
+			materialArguments = [materialArguments arrayByAddingObjectsFromArray:allowedArgs];
+		}
+		else
+		{
+			materialFormat    = allowedFormat;
+			materialArguments = allowedArgs;
+		}
+	}
+
 	if (keywordFormat || materialFormat)
 	{
 		predicateFormat    = [NSMutableString string];
@@ -212,7 +240,7 @@
 	if (materialFormat)
 	{
 		if ([predicateFormat length])
-			[predicateFormat appendString:@"AND "];
+			[predicateFormat appendString:@" AND "];
 
 		[predicateFormat appendFormat:@"(%@)", materialFormat];
 		[predicateArguments addObjectsFromArray:materialArguments];
@@ -224,6 +252,175 @@
 	}
 
 	return searchPredicate;
+}
+
+
+// MARK: - PARTS LIMIT -
+
+
+//---------- partNamesInSelection: -----------------------------------[static]--
+//
+// Purpose:		The names of the parts in a selection, in order. Other
+//				directives are skipped.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSString *> *)partNamesInSelection:(NSArray *)selection
+{
+	NSMutableArray *names = [NSMutableArray array];
+
+	for (id object in selection)
+	{
+		if ([object isKindOfClass:[LDrawPart class]] && [object displayName] != nil)
+			[names addObject:[object displayName]];
+	}
+	return names;
+}
+
+
+//---------- limitPartNamesForSelectedPartNames:hasSelection:browserPartName: --
+//
+// Purpose:		The parts the colors are narrowed to: the selection's, or the
+//				Part Browser's part when nothing is selected.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSString *> *)limitPartNamesForSelectedPartNames:(NSArray<NSString *> *)selectedPartNames
+											   hasSelection:(BOOL)hasSelection
+											browserPartName:(NSString *)browserPartName
+{
+	if (hasSelection)
+		return selectedPartNames;
+	return (browserPartName != nil) ? @[browserPartName] : @[];
+}
+
+
+//---------- allowedColorCodesForPartNames:table: --------------------[static]--
+//
+// Purpose:		The colors every part may take: those all of their lists share.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSNumber *> *)allowedColorCodesForPartNames:(NSArray<NSString *> *)partNames
+												 table:(LDrawPartLimitTable *)table
+{
+	NSMutableSet *allowed = nil;
+
+	// A selection often holds many copies of one part.
+	for (NSString *partName in [NSOrderedSet orderedSetWithArray:partNames])
+	{
+		NSArray *codes = [table everyColorCodeForPartNamed:partName];
+
+		if ([codes count] == 0)
+			continue;
+		if (allowed == nil)
+			allowed = [NSMutableSet setWithArray:codes];
+		else
+			[allowed intersectSet:[NSSet setWithArray:codes]];
+	}
+
+	return [[allowed allObjects] sortedArrayUsingSelector:@selector(compare:)];
+}
+
+
+//---------- canSelectColorCode:allowedColorCodes:warnsOnly: ---------[static]--
+//
+// Purpose:		Whether the user may pick the color under the limit.
+//
+//------------------------------------------------------------------------------
++ (BOOL)canSelectColorCode:(LDrawColorT)colorCode
+		 allowedColorCodes:(NSArray<NSNumber *> *)allowedColorCodes
+				 warnsOnly:(BOOL)warnsOnly
+{
+	if (allowedColorCodes == nil || warnsOnly || colorCode == LDrawCurrentColor)
+		return YES;
+	return [allowedColorCodes containsObject:@(colorCode)];
+}
+
+
+//---------- footerForPartNames:table: -------------------------------[static]--
+//
+// Purpose:		How many colors the parts may take, and which parts: one part
+//				by name and number, or several by count.
+//
+//------------------------------------------------------------------------------
++ (NSString *)footerForPartNames:(NSArray<NSString *> *)partNames table:(LDrawPartLimitTable *)table
+{
+	NSArray			*allowed	= [self allowedColorCodesForPartNames:partNames table:table];
+	NSMutableSet	*narrowing	= [NSMutableSet set];
+	NSString		*parts		= nil;
+	NSString		*key		= nil;
+
+	if (allowed == nil)
+		return nil;
+
+	for (NSString *name in partNames)
+	{
+		if ([[table everyColorCodeForPartNamed:name] count] > 0)
+			[narrowing addObject:name];
+	}
+
+	if ([narrowing count] == 1)
+	{
+		NSString *partName	= [narrowing anyObject];
+		NSString *title		= [[LDrawPartLibrary sharedPartLibraryIfRegistered] descriptionForPartName:partName];
+
+		parts = [NSString stringWithFormat:@"%@ (%@)", title ?: partName, [partName stringByDeletingPathExtension]];
+	}
+	else
+	{
+		parts = [NSString stringWithFormat:[LDrawLocalization stringForKey:@"%lu parts"],
+				 (unsigned long)[narrowing count]];
+	}
+
+	key = ([allowed count] == 1) ? @"%lu color for %@" : @"%lu colors for %@";
+	return [NSString stringWithFormat:[LDrawLocalization stringForKey:key], (unsigned long)[allowed count], parts];
+}
+
+
+//---------- limitFilterTitleForLimit:store: -------------------------[static]--
+//
+// Purpose:		The title of the filter for every color the limit allows.
+//
+//------------------------------------------------------------------------------
++ (NSString *)limitFilterTitleForLimit:(LDrawPartLimit *)limit store:(LDrawInventoryStore *)store
+{
+	if (limit.kind == LDrawPartLimitKindAvailableNow)
+		return [LDrawLocalization stringForKey:@"Made Now"];
+	return [NSString stringWithFormat:[LDrawLocalization stringForKey:@"In %@"],
+			[LDrawPartLimitPresentation titleForLimit:limit store:store]];
+}
+
+
+//---------- randomColorTestForTable: --------------------------------[static]--
+//
+// Purpose:		A part takes only colors it may be picked in; anything else
+//				takes any color. Many parts share a name, so each answer is
+//				kept.
+//
+//------------------------------------------------------------------------------
++ (BOOL (^)(id, LDrawColor *))randomColorTestForTable:(LDrawPartLimitTable *)table
+{
+	NSMutableDictionary *answers = [NSMutableDictionary dictionary];	// allowed, by part and color
+
+	if (table == nil || table.limit.warnsOnly)
+		return nil;
+
+	return ^BOOL(id directive, LDrawColor *color) {
+		NSString	*name	= nil;
+		NSString	*key	= nil;
+		NSNumber	*answer	= nil;
+
+		if ([directive isKindOfClass:[LDrawPart class]] == NO)
+			return YES;
+
+		name	= [(LDrawPart *)directive displayName];
+		key		= [NSString stringWithFormat:@"%@\n%d", name, (int)[color colorCode]];
+		answer	= answers[key];
+		if (answer == nil)
+		{
+			answer			= @([table allowsPickingColorCode:[color colorCode] forPartNamed:name]);
+			answers[key]	= answer;
+		}
+		return [answer boolValue];
+	};
 }
 
 @end

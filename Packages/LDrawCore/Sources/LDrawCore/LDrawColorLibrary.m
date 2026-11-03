@@ -145,6 +145,26 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 } // end LDrawColors
 
 
+//========== colorCodesWithMaterial: ===========================================
+//
+// Purpose:		Returns the codes of the registered colors of a material, such
+//				as rubber.
+//
+//==============================================================================
+- (NSSet<NSNumber *> *)colorCodesWithMaterial:(LDrawColorMaterialT)material
+{
+	NSMutableSet *codes = [NSMutableSet set];
+
+	for (LDrawColor *color in [self colors])
+	{
+		if ([color material] == material)
+			[codes addObject:@([color colorCode])];
+	}
+	return codes;
+
+} // end colorCodesWithMaterial:
+
+
 //========== colorForCode: =====================================================
 //
 // Purpose:		Returns the LDrawColor object representing colorCode, or nil if 

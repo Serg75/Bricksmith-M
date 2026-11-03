@@ -85,6 +85,7 @@ void					LDrawDLDraw(
 									const float					transform[16],
 									BOOL						is_wire_frame,
 									int							ghost_id,
-									float						ghost_alpha);
+									float						ghost_alpha,
+									const float					mark[4]);
 
 #endif /* LDrawDisplayList_h */

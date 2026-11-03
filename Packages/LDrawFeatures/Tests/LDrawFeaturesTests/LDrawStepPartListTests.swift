@@ -282,6 +282,22 @@ extension StepPartListStaticSettings {
             #expect(result.first { $0.partName == "2429c01.dat" }?.quantity == 1)
         }
 
+        @Test("A SUB naming a submodel in quotes, as a name with spaces needs, lists that submodel")
+        func quotedSubstituteNamingASubmodel() throws {
+            let file = LDrawFile()
+            let main = submodel("main.ldr", in: file)
+            let bumper = submodel("front bumper.ldr", in: file, description: "front bumper")
+
+            addStep(to: bumper, [part("3001.dat")])
+
+            let step = addStep(to: main, [substitute("\"Front Bumper.ldr\"", 4), part("3001.dat"), ignoreEnd()])
+
+            LDrawStepPartList.setIncludesSubmodels(false)
+            let listed = try #require(LDrawStepPartList.entries(forStep: step).first)
+            #expect(listed.isSubmodel == true)
+            #expect(listed.displayTitle == "front bumper")
+        }
+
         @Test("A SUB naming a submodel of the file lists that submodel as a part")
         func substituteNamingASubmodelListsIt() throws {
             let file = LDrawFile()

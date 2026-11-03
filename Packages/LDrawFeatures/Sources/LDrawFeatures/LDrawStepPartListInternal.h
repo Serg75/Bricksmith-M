@@ -3,7 +3,8 @@
 //  File:       LDrawStepPartListInternal.h
 //  Package:    LDrawFeatures
 //
-//  Purpose:    The parts of the collector that the callout code shares.
+//  Purpose:    The parts of the collector that the callouts and the part usage
+//              share.
 //
 //  Created by Sergey Slobodenyuk on 2026-10-03.
 //
@@ -15,6 +16,7 @@
 @class LDrawDirective;
 @class LDrawPart;
 @class LDrawPartLibrary;
+@protocol LDrawColorable;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -57,8 +59,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// no model or no catalog.
 + (nullable NSData *) outlinePointsOfModel:(nullable LDrawModel *)submodel;
 
-/// A part's color, or `inheritedColor` when the part is in the main color.
-+ (nullable LDrawColor *) colorOfPart:(LDrawPart *)part inheriting:(nullable LDrawColor *)inheritedColor;
+/// Whether a reference names a primitive or a subpart rather than a part.
++ (BOOL) isPrimitiveOrSubpartName:(NSString *)partName library:(nullable LDrawPartLibrary *)library;
+
+/// The color of a part or an LSynth part, or `inheritedColor` when it is in the
+/// main color.
++ (nullable LDrawColor *) colorOfPart:(id<LDrawColorable>)part inheriting:(nullable LDrawColor *)inheritedColor;
 
 /// A one-instance row that shows a whole submodel as one part, with its
 /// outline. Listed whatever the submodel preference says.

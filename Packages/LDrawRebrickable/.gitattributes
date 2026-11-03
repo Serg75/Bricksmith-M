@@ -1,0 +1,2 @@
+# Test fixtures keep their bytes, such as the CR LF line ends a test reads.
+Tests/LDrawRebrickableTests/Fixtures/** -text

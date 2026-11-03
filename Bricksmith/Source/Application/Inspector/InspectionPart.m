@@ -16,10 +16,13 @@
 #import <LDrawCore/LDrawPartLibrary.h>
 
 #import <LDrawEditing/LDrawInspection.h>
+#import <LDrawFeatures/LDrawPartLimitPresentation.h>
 
 #import "LDrawApplication.h"
 #import "LDrawColorWell.h"
 #import "LDrawDocument.h"
+#import "PartsLimitController.h"
+#import "PartsLimitManager.h"
 
 @interface InspectionPart ()
 
@@ -72,6 +75,12 @@
     } else {
 		NSLog(@"Couldn't load InspectorPart.nib");
     }
+
+	// The check runs after the edit, so the limit line is updated when it ends.
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsLimitDidCheck:)
+												 name:PartsLimitDidCheckNotification
+											   object:nil];
 	
     return self;
 	
@@ -133,8 +142,7 @@
 	Tuple3				 shear				= ZeroPoint3;
 	
 	
-	[_partDescriptionField setStringValue:description];
-	[_partDescriptionField setToolTip:description]; //in case it overflows the field.
+	[self showDescription:description];
 	[_partNameField setStringValue:[representedObject displayName]];
 	
 	[_colorWell setLDrawColor:[representedObject LDrawColor]];
@@ -340,6 +348,98 @@
 	}
 		
 }//end shearEndedEditing:
+
+
+#pragma mark -
+#pragma mark UTILITIES
+#pragma mark -
+
+//========== showDescription: ==================================================
+//
+// Purpose:		Shows the part's description, and on a second line how the part
+//				breaks the parts limit. The description then keeps to one line,
+//				since the field holds two.
+//
+//==============================================================================
+- (void) showDescription:(NSString *)description
+{
+	LDrawDocument				*document	= [self documentOfObject];
+	LDrawPart					*part		= [self object];
+	NSString					*limitLine	= [[document partsLimitController] limitLineForPart:part];
+	NSFont						*font		= [_partDescriptionField font];
+	NSMutableParagraphStyle		*oneLine	= [[NSMutableParagraphStyle alloc] init];
+	NSDictionary				*plain		= nil;
+	NSDictionary				*marked		= nil;
+	NSColor						*color		= nil;
+	NSMutableAttributedString	*text		= nil;
+
+	if(limitLine == nil)
+	{
+		[_partDescriptionField setStringValue:description];
+		[_partDescriptionField setToolTip:description]; //in case it overflows the field.
+		return;
+	}
+
+	// The color of the part's badge in File Contents.
+	color = [PartsLimitManager colorForBadgeTint:
+			 [LDrawPartLimitPresentation badgeTintForStatus:[part limitStatus]]];
+
+	[oneLine setLineBreakMode:NSLineBreakByTruncatingTail];
+	plain	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine};
+	marked	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine,
+				NSForegroundColorAttributeName: color};
+	text	= [[NSMutableAttributedString alloc] initWithString:[description stringByAppendingString:@"\n"]
+													 attributes:plain];
+
+	[text appendAttributedString:[[NSAttributedString alloc] initWithString:limitLine attributes:marked]];
+
+	// Without this, selecting the text redraws it without its colors.
+	[_partDescriptionField setAllowsEditingTextAttributes:YES];
+	[_partDescriptionField setAttributedStringValue:text];
+	[_partDescriptionField setToolTip:[NSString stringWithFormat:@"%@\n%@", description, limitLine]];
+
+}//end showDescription:
+
+
+//========== documentOfObject ==================================================
+//
+// Purpose:		The document that holds the inspected part.
+//
+// Notes:		Not the current document: while another app is active or a
+//				panel is key, there may be none.
+//
+//==============================================================================
+- (LDrawDocument *) documentOfObject
+{
+	LDrawFile *file = [[self object] enclosingFile];
+
+	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
+	{
+		if([document isKindOfClass:[LDrawDocument class]] && [(LDrawDocument *)document documentContents] == file)
+			return (LDrawDocument *)document;
+	}
+	return nil;
+
+}//end documentOfObject
+
+
+#pragma mark -
+#pragma mark NOTIFICATIONS
+#pragma mark -
+
+//========== partsLimitDidCheck: ===============================================
+//
+// Purpose:		Shows how the part stands after the latest check. Only the
+//				description changes, so fields being edited keep their text.
+//
+//==============================================================================
+- (void) partsLimitDidCheck:(NSNotification *)notification
+{
+	LDrawPart *part = [self object];
+
+	if([part isKindOfClass:[LDrawPart class]])
+		[self showDescription:[[LDrawPartLibrary sharedPartLibrary] descriptionForPart:part]];
+}
 
 
 #pragma mark -

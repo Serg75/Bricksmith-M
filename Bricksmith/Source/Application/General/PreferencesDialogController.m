@@ -19,6 +19,7 @@
 //==============================================================================
 #import "PreferencesDialogController.h"
 
+#import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawCore/LDrawGroupable.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawLSynthConfigSource.h>
@@ -33,10 +34,12 @@
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "LDrawApplication.h"
 #import "LDrawHostChrome.h"
 #import "PartLibraryController.h"
+#import "PartsLimitManager.h"
 #import "PreferencesForm.h"
 #import "UserDefaultsCategory.h"
 
@@ -45,6 +48,7 @@
 static NSString * const PreferencesPaneGeneral	= @"PreferencesTabGeneral";
 static NSString * const PreferencesPaneMouse	= @"PreferencesTabMouse";
 static NSString * const PreferencesPaneSteps	= @"PreferencesTabSteps";
+static NSString * const PreferencesPaneParts	= @"PreferencesTabParts";
 static NSString * const PreferencesPaneColors	= @"PreferencesTabStyles";
 static NSString * const PreferencesPaneLSynth	= @"PreferencesTabLSynth";
 
@@ -96,6 +100,7 @@ static NSString *SymbolNameForPane(NSString *identifier)
 		PreferencesPaneGeneral	: @"gearshape",
 		PreferencesPaneMouse	: @"computermouse",
 		PreferencesPaneSteps	: @"square.stack.3d.up",
+		PreferencesPaneParts	: @"shippingbox",
 		PreferencesPaneColors	: @"paintpalette",
 		PreferencesPaneLSynth	: @"scribble.variable",
 	};
@@ -228,6 +233,20 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 }//end RotateStyleNote
 
 
+//========== MarkColorComponents ===============================================
+//
+// Purpose:		The sRGB red, green and blue of a color well's color, as the
+//				mark color keys keep them.
+//
+//==============================================================================
+static NSArray<NSNumber *> *MarkColorComponents(NSColor *color)
+{
+	NSColor *rgb = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: color;
+
+	return @[@([rgb redComponent]), @([rgb greenComponent]), @([rgb blueComponent])];
+}
+
+
 @interface PreferencesDialogController () <NSWindowDelegate, NSToolbarDelegate,
 										   NSTableViewDataSource, NSTableViewDelegate,
 										   NSTextFieldDelegate>
@@ -269,6 +288,17 @@ static NSString *RotateStyleNote(LDrawRotateStyle style)
 	NSSwitch		*stepPageBoldOutlinesSwitch;
 	NSSwitch		*stepCalloutsAutomaticSwitch;
 	NSTextField		*stepPartListOrientationsField;
+
+	// Parts Pane
+	NSPopUpButton	*partsLimitBrowserPopUp;
+	NSSwitch		*partsLimitMarksSwitch;
+	NSPopUpButton	*partsLimitMarkStylePopUp;
+	NSColorWell		*partsLimitNotAvailableWell;
+	NSColorWell		*partsLimitTooManyWell;
+	NSSwitch		*partsLimitDimsSwitch;
+	NSTextField		*partsDataNote;
+	NSButton		*partsDataButton;
+	NSPopUpButton	*partsDataIntervalPopUp;
 
 	// Colors Pane
 	NSColorWell		*backgroundColorWell;
@@ -337,6 +367,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	paneIdentifiers = @[PreferencesPaneGeneral,
 						PreferencesPaneMouse,
 						PreferencesPaneSteps,
+						PreferencesPaneParts,
 						PreferencesPaneColors,
 						PreferencesPaneLSynth];
 
@@ -344,6 +375,7 @@ PreferencesDialogController *preferencesDialog = nil;
 		PreferencesPaneGeneral	: [self makeGeneralPane],
 		PreferencesPaneMouse	: [self makeMousePane],
 		PreferencesPaneSteps	: [self makeStepsPane],
+		PreferencesPaneParts	: [self makePartsPane],
 		PreferencesPaneColors	: [self makeColorsPane],
 		PreferencesPaneLSynth	: [self makeLSynthPane],
 	};
@@ -361,6 +393,16 @@ PreferencesDialogController *preferencesDialog = nil;
 	[[NSNotificationCenter defaultCenter] addObserver:self
 											 selector:@selector(stepPartListDidChange:)
 												 name:LDrawStepPartListDidChangeNotification
+											   object:nil];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsLimitMarksDidChange:)
+												 name:PartsLimitMarksDidChangeNotification
+											   object:nil];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(partsDataUpdateDidEnd:)
+												 name:PartsDataUpdateDidEndNotification
 											   object:nil];
 
 	return self;
@@ -762,6 +804,129 @@ PreferencesDialogController *preferencesDialog = nil;
 }//end makeStepsPane
 
 
+//========== makePartsPane =====================================================
+//
+// Purpose:		How the Part Browser lists the parts the limit does not allow,
+//				the inventories, how the model's parts are marked, and the
+//				Rebrickable data.
+//
+//==============================================================================
+- (NSScrollView *) makePartsPane
+{
+	NSString	*limitNote		= NSLocalizedString(@"Choose the limit in the Parts menu of a model's window, or in "
+													@"View > Parts Limit. Only the parts it allows show in the Part "
+													@"Browser, and the model's other parts are marked.", nil);
+	NSString	*dataNote		= NSLocalizedString(@"Data from Rebrickable.com: which sets were made when, and the "
+													@"parts of each. It is kept in Application Support.", nil);
+	NSButton	*manageButton	= nil;
+	NSView		*browserRow		= nil;
+	NSView		*manageRow		= nil;
+	NSView		*dataRow		= nil;
+	NSView		*intervalRow	= nil;
+	NSView		*limitSection	= nil;
+	NSView		*marksSection	= nil;
+	NSView		*dataSection	= nil;
+	NSTextField	*dataNoteField	= nil;
+
+	manageButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Manage Inventories…", nil)
+											 target:[PartsLimitManager sharedManager]
+											 action:@selector(showInventories:)];
+	partsDataButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Update Now", nil)
+												target:self
+												action:@selector(updatePartsData:)];
+
+	partsDataIntervalPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Never", nil),
+																NSLocalizedString(@"Every week", nil),
+																NSLocalizedString(@"Every month", nil)]
+														 tags:@[@0, @7, @30]
+													   target:self
+													   action:@selector(partsDataIntervalChanged:)];
+
+	partsLimitBrowserPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Hide them", nil),
+																NSLocalizedString(@"Show them dimmed", nil)]
+														 tags:@[@0, @1]
+													   target:self
+													   action:@selector(partsLimitBrowserChanged:)];
+
+	browserRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts not allowed", nil)
+										   note:NSLocalizedString(@"How the Part Browser lists them.", nil)
+										control:partsLimitBrowserPopUp
+									  noteField:NULL];
+	manageRow	= [PreferencesForm rowWithContent:[PreferencesForm controlGroup:@[manageButton]]];
+	dataRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts data", nil)
+										   note:nil
+										control:partsDataButton
+									  noteField:&dataNoteField];
+	intervalRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Update automatically", nil)
+										control:partsDataIntervalPopUp];
+
+	partsDataNote = dataNoteField;
+
+	limitSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Parts Limit", nil)
+												rows:@[browserRow, manageRow]
+											  footer:limitNote];
+	marksSection = [self makePartsMarksSection];
+	dataSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Rebrickable", nil)
+											   rows:@[dataRow, intervalRow]
+											 footer:dataNote];
+
+	return [PreferencesForm paneWithSections:@[limitSection, marksSection, dataSection]];
+
+}//end makePartsPane
+
+
+//========== makePartsMarksSection =============================================
+//
+// Purpose:		How the parts that break the limit are marked in the model.
+//
+//==============================================================================
+- (NSView *) makePartsMarksSection
+{
+	NSString	*marksNote	= NSLocalizedString(@"Parts not available or not made in their color are marked in "
+												@"one color, parts past what the inventory holds in the other. "
+												@"Parts with no data are not marked.", nil);
+	NSString	*dimNote	= NSLocalizedString(@"Draws every other part see-through, so the marked ones stand "
+												@"out in a big model.", nil);
+	SEL			 changed	= @selector(partsLimitMarksChanged:);
+	NSView		*marksRow	= nil;
+	NSView		*styleRow	= nil;
+	NSView		*notRow		= nil;
+	NSView		*manyRow	= nil;
+	NSView		*dimRow		= nil;
+
+	partsLimitMarksSwitch		= [PreferencesForm switchWithTarget:self action:changed];
+	partsLimitDimsSwitch		= [PreferencesForm switchWithTarget:self action:changed];
+	partsLimitNotAvailableWell	= [PreferencesForm colorWellWithTarget:self action:changed];
+	partsLimitTooManyWell		= [PreferencesForm colorWellWithTarget:self action:changed];
+	partsLimitMarkStylePopUp	= [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Stripes", nil),
+																	 NSLocalizedString(@"Tint", nil),
+																	 NSLocalizedString(@"Outline", nil)]
+															  tags:@[@(LDrawRenderMarkStripes),
+																	 @(LDrawRenderMarkTint),
+																	 @(LDrawRenderMarkOutline)]
+															target:self
+															action:changed];
+
+	marksRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Mark parts that break the limit", nil)
+										control:partsLimitMarksSwitch];
+	styleRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Highlight with", nil)
+										control:partsLimitMarkStylePopUp];
+	notRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Not available", nil)
+										control:partsLimitNotAvailableWell];
+	manyRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Too many", nil)
+										control:partsLimitTooManyWell];
+	dimRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Dim other parts", nil)
+										   note:dimNote
+										control:partsLimitDimsSwitch
+									  noteField:NULL];
+
+	return [PreferencesForm sectionWithTitle:NSLocalizedString(@"Marks", nil)
+										rows:@[marksRow, styleRow, notRow, manyRow, dimRow]
+									  footer:marksNote];
+
+}//end makePartsMarksSection
+
+
 //========== makeColorsPane ====================================================
 //
 // Purpose:		The view background and the file contents colors.
@@ -967,6 +1132,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self setGeneralPaneValues];
 	[self setMousePaneValues];
 	[self setStepsPaneValues];
+	[self setPartsPaneValues];
 	[self setColorsPaneValues];
 	[self setLSynthPaneValues];
 
@@ -1066,6 +1232,72 @@ PreferencesDialogController *preferencesDialog = nil;
 	[self showStepPartListOrientations];
 
 }//end setStepsPaneValues
+
+
+//========== setPartsPaneValues ================================================
+//
+// Purpose:		Shows the parts pane's settings, the data's age and the update
+//				interval.
+//
+//==============================================================================
+- (void) setPartsPaneValues
+{
+	NSUserDefaults		*defaults	= [NSUserDefaults standardUserDefaults];
+	PartsLimitManager	*manager	= [PartsLimitManager sharedManager];
+	NSDate				*dataDate	= [manager dataDate];
+	NSInteger			 interval	= [defaults integerForKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
+	NSString			*note		= nil;
+
+	if(dataDate != nil)
+	{
+		NSString *date = [NSDateFormatter localizedStringFromDate:dataDate
+														dateStyle:NSDateFormatterMediumStyle
+														timeStyle:NSDateFormatterShortStyle];
+		note = [NSString stringWithFormat:NSLocalizedString(@"Checked %@", nil), date];
+	}
+	else
+		note = NSLocalizedString(@"Not downloaded yet", nil);
+
+	[partsDataNote setStringValue:note];
+	[partsLimitBrowserPopUp selectItemWithTag:[defaults boolForKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY] ? 1 : 0];
+	[self setPartsMarksValues];
+	[partsDataButton setTitle:(dataDate != nil) ? NSLocalizedString(@"Update Now", nil)
+												: NSLocalizedString(@"Download", nil)];
+	[partsDataButton setEnabled:([[manager updater] isUpdating] == NO)];
+
+	// A value saved by hand that the menu lacks shows as the next longer choice,
+	// or as Every month.
+	if([partsDataIntervalPopUp selectItemWithTag:interval] == NO)
+		[partsDataIntervalPopUp selectItemWithTag:(interval <= 0) ? 0 : (interval <= 7) ? 7 : 30];
+
+}//end setPartsPaneValues
+
+
+//========== setPartsMarksValues ===============================================
+//
+// Purpose:		Shows the marks' settings. The other marks controls work only
+//				while the marks are on.
+//
+//==============================================================================
+- (void) setPartsMarksValues
+{
+	NSUserDefaults	*defaults		= [NSUserDefaults standardUserDefaults];
+	BOOL			 marks			= [defaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+	BOOL			 dims			= [defaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
+	NSColor			*notAvailable	= [PartsLimitManager markColorForKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	NSColor			*tooMany		= [PartsLimitManager markColorForKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
+
+	[partsLimitMarksSwitch setState:(marks ? NSControlStateValueOn : NSControlStateValueOff)];
+	[partsLimitDimsSwitch setState:(dims ? NSControlStateValueOn : NSControlStateValueOff)];
+	[partsLimitMarkStylePopUp selectItemWithTag:[LDrawPreferences partsLimitMarkStyleInDefaults:defaults]];
+	[partsLimitNotAvailableWell setColor:notAvailable];
+	[partsLimitTooManyWell setColor:tooMany];
+
+	for(NSControl *control in @[partsLimitMarkStylePopUp, partsLimitNotAvailableWell, partsLimitTooManyWell,
+								partsLimitDimsSwitch])
+		[control setEnabled:marks];
+
+}//end setPartsMarksValues
 
 
 //========== setColorsPaneValues ===============================================
@@ -1654,6 +1886,96 @@ PreferencesDialogController *preferencesDialog = nil;
 														object:nil];
 
 }//end postStepPartListDidChange
+
+
+#pragma mark -
+#pragma mark Parts Pane
+
+//========== partsLimitBrowserChanged: =========================================
+//
+// Purpose:		Whether the Part Browser hides the parts the limit does not
+//				allow, or lists them dimmed.
+//
+//==============================================================================
+- (IBAction) partsLimitBrowserChanged:(id)sender
+{
+	[[NSUserDefaults standardUserDefaults] setBool:([[sender selectedItem] tag] == 1)
+											forKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartsLimitBrowserSettingDidChangeNotification
+														object:nil];
+}
+
+
+//========== partsLimitMarksChanged: ===========================================
+//
+// Purpose:		Keeps the marks' settings and redraws the models with them.
+//
+//==============================================================================
+- (IBAction) partsLimitMarksChanged:(id)sender
+{
+	NSUserDefaults	*defaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 marks		= ([partsLimitMarksSwitch state] == NSControlStateValueOn);
+	BOOL			 dims		= ([partsLimitDimsSwitch state] == NSControlStateValueOn);
+	NSInteger		 style		= [[partsLimitMarkStylePopUp selectedItem] tag];
+
+	[defaults setBool:marks forKey:PARTS_LIMIT_MARKS_KEY];
+	[defaults setBool:dims forKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
+	[defaults setInteger:style forKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	[defaults setObject:MarkColorComponents([partsLimitNotAvailableWell color])
+				 forKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	[defaults setObject:MarkColorComponents([partsLimitTooManyWell color]) forKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
+
+	[[PartsLimitManager sharedManager] applyMarkSettings];
+	[self setPartsMarksValues];
+
+}//end partsLimitMarksChanged:
+
+
+//========== partsLimitMarksDidChange: =========================================
+//
+// Purpose:		View > Parts Limit turned the marks on or off.
+//
+//==============================================================================
+- (void) partsLimitMarksDidChange:(NSNotification *)notification
+{
+	[self setPartsMarksValues];
+}
+
+
+//========== updatePartsData: ==================================================
+//
+// Purpose:		Downloads what changed since the last check, even within a day.
+//
+//==============================================================================
+- (IBAction) updatePartsData:(id)sender
+{
+	[[PartsLimitManager sharedManager] updateDataForcing:YES window:preferencesWindow completion:nil];
+
+	// The button stays off while the update runs. Its end notification turns
+	// the button back on.
+	[self setPartsPaneValues];
+
+}//end updatePartsData:
+
+
+//========== partsDataIntervalChanged: =========================================
+//==============================================================================
+- (IBAction) partsDataIntervalChanged:(id)sender
+{
+	[[NSUserDefaults standardUserDefaults] setInteger:[[sender selectedItem] tag]
+											   forKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
+}
+
+
+//========== partsDataUpdateDidEnd: ============================================
+//
+// Purpose:		Shows the data's new age, and turns the button back on.
+//
+//==============================================================================
+- (void) partsDataUpdateDidEnd:(NSNotification *)notification
+{
+	[self setPartsPaneValues];
+}
 
 
 #pragma mark -

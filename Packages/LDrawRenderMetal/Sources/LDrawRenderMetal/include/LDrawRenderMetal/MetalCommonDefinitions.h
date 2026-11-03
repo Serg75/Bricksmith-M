@@ -23,7 +23,7 @@
 // MARK: - Constants -
 
 // The number of float values in InstanceInput struct
-#define InstanceInputLength 24
+#define InstanceInputLength 28
 // The size in bytes of InstanceInput struct
 #define InstanceInputStructSize (InstanceInputLength * sizeof(float))
 
@@ -72,6 +72,13 @@ typedef struct VertexUniform {
 	matrix_float3x3 normal_matrix;
 } VertexUniform;
 
+// How a mark draws a part, in the w of InstanceInput.mark. The values match
+// LDrawRenderMarkStyle, which this header cannot include.
+#define MarkStyleStripes		1
+#define MarkStyleStripesBack	2
+#define MarkStyleTint			3
+#define MarkStyleOutline		4
+
 // Instance data shared between CPU and GPU for hardware instancing
 typedef struct InstanceInput {
 	vector_float4	transform_x;
@@ -80,6 +87,7 @@ typedef struct InstanceInput {
 	vector_float4	transform_w;
 	vector_float4	color_current;
 	vector_float4	color_complement;
+	vector_float4	mark;				// RGB and a MarkStyle; all zero for no mark
 } InstanceInput;
 
 // Texture plane generation data for automatic texture coordinate generation

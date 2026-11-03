@@ -36,6 +36,11 @@ extern const CGFloat PreferencesFormPaneWidth;
 + (NSView *) rowWithContent:(NSView *)content;
 + (NSStackView *) controlGroup:(NSArray<NSView *> *)views;
 
+// A view that holds another with margins around it, for a window or popover
+// sized to fit. Use it instead of a stack view's edge insets: once the stack
+// holds two or more views, its fitting size leaves out the side insets.
++ (NSView *) containerForView:(NSView *)view margins:(NSEdgeInsets)margins;
+
 // Controls
 + (NSSwitch *) switchWithTarget:(id)target action:(SEL)action;
 + (NSPopUpButton *) popUpWithTitles:(NSArray<NSString *> *)titles
@@ -54,6 +59,11 @@ extern const CGFloat PreferencesFormPaneWidth;
 + (NSColorWell *) colorWellWithTarget:(id)target action:(SEL)action;
 + (NSTextField *) unitLabelWithString:(NSString *)text;
 + (NSView *) chooserAccessoryViewWithText:(NSString *)text;
+
+// Tables
+// A table cell holding the field, centered from top to bottom. A table
+// stretches a bare field to the row's height, which puts its text at the top.
++ (NSTableCellView *) tableCellWithField:(NSTextField *)field;
 
 @end
 

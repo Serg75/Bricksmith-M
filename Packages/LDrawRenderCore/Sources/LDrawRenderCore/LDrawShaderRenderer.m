@@ -347,6 +347,48 @@ static void set_color4fv(float * c, float storage[4])
 } // end popAlphaModulation
 
 
+//========== markNow =============================================================
+//
+// Purpose: the innermost mark pushed, or all zeros when none is.
+//
+//================================================================================
+- (const float *)markNow
+{
+	static const float noMark[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	return (mark_stack_top == 0) ? noMark : mark_stack + (mark_stack_top - 1) * 4;
+
+} // end markNow
+
+
+//========== pushMark: ===========================================================
+//
+// Purpose: mark everything drawn from here down, until the matching pop.
+//
+//================================================================================
+- (void)pushMark:(const float *)mark
+{
+	assert(mark_stack_top < COLOR_STACK_DEPTH);
+
+	memcpy(mark_stack + mark_stack_top * 4, mark, sizeof(float) * 4);
+	++mark_stack_top;
+
+} // end pushMark:
+
+
+//========== popMark =============================================================
+//
+// Purpose: undo the innermost outstanding mark.
+//
+//================================================================================
+- (void)popMark
+{
+	assert(mark_stack_top > 0);
+	--mark_stack_top;
+
+} // end popMark
+
+
 //========== pushTexture: ========================================================
 //
 // Purpose: change the current texture to a new one, specified by a spec with
@@ -573,7 +615,8 @@ static void set_color4fv(float * c, float storage[4])
 		transform_now,
 		wire_frame_count > 0,
 		[self ghostIdNow],
-		[self alphaModulationNow]);
+		[self alphaModulationNow],
+		[self markNow]);
 
 } // end drawDL:
 

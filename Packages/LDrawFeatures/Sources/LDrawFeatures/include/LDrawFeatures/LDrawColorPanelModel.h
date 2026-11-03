@@ -15,6 +15,10 @@
 
 #import <LDrawCore/LDrawColor.h>
 
+@class LDrawInventoryStore;
+@class LDrawPartLimit;
+@class LDrawPartLimitTable;
+
 NS_ASSUME_NONNULL_BEGIN
 
 /// Color-panel material popup tags (1-based filter kinds after All = 0).
@@ -26,7 +30,13 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 	LDrawColorFilterPearlescent   = 4,
 	LDrawColorFilterRubber        = 5,
 	LDrawColorFilterMetal         = 6,
-	LDrawColorFilterOther         = 7
+	LDrawColorFilterOther         = 7,
+
+	/// The colors the parts limit allows the selected parts in.
+	LDrawColorFilterSelectedPart  = 8,
+
+	/// Every color the parts limit allows some part in.
+	LDrawColorFilterLimit         = 9
 };
 
 
@@ -49,8 +59,12 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 /// If the search string parses as an integer, it matches colorCode exactly;
 /// otherwise localizedName CONTAINS[cd]. The host still applies the predicate
 /// to NSArrayController.
+///
+/// Keeps only allowedColorCodes when they are given. The two limit filters
+/// match any material.
 + (nullable NSPredicate *)predicateForSearchString:(nullable NSString *)searchString
-										  material:(LDrawColorFilter)material;
+										  material:(LDrawColorFilter)material
+								 allowedColorCodes:(nullable NSArray<NSNumber *> *)allowedColorCodes;
 
 /// YES when the filtered list no longer contains the previous selection and
 /// the host should select the first color to avoid an empty selection.
@@ -70,6 +84,45 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 /// Color-bar tooltip: “LDraw {code}\n{localizedName}”.
 + (NSString *)tooltipForColorCode:(LDrawColorT)colorCode
 					localizedName:(NSString *)localizedName;
+
+// MARK: - Parts limit
+
+/// The names of the parts in a selection, in order.
++ (NSArray<NSString *> *)partNamesInSelection:(NSArray *)selection;
+
+/// The parts whose colors the list narrows to: the parts selected, or with
+/// nothing selected, the Part Browser's part. A selection with no part, such
+/// as lines, narrows nothing.
++ (NSArray<NSString *> *)limitPartNamesForSelectedPartNames:(NSArray<NSString *> *)selectedPartNames
+											   hasSelection:(BOOL)hasSelection
+											browserPartName:(nullable NSString *)browserPartName;
+
+/// The colors the limit allows every one of the parts in, lowest code first. A
+/// part the limit knows nothing of, or allows in no color, does not narrow the
+/// list, since no color would make it right. Nil when no part narrows it.
++ (nullable NSArray<NSNumber *> *)allowedColorCodesForPartNames:(NSArray<NSString *> *)partNames
+														  table:(nullable LDrawPartLimitTable *)table;
+
+/// Whether the user may pick the color: always with no list, with Pick Any Color,
+/// and for color 16, which takes the color of what places the part.
++ (BOOL)canSelectColorCode:(LDrawColorT)colorCode
+		 allowedColorCodes:(nullable NSArray<NSNumber *> *)allowedColorCodes
+				 warnsOnly:(BOOL)warnsOnly;
+
+/// Says how many colors the parts may take, such as "14 colors for Brick 2 x 4
+/// (3001)". Only the parts that narrow the colors are named or counted. Nil
+/// when any color goes.
++ (nullable NSString *)footerForPartNames:(NSArray<NSString *> *)partNames
+									table:(nullable LDrawPartLimitTable *)table;
+
+/// The title of the filter for every color the limit allows: Made Now, or In
+/// and the inventory.
++ (NSString *)limitFilterTitleForLimit:(LDrawPartLimit *)limit store:(nullable LDrawInventoryStore *)store;
+
+/// The colors Randomize Colors may give each directive under the table, for
+/// LDrawSelection's allowedColors. Nil, for any color, without a table or when
+/// the limit only warns.
++ (nullable BOOL (^)(id directive, LDrawColor *color))randomColorTestForTable:(nullable LDrawPartLimitTable *)table;
 
 @end
 

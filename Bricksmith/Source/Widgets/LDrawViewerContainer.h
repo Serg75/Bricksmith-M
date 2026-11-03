@@ -29,8 +29,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) BOOL showsScrollbars;
 
 /// The part of the container the 3D view fills: all of it but the scroll bars,
-/// or the placard when there are none.
+/// or the placard when there are none, and the bottom accessory when shown.
 @property (nonatomic, readonly) NSRect contentRect;
+
+/// A view along the bottom edge, as tall as its frame, under the 3D view.
+/// Hiding it gives the room back.
+@property (nonatomic, strong, nullable) NSView *bottomAccessory;
 
 - (void) setVerticalPlacard:(NSView *)placardView;
 - (void) reflectLogicalDocumentRect:(Box2)newDocumentRect visibleRect:(Box2)visibleRect;

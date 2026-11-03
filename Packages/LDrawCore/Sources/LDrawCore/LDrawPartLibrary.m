@@ -278,6 +278,17 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 }
 
 
+//========== partCatalogRecordForPartName: =====================================
+//
+// Purpose:		Returns the catalog's record of the part, or nil.
+//
+//==============================================================================
+- (NSDictionary *)partCatalogRecordForPartName:(NSString *)partName
+{
+	return [[self->partCatalog objectForKey:PARTS_LIST_KEY] objectForKey:partName];
+}
+
+
 //========== favoritePartNames =================================================
 //
 // Purpose:		Returns all the part names the user has bookmarked as his 

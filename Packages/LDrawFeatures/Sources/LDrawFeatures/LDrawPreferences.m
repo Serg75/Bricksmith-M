@@ -13,9 +13,14 @@
 
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
+
+// The factory colors of the parts limit's marks.
+static const float NotAvailableMarkRGB[3]	= { 0.90f, 0.10f, 0.10f };
+static const float TooManyMarkRGB[3]		= { 1.00f, 0.55f, 0.00f };
 
 
 @implementation LDrawPreferences
@@ -64,6 +69,13 @@
 	[initialDefaults setObject:@NO								forKey:STEP_PART_LIST_LPUB_SCALE_KEY]; // an overlay is not a printed page
 	[initialDefaults setObject:@NO								forKey:STEP_PAGE_BOLD_OUTLINES_KEY];
 	[initialDefaults setObject:@NO								forKey:STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY];
+	[initialDefaults setObject:@30								forKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
+	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_BROWSER_SHOWS_ALL_KEY];
+	[initialDefaults setObject:@YES								forKey:PARTS_LIMIT_MARKS_KEY];
+	[initialDefaults setObject:@(LDrawRenderMarkStripes)		forKey:PARTS_LIMIT_MARK_STYLE_KEY];
+	[initialDefaults setObject:[self componentsOfRGB:NotAvailableMarkRGB]	forKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
+	[initialDefaults setObject:[self componentsOfRGB:TooManyMarkRGB]		forKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
+	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
 
 	//
 	// Grid Spacing
@@ -214,6 +226,83 @@
 + (NSString *)documentViewportAutosaveNameAtIndex:(NSUInteger)index
 {
 	return [NSString stringWithFormat:@"fileGraphicView_%ld", (long)index];
+}
+
+
+// MARK: - PARTS LIMIT MARKS -
+
+
+//---------- componentsOfRGB: ----------------------------------------[static]--
+//
+// Purpose:		A color as it is stored in the settings.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSNumber *> *)componentsOfRGB:(const float *)rgb
+{
+	return @[@(rgb[0]), @(rgb[1]), @(rgb[2])];
+}
+
+
+//---------- partsLimitMarkStyleInDefaults: --------------------------[static]--
+//
+// Purpose:		The stored style if the settings offer it, else stripes.
+//
+//------------------------------------------------------------------------------
++ (LDrawRenderMarkStyle)partsLimitMarkStyleInDefaults:(NSUserDefaults *)userDefaults
+{
+	NSInteger style = [userDefaults integerForKey:PARTS_LIMIT_MARK_STYLE_KEY];
+
+	if (style == LDrawRenderMarkTint || style == LDrawRenderMarkOutline)
+		return (LDrawRenderMarkStyle)style;
+	return LDrawRenderMarkStripes;
+}
+
+
+//---------- getPartsLimitMarkColor:forKey:inDefaults: ---------------[static]--
+//
+// Purpose:		The stored color, or the factory color when it is not three
+//				numbers.
+//
+//------------------------------------------------------------------------------
++ (void)getPartsLimitMarkColor:(float *)rgb forKey:(NSString *)key inDefaults:(NSUserDefaults *)userDefaults
+{
+	NSArray		*components	= [userDefaults arrayForKey:key];
+	BOOL		 isTooMany	= [key isEqualToString:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
+	const float	*factory	= isTooMany ? TooManyMarkRGB : NotAvailableMarkRGB;
+	BOOL		 isValid	= ([components count] == 3);
+
+	for (id component in components)
+	{
+		if ([component isKindOfClass:[NSNumber class]] == NO)
+			isValid = NO;
+	}
+
+	for (int index = 0; index < 3; index++)
+		rgb[index] = isValid ? [components[index] floatValue] : factory[index];
+}
+
+
+//---------- applyPartsLimitMarksFromDefaults: -----------------------[static]--
+//
+// Purpose:		Gives LDrawPart the marks the settings ask for.
+//
+// Notes:		Dimming can stay on with no limit: only parts a check under a
+//				limit has seen dim.
+//
+//------------------------------------------------------------------------------
++ (void)applyPartsLimitMarksFromDefaults:(NSUserDefaults *)userDefaults
+{
+	BOOL	marks	= [userDefaults boolForKey:PARTS_LIMIT_MARKS_KEY];
+	float	notAvailable[3];
+	float	tooMany[3];
+
+	[self getPartsLimitMarkColor:notAvailable forKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY inDefaults:userDefaults];
+	[self getPartsLimitMarkColor:tooMany forKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY inDefaults:userDefaults];
+
+	[LDrawPart setLimitMarkStyle:marks ? [self partsLimitMarkStyleInDefaults:userDefaults] : LDrawRenderMarkNone];
+	[LDrawPart setDimsAllowedParts:(marks && [userDefaults boolForKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY])];
+	[LDrawPart setLimitMarkColor:notAvailable forStatus:LDrawPartLimitStatusNotAvailable];
+	[LDrawPart setLimitMarkColor:tooMany forStatus:LDrawPartLimitStatusTooMany];
 }
 
 @end

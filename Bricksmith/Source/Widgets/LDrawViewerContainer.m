@@ -108,6 +108,24 @@
 }//end setVerticalPlacard:
 
 
+//========== setBottomAccessory: ===============================================
+///
+/// @abstract	Puts the view along the bottom edge, in place of the old one.
+///
+//==============================================================================
+- (void) setBottomAccessory:(NSView *)bottomAccessory
+{
+	[_bottomAccessory removeFromSuperview];
+
+	_bottomAccessory = bottomAccessory;
+
+	if(bottomAccessory != nil)
+		[self addSubview:bottomAccessory];
+	[self setNeedsLayout:YES];
+
+}//end setBottomAccessory:
+
+
 // MARK: - LAYOUT -
 
 //========== layout ============================================================
@@ -156,6 +174,17 @@
 		_verticalPlacard.frame = placardFrame;
 	}
 
+	if(_bottomAccessory != nil && [_bottomAccessory isHidden] == NO)
+	{
+		NSRect content		= [self contentRect];
+		NSRect accessory	= [_bottomAccessory frame];
+
+		accessory.origin.x		= NSMinX(content);
+		accessory.origin.y		= NSMinY(content) - NSHeight(accessory);
+		accessory.size.width	= NSWidth(content);
+		_bottomAccessory.frame	= accessory;
+	}
+
 	_glView.frame = [self contentRect];
 	
 	[_glView setFocusRingVisible:self.focusRingType != NSFocusRingTypeNone];
@@ -165,7 +194,8 @@
 //========== contentRect =======================================================
 ///
 /// @abstract	The part of the container the 3D view fills: all of it but the
-///				scroll bars, or the placard when there are none.
+///				scroll bars, or the placard when there are none, and the bottom
+///				accessory when shown.
 ///
 //==============================================================================
 - (NSRect) contentRect
@@ -182,6 +212,9 @@
 	{
 		content.size.width -= NSWidth(_verticalPlacard.frame);
 	}
+
+	if(_bottomAccessory != nil && [_bottomAccessory isHidden] == NO)
+		NSDivideRect(content, &edge, &content, NSHeight([_bottomAccessory frame]), NSMinYEdge);
 
 	return content;
 

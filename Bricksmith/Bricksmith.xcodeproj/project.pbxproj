@@ -383,6 +383,10 @@
 		BB0300000000000000000005 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000005 /* LDrawFeatures */; };
 		BB0300000000000000000006 /* LDrawStepRendering in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000006 /* LDrawStepRendering */; };
 		BB0300000000000000000007 /* LDrawStepEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000007 /* LDrawStepEditing */; };
+		BB0300000000000000000008 /* LDrawInventory in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000008 /* LDrawInventory */; };
+		BB0300000000000000000009 /* LDrawRebrickable in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000009 /* LDrawRebrickable */; };
+		BB0300000000000000000018 /* LDrawInventory in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000018 /* LDrawInventory */; };
+		BB0300000000000000000019 /* LDrawRebrickable in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000019 /* LDrawRebrickable */; };
 		BB0300000000000000000011 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000011 /* LDrawCore */; };
 		BB0300000000000000000012 /* LDrawRenderCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000012 /* LDrawRenderCore */; };
 		BB0300000000000000000013 /* LDrawRenderOpenGL in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000013 /* LDrawRenderOpenGL */; };
@@ -398,12 +402,36 @@
 		BB11000000000000000003 /* StepPartListChromeView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000003 /* StepPartListChromeView.m */; };
 		BB11000000000000000004 /* StepPartListController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000004 /* StepPartListController.h */; };
 		BB11000000000000000005 /* StepPartListController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000005 /* StepPartListController.m */; };
+		BB11000000000000000020 /* PartBrowserLimitViews.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000020 /* PartBrowserLimitViews.h */; };
+		BB11000000000000000021 /* PartBrowserLimitViews.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000021 /* PartBrowserLimitViews.m */; };
+		BB11000000000000000010 /* ImportSetController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000010 /* ImportSetController.h */; };
+		BB11000000000000000011 /* ImportSetController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000011 /* ImportSetController.m */; };
+		BB11000000000000000012 /* InventoriesWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000012 /* InventoriesWindowController.h */; };
+		BB11000000000000000013 /* InventoriesWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000013 /* InventoriesWindowController.m */; };
+		BB11000000000000000014 /* PartsLimitManager.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000014 /* PartsLimitManager.h */; };
+		BB11000000000000000015 /* PartsLimitManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000015 /* PartsLimitManager.m */; };
+		BB11000000000000000016 /* PartsLimitOptionsController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000016 /* PartsLimitOptionsController.h */; };
+		BB11000000000000000017 /* PartsLimitOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000017 /* PartsLimitOptionsController.m */; };
+		BB11000000000000000018 /* PartsLimitController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000018 /* PartsLimitController.h */; };
+		BB11000000000000000019 /* PartsLimitController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000019 /* PartsLimitController.m */; };
 		BB12000000000000000000 /* StepPartListView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000000 /* StepPartListView.h */; };
 		BB12000000000000000001 /* StepPartListView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000001 /* StepPartListView.m */; };
 		BB12000000000000000002 /* StepPartListChromeView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000002 /* StepPartListChromeView.h */; };
 		BB12000000000000000003 /* StepPartListChromeView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000003 /* StepPartListChromeView.m */; };
 		BB12000000000000000004 /* StepPartListController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000004 /* StepPartListController.h */; };
 		BB12000000000000000005 /* StepPartListController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000005 /* StepPartListController.m */; };
+		BB12000000000000000020 /* PartBrowserLimitViews.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000020 /* PartBrowserLimitViews.h */; };
+		BB12000000000000000021 /* PartBrowserLimitViews.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000021 /* PartBrowserLimitViews.m */; };
+		BB12000000000000000010 /* ImportSetController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000010 /* ImportSetController.h */; };
+		BB12000000000000000011 /* ImportSetController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000011 /* ImportSetController.m */; };
+		BB12000000000000000012 /* InventoriesWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000012 /* InventoriesWindowController.h */; };
+		BB12000000000000000013 /* InventoriesWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000013 /* InventoriesWindowController.m */; };
+		BB12000000000000000014 /* PartsLimitManager.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000014 /* PartsLimitManager.h */; };
+		BB12000000000000000015 /* PartsLimitManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000015 /* PartsLimitManager.m */; };
+		BB12000000000000000016 /* PartsLimitOptionsController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000016 /* PartsLimitOptionsController.h */; };
+		BB12000000000000000017 /* PartsLimitOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000017 /* PartsLimitOptionsController.m */; };
+		BB12000000000000000018 /* PartsLimitController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000018 /* PartsLimitController.h */; };
+		BB12000000000000000019 /* PartsLimitController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000019 /* PartsLimitController.m */; };
 		D687D424170A6DF3007300E2 /* related.ldr in Resources */ = {isa = PBXBuildFile; fileRef = D687D423170A6DF3007300E2 /* related.ldr */; };
 /* End PBXBuildFile section */
 
@@ -722,6 +750,18 @@
 		BB10000000000000000003 /* StepPartListChromeView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StepPartListChromeView.m; sourceTree = "<group>"; };
 		BB10000000000000000004 /* StepPartListController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StepPartListController.h; sourceTree = "<group>"; };
 		BB10000000000000000005 /* StepPartListController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StepPartListController.m; sourceTree = "<group>"; };
+		BB10000000000000000020 /* PartBrowserLimitViews.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartBrowserLimitViews.h; sourceTree = "<group>"; };
+		BB10000000000000000021 /* PartBrowserLimitViews.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartBrowserLimitViews.m; sourceTree = "<group>"; };
+		BB10000000000000000010 /* ImportSetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImportSetController.h; sourceTree = "<group>"; };
+		BB10000000000000000011 /* ImportSetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ImportSetController.m; sourceTree = "<group>"; };
+		BB10000000000000000012 /* InventoriesWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InventoriesWindowController.h; sourceTree = "<group>"; };
+		BB10000000000000000013 /* InventoriesWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InventoriesWindowController.m; sourceTree = "<group>"; };
+		BB10000000000000000014 /* PartsLimitManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartsLimitManager.h; sourceTree = "<group>"; };
+		BB10000000000000000015 /* PartsLimitManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitManager.m; sourceTree = "<group>"; };
+		BB10000000000000000016 /* PartsLimitOptionsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartsLimitOptionsController.h; sourceTree = "<group>"; };
+		BB10000000000000000017 /* PartsLimitOptionsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitOptionsController.m; sourceTree = "<group>"; };
+		BB10000000000000000018 /* PartsLimitController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartsLimitController.h; sourceTree = "<group>"; };
+		BB10000000000000000019 /* PartsLimitController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitController.m; sourceTree = "<group>"; };
 		D687D423170A6DF3007300E2 /* related.ldr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = related.ldr; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -737,6 +777,8 @@
 				BB0300000000000000000015 /* LDrawFeatures in Frameworks */,
 				BB0300000000000000000016 /* LDrawStepRendering in Frameworks */,
 				BB0300000000000000000017 /* LDrawStepEditing in Frameworks */,
+				BB0300000000000000000018 /* LDrawInventory in Frameworks */,
+				BB0300000000000000000019 /* LDrawRebrickable in Frameworks */,
 				8D15AC340486D014006FF6A4 /* Cocoa.framework in Frameworks */,
 				0B491FF707F64B5800AC0C10 /* OpenGL.framework in Frameworks */,
 				5D7BBA2E2A1BE5FC1C1EEADC /* UniformTypeIdentifiers.framework in Frameworks */,
@@ -759,6 +801,8 @@
 				BB0300000000000000000005 /* LDrawFeatures in Frameworks */,
 				BB0300000000000000000006 /* LDrawStepRendering in Frameworks */,
 				BB0300000000000000000007 /* LDrawStepEditing in Frameworks */,
+				BB0300000000000000000008 /* LDrawInventory in Frameworks */,
+				BB0300000000000000000009 /* LDrawRebrickable in Frameworks */,
 				956D9C892A30768000FA956B /* Cocoa.framework in Frameworks */,
 				956D9C8C2A30768000FA956B /* Carbon.framework in Frameworks */,
 				956D9C8D2A30768000FA956B /* AMSProgressBar.framework in Frameworks */,
@@ -958,6 +1002,8 @@
 				0BF729AA08AD849300E3DA53 /* LDrawDocument.m */,
 				2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */,
 				2BF2E3000AB0FC5E0026D5DB /* MovePanel.m */,
+				BB10000000000000000018 /* PartsLimitController.h */,
+				BB10000000000000000019 /* PartsLimitController.m */,
 				0B356AEF08D385B900695EEB /* PieceCountPanel.h */,
 				BB10000000000000000004 /* StepPartListController.h */,
 				0B356AEE08D385B900695EEB /* PieceCountPanel.m */,
@@ -977,6 +1023,10 @@
 				0B25F03F093D5F960099D85E /* BricksmithApplication.m */,
 				0B2FADD110196C2E007BA948 /* DonationDialogController.h */,
 				0B2FADD210196C2E007BA948 /* DonationDialogController.m */,
+				BB10000000000000000010 /* ImportSetController.h */,
+				BB10000000000000000011 /* ImportSetController.m */,
+				BB10000000000000000012 /* InventoriesWindowController.h */,
+				BB10000000000000000013 /* InventoriesWindowController.m */,
 				B5C01B011A2B3C4D5E6F7081 /* LDrawHostChrome.h */,
 				B5C01B021A2B3C4D5E6F7082 /* LDrawHostChrome.m */,
 				0BF729AC08AD849300E3DA53 /* LDrawApplication.h */,
@@ -987,10 +1037,16 @@
 				2BF2E30E0AB0FC840026D5DB /* MinifigureDialogController.m */,
 				0BF729B008AD849300E3DA53 /* PartBrowserDataSource.h */,
 				0BF729B108AD849300E3DA53 /* PartBrowserDataSource.m */,
+				BB10000000000000000020 /* PartBrowserLimitViews.h */,
+				BB10000000000000000021 /* PartBrowserLimitViews.m */,
 				0BDC146D0B9D0502001D1FF1 /* PartBrowserPanelController.h */,
 				0BDC146E0B9D0502001D1FF1 /* PartBrowserPanelController.m */,
 				0B4F5E0F0F31632C00355631 /* PartLibraryController.h */,
 				0B4F5E100F31632C00355631 /* PartLibraryController.m */,
+				BB10000000000000000014 /* PartsLimitManager.h */,
+				BB10000000000000000015 /* PartsLimitManager.m */,
+				BB10000000000000000016 /* PartsLimitOptionsController.h */,
+				BB10000000000000000017 /* PartsLimitOptionsController.m */,
 				0BF729B608AD849300E3DA53 /* PreferencesDialogController.h */,
 				0BF729B708AD849300E3DA53 /* PreferencesDialogController.m */,
 				95BB00012A30768000FA9501 /* PreferencesForm.h */,
@@ -1402,6 +1458,12 @@
 				BB11000000000000000000 /* StepPartListView.h in Headers */,
 				BB11000000000000000002 /* StepPartListChromeView.h in Headers */,
 				BB11000000000000000004 /* StepPartListController.h in Headers */,
+				BB11000000000000000020 /* PartBrowserLimitViews.h in Headers */,
+				BB11000000000000000010 /* ImportSetController.h in Headers */,
+				BB11000000000000000012 /* InventoriesWindowController.h in Headers */,
+				BB11000000000000000014 /* PartsLimitManager.h in Headers */,
+				BB11000000000000000016 /* PartsLimitOptionsController.h in Headers */,
+				BB11000000000000000018 /* PartsLimitController.h in Headers */,
 				9506E0F018A3F4130006CE9C /* SearchPanelController.h in Headers */,
 				9526F9892A0BA1A50083A86A /* LDrawApplicationGL.h in Headers */,
 				0B6770EE0817588D0044A0E0 /* Mac LDraw_Prefix.pch in Headers */,
@@ -1473,6 +1535,12 @@
 				BB12000000000000000000 /* StepPartListView.h in Headers */,
 				BB12000000000000000002 /* StepPartListChromeView.h in Headers */,
 				BB12000000000000000004 /* StepPartListController.h in Headers */,
+				BB12000000000000000020 /* PartBrowserLimitViews.h in Headers */,
+				BB12000000000000000010 /* ImportSetController.h in Headers */,
+				BB12000000000000000012 /* InventoriesWindowController.h in Headers */,
+				BB12000000000000000014 /* PartsLimitManager.h in Headers */,
+				BB12000000000000000016 /* PartsLimitOptionsController.h in Headers */,
+				BB12000000000000000018 /* PartsLimitController.h in Headers */,
 				956D9B872A30768000FA956B /* SearchPanelController.h in Headers */,
 				18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */,
 				956D9B8C2A30768000FA956B /* Mac LDraw_Prefix.pch in Headers */,
@@ -1566,6 +1634,8 @@
 				BB0200000000000000000015 /* LDrawFeatures */,
 				BB0200000000000000000016 /* LDrawStepRendering */,
 				BB0200000000000000000017 /* LDrawStepEditing */,
+				BB0200000000000000000018 /* LDrawInventory */,
+				BB0200000000000000000019 /* LDrawRebrickable */,
 			);
 			productInstallPath = "$(HOME)/Applications";
 			productName = "Mac LDraw";
@@ -1598,6 +1668,8 @@
 				BB0200000000000000000005 /* LDrawFeatures */,
 				BB0200000000000000000006 /* LDrawStepRendering */,
 				BB0200000000000000000007 /* LDrawStepEditing */,
+				BB0200000000000000000008 /* LDrawInventory */,
+				BB0200000000000000000009 /* LDrawRebrickable */,
 			);
 			productInstallPath = "$(HOME)/Applications";
 			productName = "Mac LDraw";
@@ -1805,6 +1877,12 @@
 				BB11000000000000000001 /* StepPartListView.m in Sources */,
 				BB11000000000000000003 /* StepPartListChromeView.m in Sources */,
 				BB11000000000000000005 /* StepPartListController.m in Sources */,
+				BB11000000000000000021 /* PartBrowserLimitViews.m in Sources */,
+				BB11000000000000000011 /* ImportSetController.m in Sources */,
+				BB11000000000000000013 /* InventoriesWindowController.m in Sources */,
+				BB11000000000000000015 /* PartsLimitManager.m in Sources */,
+				BB11000000000000000017 /* PartsLimitOptionsController.m in Sources */,
+				BB11000000000000000019 /* PartsLimitController.m in Sources */,
 				8D15AC320486D014006FF6A4 /* main.m in Sources */,
 				0BF729B908AD849300E3DA53 /* DocumentToolbarController.m in Sources */,
 				B5C01A041A2B3C4D5E6F7084 /* LDrawToolbarLabels.m in Sources */,
@@ -1878,6 +1956,12 @@
 				BB12000000000000000001 /* StepPartListView.m in Sources */,
 				BB12000000000000000003 /* StepPartListChromeView.m in Sources */,
 				BB12000000000000000005 /* StepPartListController.m in Sources */,
+				BB12000000000000000021 /* PartBrowserLimitViews.m in Sources */,
+				BB12000000000000000011 /* ImportSetController.m in Sources */,
+				BB12000000000000000013 /* InventoriesWindowController.m in Sources */,
+				BB12000000000000000015 /* PartsLimitManager.m in Sources */,
+				BB12000000000000000017 /* PartsLimitOptionsController.m in Sources */,
+				BB12000000000000000019 /* PartsLimitController.m in Sources */,
 				956D9C1D2A30768000FA956B /* main.m in Sources */,
 				956D9CA12A30A72300FA956B /* LDrawApplicationMTL.m in Sources */,
 				18B32A672B9A0ED800A97084 /* InspectionLPubCommand.m in Sources */,
@@ -2750,6 +2834,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawStepEditing;
+		};
+		BB0200000000000000000008 /* LDrawInventory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawInventory;
+		};
+		BB0200000000000000000009 /* LDrawRebrickable */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawRebrickable;
+		};
+		BB0200000000000000000018 /* LDrawInventory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawInventory;
+		};
+		BB0200000000000000000019 /* LDrawRebrickable */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawRebrickable;
 		};
 		BB0200000000000000000011 /* LDrawCore */ = {
 			isa = XCSwiftPackageProductDependency;

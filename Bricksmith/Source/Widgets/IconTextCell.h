@@ -23,6 +23,12 @@
 		BOOL	verticallyCentersTitle;
 }
 
+// A badge at the end of the row: an image, and text after it in the given
+// color, such as a count. The title gives up the room.
+@property (nonatomic, strong) NSImage *badgeImage;
+@property (nonatomic, copy) NSString *badgeText;
+@property (nonatomic, strong) NSColor *badgeColor;
+
 //Accessors
 - (NSImage *)image;
 - (CGFloat) imagePadding;

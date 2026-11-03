@@ -42,6 +42,7 @@
 @class LDrawStepPartListPageAnchor;
 @class LDrawStepPartListPageFitter;
 @class PartBrowserDataSource;
+@class PartsLimitController;
 @class StepPartListController;
 
 
@@ -104,6 +105,7 @@
 		LDrawView			*mostRecentLDrawView; 	//file graphic view which most recently had focus. Weak link.
 		__weak LDrawView *pageFitViewport;			// viewport whose size the page is kept against. Weak link.
 		StepPartListController *stepPartListController;	// owns the parts list overlay, or nil until one is wanted
+		PartsLimitController *partsLimitController;	// the Parts menu in the scope bar, and the check of the model
 		LDrawStepPartListPageAnchor *pageAnchor;	// the model point the page is pinned to
 		LDrawStepPartListPageFitter *pageFitter;	// fits the page to pageFitViewport, and keeps the size it fitted
 		LDrawStepCalloutPath *calloutPath;			// the steps left through callouts, to lead back to
@@ -125,6 +127,7 @@
 
 // Accessors
 - (LDrawFile *) documentContents;
+- (PartsLimitController *) partsLimitController;
 - (NSWindow *)foremostWindow;
 - (LDrawGridSpacingMode) gridSpacingMode;
 - (LDrawGridOrientationMode) gridOrientationMode;
@@ -185,6 +188,7 @@
 - (IBAction) copy:(id)sender;
 - (IBAction) paste:(id)sender;
 - (IBAction) delete:(id)sender;
+- (IBAction) selectPartsWithLimitProblems:(id)sender;
 - (IBAction) duplicate:(id)sender;
 - (IBAction) splitStep:(id)sender;
 - (IBAction) splitModel:(id)sender;
@@ -279,6 +283,7 @@
 - (void) addModel:(LDrawMPDModel *)newModel atIndex:(NSInteger)insertAtIndex preventNameCollisions:(BOOL)renameModels;
 - (void) addStep:(LDrawStep *)newStep parent:(LDrawMPDModel*)selectedModel index:(NSInteger)insertAtIndex;
 - (void) addPartNamed:(NSString *)partName;
+- (void) addPartNamed:(NSString *)partName color:(LDrawColor *)color;
 - (void) addStepComponent:(LDrawDirective *)newDirective parent:(LDrawContainer*)parent index:(NSInteger)insertAtIndex;
 
 - (BOOL) canDeleteDirective:(LDrawDirective *)directive displayErrors:(BOOL)errorFlag;
