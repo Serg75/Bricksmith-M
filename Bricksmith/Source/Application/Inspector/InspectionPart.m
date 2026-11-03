@@ -146,16 +146,16 @@
 //==============================================================================
 - (void) showDescription:(NSString *)description
 {
-	LDrawDocument			*document	= [[NSDocumentController sharedDocumentController] currentDocument];
+	LDrawDocument			*document	= [self documentOfObject];
 	NSString				*limitLine	= nil;
 	NSFont					*font		= [_partDescriptionField font];
 	NSMutableParagraphStyle	*oneLine	= [[NSMutableParagraphStyle alloc] init];
 	NSDictionary			*plain		= nil;
-	NSDictionary			*red		= nil;
+	NSDictionary			*marked		= nil;
+	NSColor					*color		= nil;
 	NSMutableAttributedString *text		= nil;
 
-	if([document isKindOfClass:[LDrawDocument class]])
-		limitLine = [[document partsLimitController] limitLineForPart:[self object]];
+	limitLine = [[document partsLimitController] limitLineForPart:[self object]];
 	if(limitLine == nil)
 	{
 		[_partDescriptionField setStringValue:description];
@@ -163,18 +163,49 @@
 		return;
 	}
 
+	// Orange for too many, else red, as in the document's problem button.
+	if([(LDrawPart *)[self object] limitStatus] == LDrawPartLimitStatusTooMany)
+		color = [NSColor systemOrangeColor];
+	else
+		color = [NSColor systemRedColor];
+
 	[oneLine setLineBreakMode:NSLineBreakByTruncatingTail];
 	plain	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine};
-	red		= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine,
-				NSForegroundColorAttributeName: [NSColor systemRedColor]};
+	marked	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine,
+				NSForegroundColorAttributeName: color};
 	text	= [[NSMutableAttributedString alloc] initWithString:[description stringByAppendingString:@"\n"]
 													 attributes:plain];
 
-	[text appendAttributedString:[[NSAttributedString alloc] initWithString:limitLine attributes:red]];
+	[text appendAttributedString:[[NSAttributedString alloc] initWithString:limitLine attributes:marked]];
+
+	// Without this, selecting the text redraws it without its colors.
+	[_partDescriptionField setAllowsEditingTextAttributes:YES];
 	[_partDescriptionField setAttributedStringValue:text];
 	[_partDescriptionField setToolTip:[NSString stringWithFormat:@"%@\n%@", description, limitLine]];
 
 }//end showDescription:
+
+
+//========== documentOfObject ==================================================
+//
+// Purpose:		The document that holds the inspected part.
+//
+// Notes:		Not the current document: while another app is active or a
+//				panel is key, there may be none.
+//
+//==============================================================================
+- (LDrawDocument *) documentOfObject
+{
+	LDrawFile *file = [[self object] enclosingFile];
+
+	for(NSDocument *document in [[NSDocumentController sharedDocumentController] documents])
+	{
+		if([document isKindOfClass:[LDrawDocument class]] && [(LDrawDocument *)document documentContents] == file)
+			return (LDrawDocument *)document;
+	}
+	return nil;
+
+}//end documentOfObject
 
 
 //========== revert ============================================================

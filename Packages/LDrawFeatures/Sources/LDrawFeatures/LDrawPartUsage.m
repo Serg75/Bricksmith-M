@@ -60,7 +60,9 @@
 //==============================================================================
 - (BOOL) isLEGOPart
 {
-	return self.kind == LDrawPartUsageKindPart || self.kind == LDrawPartUsageKindSubstitute;
+	return		self.kind == LDrawPartUsageKindPart
+			||	self.kind == LDrawPartUsageKindSubstitute
+			||	self.kind == LDrawPartUsageKindMissing;
 }
 
 
@@ -351,10 +353,10 @@
 			  counted:(BOOL)counted
 {
 	[self->collected addObject:[[LDrawPartUsageCopy alloc] initWithPartName:name
-																	colorCode:colorCode
-																		 kind:kind
-																		parts:parts
-																	isCounted:counted]];
+																  colorCode:colorCode
+																	   kind:kind
+																	  parts:parts
+																  isCounted:counted]];
 }
 
 @end

@@ -53,10 +53,10 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LDrawUnmatchedParts : NSObject
 
-/// The library parts the models use that have no Rebrickable part, the most
-/// used first. An assembly with no match of its own lists its pieces that
-/// have none. A part only in a model nothing places is listed with a count
-/// of 0.
+/// The parts the models use that have no Rebrickable part, the most used
+/// first, including parts the library does not have. An assembly with no
+/// match of its own lists its pieces that have none. A part only in a model
+/// nothing places is listed with a count of 0.
 + (NSArray<LDrawUnmatchedPart *> *) partsInUsages:(NSArray<LDrawPartUsage *> *)usages
 										 identity:(LDrawPartIdentity *)identity
 										shortcuts:(nullable LDrawShortcutMap *)shortcuts

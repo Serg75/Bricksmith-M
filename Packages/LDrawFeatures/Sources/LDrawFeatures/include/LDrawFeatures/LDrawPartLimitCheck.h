@@ -93,6 +93,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// The parts that break the limit, in no set order.
 - (NSArray<LDrawPart *> *) problemParts;
 
+/// The parts the library does not have, in no set order. Each is still checked
+/// by its name, so it has no data only when no LEGO part matches it.
+- (NSArray<LDrawPart *> *) missingParts;
+
 /// How many parts inside the container are too many, not in their color, or
 /// not available. Parts with no data are not problems.
 - (NSUInteger) problemCountInContainer:(LDrawContainer *)container;

@@ -22,6 +22,7 @@ static NSString * const IdentityPartLinksKey	= @"partLinks";
 static NSString * const IdentityColorLinksKey	= @"colorLinks";
 static NSString * const IdentityRelationsKey	= @"relations";
 static NSString * const IdentityKnownPartsKey	= @"knownPartNumbers";
+static NSString * const IdentityRubberPartsKey	= @"rubberPartNumbers";
 
 static NSString * const RebrickableKeywordPrefix = @"rebrickable ";
 
@@ -37,7 +38,9 @@ static const NSUInteger MaximumChainLength = 8;
 						movedParts:(NSDictionary<NSString *, NSString *> *)movedParts
 						colorLinks:(NSDictionary<NSNumber *, NSArray<NSNumber *> *> *)colorLinks
 						 relations:(NSArray<NSArray<NSString *> *> *)relations
-				  knownPartNumbers:(NSSet<NSString *> *)knownPartNumbers;
+				  knownPartNumbers:(NSSet<NSString *> *)knownPartNumbers
+				 rubberPartNumbers:(NSSet<NSString *> *)rubberPartNumbers
+				  rubberColorCodes:(NSSet<NSNumber *> *)rubberColorCodes;
 
 @end
 
@@ -54,6 +57,8 @@ static const NSUInteger MaximumChainLength = 8;
 	NSDictionary<NSString *, NSString *>			*printParents;		// print or pattern → its plain part
 	NSDictionary<NSString *, NSString *>			*moldRoots;			// part → the key of its mold group
 	NSSet<NSString *>								*knownPartNumbers;	// nil when not known
+	NSSet<NSString *>								*rubberPartNumbers;	// nil when not known
+	NSSet<NSNumber *>								*rubberColorCodes;
 }
 
 
@@ -73,6 +78,8 @@ static const NSUInteger MaximumChainLength = 8;
 						colorLinks:(NSDictionary<NSNumber *, NSArray<NSNumber *> *> *)colors
 						 relations:(NSArray<NSArray<NSString *> *> *)relations
 				  knownPartNumbers:(NSSet<NSString *> *)known
+				 rubberPartNumbers:(NSSet<NSString *> *)rubberParts
+				  rubberColorCodes:(NSSet<NSNumber *> *)rubberColors
 {
 	self = [super init];
 	if (self) {
@@ -82,6 +89,8 @@ static const NSUInteger MaximumChainLength = 8;
 		self->movedParts		= [moved copy];
 		self->colorLinks		= LDrawJSONColorLinks(colors);
 		self->knownPartNumbers	= [known copy];
+		self->rubberPartNumbers	= [rubberParts copy];
+		self->rubberColorCodes	= [rubberColors copy] ?: [NSSet set];
 
 		[self buildReverseLinks];
 		[self buildReverseColors];
@@ -101,6 +110,19 @@ static const NSUInteger MaximumChainLength = 8;
 
 
 //---------- identityWithCatalogRecords:rebrickableData:overrides: ---[static]--
+//------------------------------------------------------------------------------
++ (instancetype) identityWithCatalogRecords:(NSArray<NSDictionary *> *)catalogRecords
+							rebrickableData:(NSDictionary *)rebrickableData
+								  overrides:(NSDictionary<NSString *, NSString *> *)overrides
+{
+	return [self identityWithCatalogRecords:catalogRecords
+							rebrickableData:rebrickableData
+								  overrides:overrides
+						   rubberColorCodes:nil];
+}
+
+
+//---------- identityWithCatalogRecords:...rubberColorCodes: ---------[static]--
 ///
 /// @abstract	Merges what is known about parts, weakest first, so a later
 /// 			source wins over an earlier one.
@@ -109,9 +131,10 @@ static const NSUInteger MaximumChainLength = 8;
 + (instancetype) identityWithCatalogRecords:(NSArray<NSDictionary *> *)catalogRecords
 							rebrickableData:(NSDictionary *)rebrickableData
 								  overrides:(NSDictionary<NSString *, NSString *> *)overrides
+						   rubberColorCodes:(NSSet<NSNumber *> *)rubberColorCodes
 {
 	NSDictionary		*data	= LDrawJSONDictionary(rebrickableData);
-	NSSet				*known	= [self knownPartNumbersInRebrickableData:data];
+	NSSet				*known	= [self partNumbersForKey:IdentityKnownPartsKey inRebrickableData:data];
 	NSMutableDictionary	*links	= [NSMutableDictionary dictionary];
 	NSMutableDictionary	*hand	= [NSMutableDictionary dictionary];
 	NSMutableSet		*parts	= [NSMutableSet set];
@@ -141,9 +164,11 @@ static const NSUInteger MaximumChainLength = 8;
 								movedParts:moved
 								colorLinks:[self colorLinksInRebrickableData:data]
 								 relations:[self relationsInRebrickableData:data]
-						  knownPartNumbers:known];
+						  knownPartNumbers:known
+						 rubberPartNumbers:[self rubberPartNumbersInRebrickableData:data]
+						  rubberColorCodes:rubberColorCodes];
 
-}//end identityWithCatalogRecords:rebrickableData:overrides:
+}//end identityWithCatalogRecords:...rubberColorCodes:
 
 
 //---------- rebrickableDataWithPartLinks:... ------------------------[static]--
@@ -157,6 +182,7 @@ static const NSUInteger MaximumChainLength = 8;
 									 colorLinks:(NSDictionary<NSNumber *, id> *)colorLinks
 									  relations:(NSArray<NSArray<NSString *> *> *)relations
 							   knownPartNumbers:(NSSet<NSString *> *)knownPartNumbers
+							  rubberPartNumbers:(NSSet<NSString *> *)rubberPartNumbers
 {
 	NSMutableDictionary *data = [NSMutableDictionary dictionary];
 
@@ -166,6 +192,8 @@ static const NSUInteger MaximumChainLength = 8;
 	data[IdentityRelationsKey]		= relations ?: @[];
 	if (knownPartNumbers != nil)
 		data[IdentityKnownPartsKey] = [[knownPartNumbers allObjects] sortedArrayUsingSelector:@selector(compare:)];
+	if (rubberPartNumbers != nil)
+		data[IdentityRubberPartsKey] = [[rubberPartNumbers allObjects] sortedArrayUsingSelector:@selector(compare:)];
 
 	return data;
 
@@ -183,17 +211,24 @@ static const NSUInteger MaximumChainLength = 8;
 								  colorLinks:(NSDictionary<NSNumber *, id> *)colorLinks
 								   relations:(NSArray<NSArray<NSString *> *> *)relations
 							knownPartNumbers:(NSSet<NSString *> *)knownPartNumbers
+						   rubberPartNumbers:(NSSet<NSString *> *)rubberPartNumbers
 {
 	NSDictionary		*values	= LDrawJSONDictionary(data);
 	NSMutableDictionary	*links	= [NSMutableDictionary dictionary];
+	NSSet				*known	= nil;
+	NSSet				*rubber	= nil;
 
 	[self addLinks:LDrawJSONDictionary(values[IdentityPartLinksKey]) to:links];
 	[self addLinks:addedPartLinks to:links];
 
+	known	= knownPartNumbers ?: [self partNumbersForKey:IdentityKnownPartsKey inRebrickableData:values];
+	rubber	= rubberPartNumbers ?: [self rubberPartNumbersInRebrickableData:values];
+
 	return [self rebrickableDataWithPartLinks:links
 								   colorLinks:colorLinks ?: [self colorLinksInRebrickableData:values]
 									relations:relations ?: [self relationsInRebrickableData:values]
-							 knownPartNumbers:knownPartNumbers ?: [self knownPartNumbersInRebrickableData:values]];
+							 knownPartNumbers:known
+							rubberPartNumbers:rubber];
 
 }//end rebrickableDataByUpdating:...
 
@@ -232,28 +267,37 @@ static const NSUInteger MaximumChainLength = 8;
 }//end relationsInRebrickableData:
 
 
-//---------- knownPartNumbersInRebrickableData: ----------------------[static]--
+//---------- rubberPartNumbersInRebrickableData: ---------------------[static]--
+//------------------------------------------------------------------------------
++ (NSSet<NSString *> *) rubberPartNumbersInRebrickableData:(NSDictionary *)data
+{
+	return [self partNumbersForKey:IdentityRubberPartsKey inRebrickableData:data];
+}
+
+
+//---------- partNumbersForKey:inRebrickableData: --------------------[static]--
 ///
-/// @abstract	Every part Rebrickable has, or nil when the data does not say.
+/// @abstract	The part numbers listed under the key, or nil when the data
+/// 			has no such list.
 ///
 //------------------------------------------------------------------------------
-+ (NSSet<NSString *> *) knownPartNumbersInRebrickableData:(NSDictionary *)data
++ (NSSet<NSString *> *) partNumbersForKey:(NSString *)key inRebrickableData:(NSDictionary *)data
 {
-	NSArray			*knownData	= LDrawJSONArray(LDrawJSONDictionary(data)[IdentityKnownPartsKey]);
-	NSMutableSet	*known		= nil;
+	NSArray			*listed		= LDrawJSONArray(LDrawJSONDictionary(data)[key]);
+	NSMutableSet	*numbers	= nil;
 
-	if (knownData != nil)
+	if (listed != nil)
 	{
-		known = [NSMutableSet setWithCapacity:[knownData count]];
-		for (id partNumber in knownData)
+		numbers = [NSMutableSet setWithCapacity:[listed count]];
+		for (id partNumber in listed)
 		{
 			if (LDrawJSONString(partNumber) != nil)
-				[known addObject:partNumber];
+				[numbers addObject:partNumber];
 		}
 	}
-	return known;
+	return numbers;
 
-}//end knownPartNumbersInRebrickableData:
+}//end partNumbersForKey:inRebrickableData:
 
 
 //---------- addLinks:to: --------------------------------------------[static]--
@@ -517,6 +561,59 @@ static const NSUInteger MaximumChainLength = 8;
 	NSNumber *code = [self->colorLinks[@(colorID)] firstObject];
 	return (code != nil) ? (LDrawColorT)[code intValue] : LDrawColorBogus;
 }
+
+
+//========== colorCodesForRebrickableColorID:ofPartNumber: =====================
+///
+/// @abstract	The linked LDraw colors, less the rubber ones after the first
+/// 			when the part is known not to be rubber.
+///
+//==============================================================================
+- (NSArray<NSNumber *> *) colorCodesForRebrickableColorID:(NSInteger)colorID
+											 ofPartNumber:(NSString *)partNumber
+{
+	NSArray<NSNumber *>	*linked		= self->colorLinks[@(colorID)] ?: @[];
+	NSMutableArray		*codes		= nil;
+	BOOL				 isRubber	= (	self->rubberPartNumbers == nil
+									||	(partNumber != nil && [self->rubberPartNumbers containsObject:partNumber]) );
+
+	if (isRubber || [linked count] < 2 || [self->rubberColorCodes count] == 0)
+		return linked;
+
+	codes = [NSMutableArray arrayWithObject:linked[0]];
+	for (NSUInteger index = 1; index < [linked count]; index++)
+	{
+		if ([self->rubberColorCodes containsObject:linked[index]] == NO)
+			[codes addObject:linked[index]];
+	}
+	return codes;
+
+}//end colorCodesForRebrickableColorID:ofPartNumber:
+
+
+//========== colorCode:suitsPartNamed: =========================================
+///
+/// @abstract	Looks the part up only for a rubber color, since every other
+/// 			color suits any part.
+///
+//==============================================================================
+- (BOOL) colorCode:(LDrawColorT)colorCode suitsPartNamed:(NSString *)partName
+{
+	NSNumber *code			= @(colorCode);
+	NSString *partNumber	= nil;
+
+	if (self->rubberPartNumbers == nil || [self->rubberColorCodes containsObject:code] == NO)
+		return YES;
+
+	partNumber = [self rebrickablePartNumberForPartName:partName];
+	for (NSNumber *colorID in self->reverseColors[code])
+	{
+		if ([[self colorCodesForRebrickableColorID:[colorID integerValue] ofPartNumber:partNumber] containsObject:code])
+			return YES;
+	}
+	return NO;
+
+}//end colorCode:suitsPartNamed:
 
 
 //========== poolKeyForRebrickablePartNumber:... ===============================

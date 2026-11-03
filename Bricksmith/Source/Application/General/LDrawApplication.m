@@ -763,8 +763,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 //========== addPartsLimitMenus ================================================
 //
 // Purpose:		Adds View > Parts Limit, which the limit manager fills as it
-//				opens, File > Import Set Parts, Edit > Select Parts with Limit
-//				Problems and Window > Inventories.
+//				opens, Edit > Select Parts with Limit Problems and Window >
+//				Inventories, whose window imports sets.
 //
 //==============================================================================
 - (void) addPartsLimitMenus
@@ -772,7 +772,6 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	PartsLimitManager	*manager	= [PartsLimitManager sharedManager];
 	NSMenu				*mainMenu	= [NSApp mainMenu];
 	NSMenu				*viewMenu	= [[mainMenu itemWithTag:LDrawViewsMenuTag] submenu];
-	NSMenu				*fileMenu	= [[mainMenu itemWithTag:LDrawFileMenuTag] submenu];
 	NSMenu				*windowMenu	= [[mainMenu itemWithTag:LDrawWindowMenuTag] submenu];
 	NSMenu				*editMenu	= [[mainMenu itemWithTag:LDrawEditMenuTag] submenu];
 	NSMenu				*limitMenu	= [[NSMenu alloc] initWithTitle:NSLocalizedString(@"Parts Limit", nil)];
@@ -788,14 +787,6 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[item setSubmenu:limitMenu];
 	[viewMenu addItem:[NSMenuItem separatorItem]];
 	[viewMenu addItem:item];
-
-	// After Export Steps.
-	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
-									  action:@selector(importSetParts:)
-							   keyEquivalent:@""];
-	[item setTarget:manager];
-	index = [fileMenu indexOfItemWithTitle:@"Export Steps…"];
-	[fileMenu insertItem:item atIndex:(index >= 0) ? index + 1 : [fileMenu numberOfItems]];
 
 	// After Select All.
 	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Select Parts with Limit Problems", nil)

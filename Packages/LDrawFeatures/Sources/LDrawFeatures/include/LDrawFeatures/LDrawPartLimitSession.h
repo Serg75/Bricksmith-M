@@ -68,8 +68,11 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 	NS_SWIFT_NAME(table(forInventoryIdentifier:));
 
 /// The part library's records, for the keywords that name Rebrickable parts
-/// and for moved parts. Setting them builds everything again.
-- (void) setCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords;
+/// and for moved parts, and the LDraw colors that are rubber, such as rubber
+/// black, which only rubber parts are offered. Setting them builds everything
+/// again.
+- (void) setCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords
+		  rubberColorCodes:(nullable NSSet<NSNumber *> *)rubberColorCodes;
 
 /// The part library's shortcuts, so assemblies and their pieces count alike.
 /// Setting it builds the tables again and posts the notification.

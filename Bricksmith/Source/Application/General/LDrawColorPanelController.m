@@ -34,7 +34,6 @@
 // The separator after the material pop-up's limit items.
 static const NSInteger LimitSeparatorTag = 10;
 
-static const CGFloat FooterHeight = 16.0;
 
 @implementation LDrawColorPanelController
 
@@ -419,7 +418,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	if(materialType == LDrawColorFilterSelectedPart)
 		colorCodes = self->allowedColorCodes;
 	else if(materialType == LDrawColorFilterLimit)
-		colorCodes = [[self restrictingTable] allowedColorCodes];
+		colorCodes = [[self restrictingTable] everyAllowedColorCode];
 
 	searchPredicate = [LDrawColorPanelModel predicateForSearchString:searchString
 															material:materialType
@@ -500,23 +499,27 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 //========== makeFooter ========================================================
 //
-// Purpose:		A line under the list that says why it is short. It takes room
-//				from the list only while shown.
+// Purpose:		Text under the list that says why it is short. It wraps, and
+//				takes room from the list only while shown.
 //
 //==============================================================================
 - (void) makeFooter
 {
 	NSScrollView *scrollView = [self->colorTable enclosingScrollView];
 
-	self->footerField = [NSTextField labelWithString:@""];
+	self->footerField = [NSTextField wrappingLabelWithString:@""];
 	[self->footerField setFont:[NSFont systemFontOfSize:[NSFont smallSystemFontSize]]];
 	[self->footerField setTextColor:[NSColor secondaryLabelColor]];
-	[self->footerField setLineBreakMode:NSLineBreakByTruncatingMiddle];
-	[self->footerField setFrame:NSMakeRect(NSMinX([scrollView frame]), NSMinY([scrollView frame]),
-										   NSWidth([scrollView frame]), FooterHeight)];
+	[self->footerField setSelectable:NO];
 	[self->footerField setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
 	[self->footerField setHidden:YES];
 	[[scrollView superview] addSubview:self->footerField];
+
+	// A new width can change how many lines the text needs.
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(layOutFooter)
+												 name:NSViewFrameDidChangeNotification
+											   object:scrollView];
 
 }//end makeFooter
 
@@ -528,22 +531,45 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //==============================================================================
 - (void) setFooterText:(NSString *)text
 {
-	NSScrollView	*scrollView	= [self->colorTable enclosingScrollView];
-	NSRect			 list		= [scrollView frame];
-	BOOL			 shows		= (text != nil);
-
 	[self->footerField setStringValue:text ?: @""];
-	[self->footerField setToolTip:text];
-
-	if(shows == ([self->footerField isHidden] == NO))
-		return;
-
-	list.origin.y		+= shows ? FooterHeight : -FooterHeight;
-	list.size.height	-= shows ? FooterHeight : -FooterHeight;
-	[scrollView setFrame:list];
-	[self->footerField setHidden:(shows == NO)];
+	[self->footerField setHidden:(text == nil)];
+	[self layOutFooter];
 
 }//end setFooterText:
+
+
+//========== layOutFooter ======================================================
+//
+// Purpose:		Gives the footer the lines its text needs, below the list, and
+//				the list the rest.
+//
+// Notes:		Setting the list's frame posts a frame change, which comes back
+//				here with the height already right and stops.
+//
+//==============================================================================
+- (void) layOutFooter
+{
+	NSScrollView	*scrollView	= [self->colorTable enclosingScrollView];
+	NSRect			 list		= [scrollView frame];
+	CGFloat			 bottom		= NSMinY(list) - self->footerSpace;
+	CGFloat			 height		= 0;
+
+	if([self->footerField isHidden] == NO)
+	{
+		NSRect bounds = NSMakeRect(0, 0, NSWidth(list), CGFLOAT_MAX);
+		height = ceil([[self->footerField cell] cellSizeForBounds:bounds].height);
+	}
+
+	[self->footerField setFrame:NSMakeRect(NSMinX(list), bottom, NSWidth(list), height)];
+	if(height == self->footerSpace)
+		return;
+
+	list.origin.y		= bottom + height;
+	list.size.height	+= self->footerSpace - height;
+	self->footerSpace	= height;
+	[scrollView setFrame:list];
+
+}//end layOutFooter
 
 
 //========== restrictingTable ==================================================
@@ -627,8 +653,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	if(table != nil && partItem == nil)
 	{
 		partItem	= [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"For Selected Part", nil)
-											  action:NULL
-									   keyEquivalent:@""];
+												 action:NULL
+										  keyEquivalent:@""];
 		limitItem	= [[NSMenuItem alloc] initWithTitle:@"" action:NULL keyEquivalent:@""];
 		separator	= [NSMenuItem separatorItem];
 
@@ -662,16 +688,17 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 //========== updateFooterForPartNames: =========================================
 //
-// Purpose:		Says how many colors the parts may take, such as "Colors for
-//				Brick 2 x 4 (3001): 14 of 92". Hidden when any color goes.
+// Purpose:		Says how many colors the parts may take, such as "14 colors
+//				for Brick 2 x 4 (3001)". Hidden when any color goes.
 //
 //==============================================================================
 - (void) updateFooterForPartNames:(NSArray *)names
 {
 	NSSet		*unique		= [NSSet setWithArray:names];
-	NSUInteger	 total		= [[[LDrawColorLibrary sharedColorLibrary] colors] count];
 	NSString	*partName	= [unique anyObject];
 	NSString	*parts		= nil;
+	NSUInteger	 count		= [self->allowedColorCodes count];
+	NSString	*format		= nil;
 
 	if(self->allowedColorCodes == nil)
 	{
@@ -686,8 +713,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	else
 		parts = [NSString stringWithFormat:NSLocalizedString(@"%lu parts", nil), (unsigned long)[unique count]];
 
-	[self setFooterText:[NSString stringWithFormat:NSLocalizedString(@"Colors for %@: %lu of %lu", nil),
-						 parts, (unsigned long)[self->allowedColorCodes count], (unsigned long)total]];
+	format = (count == 1) ? NSLocalizedString(@"%lu color for %@", nil) : NSLocalizedString(@"%lu colors for %@", nil);
+	[self setFooterText:[NSString stringWithFormat:format, (unsigned long)count, parts]];
 
 }//end updateFooterForPartNames:
 
@@ -742,7 +769,7 @@ LDrawColorPanelController *sharedColorPanel = nil;
 //========== tableView:willDisplayCell:forTableColumn:row: =====================
 //
 // Purpose:		Fades and crosses out the colors the selected parts are not made
-//				in, even when Warn Only lets them be picked.
+//				in, even when Pick Any Color lets them be picked.
 //
 //==============================================================================
 - (void) tableView:(NSTableView *)tableView
@@ -753,8 +780,8 @@ LDrawColorPanelController *sharedColorPanel = nil;
 	NSArray		*colors		= [self->colorListController arrangedObjects];
 	LDrawColor	*color		= (row >= 0 && row < (NSInteger)[colors count]) ? [colors objectAtIndex:row] : nil;
 	BOOL		 allowed	= [LDrawColorPanelModel canSelectColorCode:[color colorCode]
-												  allowedColorCodes:self->allowedColorCodes
-														  warnsOnly:NO];
+													 allowedColorCodes:self->allowedColorCodes
+															 warnsOnly:NO];
 
 	if([cell isKindOfClass:[LDrawColorCell class]])
 		[(LDrawColorCell *)cell setStruck:(allowed == NO)];

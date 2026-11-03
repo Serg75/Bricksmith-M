@@ -70,7 +70,7 @@ typedef NS_ENUM(NSInteger, LDrawColorFilter) {
 + (nullable NSArray<NSNumber *> *)allowedColorCodesForPartNames:(NSArray<NSString *> *)partNames
 														  table:(nullable LDrawPartLimitTable *)table;
 
-/// Whether the user may pick the color: always with no list, with Warn Only,
+/// Whether the user may pick the color: always with no list, with Pick Any Color,
 /// and for color 16, which takes the color of what places the part.
 + (BOOL)canSelectColorCode:(LDrawColorT)colorCode
 		 allowedColorCodes:(nullable NSArray<NSNumber *> *)allowedColorCodes

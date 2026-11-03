@@ -86,8 +86,8 @@ static ImportSetController *runningController = nil;
 {
 	NSScrollView	*scrollView		= [[NSScrollView alloc] init];
 	NSButton		*cancelButton	= [NSButton buttonWithTitle:NSLocalizedString(@"Cancel", nil)
-													 target:self
-													 action:@selector(cancel:)];
+														 target:self
+														 action:@selector(cancel:)];
 	NSArray			*columns		= @[@[@"number", NSLocalizedString(@"Number", nil), @80],
 										@[@"name", NSLocalizedString(@"Name", nil), @230],
 										@[@"year", NSLocalizedString(@"Year", nil), @50],

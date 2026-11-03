@@ -233,10 +233,10 @@ static NSString *ColorName(LDrawColorT colorCode)
 		NSString					*count	= chip.hasCount ? [NSString stringWithFormat:@"%ld", (long)chip.leftCount]
 															: nil;
 		NSButton					*button	= [self chipButtonWithColor:chip.colorCode
-																	  title:count
-																	 ringed:(chip.colorCode == self->currentColor)
-																	 struck:NO
-																	   font:font];
+																  title:count
+																 ringed:(chip.colorCode == self->currentColor)
+																 struck:NO
+																   font:font];
 		NSString					*tip	= ColorName(chip.colorCode);
 
 		if(chip.hasCount)

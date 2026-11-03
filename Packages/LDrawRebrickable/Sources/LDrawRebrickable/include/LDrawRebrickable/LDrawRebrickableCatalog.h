@@ -35,6 +35,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable instancetype) catalogFromDownloads:(LDrawRebrickableDownloads *)downloads
 										 error:(NSError **)error NS_SWIFT_NAME(init(downloads:));
 
+/// The parts made of rubber, read from the part list alone. Nil, with an
+/// error, when it cannot be read.
++ (nullable NSSet<NSString *> *) rubberPartNumbersFromDownloads:(LDrawRebrickableDownloads *)downloads
+														  error:(NSError **)error;
+
 @property (nonatomic, readonly) LDrawPartAvailability *availability;
 
 /// Rows of relation code, child and parent, from `part_relationships`.
@@ -43,10 +48,14 @@ NS_ASSUME_NONNULL_BEGIN
 /// Every part Rebrickable has.
 @property (nonatomic, readonly, copy) NSSet<NSString *> *knownPartNumbers;
 
+/// The parts made of rubber, such as tires.
+@property (nonatomic, readonly, copy) NSSet<NSString *> *rubberPartNumbers;
+
 @property (nonatomic, readonly) LDrawRebrickableSetList *setList;
 
-/// Saves the availability catalog, and the relations, the known parts and the
-/// color links in the identity data, keeping the part links the store has.
+/// Saves the availability catalog, and the relations, the known and rubber
+/// parts and the color links in the identity data, keeping the part links the
+/// store has.
 - (BOOL) saveIntoStore:(LDrawInventoryStore *)store
 			colorLinks:(NSDictionary<NSNumber *, id> *)colorLinks
 				 error:(NSError **)error NS_SWIFT_NAME(save(into:colorLinks:));

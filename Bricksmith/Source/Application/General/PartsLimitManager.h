@@ -30,8 +30,7 @@ extern NSString * const PartsDataUpdateDidEndNotification;
 typedef NS_OPTIONS(NSUInteger, PartsLimitMenuCommands)
 {
 	PartsLimitMenuNoCommands		= 0,
-	PartsLimitMenuLimitOptions		= 1 << 0,
-	PartsLimitMenuImportSetParts	= 1 << 1
+	PartsLimitMenuLimitOptions		= 1 << 0
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -73,7 +72,6 @@ typedef NS_OPTIONS(NSUInteger, PartsLimitMenuCommands)
 // Actions
 - (IBAction) choosePartsLimit:(nullable id)sender;
 - (IBAction) showLimitOptions:(nullable id)sender;
-- (IBAction) importSetParts:(nullable id)sender;
 - (IBAction) showInventories:(nullable id)sender;
 - (IBAction) toggleLimitMarks:(nullable id)sender;
 

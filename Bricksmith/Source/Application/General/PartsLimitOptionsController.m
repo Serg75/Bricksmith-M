@@ -9,20 +9,56 @@
 //==============================================================================
 #import "PartsLimitOptionsController.h"
 
+#import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 
+#import "PartsLimitManager.h"
 #import "PreferencesForm.h"
 
 // The sheet on screen. It keeps itself until it closes.
 static PartsLimitOptionsController *runningController = nil;
 
 
+@interface PartsLimitOptionsController () <NSWindowDelegate>
+@end
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// class PartsLimitOptionsPanel
+//
+////////////////////////////////////////////////////////////////////////////////
+@interface PartsLimitOptionsPanel : NSPanel
+@end
+
+
+@implementation PartsLimitOptionsPanel
+
+//========== keyDown: ==========================================================
+//
+// Purpose:		Sends Escape to the delegate as cancelOperation:. The panel has
+//				no text field, so nothing else turns Escape into one.
+//
+//==============================================================================
+- (void) keyDown:(NSEvent *)event
+{
+	id		delegate	= [self delegate];
+	BOOL	isEscape	= [[event charactersIgnoringModifiers] isEqualToString:@"\e"];
+
+	if(isEscape && [delegate respondsToSelector:@selector(cancelOperation:)])
+		[delegate cancelOperation:self];
+	else
+		[super keyDown:event];
+
+}//end keyDown:
+
+@end
+
+
 @implementation PartsLimitOptionsController
 {
-	LDrawMutablePartLimit	*limit;
 	NSWindow				*parent;
 	NSPanel					*panel;
-	void					(^completion)(LDrawPartLimit *limit);
 
 	NSPopUpButton			*yearsPopUp;
 	NSSwitch				*pickABrickSwitch;
@@ -34,11 +70,9 @@ static PartsLimitOptionsController *runningController = nil;
 }
 
 
-//---------- runWithLimit:window:completion: -------------------------[static]--
+//---------- showWithWindow: -----------------------------------------[static]--
 //------------------------------------------------------------------------------
-+ (void) runWithLimit:(LDrawPartLimit *)limit
-			   window:(NSWindow *)window
-		   completion:(void (^)(LDrawPartLimit *limit))completion
++ (void) showWithWindow:(NSWindow *)window
 {
 	if(runningController != nil)
 	{
@@ -47,17 +81,15 @@ static PartsLimitOptionsController *runningController = nil;
 	}
 
 	runningController = [[PartsLimitOptionsController alloc] init];
-	runningController->limit		= [limit mutableCopy];
-	runningController->parent		= window;
-	runningController->completion	= completion;
+	runningController->parent = window;
 	[runningController show];
 
-}//end runWithLimit:window:completion:
+}//end showWithWindow:
 
 
 //========== show ==============================================================
 //
-// Purpose:		Builds the sheet from the limit and puts it up.
+// Purpose:		Builds the sheet from the app's limit and puts it up.
 //
 //==============================================================================
 - (void) show
@@ -70,15 +102,12 @@ static PartsLimitOptionsController *runningController = nil;
 													@"part.", nil);
 	NSString	*printNote		= NSLocalizedString(@"A printed part counts as the plain part, and the plain "
 													@"part as any of its prints.", nil);
-	NSString	*warnNote		= NSLocalizedString(@"A color the part does not come in can still be picked. "
-													@"The part is marked.", nil);
-	NSButton	*okButton		= [NSButton buttonWithTitle:NSLocalizedString(@"OK", nil)
-												 target:self
-												 action:@selector(ok:)];
-	NSButton	*cancelButton	= [NSButton buttonWithTitle:NSLocalizedString(@"Cancel", nil)
-												 target:self
-												 action:@selector(cancel:)];
-	NSStackView	*buttons		= [NSStackView stackViewWithViews:@[cancelButton, okButton]];
+	NSString	*warnNote		= NSLocalizedString(@"You can pick a color the part is not made in. The part "
+													@"then gets a mark.", nil);
+	NSButton	*doneButton		= [NSButton buttonWithTitle:NSLocalizedString(@"Done", nil)
+													 target:self
+													 action:@selector(done:)];
+	NSStackView	*buttons		= [[NSStackView alloc] init];
 	NSView		*yearsRow		= nil;
 	NSView		*looseRow		= nil;
 	NSView		*sparesRow		= nil;
@@ -95,14 +124,16 @@ static PartsLimitOptionsController *runningController = nil;
 													NSLocalizedString(@"The last 10 years", nil),
 													NSLocalizedString(@"Any year", nil)]
 											 tags:@[@3, @5, @10, @0]
-										   target:nil
-										   action:NULL];
-	pickABrickSwitch	= [PreferencesForm switchWithTarget:nil action:NULL];
-	sparesSwitch		= [PreferencesForm switchWithTarget:nil action:NULL];
-	moldsSwitch			= [PreferencesForm switchWithTarget:nil action:NULL];
-	printsSwitch		= [PreferencesForm switchWithTarget:nil action:NULL];
-	colorsSwitch		= [PreferencesForm switchWithTarget:nil action:NULL];
-	warnsSwitch			= [PreferencesForm switchWithTarget:nil action:NULL];
+										   target:self
+										   action:@selector(optionDidChange:)];
+	pickABrickSwitch	= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
+	sparesSwitch		= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
+	moldsSwitch			= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
+	printsSwitch		= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
+	colorsSwitch		= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
+	warnsSwitch			= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
+
+	LDrawPartLimit *limit = [[[PartsLimitManager sharedManager] session] limit];
 
 	// A value the menu lacks, from an older choice, shows as the next longer one.
 	if([yearsPopUp selectItemWithTag:limit.yearsBack] == NO)
@@ -138,7 +169,7 @@ static PartsLimitOptionsController *runningController = nil;
 									  noteField:NULL];
 	colorRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Ignore colors", nil)
 										control:colorsSwitch];
-	warnRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Allow any color", nil)
+	warnRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Pick any color", nil)
 										   note:warnNote
 										control:warnsSwitch
 									  noteField:NULL];
@@ -153,21 +184,24 @@ static PartsLimitOptionsController *runningController = nil;
 											   rows:@[moldRow, printRow, colorRow, warnRow]
 											 footer:nil];
 
-	[okButton setKeyEquivalent:@"\r"];
-	[cancelButton setKeyEquivalent:@"\e"];
+	// Return and Escape both close it, since every change is already made.
+	[doneButton setKeyEquivalent:@"\r"];
+	[buttons addView:doneButton inGravity:NSStackViewGravityTrailing];
 
 	NSStackView *stack = [NSStackView stackViewWithViews:@[available, inventory, matching, buttons]];
 	[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
-	[stack setAlignment:NSLayoutAttributeTrailing];
+	[stack setAlignment:NSLayoutAttributeLeading];
 	[stack setSpacing:18];
+	[[[buttons widthAnchor] constraintEqualToAnchor:[stack widthAnchor]] setActive:YES];
 
 	NSView *content = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(20, 20, 20, 20)];
 
-	panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 500, 400)
-									   styleMask:NSWindowStyleMaskTitled
-										 backing:NSBackingStoreBuffered
-										   defer:YES];
+	panel = [[PartsLimitOptionsPanel alloc] initWithContentRect:NSMakeRect(0, 0, 500, 400)
+													  styleMask:NSWindowStyleMaskTitled
+														backing:NSBackingStoreBuffered
+														  defer:YES];
 	[panel setTitle:NSLocalizedString(@"Limit Options", nil)];
+	[panel setDelegate:self];
 	[panel setContentView:content];
 	[panel setContentSize:[content fittingSize]];
 
@@ -182,10 +216,17 @@ static PartsLimitOptionsController *runningController = nil;
 }//end show
 
 
-//========== ok: ===============================================================
+//========== optionDidChange: ==================================================
+//
+// Purpose:		Puts the options into the app's limit. Its kind is read again,
+//				since a menu may pick another limit while the sheet is up.
+//
 //==============================================================================
-- (void) ok:(id)sender
+- (void) optionDidChange:(id)sender
 {
+	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
+	LDrawMutablePartLimit	*limit		= [[[manager session] limit] mutableCopy];
+
 	limit.yearsBack				= [[yearsPopUp selectedItem] tag];
 	limit.countsPickABrickParts	= ([pickABrickSwitch state] == NSControlStateValueOn);
 	limit.includesSpares		= ([sparesSwitch state] == NSControlStateValueOn);
@@ -194,32 +235,33 @@ static PartsLimitOptionsController *runningController = nil;
 	limit.matchesAnyColor		= ([colorsSwitch state] == NSControlStateValueOn);
 	limit.warnsOnly				= ([warnsSwitch state] == NSControlStateValueOn);
 
-	[self closeWithLimit:[limit copy]];
-}
+	[manager setLimit:[limit copy] window:parent];
+
+}//end optionDidChange:
 
 
-//========== cancel: ===========================================================
+//========== done: =============================================================
 //==============================================================================
-- (void) cancel:(id)sender
+- (void) done:(id)sender
 {
-	[self closeWithLimit:nil];
-}
-
-
-//========== closeWithLimit: ===================================================
-//==============================================================================
-- (void) closeWithLimit:(LDrawPartLimit *)result
-{
-	void (^done)(LDrawPartLimit *) = completion;
-
 	if(parent != nil)
 		[parent endSheet:panel];
 	[panel orderOut:nil];
 
 	// The last strong reference may go here, so nothing of self is read after.
 	runningController = nil;
-	done(result);
 
-}//end closeWithLimit:
+}//end done:
+
+
+//========== cancelOperation: ==================================================
+//
+// Purpose:		Escape closes the sheet like Done.
+//
+//==============================================================================
+- (void) cancelOperation:(id)sender
+{
+	[self done:sender];
+}
 
 @end

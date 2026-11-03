@@ -30,7 +30,7 @@ struct LDrawPartLimitTests {
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil,
                                                      colorLinks: [4: 4, 0: 0, 379: 379],
                                                      relations: [["M", "3062a", "3062b"], ["P", "3001pr0001", "3001"]],
-                                                     knownPartNumbers: nil)
+                                                     knownPartNumbers: nil, rubberPartNumbers: nil)
         return LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil)
     }
 
@@ -162,7 +162,10 @@ struct LDrawPartLimitTests {
 
     @Test("A color with no Rebrickable match has no data")
     func unmatchedColor() {
-        #expect(availableNowTable().status(forPartNamed: "3001.dat", colorCode: color(16)) == .noData)
+        let table = availableNowTable()
+        #expect(table.status(forPartNamed: "3001.dat", colorCode: color(16)) == .noData)
+        #expect(table.matchesColorCode(color(16)) == false)
+        #expect(table.matchesColorCode(color(Self.red)))
     }
 
     @Test("Any year allows every color a part ever came in")
@@ -214,6 +217,48 @@ struct LDrawPartLimitTests {
         #expect(availableNowTable().allowedColorCodes() == [NSNumber(value: Self.red)])
         #expect(availableNowTable { $0.countsPickABrickParts = true }.allowedColorCodes()
                 == [NSNumber(value: Self.red), NSNumber(value: Self.sandBlue)])
+    }
+
+    @Test("Every-code lists add the other LDraw colors each Rebrickable color links to")
+    func everyColorCode() {
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [4: [4, 324]],
+                                                     relations: nil, knownPartNumbers: nil, rubberPartNumbers: nil)
+        let table = LDrawPartLimitTable(limit: limit { $0.kind = .availableNow }, availability: availability(),
+                                        items: nil,
+                                        identity: LDrawPartIdentity(catalogRecords: nil, rebrickableData: data,
+                                                                    overrides: nil),
+                                        year: 2026)
+        let both = [NSNumber(value: Self.red), NSNumber(value: 324)]
+        #expect(table.colorCodes(forPartNamed: "3001.dat") == [NSNumber(value: Self.red)])
+        #expect(table.everyColorCode(forPartNamed: "3001.dat") == both)
+        #expect(table.allowedColorCodes() == [NSNumber(value: Self.red)])
+        #expect(table.everyAllowedColorCode() == both)
+        #expect(table.status(forPartNamed: "3001.dat", colorCode: color(324)) == .allowed)
+    }
+
+    @Test("A rubber color is offered and allowed only for a rubber part")
+    func rubberColorCodes() {
+        let builder = LDrawPartAvailabilityBuilder()
+        builder.notePartNumber("3001", colorID: 4, year: 2026, inDatabaseSet: false)
+        builder.notePartNumber("3483", colorID: 0, year: 2026, inDatabaseSet: false)
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [0: [0, 256], 4: [4, 324]],
+                                                     relations: nil, knownPartNumbers: nil,
+                                                     rubberPartNumbers: ["3483"])
+        let identity = LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil,
+                                         rubberColorCodes: [256, 324])
+        let table = LDrawPartLimitTable(limit: limit { $0.kind = .availableNow },
+                                        availability: builder.availability(with: nil),
+                                        items: nil, identity: identity, year: 2026)
+        let codes = { (codes: [Int32]) in codes.map { NSNumber(value: $0) } }
+
+        #expect(table.everyColorCode(forPartNamed: "3001.dat") == codes([Self.red]))
+        #expect(table.everyColorCode(forPartNamed: "3483.dat") == codes([Self.black, 256]))
+        #expect(table.everyAllowedColorCode() == codes([Self.black, Self.red, 256]))
+        #expect(table.status(forPartNamed: "3001.dat", colorCode: color(324)) == .notInColor)
+        #expect(table.status(forPartNamed: "3001.dat", colorCode: color(Self.red)) == .allowed)
+        #expect(table.status(forPartNamed: "3483.dat", colorCode: color(256)) == .allowed)
+        #expect(table.status(forPartNamed: "3483.dat", colorCode: color(324)) == .notInColor)
+        #expect(table.allowsPartNamed("3001.dat", colorCode: color(324)) == false)
     }
 
     // MARK: - Inventories

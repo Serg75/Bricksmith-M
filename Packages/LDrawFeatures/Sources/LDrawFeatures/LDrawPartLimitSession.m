@@ -29,6 +29,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 @implementation LDrawPartLimitSession
 {
 	NSArray<NSDictionary *>								*catalogRecords;
+	NSSet<NSNumber *>									*rubberColorCodes;
 	NSMutableDictionary<NSString *, LDrawPartLimitTable *>	*inventoryTables;	// by identifier
 
 	// The identity map, and the store's data it was built from.
@@ -122,7 +123,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 {
 	LDrawPartLimitTable	*table		= self->inventoryTables[identifier];
 	LDrawPartLimit		*limit		= [self.limit limitWithKind:LDrawPartLimitKindInventory
-											 inventoryIdentifier:identifier];
+											inventoryIdentifier:identifier];
 
 	if (table != nil)
 		return table;
@@ -140,11 +141,12 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 }//end tableForInventoryIdentifier:
 
 
-//========== setCatalogRecords: ================================================
+//========== setCatalogRecords:rubberColorCodes: ===============================
 //==============================================================================
-- (void) setCatalogRecords:(NSArray<NSDictionary *> *)records
+- (void) setCatalogRecords:(NSArray<NSDictionary *> *)records rubberColorCodes:(NSSet<NSNumber *> *)codes
 {
 	self->catalogRecords	= [records copy];
+	self->rubberColorCodes	= [codes copy];
 	self->builtIdentity		= nil;
 	[self reload];
 }
@@ -185,8 +187,9 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 		self->identityData		= data;
 		self->identityOverrides	= overrides;
 		self->builtIdentity		= [LDrawPartIdentity identityWithCatalogRecords:self->catalogRecords
-																 rebrickableData:data
-																	   overrides:overrides];
+																rebrickableData:data
+																	  overrides:overrides
+															   rubberColorCodes:self->rubberColorCodes];
 	}
 	return self->builtIdentity;
 

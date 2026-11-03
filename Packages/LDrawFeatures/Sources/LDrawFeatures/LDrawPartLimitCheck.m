@@ -59,6 +59,7 @@
 	NSMapTable<LDrawPart *, NSNumber *>						*statusByPart;
 	NSMapTable<LDrawPart *, NSNumber *>						*colorByPart;		// the color of the worst copy
 	NSMapTable<LDrawContainer *, NSArray<NSNumber *> *>		*containerCache;	// problem count, worst status
+	NSHashTable<LDrawPart *>								*missing;
 }
 
 
@@ -80,17 +81,24 @@
 	self->rowsByKey			= [NSMutableDictionary dictionary];
 	self->assemblies		= [NSMutableDictionary dictionary];
 	self->statusByPart		= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality
-												valueOptions:NSPointerFunctionsStrongMemory];
+													valueOptions:NSPointerFunctionsStrongMemory];
 	self->colorByPart		= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality
-												valueOptions:NSPointerFunctionsStrongMemory];
+													valueOptions:NSPointerFunctionsStrongMemory];
 	self->containerCache	= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality
-												valueOptions:NSPointerFunctionsStrongMemory];
+													valueOptions:NSPointerFunctionsStrongMemory];
+	self->missing			= [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
 
 	for (LDrawPartUsageCopy *copy in usage.copies)
 	{
 		BOOL					 isPart	= copy.isLEGOPart;
 		NSArray					*pieces	= isPart ? [table countedPiecesOfPartNamed:copy.partName] : nil;
 		LDrawPartLimitStatus	 worst	= LDrawPartLimitStatusAllowed;
+
+		if (copy.kind == LDrawPartUsageKindMissing)
+		{
+			for (LDrawPart *part in copy.parts)
+				[self->missing addObject:part];
+		}
 
 		if (pieces == nil)
 		{
@@ -252,6 +260,14 @@
 	return parts;
 
 }//end problemParts
+
+
+//========== missingParts ======================================================
+//==============================================================================
+- (NSArray<LDrawPart *> *) missingParts
+{
+	return [self->missing allObjects];
+}
 
 
 //========== problemCountInContainer: ==========================================

@@ -116,6 +116,43 @@
 }//end updateCatalogForcing:completion:
 
 
+//========== updateIdentityData: ===============================================
+///
+/// @abstract	A catalog keeps the color links it was built with, so a newer
+/// 			table or fetched links reach it only through this. A catalog
+/// 			built before rubber parts were read gets them here.
+///
+//==============================================================================
+- (BOOL) updateIdentityData:(NSError **)error
+{
+	NSDictionary	*data	= [self.store rebrickableIdentityData];
+	NSDictionary	*links	= [LDrawRebrickableColors colorLinksForFolder:self.downloads.folderURL];
+	NSSet			*rubber	= nil;
+
+	if (data == nil)
+		return YES;
+
+	if (	[LDrawPartIdentity rubberPartNumbersInRebrickableData:data] == nil
+		&&	[self.downloads hasFilesNamed:@[@"parts"]] )
+	{
+		rubber = [LDrawRebrickableCatalog rubberPartNumbersFromDownloads:self.downloads error:error];
+		if (rubber == nil)
+			return NO;
+	}
+	if (rubber == nil && [links isEqualToDictionary:[LDrawPartIdentity colorLinksInRebrickableData:data]])
+		return YES;
+
+	data = [LDrawPartIdentity rebrickableDataByUpdating:data
+											  partLinks:nil
+											 colorLinks:links
+											  relations:nil
+									   knownPartNumbers:nil
+									  rubberPartNumbers:rubber];
+	return [self.store saveRebrickableIdentityData:data error:error];
+
+}//end updateIdentityData:
+
+
 //========== loadSetListWithCompletion: ========================================
 //==============================================================================
 - (void) loadSetListWithCompletion:(void (^)(LDrawRebrickableSetList *setList, NSError *error))completion
@@ -173,7 +210,8 @@
 																  partLinks:links
 																 colorLinks:nil
 																  relations:nil
-														   knownPartNumbers:nil];
+														   knownPartNumbers:nil
+														  rubberPartNumbers:nil];
 						[self.store saveRebrickableIdentityData:data error:&saveError];
 					}
 					if (saveError == nil)

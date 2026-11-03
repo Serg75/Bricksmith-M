@@ -121,12 +121,11 @@ Parts: [All Parts             ▾]  ⚠ 12
         Technic shelf (3 sets + loose parts)
         ─────────────
         Limit Options…
-        Import Set Parts…
 ```
 
-- The button after it shows how many parts of this window's model break the limit, and hides at zero. It opens a popover with the count of each kind, a **Select** button for each, and **Show Piece Count**.
-- The same choices are in **View → Parts Limit**, with **Limit Options…** and **Mark Limit Problems** to turn the marks on and off. Each command has one place in the menu bar: importing is in the File menu and the inventories in the Window menu.
-- **Limit Options…** opens a sheet: include spare parts (on, as Rebrickable's Build counts them); prints must match, or any print of a part will do; mold variants and alternates count as one (on); colors must match (on), or any color will do; how many years back *Available now* reaches (3, 5 or 10, or any year; 5 by default), and whether parts sold only through Pick a Brick count (off); and **Warn only**, which lets a color the part is not made in be picked, and only marks it.
+- The button after it shows how many parts of this window's model break the limit. With none, it shows in gray how many parts have no data or are not in the part library, and it hides when there are none of those either. It opens a popover with the count of each kind, the parts not in the part library, a **Select** button for each, and **Show Piece Count**.
+- The same choices are in **View → Parts Limit**, with **Limit Options…** and **Mark Limit Problems** to turn the marks on and off. The inventories have their place in the Window menu, and sets are imported from their window.
+- **Limit Options…** opens a sheet: include spare parts (on, as Rebrickable's Build counts them); prints must match, or any print of a part will do; mold variants and alternates count as one (on); colors must match (on), or any color will do; how many years back *Available now* reaches (3, 5 or 10, or any year; 5 by default), and whether parts sold only through Pick a Brick count (off); and **Pick any color**, which lets a color the part is not made in be picked, and only marks it. Each change applies at once, so the model's marks follow while the sheet is up; **Done** (Return or Escape) closes it.
 - The limit and its options are kept in the app's defaults. Switching it is not an edit: it does not touch the file, mark the document changed, or go on the undo stack.
 
 **The Inventories window keeps the library.** It is app-wide, under Window → Inventories.
@@ -135,7 +134,7 @@ Parts: [All Parts             ▾]  ⚠ 12
 - On the right, for an inventory: its sets with a count each, its loose parts (part, color, count), and **Add Set…**, **Add Parts from File…** (Bricksmith's own piece count export, Rebrickable CSV, BrickLink XML), **Remove**.
 - For a set: name, year, theme, picture, part count, spare count, minifigures, the date it was fetched, and **Refresh**.
 - An **Unmatched** list: the inventory parts with no LDraw part, and the model's parts with no LEGO match, so gaps in the matching can be seen and fixed by hand (Phase 7).
-- **File → Import Set Parts…** opens the Add Set sheet at once: type a set number or a name, pick from the matches (number, name, year, picture), **Import**. It then offers **Use as the Limit**.
+- **Import Set Parts…**, on the Inventories window's **+** menu, opens the Add Set sheet at once: type a set number or a name, pick from the matches (number, name, year, picture), **Import**. It then offers **Use as the Limit**. It is the one place to import a set. Window → Inventories and **Manage Inventories…** in Settings open that window.
 
 **Settings get a Parts pane**, for app-wide defaults and the data.
 
@@ -180,8 +179,8 @@ Every browser shows the one limit. The counts come from a model: the browser in 
 
 - With a limit on, the Colors window's material pop-up gets two items at the top: **For Selected Part**, and **In *inventory*** or **Made Now**. For Selected Part is the default.
 - The selected part is the document's selection when it has parts. Otherwise it is the part selected in the Part Browser, the one the next insert makes. With several parts selected, a color must suit all of them.
-- Under the other filters, the colors the selected part is not made in are dimmed and struck through, and they cannot be selected, by click, arrow key or a typed color code. **Warn only** in Limit Options lifts that, and the part is then marked instead.
-- A line at the bottom says why the list is short: *Colors for Brick 2 x 4 (3001): 14 of 92*.
+- Under the other filters, the colors the selected part is not made in are dimmed and struck through, and they cannot be selected, by click, arrow key or a typed color code. **Pick any color** in Limit Options lifts that, and the part is then marked instead.
+- A line at the bottom says why the list is short: *14 colors for Brick 2 x 4 (3001)*.
 - **Randomize Color** picks only among each part's allowed colors.
 - The inspector's color well uses the same window, so the same rule holds there.
 - Parts that come in some other way are not stopped: paste, drag from another file, a typed part name, Insert Related, the Minifigure Generator. They are marked.
@@ -205,9 +204,11 @@ Stripes show on a part of any color, red ones included, and look like neither a 
 | Not available | red `nosign` | *Not made now in any color.* / *Not in 42115-1.* |
 | Not in this color | red `exclamationmark.circle.fill` | *Not made in Sand Blue now. Made in Black, Red, Light Bluish Gray and 11 more.* |
 | Too many | orange `plus.circle.fill` | *The model uses 11 red Brick 2 x 4; 42115-1 holds 10.* |
-| No data | gray `questionmark.circle` | *Bricksmith cannot match this part to a LEGO part.* |
+| No data | gray `questionmark.circle` | *Bricksmith cannot match this part to a LEGO part.* / *Bricksmith cannot match Pearl Silver to a LEGO color.* |
 
 A step or model row that holds marked parts shows how many, in the color of the worst one, so a collapsed tree still shows where to look.
+
+A part the part library does not have gets a gray `questionmark.square.dashed` badge, with or without a limit, unless it breaks the limit. Its tooltip says *The part library does not have this part.*, followed by its limit line when it has one. A step or model with no problems but with such parts shows their count in gray.
 
 **Elsewhere.**
 
@@ -224,7 +225,7 @@ A step or model row that holds marked parts shows how many, in the color of the 
 | Preferences → Parts → Highlight unavailable parts | The Marks section of the new Parts pane |
 | A filter button with a color list in the Part Browser's bottom bar | The color filter button: Any Color, Current Color, then the colors made now |
 | A settings page, tool or Part Browser extension for imported sets, set combinations, sets plus parts | The Inventories window keeps them; the SETS group shows them in the Part Browser |
-| SETS in the Part Browser's left list; File → Import Set Parts | Both, with a **+** on the SETS heading too |
+| SETS in the Part Browser's left list; File → Import Set Parts | The SETS group; sets are imported from the Inventories window |
 | Buttons for the selected part's colors in the bottom bar | The color strip under the preview, with what is left on each chip for a set |
 | A selected set appears in the Colors window's pop-up | **In 42115-1** in the material pop-up |
 | A Count column like `5 / 10`, a red line at `11 / 10` | The Count column, gray when all are used, a red row past the count |
@@ -237,7 +238,8 @@ A step or model row that holds marked parts shows how many, in the color of the 
 - Color 16 takes the color of the reference that brings the part in. A part in color 16 at the top of the main model has no real color, so its status is *no data*.
 - Hidden parts count, since hiding is only a view. A part in a removed group counts once, in the step that adds it.
 - Parts inside `PLI BEGIN IGN` and `PART BEGIN IGN` ranges do not count. LPub3D keeps them out of its bill of materials; they are alternates and helpers. A `PLI BEGIN SUB` range counts its substitute once instead of what it holds, as LPub3D lists it. A set lists it that way too: one hinge, not its two halves. `LDrawStepPartList` follows the same rules, so the range tracking moves into a helper that both use.
-- An LSynth hose or band, a peer-file part, a missing part, and a part in a direct color (`0x2RRGGBB`) are *no data*. A peer file is not walked into, since its parts can be neither marked nor changed from this file.
+- An LSynth hose or band, a peer-file part, and a part in a direct color (`0x2RRGGBB`) are *no data*. A peer file is not walked into, since its parts can be neither marked nor changed from this file.
+- A part the library does not have, such as a part newer than the library, is checked by its name like any other part, since Rebrickable may know it. It has *no data* only when nothing matches it. The popover lists these parts too.
 - Models that nothing places are walked after the main model, first those no other model places, so a model placed only by one of them takes its color from there.
 - Copies are numbered in build order, so the copies past the count are the last ones built.
 
@@ -353,7 +355,9 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitKind)
 - (NSUInteger) ownedCountForPartNamed:(NSString *)partName
                             colorCode:(LDrawColorT)colorCode;                       // NSNotFound when not counted
 - (nullable NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName;    // nil when colors are not limited
+- (nullable NSArray<NSNumber *> *) everyColorCodeForPartNamed:(NSString *)partName; // with rubber black for a tire
 - (nullable NSArray<NSNumber *> *) allowedColorCodes;                               // for the color filter
+- (nullable NSArray<NSNumber *> *) everyAllowedColorCode;
 - (nullable NSString *) poolKeyForPartNamed:(NSString *)partName;                   // nil when there is no match
 - (NSArray<LDrawInventoryItem *> *) items;                                          // an inventory's rows; empty otherwise
 - (NSArray<LDrawInventoryItem *> *) unmatchedItems;
@@ -429,8 +433,9 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 
 **As built.** `Packages/LDrawRebrickable`, with 28 tests on small hand-made files in Rebrickable's formats and a stub URL protocol; nothing in them reaches the network. Every package test passes and the target builds for the iOS Simulator. What came out differently, or is still open:
 
-- *The color table is made from names for now.* `Scripts/make_color_table.py --names colors.csv.gz LDConfig.ldr` links 198 of Rebrickable's colors by name, then by an RGB value only one LDraw color has; the rest are mostly special lines (HO, Duplo, Modulex, Vintage). Run `REBRICKABLE_API_KEY=… Scripts/make_color_table.py --api` once to replace it with Rebrickable's own links. A user's key does the same at run time: after a data update, or when the key is entered, `PartsLimitManager` fetches `lego/colors/` once into `colors-api.json` in the downloads folder, which then wins, and gives the links to the identity data already saved.
+- *The color table is made from names for now.* `Scripts/make_color_table.py --names colors.csv.gz LDConfig.ldr` links 200 of Rebrickable's colors: a few fixed by hand, then by name, then by an RGB value only one LDraw color has. The hand fixes are names that differ or mislead: Flat Silver is LDraw's 179 Pearl_Silver, Dark Purple is Medium_Lilac, and Vibrant Yellow is Neon_Yellow. The rest are mostly special lines (HO, Duplo, Modulex, Vintage). Run `REBRICKABLE_API_KEY=… Scripts/make_color_table.py --api` once to replace it with Rebrickable's own links. A user's key does the same at run time: after a data update, or when the key is entered, `PartsLimitManager` fetches `lego/colors/` once into `colors-api.json` in the downloads folder, which then wins. Saved identity data keeps the links it was built with, so once a launch, when a limit, a set or an inventory uses it, the updater gives it the folder's links, fetched or built in, if they differ. A newer table then works without a catalog rebuild.
 - *One Rebrickable color can be several LDraw colors.* Black is LDraw's 0 and 256 (rubber black), so color links map an id to a list of codes. `LDrawPartIdentity` took that change.
+- *Rubber colors go only to rubber parts.* Rebrickable has no rubber colors, but its part list gives each part a material, and 324 parts are rubber: tires, rubber bands and the like. The catalog keeps those as `rubberPartNumbers` in the identity data. Data saved before that has none, so the once-a-launch update reads them from the downloaded `parts.csv.gz`. The host gives the session ldconfig.ldr's rubber colors with the part library's records, and `-[LDrawPartIdentity colorCodesForRebrickableColorID:ofPartNumber:]` drops a rubber color, after the first, for a part that is not rubber. So the Colors window offers Technic Axle 2 Notched (32062) in red but not in rubber red. `-[LDrawPartIdentity colorCode:suitsPartNamed:]` applies the same rule to a part's status, so a plastic part already in rubber red is marked as not made in its color, and Use Nearest Color gives it red. While the data does not say which parts are rubber, every part is offered and allowed every color.
 - *`LDrawInventoryJSON.h` is public now*, so both packages read JSON the same careful way.
 - *The set import reads the downloads, sets inside sets and minifigures included, each multiplied.* The API import does not fetch sets inside a set yet.
 - *A set's count in the catalog can come out high* when a part is in the set and in one of its minifigures: each inventory is read on its own. Years, which are what *Available now* reads, are right.
@@ -454,7 +459,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - *`LDrawPartUsage`* lists copies: part name, built color, kind (part, substitute, LSynth, missing), the parts that stand for it, and whether it counts. A substitute named `.ldr` or `.mpd` is counted as the `.dat` of that number. A callout's placement counts like any other.
 - *`LDrawPartLimitCheck`* gives `LDrawPartLimitReport`: one row per pool and color with used, owned and status; a status per part; and a problem count and worst status per container, worked out once each for File Contents. *No data* is not a problem in those counts.
 - *Counting shares the limit's own key.* `-[LDrawPartLimitTable countKeyForPartNamed:colorCode:]` keys a copy by its pool and the Rebrickable colors its color is, so black and rubber black draw on one count.
-- *LSynth and missing parts are no data and get no mark*, since only `LDrawPart` carries a status. A part tells it is missing only with a catalog loaded, as in the step parts list; so does a primitive in the library's root folder, such as `stud.dat`.
+- *LSynth is no data and gets no mark*, since only `LDrawPart` carries a status. A part tells it is missing only with a catalog loaded, as in the step parts list; so does a primitive in the library's root folder, such as `stud.dat`. A part the library does not have is checked by its name, and the report lists it in `missingParts`.
 - *A part in "any color" (9999) counts toward every color of its pool*, so two colors can each draw on it. Rare, and generous rather than strict.
 - *A model that places itself does not resolve*; the line reads as a part with no match.
 - *Copying a part leaves its status behind*, since a copy starts from a new part. Copying looks up the shared part library, which package tests do not have, so no test covers it.
@@ -475,8 +480,8 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - *`PartsLimitManager`* is the app's one owner of the store, the session and the updater, instead of class methods on `PreferencesDialogController`. It keeps the limit in the defaults under `PARTS_LIMIT_KEY`, the data in `~/Library/Application Support/Bricksmith/Parts Data`, and the API key in the Keychain. It fills every limit menu, asks before the first download (about 18 MB), shows the download's progress, and updates the data quietly when `PARTS_DATA_UPDATE_INTERVAL_KEY` days (default 30) have passed, but only once the user has data.
 - *The Parts menu is a pull-down with a box icon, not a "Parts:" label and pop-up*, placed after the model menu against the step controls, which takes less room. The model menu gives up the width. Both hide while a step is arranged. The problem button shows the count and turns orange when the worst problem is *too many*. Its popover lists each kind with **Select**, which selects the parts in the model being edited, or else in the first model that has some, and **Show Piece Count…**.
 - *Documents check from `-docChanged:` and on every limit change*, once per run of the event loop, and redraw only when a part's status changed. With no limit the walk is skipped, once the marks of the earlier limit are cleared.
-- *View → Parts Limit, File → Import Set Parts… and Window → Inventories* are added in code at launch. **Mark Limit Problems** waits for the marks in Phase 6.
-- *Settings → Parts* has the limit with **Limit Options…**, **Import Set Parts…** and **Manage Inventories…** as buttons; its pull-down lists only the limits. Then Rebrickable: when the data was last checked with **Update Now** (or **Download**), the update interval (never, weekly, monthly) and the API key. The Part Browser and Marks sections come with Phases 4 and 6.
+- *View → Parts Limit and Window → Inventories* are added in code at launch. **Mark Limit Problems** waits for the marks in Phase 6.
+- *Settings → Parts* has the limit with **Limit Options…** and **Manage Inventories…** as buttons; its pull-down lists only the limits. Then Rebrickable: when the data was last checked with **Update Now** (or **Download**), the update interval (never, weekly, monthly) and the API key. The Part Browser and Marks sections come with Phases 4 and 6.
 - *The Inventories window* lists the sets and the inventories. A set shows its year, theme, parts and spares, and where and when it was imported, with **Use as Limit** and **Refresh**. An inventory has an editable name, its sets with a count each (**Add Set**, **Remove Set**), its loose parts (**Add Parts from File…**, **Remove Loose Parts**) and **Use as Limit**. The picture, minifigures and the Unmatched list are left for Phase 7.
 - *`LDrawInventoryPartsFile`* (LDrawInventory) reads loose parts from Bricksmith's piece count export and from a Rebrickable parts list in CSV. BrickLink XML needs BrickLink's color numbers, so it stays in Phase 8.
 - *Strings use the English text as the key*, as the Settings panes do, except the pane name, which `Localizable.strings` gets.
@@ -494,7 +499,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - *`-[LDrawPartLimitSession tableForInventoryIdentifier:]`* builds a set's table with the limit's options, for browsing it under Sets whatever the limit is, and keeps it until the limit or the store changes.
 - *Parts with no data are hidden like parts not made now* under *Available now*, since nothing says they are. Show All lists them dimmed. Primitives and Subparts are never filtered when browsed as categories.
 - *Show All with an inventory as the limit lists the library*, dimming what the inventory lacks, instead of adding library parts to the inventory's rows.
-- *Insert is blocked only for a color the part is not made in* (or the inventory lacks), as the plan says, with Warn Only lifting it. A dimmed part can still be inserted and is then marked. Drag follows the same rule.
+- *Insert is blocked only for a color the part is not made in* (or the inventory lacks), as the plan says, with Pick Any Color lifting it. A dimmed part can still be inserted and is then marked. Drag follows the same rule.
 - *A chip that is not an inventory row sets the Colors window's color*, as a click in that window does, which also recolors any parts selected in the model. An inventory row's chip selects that row.
 - *The Count column sorts by what is left*, and sorting now keeps the selected part selected; before, the selection stayed on the same row number while the rows moved.
 - *The shared panel counts the main window's model*, or with the app in the background the frontmost document's. Each document posts `PartsLimitDidCheckNotification` after its check, and keeps the walk of its model until the next edit, so the browser's counts cost no second walk.
@@ -510,11 +515,11 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 
 **As built.** 3 new tests in `LDrawFeaturesTests`; every package test passes, both app targets build, and LDrawFeatures and LDrawEditing build for the iOS Simulator. Checked in the Metal app with *Available now* and the Porsche test model: with 3001 chosen in the Part Browser the list is its 40 colors of 322, and under Solid 110 rows are refused; 40 parts selected in the model share one color and keep their own colors while the list follows them; Randomize Color changed 25 of them and put none in a color its part is not made in. What came out differently, or is left:
 
-- *`LDrawColorPanelModel`* gets `+allowedColorCodesForPartNames:table:`, which takes the colors every part shares. A part the limit knows nothing of, or allows in no color, does not narrow the list, since no color would make it right. `+canSelectColorCode:allowedColorCodes:warnsOnly:` always lets color 16 through, as it takes the color of what places the part. The predicate's search and material parts were joined without a space before AND; that is fixed.
+- *`LDrawColorPanelModel`* gets `+allowedColorCodesForPartNames:table:`, which takes the colors every part shares. The Colors window takes every LDraw color linked to a Rebrickable color that suits the part, so it offers rubber black for a tire made in black, and not for a brick; the Part Browser's chips, the *Made in* list and Use Nearest Color take one LDraw color for each, so a brick does not read as made in rubber. A part the limit knows nothing of, or allows in no color, does not narrow the list, since no color would make it right. `+canSelectColorCode:allowedColorCodes:warnsOnly:` always lets color 16 through, as it takes the color of what places the part. The predicate's search and material parts were joined without a space before AND; that is fixed.
 - *The Colors window never picks a color by itself.* Its list no longer avoids an empty selection, and narrowing the list for the limit applies no color, so selecting a part never recolors it. A part already in a color it is not made in shows that color in the bar with no row selected.
 - *For Selected Part becomes the filter when a limit comes on*, and the limit's item reads Made Now or In *set*. Both go away with the limit, back to All.
-- *Rows the parts may not take are faded and crossed out*, and refused by click or arrow key. A typed code picks the first listed color that can be picked. Warn Only still fades them, but lets them be picked.
-- *The footer* says "Colors for Brick 2 x 4 (3001): 40 of 322", or "Colors for 16 parts" for several. It and the material pop-up do not render in snapshots of this panel, so it was checked by its state.
+- *Rows the parts may not take are faded and crossed out*, and refused by click or arrow key. A typed code picks the first listed color that can be picked. Pick Any Color still fades them, but lets them be picked.
+- *The footer* says "40 colors for Brick 2 x 4 (3001)", or "12 colors for 16 parts" for several. It wraps onto more lines when the window is narrow. It and the material pop-up do not render in snapshots of this panel, so it was checked by its state.
 - *The Part Browser posts `PartBrowserSelectionDidChangeNotification`*, so its part counts when the model has none selected.
 - *`+[LDrawSelection randomizedColorsForDirectives:allowedColors:]`* takes a block per part and color; a part allowed none of the selection's colors keeps its own. LDrawEditing has no test target, since it needs a renderer's display lists to link, so Randomize was checked in the app instead.
 - *The inspector's color well* goes through the same window and rules; it was not checked on its own.
@@ -538,7 +543,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 - *Stripes are 14 pixels apart on screen*, leaning one way for not available and not in color and the other way for too many. The shaders hold the same numbers in both languages.
 - *`LDrawPart` holds the mark settings* (`+setLimitMarkStyle:`, `+setLimitMarkColor:forStatus:`, `+setDimsAllowedParts:`), which `PartsLimitManager` sets from the defaults (`PARTS_LIMIT_MARKS_KEY`, `…_MARK_STYLE_KEY`, the two color keys, `…_DIMS_OTHER_PARTS_KEY`), and then redraws every model. *Dim other parts* dims every checked part without a mark, those with no data too; it pushes the ghost alpha on parts from the library only, so a submodel never dims its own marked parts. `-applyReport:toFile:` sets `isLimitChecked` on each part while the limit restricts, and clears it when it does not, so dimming follows the limit, and the Part Browser, Piece Count and step parts list previews never dim. A document checks its model again when its change count moves (an edit, an undo or a redo), not when a view only redraws.
 - *File Contents* badges come from `LDrawPartLimitPresentation` (symbol and color per status) through `IconTextCell`'s new `badgeImage`, `badgeText` and `badgeColor`; a step or model gets a count. Tooltips and the inspector's line come from `PartsLimitController`. They follow View → Parts Limit → Mark Limit Problems, as the 3D marks do.
-- *The inspector's line* goes on the second line of the part's description, in red, instead of a new field.
+- *The inspector's line* goes on the second line of the part's description, in orange for too many and red otherwise, as the problem button is, instead of a new field.
 - *Piece Count* gets Owned and Status columns, the problems first and Problems Only; a row takes the status of what it counts with. Use Nearest Allowed Color is in the popover only, for all the parts not in their color at once; Piece Count's per-row version and Export Missing Parts are left for Phase 8.
 - *Use Nearest Allowed Color* skips parts in color 16, which take the color of what places them.
 - *Not checked:* Steps mode, LPub3D's page, and marked transparent or printed parts were not rendered on their own; they use the same draw paths.

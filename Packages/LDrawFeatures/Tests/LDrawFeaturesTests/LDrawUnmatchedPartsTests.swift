@@ -27,7 +27,7 @@ struct LDrawUnmatchedPartsTests {
         let known: Set<String> = ["3001", "2429", "2430", "3069b", "3069bpr0020", "3069bpr0101", "973c04h01pr3045"]
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [4: 4],
                                                      relations: [["P", "3069bpr0020", "3069b"]],
-                                                     knownPartNumbers: known)
+                                                     knownPartNumbers: known, rubberPartNumbers: nil)
         return LDrawPartIdentity(catalogRecords: records, rebrickableData: data, overrides: nil)
     }
 

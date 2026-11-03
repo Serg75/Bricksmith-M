@@ -35,11 +35,19 @@ struct LDrawRebrickableColorsTests {
         #expect(links[9999] == nil)
     }
 
+    @Test("Colors whose names differ from LDraw's link by hand")
+    func handLinks() {
+        let links = LDrawRebrickableColors.builtInColorLinks()
+        #expect(links[179] == [179, 315, 504])  // Flat Silver, LDraw's Pearl_Silver first
+        #expect(links[85] == [85])              // Dark Purple, LDraw's Medium_Lilac
+        #expect(links[1062] == [368])           // Vibrant Yellow, LDraw's Neon_Yellow
+    }
+
     @Test("A rubber color reads as its plain Rebrickable color")
     func rubber() {
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil,
                                                      colorLinks: LDrawRebrickableColors.builtInColorLinks(),
-                                                     relations: nil, knownPartNumbers: nil)
+                                                     relations: nil, knownPartNumbers: nil, rubberPartNumbers: nil)
         let identity = LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil)
         #expect(identity.rebrickableColorIDs(forColorCode: LDrawColorT(rawValue: 256)!) == [0])
         #expect(identity.colorCode(forRebrickableColorID: 0).rawValue == 0)

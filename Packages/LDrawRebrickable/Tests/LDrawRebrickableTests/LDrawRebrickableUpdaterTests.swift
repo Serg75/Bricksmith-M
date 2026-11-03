@@ -111,4 +111,38 @@ extension LDrawRebrickableNetworkTests {
         #expect((error as NSError?)?.code == LDrawRebrickableError.notFound.rawValue)
         #expect(updater.store.setNumbers().isEmpty)
     }
+
+    @Test("Saved data takes the folder's color links and keeps its part links")
+    func updateColorLinks() throws {
+        let updater = updater()
+        try updater.updateIdentityData()
+        #expect(updater.store.rebrickableIdentityData() == nil)
+
+        try updater.store.saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
+            withPartLinks: ["3001": "3001"], colorLinks: [179: [315]], relations: nil, knownPartNumbers: nil,
+            rubberPartNumbers: nil))
+        try updater.updateIdentityData()
+
+        let data = updater.store.rebrickableIdentityData()
+        #expect(LDrawPartIdentity.colorLinks(inRebrickableData: data) == LDrawRebrickableColors.builtInColorLinks())
+        let identity = LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil)
+        #expect(identity.rebrickablePartNumber(forPartName: "3001") == "3001")
+        #expect(identity.rebrickableColorID(forColorCode: LDrawColorT(rawValue: 179)!) == 179)
+        #expect(LDrawPartIdentity.rubberPartNumbers(inRebrickableData: data) == nil)
+    }
+
+    @Test("Saved data with no rubber parts reads them from the downloaded part list")
+    func updateRubberParts() throws {
+        let updater = updater()
+        let parts = updater.downloads.localURL(forFileNamed: "parts")
+        try FileManager.default.createDirectory(at: updater.downloads.folderURL, withIntermediateDirectories: true)
+        try RebrickableFixtures.data(ofDownload: "parts").write(to: parts)
+        try updater.store.saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
+            withPartLinks: nil, colorLinks: LDrawRebrickableColors.builtInColorLinks(), relations: nil,
+            knownPartNumbers: nil, rubberPartNumbers: nil))
+
+        try updater.updateIdentityData()
+        let data = updater.store.rebrickableIdentityData()
+        #expect(LDrawPartIdentity.rubberPartNumbers(inRebrickableData: data) == ["3483"])
+    }
 }

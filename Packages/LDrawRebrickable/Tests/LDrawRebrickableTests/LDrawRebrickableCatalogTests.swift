@@ -89,24 +89,28 @@ struct LDrawRebrickableCatalogTests {
         #expect(record(catalog.availability, "3002", 4)?.setCount == 1)
     }
 
-    @Test("The catalog reads the part relations and every part")
+    @Test("The catalog reads the part relations, every part and the rubber ones")
     func relationsAndParts() throws {
         let catalog = try LDrawRebrickableCatalog(downloads: RebrickableFixtures.downloads)
         #expect(catalog.relations == [["M", "3062a", "3062b"], ["P", "3626cpr0001", "3626c"]])
-        #expect(catalog.knownPartNumbers.count == 11)
+        #expect(catalog.knownPartNumbers.count == 12)
         #expect(catalog.knownPartNumbers.contains("3003"))
+        #expect(catalog.rubberPartNumbers == ["3483"])
+        #expect(try LDrawRebrickableCatalog.rubberPartNumbers(from: RebrickableFixtures.downloads) == ["3483"])
     }
 
     @Test("Saving keeps the part links the store has and adds the rest")
     func saving() throws {
         let store = LDrawInventoryStore(folderURL: RebrickableFixtures.temporaryFolder())
         try store.saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
-            withPartLinks: ["3626cp01.dat": "3626cpr0001"], colorLinks: nil, relations: nil, knownPartNumbers: nil))
+            withPartLinks: ["3626cp01.dat": "3626cpr0001"], colorLinks: nil, relations: nil, knownPartNumbers: nil,
+            rubberPartNumbers: nil))
 
         let catalog = try LDrawRebrickableCatalog(downloads: RebrickableFixtures.downloads)
         try catalog.save(into: store, colorLinks: [4: [4, 324], 14: 14])
 
         #expect(store.availability()?.partCount == catalog.availability.partCount)
+        #expect(LDrawPartIdentity.rubberPartNumbers(inRebrickableData: store.rebrickableIdentityData()) == ["3483"])
         let identity = store.identity(withCatalogRecords: nil)
         #expect(identity.rebrickablePartNumber(forPartName: "3626cp01.dat") == "3626cpr0001")
         #expect(identity.rebrickablePartNumber(forPartName: "u9999.dat") == nil)

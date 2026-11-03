@@ -68,7 +68,7 @@ struct LDrawPartLimitAssemblyTests {
                                   "3001pr9999", "3815", "3816", "3817", "970c00"]
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil,
                                                      colorLinks: [0: 0, 4: 4, 14: 14, 15: 15],
-                                                     relations: nil, knownPartNumbers: known)
+                                                     relations: nil, knownPartNumbers: known, rubberPartNumbers: nil)
         return LDrawPartIdentity(catalogRecords: records, rebrickableData: data, overrides: nil)
     }
 
@@ -164,7 +164,7 @@ struct LDrawPartLimitAssemblyTests {
                                         [PART_NUMBER_KEY: "3001d02.dat", PART_NAME_KEY: "Brick  2 x  4 with Sticker",
                                          PART_KEYWORDS_KEY: ["Rebrickable 3001"]]]
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [4: 4, 15: 15],
-                                                     relations: nil, knownPartNumbers: ["3001"])
+                                                     relations: nil, knownPartNumbers: ["3001"], rubberPartNumbers: nil)
         let identity = LDrawPartIdentity(catalogRecords: records, rebrickableData: data, overrides: nil)
         let table = LDrawPartLimitTable(limit: LDrawPartLimit.inventory("set"), availability: nil,
                                         items: [item("3001", 4, 2)], identity: identity,

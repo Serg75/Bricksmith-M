@@ -65,7 +65,7 @@ struct LDrawPartLimitCheckTests {
     /// Red, blue and black link to the same Rebrickable colors.
     private func identity() -> LDrawPartIdentity {
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [0: [0, 256], 1: 1, 4: 4],
-                                                     relations: nil, knownPartNumbers: nil)
+                                                     relations: nil, knownPartNumbers: nil, rubberPartNumbers: nil)
         return LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil)
     }
 

@@ -61,7 +61,8 @@ final class LDrawPartBrowserLimitTests {
         builder.notePartNumber("3002", colorID: 1, year: 2026, inDatabaseSet: false)
         try store.saveAvailability(builder.availability(with: nil))
         try store.saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
-            withPartLinks: nil, colorLinks: [0: 0, 1: 1, 4: 4], relations: nil, knownPartNumbers: nil))
+            withPartLinks: nil, colorLinks: [0: 0, 1: 1, 4: 4], relations: nil, knownPartNumbers: nil,
+            rubberPartNumbers: nil))
 
         func item(_ part: String, _ color: Int, _ quantity: UInt, spares: UInt = 0) -> LDrawInventoryItem {
             LDrawInventoryItem(rebrickablePartNumber: part, rebrickableColorID: color, ldrawPartName: nil,

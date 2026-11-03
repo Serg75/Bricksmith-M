@@ -829,7 +829,6 @@ PreferencesDialogController *preferencesDialog = nil;
 													@"Rebrickable with its LDraw part links. Make one free in your "
 													@"Rebrickable account settings, under API.", nil);
 	NSButton	*optionsButton	= nil;
-	NSButton	*importButton	= nil;
 	NSButton	*manageButton	= nil;
 	NSView		*limitRow		= nil;
 	NSView		*browserRow		= nil;
@@ -849,9 +848,6 @@ PreferencesDialogController *preferencesDialog = nil;
 	optionsButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Limit Options…", nil)
 											  target:[PartsLimitManager sharedManager]
 											  action:@selector(showLimitOptions:)];
-	importButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
-											 target:[PartsLimitManager sharedManager]
-											 action:@selector(importSetParts:)];
 	manageButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Manage Inventories…", nil)
 											 target:[PartsLimitManager sharedManager]
 											 action:@selector(showInventories:)];
@@ -900,7 +896,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	limitSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Parts Limit", nil)
 												rows:@[limitRow, browserRow,
 													   [PreferencesForm rowWithContent:
-														[PreferencesForm controlGroup:@[importButton, manageButton]]]]
+														[PreferencesForm controlGroup:@[manageButton]]]]
 											  footer:limitNote];
 
 	dataSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"Rebrickable", nil)

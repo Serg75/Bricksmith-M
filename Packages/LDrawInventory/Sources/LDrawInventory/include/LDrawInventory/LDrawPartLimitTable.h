@@ -75,10 +75,15 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) BOOL hasData;
 
 /// How the part stands in this color. Never `TooMany`, since a table does not
-/// count what a model uses.
+/// count what a model uses. A rubber color is not the color of a part that is
+/// not rubber, though it matches the same Rebrickable color.
 - (LDrawPartLimitStatus) statusForPartNamed:(NSString *)partName
 								  colorCode:(LDrawColorT)colorCode
 	NS_SWIFT_NAME(status(forPartNamed:colorCode:));
+
+/// Whether the color matches a Rebrickable color. Every part in a color that
+/// does not has no data.
+- (BOOL) matchesColorCode:(LDrawColorT)colorCode;
 
 /// Whether the limit allows the part in at least one color.
 - (BOOL) allowsPartNamed:(NSString *)partName;
@@ -90,14 +95,23 @@ NS_ASSUME_NONNULL_BEGIN
 /// when the limit says so. `NSNotFound` when the limit does not count.
 - (NSUInteger) ownedCountForPartNamed:(NSString *)partName colorCode:(LDrawColorT)colorCode;
 
-/// The LDraw colors the part is allowed in, lowest code first. Nil when the
-/// limit does not restrict its colors. Colors with no LDraw match are left
-/// out.
+/// The LDraw colors the part is allowed in, lowest code first, one for each
+/// Rebrickable color: the first LDraw color it links to. Nil when the limit
+/// does not restrict its colors. Colors with no LDraw match are left out.
 - (nullable NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName;
 
-/// Every LDraw color some part is allowed in, lowest code first. Nil when
-/// the limit does not restrict colors.
+/// The same with every LDraw color those Rebrickable colors link to that
+/// suits the part, such as rubber black with black for a tire. A rubber color
+/// suits only a part Rebrickable makes of rubber.
+- (nullable NSArray<NSNumber *> *) everyColorCodeForPartNamed:(NSString *)partName;
+
+/// The colors some part is allowed in, lowest code first, one for each
+/// Rebrickable color. Nil when the limit does not restrict colors.
 - (nullable NSArray<NSNumber *> *) allowedColorCodes;
+
+/// The same with every LDraw color those Rebrickable colors link to that
+/// suits a part allowed in them.
+- (nullable NSArray<NSNumber *> *) everyAllowedColorCode;
 
 /// What copies of the part in this color are counted under: its pool and the
 /// Rebrickable colors its color is, so LDraw colors that are one Rebrickable

@@ -27,26 +27,32 @@ struct LDrawColorPanelLimitTests {
         return color
     }
 
-    /// 3001 came in black and red this year, 3002 only in red.
+    /// 3001 came in black and red this year, 3002 only in red, the tire 3483 in black. Black is LDraw's
+    /// black and rubber black.
     private func table(_ change: (LDrawMutablePartLimit) -> Void = { _ in }) -> LDrawPartLimitTable {
         let builder = LDrawPartAvailabilityBuilder()
         builder.notePartNumber("3001", colorID: 0, year: 2026, inDatabaseSet: false)
         builder.notePartNumber("3001", colorID: 4, year: 2026, inDatabaseSet: false)
         builder.notePartNumber("3002", colorID: 4, year: 2026, inDatabaseSet: false)
-        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [0: 0, 1: 1, 4: 4],
-                                                     relations: nil, knownPartNumbers: nil)
+        builder.notePartNumber("3483", colorID: 0, year: 2026, inDatabaseSet: false)
+        let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [0: [0, 256], 1: 1, 4: 4],
+                                                     relations: nil, knownPartNumbers: nil,
+                                                     rubberPartNumbers: ["3483"])
+        let identity = LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil,
+                                         rubberColorCodes: [256])
         let limit = LDrawPartLimit.availableNow().mutableCopy() as! LDrawMutablePartLimit
         change(limit)
-        return LDrawPartLimitTable(limit: limit.copy() as! LDrawPartLimit, availability: builder.availability(with: nil),
-                                   items: nil, identity: LDrawPartIdentity(catalogRecords: nil, rebrickableData: data,
-                                                                           overrides: nil),
-                                   year: 2026)
+        return LDrawPartLimitTable(limit: limit.copy() as! LDrawPartLimit,
+                                   availability: builder.availability(with: nil),
+                                   items: nil, identity: identity, year: 2026)
     }
 
-    @Test("Several parts may take only the colors they share; an unknown part does not narrow them")
+    @Test("Parts take the colors they share, rubber ones only when rubber; an unknown part does not narrow them")
     func allowedColors() {
         let table = table()
         #expect(LDrawColorPanelModel.allowedColorCodes(forPartNames: ["3001.dat"], table: table) == [0, 4])
+        #expect(LDrawColorPanelModel.allowedColorCodes(forPartNames: ["3483.dat"], table: table) == [0, 256])
+        #expect(LDrawColorPanelModel.allowedColorCodes(forPartNames: ["3001.dat", "3483.dat"], table: table) == [0])
         #expect(LDrawColorPanelModel.allowedColorCodes(forPartNames: ["3001.dat", "3002.dat"], table: table) == [4])
         #expect(LDrawColorPanelModel.allowedColorCodes(forPartNames: ["3001.dat", "unknown.dat"], table: table)
                 == [0, 4])

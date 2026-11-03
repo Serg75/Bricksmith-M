@@ -89,9 +89,9 @@ static const CGFloat DetailInset	= 20;
 	NSWindowStyleMask	 styleMask	= (  NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
 									   | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable);
 	NSWindow			*window		= [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 760, 480)
-																styleMask:styleMask
-																  backing:NSBackingStoreBuffered
-																	defer:YES];
+																  styleMask:styleMask
+																	backing:NSBackingStoreBuffered
+																	  defer:YES];
 
 	self = [super initWithWindow:window];
 	if (self)
@@ -153,8 +153,8 @@ static const CGFloat DetailInset	= 20;
 	NSScrollView	*scrollView	= [[NSScrollView alloc] init];
 	NSPopUpButton	*addButton	= [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:YES];
 	NSButton		*remove		= [NSButton buttonWithImage:[NSImage imageNamed:NSImageNameRemoveTemplate]
-													target:self
-													action:@selector(removeSelection:)];
+													 target:self
+													 action:@selector(removeSelection:)];
 	NSStackView		*bar		= nil;
 
 	removeButton = remove;
@@ -365,7 +365,7 @@ static const CGFloat DetailInset	= 20;
 
 	[[cell textField] setStringValue:entry[@"title"]];
 	[[cell imageView] setImage:(symbol != nil) ? [NSImage imageWithSystemSymbolName:symbol
-															accessibilityDescription:nil] : nil];
+														   accessibilityDescription:nil] : nil];
 	[[cell imageView] setHidden:(symbol == nil)];
 
 	return cell;
@@ -558,8 +558,8 @@ static const CGFloat DetailInset	= 20;
 						   action:@selector(removeLooseParts:)],
 	]];
 	NSButton	*useAsLimit		= [NSButton buttonWithTitle:NSLocalizedString(@"Use as Limit", nil)
-												target:self
-												action:@selector(useAsLimit:)];
+													 target:self
+													 action:@selector(useAsLimit:)];
 
 	return [self stackWithViews:@[nameField,
 								  [self headingWithString:NSLocalizedString(@"Sets", nil)], scrollView, setButtons,
@@ -935,7 +935,7 @@ static const CGFloat DetailInset	= 20;
 {
 	PartsLimitManager	*manager	= [PartsLimitManager sharedManager];
 	LDrawPartLimit		*limit		= [[[manager session] limit] limitWithKind:LDrawPartLimitKindInventory
-														 inventoryIdentifier:selectedIdentifier];
+														   inventoryIdentifier:selectedIdentifier];
 
 	[manager setLimit:limit window:[self window]];
 

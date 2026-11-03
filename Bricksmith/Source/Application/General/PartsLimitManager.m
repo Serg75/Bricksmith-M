@@ -15,13 +15,13 @@
 
 #import <Security/Security.h>
 
+#import <LDrawCore/LDrawColorLibrary.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawInventory/LDrawCombinedInventory.h>
 #import <LDrawInventory/LDrawInventoryStore.h>
-#import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
 #import <LDrawInventory/LDrawShortcutMap.h>
 #import <LDrawRebrickable/LDrawRebrickableCSVReader.h>
@@ -30,7 +30,6 @@
 #import <LDrawRebrickable/LDrawRebrickableDownloads.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
-#import "ImportSetController.h"
 #import "InventoriesWindowController.h"
 #import "LDrawDocument.h"
 #import "PartsLimitController.h"
@@ -87,9 +86,9 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 		self->progress	= aProgress;
 		self->parent	= window;
 		self->panel		= [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 380, 110)
-												   styleMask:NSWindowStyleMaskTitled
-													 backing:NSBackingStoreBuffered
-													   defer:NO];
+													 styleMask:NSWindowStyleMaskTitled
+													   backing:NSBackingStoreBuffered
+														 defer:NO];
 		self->label		= [NSTextField labelWithString:NSLocalizedString(@"Downloading parts data from "
 																		 @"Rebrickable.com…", nil)];
 		self->indicator	= [[NSProgressIndicator alloc] init];
@@ -181,6 +180,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	NSMutableArray				*waitingCompletions;	// asked for an update while one ran
 	LDrawRebrickableClient		*sharedClient;			// one for the key, so calls keep a second apart
 	BOOL						 isFetchingColors;
+	BOOL						 identityDataIsCurrent;	// the saved identity data was checked this launch
 	NSString					*apiKeyRead;			// the Keychain's key, once read
 	BOOL						 apiKeyWasRead;
 	BOOL						 isAskingToDownload;	// the first download's question is up
@@ -213,10 +213,10 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	if (self)
 	{
 		NSURL			*support	= [[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory
-																		 inDomain:NSUserDomainMask
-																appropriateForURL:nil
-																		   create:YES
-																			error:NULL];
+																			 inDomain:NSUserDomainMask
+																	appropriateForURL:nil
+																			   create:YES
+																				error:NULL];
 		NSURL			*folder		= [[support URLByAppendingPathComponent:@"Bricksmith" isDirectory:YES]
 									   URLByAppendingPathComponent:@"Parts Data" isDirectory:YES];
 		NSDictionary	*saved		= [[NSUserDefaults standardUserDefaults] dictionaryForKey:PARTS_LIMIT_KEY];
@@ -248,12 +248,17 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	NSInteger	 days		= [[NSUserDefaults standardUserDefaults] integerForKey:PARTS_DATA_UPDATE_INTERVAL_KEY];
 	NSDate		*checked	= [self->downloads checkDateForFileNamed:@"inventory_parts"];
 
+	[self updateIdentityDataIfNeeded];
 	[[NSNotificationCenter defaultCenter] addObserver:self
 											 selector:@selector(partLibraryDidChange:)
 												 name:LDrawPartLibraryDidChangeNotification
 											   object:nil];
 	[self partLibraryDidChange:nil];
 
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(updateIdentityDataIfNeeded)
+												 name:LDrawPartLimitDidChangeNotification
+											   object:self.session];
 	[[NSNotificationCenter defaultCenter] addObserver:self
 											 selector:@selector(readShortcutsIfNeeded)
 												 name:LDrawPartLimitDidChangeNotification
@@ -278,10 +283,14 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 //========== partLibraryDidChange: =============================================
 //
 // Purpose:		Gives the session the part library's records, whose keywords
-//				link parts to Rebrickable, and then its shortcuts.
+//				link parts to Rebrickable, and the rubber colors, and then its
+//				shortcuts.
 //
 // Notes:		The library also posts this when favorites change, which leaves
 //				the records as they were.
+//
+//				The colors are read once, so they wait until a library has
+//				loaded and the LDraw folder is known.
 //
 //==============================================================================
 - (void) partLibraryDidChange:(NSNotification *)notification
@@ -292,7 +301,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	{
 		self->partRecords			= records;
 		self->shortcutsAreCurrent	= NO;
-		[self.session setCatalogRecords:records];
+		[self.session setCatalogRecords:records rubberColorCodes:[self rubberColorCodes]];
 		[self readShortcutsIfNeeded];
 	}
 
@@ -310,19 +319,69 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 //==============================================================================
 - (void) readShortcutsIfNeeded
 {
-	LDrawInventoryStore *store = self.store;
-
-	if(self->shortcutsAreCurrent || [self->partRecords count] == 0)
-		return;
-	if(		[self.session limit].kind == LDrawPartLimitKindNone
-	   &&	[[store setNumbers] count] == 0
-	   &&	[[store combinedInventories] count] == 0 )
+	if(self->shortcutsAreCurrent || [self->partRecords count] == 0 || [self usesPartsData] == NO)
 		return;
 
 	self->shortcutsAreCurrent = YES;
 	[self readShortcutsOfRecords:self->partRecords];
 
 }//end readShortcutsIfNeeded
+
+
+//========== updateIdentityDataIfNeeded ========================================
+//
+// Purpose:		Brings the saved color links and rubber parts up to date with
+//				the downloads, once a launch, when something uses them.
+//
+//==============================================================================
+- (void) updateIdentityDataIfNeeded
+{
+	NSError *error = nil;
+
+	if(self->identityDataIsCurrent || [self usesPartsData] == NO)
+		return;
+
+	self->identityDataIsCurrent = YES;
+	if([self.updater updateIdentityData:&error] == NO)
+		NSLog(@"Could not update the saved parts data: %@", error);
+
+}//end updateIdentityDataIfNeeded
+
+
+//========== rubberColorCodes ==================================================
+//
+// Purpose:		The LDraw colors ldconfig.ldr makes of rubber.
+//
+//==============================================================================
+- (NSSet<NSNumber *> *) rubberColorCodes
+{
+	NSMutableSet *codes = [NSMutableSet set];
+
+	for(LDrawColor *color in [[LDrawColorLibrary sharedColorLibrary] colors])
+	{
+		if([color material] == LDrawColorMaterialRubber)
+			[codes addObject:@([color colorCode])];
+	}
+	return codes;
+
+}//end rubberColorCodes
+
+
+//========== usesPartsData =====================================================
+//
+// Purpose:		Whether something uses the parts data: a limit, a set or an
+//				inventory.
+//
+//==============================================================================
+- (BOOL) usesPartsData
+{
+	LDrawInventoryStore *store = self.store;
+
+	return		[self.session limit].kind != LDrawPartLimitKindNone
+			||	[[store setNumbers] count] > 0
+			||	[[store combinedInventories] count] > 0;
+
+}//end usesPartsData
 
 
 //========== readShortcutsOfRecords: ===========================================
@@ -411,9 +470,9 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 - (void) populateLimitMenu:(NSMenu *)menu commands:(PartsLimitMenuCommands)commands
 {
 	LDrawPartLimit	*current	= self.session.limit;
-	NSMutableArray	*limits		= [NSMutableArray arrayWithObjects:[current limitWithKind:LDrawPartLimitKindNone
-																	   inventoryIdentifier:nil],
-								   [current limitWithKind:LDrawPartLimitKindAvailableNow inventoryIdentifier:nil], nil];
+	LDrawPartLimit	*none		= [current limitWithKind:LDrawPartLimitKindNone inventoryIdentifier:nil];
+	LDrawPartLimit	*now		= [current limitWithKind:LDrawPartLimitKindAvailableNow inventoryIdentifier:nil];
+	NSMutableArray	*limits		= [NSMutableArray arrayWithObjects:none, now, nil];
 	NSUInteger		 fixedCount	= [limits count];
 
 	[menu removeAllItems];
@@ -447,12 +506,6 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 						 action:@selector(showLimitOptions:)
 				  keyEquivalent:@""] setTarget:self];
 	}
-	if(commands & PartsLimitMenuImportSetParts)
-	{
-		[[menu addItemWithTitle:NSLocalizedString(@"Import Set Parts…", nil)
-						 action:@selector(importSetParts:)
-				  keyEquivalent:@""] setTarget:self];
-	}
 
 }//end populateLimitMenu:commands:
 
@@ -475,8 +528,8 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 //========== menuNeedsUpdate: ==================================================
 //
 // Purpose:		The View menu's Parts Limit submenu is filled when it opens. It
-//				ends with the switch for the marks. Importing and the
-//				inventories have their own items in the File and Window menus.
+//				ends with the switch for the marks. The inventories have their
+//				own item in the Window menu.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
@@ -726,8 +779,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	self->isFetchingColors	= YES;
 	client.completionQueue	= dispatch_get_main_queue();
 	[LDrawRebrickableColors fetchColorLinksWithClient:client completion:^(NSDictionary *links, NSError *error) {
-		NSDictionary	*data		= [self.store rebrickableIdentityData];
-		NSError			*saveError	= nil;
+		NSError *saveError = nil;
 
 		self->isFetchingColors = NO;
 		if([links count] == 0)
@@ -737,17 +789,8 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 		}
 
 		// The catalog's next build reads the folder; one already built gets the links now.
-		if(		[LDrawRebrickableColors saveFetchedColorLinks:links inFolder:folder error:&saveError]
-		   &&	data != nil )
-		{
-			data = [LDrawPartIdentity rebrickableDataByUpdating:data
-													  partLinks:nil
-													 colorLinks:links
-													  relations:nil
-											   knownPartNumbers:nil];
-			[self.store saveRebrickableIdentityData:data error:&saveError];
-		}
-		if(saveError != nil)
+		if(		[LDrawRebrickableColors saveFetchedColorLinks:links inFolder:folder error:&saveError] == NO
+		   ||	[self.updater updateIdentityData:&saveError] == NO )
 			NSLog(@"Could not keep the colors from Rebrickable: %@", saveError);
 	}];
 
@@ -878,20 +921,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 //==============================================================================
 - (IBAction) showLimitOptions:(id)sender
 {
-	[PartsLimitOptionsController runWithLimit:self.session.limit
-									   window:[NSApp mainWindow]
-								   completion:^(LDrawPartLimit *limit) {
-		if(limit != nil)
-			[self setLimit:limit window:[NSApp mainWindow]];
-	}];
-}
-
-
-//========== importSetParts: ===================================================
-//==============================================================================
-- (IBAction) importSetParts:(id)sender
-{
-	[ImportSetController runWithWindow:[NSApp mainWindow]];
+	[PartsLimitOptionsController showWithWindow:[NSApp mainWindow]];
 }
 
 

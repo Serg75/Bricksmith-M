@@ -1190,7 +1190,7 @@ static const CGFloat SwatchSize				= 14.0;
 		[countColumn setMinWidth:44];
 		[countColumn setEditable:NO];
 		[countColumn setSortDescriptorPrototype:[NSSortDescriptor sortDescriptorWithKey:LDrawPartBrowserLeftKey
-																			   ascending:YES]];
+																			  ascending:YES]];
 		[self->partsTable addTableColumn:countColumn];
 	}
 	else if(wantsColumns == NO && colorColumn != nil)
@@ -1342,7 +1342,7 @@ static const CGFloat SwatchSize				= 14.0;
 //
 // Purpose:		Why the selected part cannot be inserted in the current color,
 //				or nil when it can. An inventory row brings its own color, and
-//				Warn Only lets any color through.
+//				Pick Any Color lets any color through.
 //
 //==============================================================================
 - (NSString *) colorProblemForSelectedPart

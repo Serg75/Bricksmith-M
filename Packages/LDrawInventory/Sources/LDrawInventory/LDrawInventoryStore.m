@@ -455,11 +455,12 @@ static NSString * const OverridesKey			= @"links";
 {
 	if (self->sets == nil)
 	{
-		NSURL	*folder	= [self urlForFile:SetsFolderName];
-		NSArray	*files	= [[NSFileManager defaultManager] contentsOfDirectoryAtURL:folder
-												  includingPropertiesForKeys:nil
-																	 options:NSDirectoryEnumerationSkipsHiddenFiles
-																	   error:NULL];
+		NSFileManager	*manager	= [NSFileManager defaultManager];
+		NSURL			*folder		= [self urlForFile:SetsFolderName];
+		NSArray			*files		= [manager contentsOfDirectoryAtURL:folder
+											 includingPropertiesForKeys:nil
+																options:NSDirectoryEnumerationSkipsHiddenFiles
+																  error:NULL];
 
 		self->sets = [NSMutableDictionary dictionary];
 		for (NSURL *file in files)

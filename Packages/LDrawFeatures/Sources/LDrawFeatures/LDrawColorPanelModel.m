@@ -122,7 +122,7 @@
 	// A selection often holds many copies of one part.
 	for (NSString *partName in [NSOrderedSet orderedSetWithArray:partNames])
 	{
-		NSArray *codes = [table colorCodesForPartNamed:partName];
+		NSArray *codes = [table everyColorCodeForPartNamed:partName];
 
 		if ([codes count] == 0)
 			continue;

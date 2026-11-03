@@ -61,6 +61,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	BOOL					 isHidden;
 	BOOL					 hasMarks;		// some part may hold a status from an earlier limit
 	LDrawPartUsage			*usage;			// nil after an edit until asked for
+	NSMapTable				*missingCounts;	// container → parts not in the library, until the next edit
 }
 
 
@@ -71,7 +72,10 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	self = [super init];
 	if (self)
 	{
-		self->document = aDocument;
+		self->document		= aDocument;
+		self->missingCounts	= [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsWeakMemory
+															   | NSPointerFunctionsObjectPointerPersonality
+													valueOptions:NSPointerFunctionsStrongMemory];
 
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(limitDidChange:)
@@ -209,7 +213,9 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //========== updateControls ====================================================
 //
 // Purpose:		Shows the limit's name, and the problem count when there are
-//				problems.
+//				problems. With none, the button counts in gray the parts with
+//				no data or not in the part library, once the limit has its
+//				data.
 //
 //==============================================================================
 - (void) updateControls
@@ -220,9 +226,12 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 										  ?: NSLocalizedString(@"Missing Inventory", nil);
 	LDrawPartLimitReport	*report		= self.report;
 	NSUInteger				 problems	= 0;
+	NSUInteger				 noted		= 0;
 	LDrawPartLimitStatus	 worst		= LDrawPartLimitStatusAllowed;
 	NSColor					*color		= nil;
-	NSImage					*warning	= nil;
+	NSString				*symbol		= @"exclamationmark.triangle.fill";
+	NSString				*toolTip	= NSLocalizedString(@"Parts that break the parts limit", nil);
+	NSImage					*image		= nil;
 
 	if(report != nil && [[report table] limit].isRestricting)
 	{
@@ -230,24 +239,50 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 		problems	= [report problemCountInContainer:file];
 		worst		= [report worstStatusInContainer:file];
+		noted		= (problems == 0 && [[report table] hasData]) ? [self notedPartCount] : 0;
 	}
 
 	[[self->limitPopUp itemAtIndex:0] setTitle:title];
 	[self->limitPopUp setHidden:self->isHidden];
 
 	// The icon takes the color of the worst problem: orange for too many, else red.
-	color	= (worst == LDrawPartLimitStatusTooMany) ? [NSColor systemOrangeColor] : [NSColor systemRedColor];
-	warning	= [[NSImage imageWithSystemSymbolName:@"exclamationmark.triangle.fill" accessibilityDescription:nil]
-			   imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithHierarchicalColor:color]];
+	color = (worst == LDrawPartLimitStatusTooMany) ? [NSColor systemOrangeColor] : [NSColor systemRedColor];
+	if(problems == 0)
+	{
+		color	= [NSColor secondaryLabelColor];
+		symbol	= @"questionmark.circle";
+		toolTip	= NSLocalizedString(@"Parts with no data, or not in the part library", nil);
+	}
+	image = [[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil]
+			 imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithHierarchicalColor:color]];
 
-	[self->problemButton setImage:warning];
-	[self->problemButton setTitle:[NSString stringWithFormat:@"%lu", (unsigned long)problems]];
+	[self->problemButton setImage:image];
+	[self->problemButton setTitle:[NSString stringWithFormat:@"%lu", (unsigned long)MAX(problems, noted)]];
 	[self->problemButton setContentTintColor:color];
-	[self->problemButton setHidden:(self->isHidden || problems == 0)];
+	[self->problemButton setToolTip:toolTip];
+	[self->problemButton setHidden:(self->isHidden || (problems == 0 && noted == 0))];
 
 	[self layout];
 
 }//end updateControls
+
+
+//========== notedPartCount ====================================================
+//
+// Purpose:		How many parts have no data or are not in the part library.
+//
+//==============================================================================
+- (NSUInteger) notedPartCount
+{
+	NSHashTable *parts = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+
+	for(LDrawPart *part in [self.report partsWithStatus:LDrawPartLimitStatusNoData])
+		[parts addObject:part];
+	for(LDrawPart *part in [self.report missingParts])
+		[parts addObject:part];
+	return [parts count];
+
+}//end notedPartCount
 
 
 #pragma mark -
@@ -259,6 +294,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 - (void) setNeedsCheck
 {
 	self->usage = nil;
+	[self->missingCounts removeAllObjects];
 	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(check) object:nil];
 	[self performSelector:@selector(check) withObject:nil afterDelay:0];
 }
@@ -367,7 +403,8 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //========== fillPopover =======================================================
 //
 // Purpose:		Fills the popover from the last report: one row per status the
-//				model has, then Show Piece Count.
+//				model has, the parts not in the part library, then Show Piece
+//				Count.
 //
 //==============================================================================
 - (void) fillPopover
@@ -376,6 +413,7 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	LDrawPartLimitReport	*report		= self.report;
 	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
 	NSString				*title		= [manager titleForLimit:[[manager session] limit]] ?: @"";
+	NSUInteger				 missing	= [[report missingParts] count];
 	NSTextField				*heading	= nil;
 	NSGridView				*grid		= nil;
 	NSButton				*pieceCount	= nil;
@@ -398,20 +436,16 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	{
 		LDrawPartLimitStatus	 status	= PartsLimitListedStatuses[index];
 		NSUInteger				 count	= [[report partsWithStatus:status] count];
-		NSTextField				*label	= nil;
-		NSButton				*select	= nil;
+		NSString				*format	= [self formatForStatus:status];
+		NSArray					*row	= nil;
 
 		if(count == 0)
 			continue;
 
-		label	= [NSTextField labelWithString:[NSString stringWithFormat:[self formatForStatus:status],
-												(unsigned long)count]];
-		select	= [NSButton buttonWithTitle:NSLocalizedString(@"Select", nil)
-									target:self
-									action:@selector(selectPartsWithStatus:)];
-		[select setTag:status];
-		[select setControlSize:NSControlSizeSmall];
-		[label setToolTip:[self explanationForStatus:status]];
+		row = [self popoverRowWithText:[NSString stringWithFormat:format, (unsigned long)count]
+							   toolTip:[self explanationForStatus:status]
+								action:@selector(selectPartsWithStatus:)
+								   tag:status];
 
 		if(status == LDrawPartLimitStatusNotInColor)
 		{
@@ -420,10 +454,22 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 												   action:@selector(useNearestAllowedColor:)];
 			[nearest setControlSize:NSControlSizeSmall];
 			[nearest setToolTip:NSLocalizedString(@"Gives each of them the nearest color it is made in.", nil)];
-			[grid addRowWithViews:@[label, select, nearest]];
+			row = [row arrayByAddingObject:nearest];
 		}
-		else
-			[grid addRowWithViews:@[label, select]];
+		[grid addRowWithViews:row];
+	}
+
+	if(missing > 0)
+	{
+		NSString *text		= [NSString stringWithFormat:NSLocalizedString(@"%lu not in the part library", nil),
+							   (unsigned long)missing];
+		NSString *toolTip	= NSLocalizedString(@"The part library does not have these parts. Each is still "
+												@"checked when Bricksmith can match it to a LEGO part.", nil);
+
+		[grid addRowWithViews:[self popoverRowWithText:text
+											   toolTip:toolTip
+												action:@selector(selectMissingParts:)
+												   tag:0]];
 	}
 
 	if([grid numberOfRows] == 0)
@@ -437,11 +483,36 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	[stack setAlignment:NSLayoutAttributeLeading];
 	[stack setSpacing:10];
 
+	// Measured before it goes in, where the popover's old size would hold it.
 	NSView *view = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(14, 16, 14, 16)];
+	NSSize	size = [view fittingSize];
+
 	[content setView:view];
-	[content setPreferredContentSize:[view fittingSize]];
+	[content setPreferredContentSize:size];
+	[self->popover setContentSize:size];
 
 }//end fillPopover
+
+
+//========== popoverRowWithText:toolTip:action:tag: ============================
+//
+// Purpose:		A popover row: a line of text and a Select button.
+//
+//==============================================================================
+- (NSArray<NSView *> *) popoverRowWithText:(NSString *)text
+								   toolTip:(NSString *)toolTip
+									action:(SEL)action
+									   tag:(NSInteger)tag
+{
+	NSTextField	*label	= [NSTextField labelWithString:text];
+	NSButton	*select	= [NSButton buttonWithTitle:NSLocalizedString(@"Select", nil) target:self action:action];
+
+	[label setToolTip:toolTip];
+	[select setTag:tag];
+	[select setControlSize:NSControlSizeSmall];
+	return @[label, select];
+
+}//end popoverRowWithText:toolTip:action:tag:
 
 
 //========== formatForStatus: ==================================================
@@ -493,6 +564,19 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 	[self selectParts:[self.report partsWithStatus:[sender tag]]];
 
 }//end selectPartsWithStatus:
+
+
+//========== selectMissingParts: ===============================================
+//
+// Purpose:		Selects the parts the part library does not have.
+//
+//==============================================================================
+- (void) selectMissingParts:(id)sender
+{
+	[self->popover close];
+	[self selectParts:[self.report missingParts]];
+
+}//end selectMissingParts:
 
 
 //========== selectProblemParts ================================================
@@ -636,11 +720,15 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 // Purpose:		A part's badge says how it breaks the limit. A step or model
 //				says how many of its parts do, in the color of the worst.
 //
+// Notes:		Parts the part library does not have get a gray badge of their
+//				own, with or without a limit, unless they break it.
+//
 //==============================================================================
 - (void) configureBadgeOfCell:(IconTextCell *)cell forItem:(id)item
 {
 	LDrawPartLimitStatus	status	= LDrawPartLimitStatusAllowed;
 	NSUInteger				count	= 0;
+	NSUInteger				missing	= 0;
 	NSColor					*color	= nil;
 	NSString				*symbol	= nil;
 
@@ -657,6 +745,15 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 	symbol	= [LDrawPartLimitPresentation badgeSymbolNameForStatus:status];
 	color	= [self colorForBadgeTint:[LDrawPartLimitPresentation badgeTintForStatus:status]];
+
+	if(LDrawPartLimitStatusIsProblem(status) == NO)
+		missing = [self missingPartCountInItem:item];
+	if(missing > 0)
+	{
+		symbol	= @"questionmark.square.dashed";
+		color	= [NSColor secondaryLabelColor];
+		count	= [item isKindOfClass:[LDrawPart class]] ? 0 : missing;
+	}
 
 	[cell setBadgeColor:color];
 	[cell setBadgeText:(count > 0) ? [NSString stringWithFormat:@"%lu", (unsigned long)count] : nil];
@@ -699,10 +796,10 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 
 	if(image == nil)
 	{
-		NSImageSymbolConfiguration *size	= [NSImageSymbolConfiguration configurationWithPointSize:11
-																						 weight:NSFontWeightRegular];
-		NSImageSymbolConfiguration *tinted	= [size configurationByApplyingConfiguration:
-											   [NSImageSymbolConfiguration configurationWithHierarchicalColor:color]];
+		NSImageSymbolConfiguration *size = [NSImageSymbolConfiguration configurationWithPointSize:11
+																						   weight:NSFontWeightRegular];
+		NSImageSymbolConfiguration *tinted = [size configurationByApplyingConfiguration:
+											  [NSImageSymbolConfiguration configurationWithHierarchicalColor:color]];
 
 		image = [[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil]
 				 imageWithSymbolConfiguration:tinted];
@@ -716,29 +813,75 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 }//end badgeImageNamed:color:
 
 
+//========== missingPartCountInItem: ===========================================
+//
+// Purpose:		How many parts the part library does not have: 1 or 0 for a
+//				part, and the parts inside a step or model.
+//
+// Notes:		A container's count is kept until the next edit, since every
+//				row asks each time File Contents draws.
+//
+//==============================================================================
+- (NSUInteger) missingPartCountInItem:(id)item
+{
+	__block NSUInteger	 count	= 0;
+	NSNumber			*known	= nil;
+
+	if([item isKindOfClass:[LDrawPart class]])
+		return [(LDrawPart *)item partIsMissing] ? 1 : 0;
+	if([item isKindOfClass:[LDrawContainer class]] == NO)
+		return 0;
+
+	known = [self->missingCounts objectForKey:item];
+	if(known != nil)
+		return [known unsignedIntegerValue];
+
+	[(LDrawContainer *)item applyToAllParts:^(LDrawPart *part) {
+		if([part partIsMissing])
+			count += 1;
+	}];
+	[self->missingCounts setObject:@(count) forKey:item];
+	return count;
+
+}//end missingPartCountInItem:
+
+
 //========== toolTipForItem: ===================================================
 //
 // Purpose:		Why a part's badge is there, or how many of a step's or model's
-//				parts break the limit.
+//				parts break the limit or are not in the part library.
 //
 //==============================================================================
 - (NSString *) toolTipForItem:(id)item
 {
-	NSUInteger count = 0;
-
-	if([self showsMarks] == NO)
-		return nil;
+	NSUInteger	 count		= 0;
+	NSUInteger	 missing	= [self missingPartCountInItem:item];
+	NSString	*line		= nil;
 
 	if([item isKindOfClass:[LDrawPart class]])
-		return [self describePart:item fully:YES];
+	{
+		NSString *note = NSLocalizedString(@"The part library does not have this part.", nil);
 
-	if([item isKindOfClass:[LDrawContainer class]])
+		line = [self showsMarks] ? [self describePart:item fully:YES] : nil;
+		if(missing == 0)
+			return line;
+		return (line != nil) ? [NSString stringWithFormat:@"%@ %@", note, line] : note;
+	}
+
+	if([self showsMarks] && [item isKindOfClass:[LDrawContainer class]])
 		count = [self.report problemCountInContainer:item];
 
-	if(count == 0)
-		return nil;
-	return [NSString localizedStringWithFormat:NSLocalizedString(@"%lu parts break the parts limit.", nil),
-			(unsigned long)count];
+	if(count == 1)
+		return NSLocalizedString(@"1 part breaks the parts limit.", nil);
+	if(count > 1)
+		return [NSString localizedStringWithFormat:NSLocalizedString(@"%lu parts break the parts limit.", nil),
+				(unsigned long)count];
+	if(missing == 1)
+		return NSLocalizedString(@"1 part is not in the part library.", nil);
+	if(missing > 1)
+		return [NSString localizedStringWithFormat:NSLocalizedString(@"%lu parts are not in the part library.", nil),
+				(unsigned long)missing];
+	return nil;
 
 }//end toolTipForItem:
 
@@ -787,6 +930,13 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 			return nil;
 
 		case LDrawPartLimitStatusNoData:
+			// In a color with no match, every part has no data.
+			if([table hasData] && [table matchesColorCode:[color colorCode]] == NO)
+			{
+				NSString *format = fully ? NSLocalizedString(@"Bricksmith cannot match %@ to a LEGO color.", nil)
+										 : NSLocalizedString(@"No LEGO color matches %@", nil);
+				return [NSString stringWithFormat:format, colorName];
+			}
 			return fully ? NSLocalizedString(@"Bricksmith cannot match this part to a LEGO part.", nil)
 						 : NSLocalizedString(@"No LEGO part matches it", nil);
 
@@ -864,14 +1014,12 @@ static const LDrawPartLimitStatus PartsLimitListedStatuses[] = {
 //========== menuNeedsUpdate: ==================================================
 //
 // Purpose:		The app's limit menu, after the pull-down's title item, with
-//				the two commands needed while choosing a limit.
+//				Limit Options. Sets are imported in the Inventories window.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
-	PartsLimitMenuCommands commands = PartsLimitMenuLimitOptions | PartsLimitMenuImportSetParts;
-
-	[[PartsLimitManager sharedManager] populatePullDownLimitMenu:menu commands:commands];
+	[[PartsLimitManager sharedManager] populatePullDownLimitMenu:menu commands:PartsLimitMenuLimitOptions];
 
 }//end menuNeedsUpdate:
 

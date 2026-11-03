@@ -16,6 +16,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUTPUT = os.path.join(HERE, "..", "Sources", "LDrawRebrickable", "Resources", "rebrickable-colors.json")
 API_URL = "https://rebrickable.com/api/v3/lego/colors/?page_size=1000"
 
+# Links the names miss or get wrong, checked by hand. The API needs none.
+FIXES = {
+    85: [85],               # Dark Purple is LDraw's Medium_Lilac.
+    179: [179, 315, 504],   # Flat Silver has LDraw 179's number and RGB; 315 and 504 share its name.
+    1062: [368],            # Vibrant Yellow is LDraw's Neon_Yellow.
+}
+
 
 def from_api():
     key = os.environ.get("REBRICKABLE_API_KEY")
@@ -44,7 +51,7 @@ def normalized(name):
 
 
 def from_names(colors_path, ldconfig_path):
-    """Links by name first, then by an RGB value only one LDraw color has."""
+    """Links by hand, then by name, then by an RGB value only one LDraw color has."""
     opener = gzip.open if colors_path.endswith(".gz") else open
     with opener(colors_path, "rt", encoding="utf-8") as file:
         rebrickable = [(int(row["id"]), row["name"], row["rgb"].upper(), row["is_trans"].lower() == "true")
@@ -75,6 +82,10 @@ def from_names(colors_path, ldconfig_path):
     for color_id, name, rgb, is_trans in rebrickable:
         # -1 is Unknown and 9999 is Any Color; neither is an LDraw color.
         if color_id < 0 or color_id == 9999:
+            continue
+        if color_id in FIXES:
+            links[str(color_id)] = FIXES[color_id]
+            used.update(FIXES[color_id])
             continue
         codes = by_name.get(normalized(name))
         if codes:

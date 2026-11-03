@@ -45,7 +45,7 @@ final class LDrawPartLimitSessionTests {
         let store = LDrawInventoryStore(folderURL: folder)
         try store.saveSetInventory(set("42115-1", "3001"))
         try store.saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
-            withPartLinks: nil, colorLinks: [4: 4], relations: nil, knownPartNumbers: nil))
+            withPartLinks: nil, colorLinks: [4: 4], relations: nil, knownPartNumbers: nil, rubberPartNumbers: nil))
         let session = LDrawPartLimitSession(store: store)
 
         #expect(session.limit.kind == .none)
@@ -76,7 +76,8 @@ final class LDrawPartLimitSessionTests {
     @Test("The part library's keywords reach the identity map")
     func catalogRecords() throws {
         let session = LDrawPartLimitSession(store: LDrawInventoryStore(folderURL: folder))
-        session.setCatalogRecords([[PART_NUMBER_KEY: "2431px7.dat", PART_KEYWORDS_KEY: ["Rebrickable 2431pr0014"]]])
+        session.setCatalogRecords([[PART_NUMBER_KEY: "2431px7.dat", PART_KEYWORDS_KEY: ["Rebrickable 2431pr0014"]]],
+                                  rubberColorCodes: nil)
         #expect(session.identity.rebrickablePartNumber(forPartName: "2431px7.dat") == "2431pr0014")
     }
 

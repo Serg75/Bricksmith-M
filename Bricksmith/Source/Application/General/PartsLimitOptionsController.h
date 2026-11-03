@@ -9,8 +9,6 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
-@class LDrawPartLimit;
-
 NS_ASSUME_NONNULL_BEGIN
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -20,11 +18,9 @@ NS_ASSUME_NONNULL_BEGIN
 ////////////////////////////////////////////////////////////////////////////////
 @interface PartsLimitOptionsController : NSObject
 
-// Shows the sheet, or a panel without a window. The completion gets the limit
-// with the new options, or nil for Cancel.
-+ (void) runWithLimit:(LDrawPartLimit *)limit
-			   window:(nullable NSWindow *)window
-		   completion:(void (^)(LDrawPartLimit * _Nullable limit))completion;
+// Shows the sheet, or a panel without a window. Each change applies to the
+// app's limit at once.
++ (void) showWithWindow:(nullable NSWindow *)window;
 
 @end
 

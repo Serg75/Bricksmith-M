@@ -29,7 +29,8 @@ NS_ASSUME_NONNULL_BEGIN
 ///             while Rebrickable has only that; and last the same number.
 ///
 ///             Colors are matched only through links. Rebrickable's color ids
-///             are not LDraw codes, though many agree.
+///             are not LDraw codes, though many agree. Rebrickable has no
+///             rubber colors, so LDraw's rubber black is Black there.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPartIdentity : NSObject
@@ -51,6 +52,12 @@ NS_ASSUME_NONNULL_BEGIN
 							rebrickableData:(nullable NSDictionary *)rebrickableData
 								  overrides:(nullable NSDictionary<NSString *, NSString *> *)overrides;
 
+/// The same, knowing which LDraw colors are rubber, such as rubber black.
++ (instancetype) identityWithCatalogRecords:(nullable NSArray<NSDictionary *> *)catalogRecords
+							rebrickableData:(nullable NSDictionary *)rebrickableData
+								  overrides:(nullable NSDictionary<NSString *, NSString *> *)overrides
+						   rubberColorCodes:(nullable NSSet<NSNumber *> *)rubberColorCodes;
+
 /// What Rebrickable tells about parts and colors, in the form the store keeps.
 ///
 /// - `partLinks`: LDraw part name → Rebrickable number.
@@ -62,10 +69,13 @@ NS_ASSUME_NONNULL_BEGIN
 ///   "A" alternate. "B" sub-part and "R" pair are kept but not used.
 /// - `knownPartNumbers`: every part Rebrickable has, or nil when not known. A
 ///   part outside it has no data.
+/// - `rubberPartNumbers`: the parts Rebrickable makes of rubber, such as
+///   tires, or nil when not known.
 + (NSDictionary *) rebrickableDataWithPartLinks:(nullable NSDictionary<NSString *, NSString *> *)partLinks
 									 colorLinks:(nullable NSDictionary<NSNumber *, id> *)colorLinks
 									  relations:(nullable NSArray<NSArray<NSString *> *> *)relations
-							   knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers;
+							   knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers
+							  rubberPartNumbers:(nullable NSSet<NSString *> *)rubberPartNumbers;
 
 /// Rebrickable data with some parts replaced. Part links are added to the
 /// links `data` has; any other argument that is not nil replaces what `data`
@@ -74,7 +84,14 @@ NS_ASSUME_NONNULL_BEGIN
 								   partLinks:(nullable NSDictionary<NSString *, NSString *> *)addedPartLinks
 								  colorLinks:(nullable NSDictionary<NSNumber *, id> *)colorLinks
 								   relations:(nullable NSArray<NSArray<NSString *> *> *)relations
-							knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers;
+							knownPartNumbers:(nullable NSSet<NSString *> *)knownPartNumbers
+						   rubberPartNumbers:(nullable NSSet<NSString *> *)rubberPartNumbers;
+
+/// The color links in Rebrickable data, or an empty dictionary.
++ (NSDictionary<NSNumber *, NSArray<NSNumber *> *> *) colorLinksInRebrickableData:(nullable NSDictionary *)data;
+
+/// The rubber parts in Rebrickable data, or nil when it does not say.
++ (nullable NSSet<NSString *> *) rubberPartNumbersInRebrickableData:(nullable NSDictionary *)data;
 
 /// An LDraw part name as the map keys it: lowercase, no ".dat", and "/" for a
 /// path. "3001.DAT" is "3001". Nil for an empty name.
@@ -112,6 +129,16 @@ NS_ASSUME_NONNULL_BEGIN
 /// The LDraw color for a Rebrickable color, the first when it has several,
 /// or `LDrawColorBogus`.
 - (LDrawColorT) colorCodeForRebrickableColorID:(NSInteger)colorID;
+
+/// Every LDraw color a Rebrickable color links to that suits the part, that
+/// first one first. A rubber color suits only a part Rebrickable makes of
+/// rubber, or any part when that is not known. Empty when none links.
+- (NSArray<NSNumber *> *) colorCodesForRebrickableColorID:(NSInteger)colorID
+											 ofPartNumber:(nullable NSString *)partNumber;
+
+/// Whether the LDraw color suits the part, by the same rule. Only a rubber
+/// color on a part that is not rubber does not.
+- (BOOL) colorCode:(LDrawColorT)colorCode suitsPartNamed:(NSString *)partName;
 
 /// The part that stands for a whole pool. With `matchesAnyPrint`, a print or
 /// pattern stands for its plain part. With `matchesMoldVariants`, a part's

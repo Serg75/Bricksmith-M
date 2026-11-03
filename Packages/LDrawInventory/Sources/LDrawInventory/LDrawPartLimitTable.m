@@ -39,7 +39,8 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 
 	NSArray<LDrawInventoryItem *>	*rows;
 	NSArray<LDrawInventoryItem *>	*unmatched;
-	NSArray<NSNumber *>				*allowedColorCodes;	// worked out when first asked
+	NSArray<NSNumber *>				*allowedCodes;		// worked out when first asked
+	NSArray<NSNumber *>				*everyAllowedCode;	// worked out when first asked
 	NSMutableDictionary				*poolsByName;		// part name → pool, or NSNull for none
 }
 
@@ -142,8 +143,8 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 	for (NSString *partNumber in [availability partNumbers])
 	{
 		NSString		*pool		= [self->identity poolKeyForRebrickablePartNumber:partNumber
-																 matchesMoldVariants:limit.matchesMoldVariants
-																	 matchesAnyPrint:limit.matchesAnyPrint];
+																  matchesMoldVariants:limit.matchesMoldVariants
+																	  matchesAnyPrint:limit.matchesAnyPrint];
 		NSMutableArray	*piecePools	= [NSMutableArray array];	// pool, and color or NSNull for the record's
 
 		for (LDrawShortcutPiece *piece in [self piecesOfRebrickablePartNumber:partNumber partName:nil])
@@ -444,6 +445,14 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 }//end statusForPartNamed:colorCode:
 
 
+//========== matchesColorCode: =================================================
+//==============================================================================
+- (BOOL) matchesColorCode:(LDrawColorT)colorCode
+{
+	return [[self->identity rebrickableColorIDsForColorCode:colorCode] count] > 0;
+}
+
+
 //========== allowsPartNamed: ==================================================
 //==============================================================================
 - (BOOL) allowsPartNamed:(NSString *)partName
@@ -463,7 +472,7 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 			return NO;
 	}
 
-	NSArray *colors = [self colorCodesOfPieces:pieces];
+	NSArray *colors = [self colorCodesOfPieces:pieces everyCode:YES];
 	return colors == nil || [colors count] > 0;
 
 }//end allowsPartNamed:
@@ -509,13 +518,29 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 
 
 //========== colorCodesForPartNamed: ===========================================
+//==============================================================================
+- (NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName
+{
+	return [self colorCodesForPartNamed:partName everyCode:NO];
+}
+
+
+//========== everyColorCodeForPartNamed: =======================================
+//==============================================================================
+- (NSArray<NSNumber *> *) everyColorCodeForPartNamed:(NSString *)partName
+{
+	return [self colorCodesForPartNamed:partName everyCode:YES];
+}
+
+
+//========== colorCodesForPartNamed:everyCode: =================================
 ///
 /// @abstract	The colors the part is allowed in. An assembly adds the colors
 /// 			its pieces are all allowed in; under an inventory it has only
 /// 			those.
 ///
 //==============================================================================
-- (NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName
+- (NSArray<NSNumber *> *) colorCodesForPartNamed:(NSString *)partName everyCode:(BOOL)everyCode
 {
 	NSArray<NSNumber *>	*colors		= nil;
 	NSArray<NSNumber *>	*ofPieces	= nil;
@@ -524,12 +549,12 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 	if (self.limit.isRestricting == NO || self.limit.matchesAnyColor)
 		return nil;
 
-	colors = [self colorCodesOfOnePartNamed:partName];
+	colors = [self colorCodesOfOnePartNamed:partName everyCode:everyCode];
 	pieces = (self->colorsByPool != nil) ? [self.shortcuts piecesOfPartNamed:partName] : nil;
 	if (pieces == nil)
 		return colors;
 
-	ofPieces = [self colorCodesOfPieces:pieces];
+	ofPieces = [self colorCodesOfPieces:pieces everyCode:everyCode];
 	if (self.limit.kind == LDrawPartLimitKindInventory)
 		return ofPieces;
 	if (colors == nil || ofPieces == nil)
@@ -539,27 +564,59 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 	[both addObjectsFromArray:ofPieces];
 	return [[both allObjects] sortedArrayUsingSelector:@selector(compare:)];
 
-}//end colorCodesForPartNamed:
+}//end colorCodesForPartNamed:everyCode:
 
 
 //========== allowedColorCodes =================================================
 //==============================================================================
 - (NSArray<NSNumber *> *) allowedColorCodes
 {
+	return [self allowedColorCodesWithEveryCode:NO];
+}
+
+
+//========== everyAllowedColorCode =============================================
+//==============================================================================
+- (NSArray<NSNumber *> *) everyAllowedColorCode
+{
+	return [self allowedColorCodesWithEveryCode:YES];
+}
+
+
+//========== allowedColorCodesWithEveryCode: ===================================
+///
+/// @abstract	The colors of every pool, each pool taking the colors its own
+/// 			part suits.
+///
+//==============================================================================
+- (NSArray<NSNumber *> *) allowedColorCodesWithEveryCode:(BOOL)everyCode
+{
+	NSArray			*cached	= everyCode ? self->everyAllowedCode : self->allowedCodes;
+	NSMutableSet	*codes	= nil;
+
 	if (self.limit.isRestricting == NO || self.limit.matchesAnyColor)
 		return nil;
+	if (cached != nil)
+		return cached;
 
-	if (self->allowedColorCodes == nil)
+	// A pool is keyed by a Rebrickable number, which tells if it is rubber.
+	codes = [NSMutableSet set];
+	for (NSString *pool in self->colorsByPool)
 	{
-		NSMutableSet *colorIDs = [NSMutableSet set];
-
-		for (NSString *pool in self->colorsByPool)
-			[colorIDs addObjectsFromArray:[self->colorsByPool[pool] allKeys]];
-		self->allowedColorCodes = [self colorCodesForColorIDs:[colorIDs allObjects]];
+		[self addColorCodesForColorIDs:[self->colorsByPool[pool] allKeys]
+						  ofPartNumber:pool
+							 everyCode:everyCode
+									to:codes];
 	}
-	return self->allowedColorCodes;
+	cached = [[codes allObjects] sortedArrayUsingSelector:@selector(compare:)];
 
-}//end allowedColorCodes
+	if (everyCode)
+		self->everyAllowedCode = cached;
+	else
+		self->allowedCodes = cached;
+	return cached;
+
+}//end allowedColorCodesWithEveryCode:
 
 
 //========== poolKeyForPartNamed: ==============================================
@@ -678,6 +735,10 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 	for (NSNumber *colorID in colorIDs)
 		isAllowed = isAllowed || (colors[colorID] != nil);
 
+	// Rubber red matches red, but a part that is not rubber is not made in it.
+	if (isAllowed && [self->identity colorCode:colorCode suitsPartNamed:partName] == NO)
+		return LDrawPartLimitStatusNotInColor;
+
 	return isAllowed ? LDrawPartLimitStatusAllowed : LDrawPartLimitStatusNotInColor;
 
 }//end statusOfOnePartNamed:colorCode:
@@ -714,30 +775,37 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 }//end ownedCountOfOnePartNamed:colorCode:
 
 
-//========== colorCodesOfOnePartNamed: =========================================
+//========== colorCodesOfOnePartNamed:everyCode: ===============================
 ///
 /// @abstract	The colors the part is allowed in, not looking at its pieces.
 /// 			Nil when they are not restricted.
 ///
 //==============================================================================
-- (NSArray<NSNumber *> *) colorCodesOfOnePartNamed:(NSString *)partName
+- (NSArray<NSNumber *> *) colorCodesOfOnePartNamed:(NSString *)partName everyCode:(BOOL)everyCode
 {
 	NSString		*pool	= [self poolKeyForPartNamed:partName];
 	NSDictionary	*colors	= (pool != nil) ? self->colorsByPool[pool] : nil;
+	NSString		*number	= nil;
+	NSMutableSet	*codes	= [NSMutableSet set];
 
 	if (colors[@(LDrawRebrickableColorAny)] != nil)
 		return nil;
-	return [self colorCodesForColorIDs:[colors allKeys]];
+
+	// Only the other codes depend on the part.
+	if (everyCode)
+		number = [self->identity rebrickablePartNumberForPartName:partName];
+	[self addColorCodesForColorIDs:[colors allKeys] ofPartNumber:number everyCode:everyCode to:codes];
+	return [[codes allObjects] sortedArrayUsingSelector:@selector(compare:)];
 }
 
 
-//========== colorCodesOfPieces: ===============================================
+//========== colorCodesOfPieces:everyCode: =====================================
 ///
 /// @abstract	The colors an assembly can take with every piece allowed. Nil
 /// 			for any color; empty when a piece is not allowed at all.
 ///
 //==============================================================================
-- (NSArray<NSNumber *> *) colorCodesOfPieces:(NSArray<LDrawShortcutPiece *> *)pieces
+- (NSArray<NSNumber *> *) colorCodesOfPieces:(NSArray<LDrawShortcutPiece *> *)pieces everyCode:(BOOL)everyCode
 {
 	NSMutableSet *common = nil;	// nil while any color goes
 
@@ -754,7 +822,7 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 		if ([self allowsOnePartNamed:piece.partName] == NO)
 			return @[];
 
-		NSArray *colors = [self colorCodesOfOnePartNamed:piece.partName];
+		NSArray *colors = [self colorCodesOfOnePartNamed:piece.partName everyCode:everyCode];
 		if (colors == nil)
 			continue;
 		if (common == nil)
@@ -764,7 +832,7 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 	}
 	return (common != nil) ? [[common allObjects] sortedArrayUsingSelector:@selector(compare:)] : nil;
 
-}//end colorCodesOfPieces:
+}//end colorCodesOfPieces:everyCode:
 
 
 // MARK: - UTILITIES -
@@ -792,24 +860,28 @@ static NSString * const LDrawNamePoolPrefix = @"ldraw:";
 }//end poolKeyForFillingPartNamed:
 
 
-//========== colorCodesForColorIDs: ============================================
+//========== addColorCodesForColorIDs:ofPartNumber:everyCode:to: ===============
 ///
-/// @abstract	The LDraw colors of these Rebrickable colors, each once, lowest
-/// 			first. Colors with no LDraw match are left out.
+/// @abstract	Adds the LDraw colors of these Rebrickable colors: the first
+/// 			one each links to, or with everyCode each one that suits the
+/// 			part. Colors with no LDraw match add nothing.
 ///
 //==============================================================================
-- (NSArray<NSNumber *> *) colorCodesForColorIDs:(NSArray<NSNumber *> *)colorIDs
+- (void) addColorCodesForColorIDs:(NSArray<NSNumber *> *)colorIDs
+					 ofPartNumber:(NSString *)partNumber
+						everyCode:(BOOL)everyCode
+							   to:(NSMutableSet<NSNumber *> *)codes
 {
-	NSMutableSet *codes = [NSMutableSet set];
-
 	for (NSNumber *colorID in colorIDs)
 	{
-		LDrawColorT code = [self->identity colorCodeForRebrickableColorID:[colorID integerValue]];
-		if (code != LDrawColorBogus)
-			[codes addObject:@(code)];
+		NSArray *linked = [self->identity colorCodesForRebrickableColorID:[colorID integerValue]
+															 ofPartNumber:partNumber];
+		if (everyCode)
+			[codes addObjectsFromArray:linked];
+		else if ([linked count] > 0)
+			[codes addObject:linked[0]];
 	}
-	return [[codes allObjects] sortedArrayUsingSelector:@selector(compare:)];
 
-}//end colorCodesForColorIDs:
+}//end addColorCodesForColorIDs:ofPartNumber:everyCode:to:
 
 @end

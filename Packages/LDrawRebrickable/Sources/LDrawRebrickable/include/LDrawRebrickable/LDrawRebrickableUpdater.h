@@ -51,6 +51,11 @@ NS_ASSUME_NONNULL_BEGIN
 						   completion:(void (^)(BOOL changed, NSError * _Nullable error))completion
 	NS_SWIFT_NAME(updateCatalog(forcing:completion:));
 
+/// Brings the store's Rebrickable data up to date with the folder: its color
+/// links, fetched or built in, and the rubber parts when the data has none.
+/// A store with no Rebrickable data is left alone.
+- (BOOL) updateIdentityData:(NSError **)error;
+
 /// The set list from the downloads, read once.
 - (void) loadSetListWithCompletion:(void (^)(LDrawRebrickableSetList * _Nullable setList,
 											 NSError * _Nullable error))completion

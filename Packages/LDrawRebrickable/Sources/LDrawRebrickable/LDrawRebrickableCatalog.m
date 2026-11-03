@@ -4,7 +4,8 @@
 //  Package:    LDrawRebrickable
 //
 //  Purpose:    What Rebrickable's downloads tell about every part: when it
-//              came in which colors, how parts relate, and which parts exist.
+//              came in which colors, how parts relate, which parts exist and
+//              which are rubber.
 //
 //  Created by Sergey Slobodenyuk on 2026-10-26.
 //
@@ -24,12 +25,16 @@
 /// Sets inside sets go only a few levels deep; a loop must not hang.
 static const NSUInteger MaximumNesting = 6;
 
+/// The `part_material` of rubber parts.
+static NSString * const RubberMaterial = @"Rubber";
+
 
 @interface LDrawRebrickableCatalog ()
 
 @property (nonatomic, readwrite) LDrawPartAvailability *availability;
 @property (nonatomic, readwrite, copy) NSArray<NSArray<NSString *> *> *relations;
 @property (nonatomic, readwrite, copy) NSSet<NSString *> *knownPartNumbers;
+@property (nonatomic, readwrite, copy) NSSet<NSString *> *rubberPartNumbers;
 @property (nonatomic, readwrite) LDrawRebrickableSetList *setList;
 
 @end
@@ -52,6 +57,8 @@ static const NSUInteger MaximumNesting = 6;
 	NSMutableDictionary				*owners		= [NSMutableDictionary dictionary];	// number → sets that hold it
 	NSMutableSet					*seen		= [NSMutableSet set];
 	__block NSString				*lastID		= nil;
+	NSSet							*known		= nil;
+	NSSet							*rubber		= nil;
 
 	catalog.setList = [LDrawRebrickableSetList setListFromDownloads:downloads error:error];
 	if (catalog.setList == nil)
@@ -97,12 +104,30 @@ static const NSUInteger MaximumNesting = 6;
 
 	if ([catalog readRelationsFromDownloads:downloads error:error] == NO)
 		return nil;
-	if ([catalog readKnownPartsFromDownloads:downloads error:error] == NO)
+	if ([self readPartsFromDownloads:downloads
+							   known:&known
+							  rubber:&rubber
+							   error:error] == NO)
 		return nil;
+	catalog.knownPartNumbers	= known;
+	catalog.rubberPartNumbers	= rubber;
 
 	return catalog;
 
 }//end catalogFromDownloads:error:
+
+
+//---------- rubberPartNumbersFromDownloads:error: -------------------[static]--
+//------------------------------------------------------------------------------
++ (NSSet<NSString *> *) rubberPartNumbersFromDownloads:(LDrawRebrickableDownloads *)downloads
+												 error:(NSError **)error
+{
+	NSSet *rubber = nil;
+
+	if ([self readPartsFromDownloads:downloads known:NULL rubber:&rubber error:error] == NO)
+		return nil;
+	return rubber;
+}
 
 
 //========== setsHoldingNumber:index:cache:depth: ==============================
@@ -183,29 +208,44 @@ static const NSUInteger MaximumNesting = 6;
 }//end readRelationsFromDownloads:error:
 
 
-//========== readKnownPartsFromDownloads:error: ================================
-//==============================================================================
-- (BOOL) readKnownPartsFromDownloads:(LDrawRebrickableDownloads *)downloads error:(NSError **)error
+//---------- readPartsFromDownloads:known:rubber:error: -------------[static]--
+///
+/// @abstract	Reads every part number in the part list, and those made of
+/// 			rubber.
+///
+//------------------------------------------------------------------------------
++ (BOOL) readPartsFromDownloads:(LDrawRebrickableDownloads *)downloads
+						  known:(NSSet **)knownOut
+						 rubber:(NSSet **)rubberOut
+						  error:(NSError **)error
 {
 	NSURL						*url		= [downloads localURLForFileNamed:@"parts"];
 	LDrawRebrickableCSVReader	*reader		= [[LDrawRebrickableCSVReader alloc] initWithURL:url error:error];
 	NSArray						*columns	= [reader indexesOfColumns:@[@"part_num"] error:error];
 	NSUInteger					 column		= [[columns firstObject] unsignedIntegerValue];
+	NSUInteger					 material	= [reader indexOfColumn:@"part_material"];
 	NSMutableSet				*known		= [NSMutableSet set];
+	NSMutableSet				*rubber		= [NSMutableSet set];
 
 	if (columns == nil)
 		return NO;
 
 	if ([reader enumerateRowsUsingBlock:^(NSArray<NSString *> *fields, BOOL *stop) {
-			if ([fields count] > column && [fields[column] length] > 0)
-				[known addObject:fields[column]];
+			if ([fields count] <= column || [fields[column] length] == 0)
+				return;
+			[known addObject:fields[column]];
+			if (material < [fields count] && [fields[material] isEqualToString:RubberMaterial])
+				[rubber addObject:fields[column]];
 		} error:error] == NO)
 		return NO;
 
-	self.knownPartNumbers = known;
+	if (knownOut != NULL)
+		*knownOut = known;
+	if (rubberOut != NULL)
+		*rubberOut = rubber;
 	return YES;
 
-}//end readKnownPartsFromDownloads:error:
+}//end readPartsFromDownloads:known:rubber:error:
 
 
 // MARK: - SAVING -
@@ -225,7 +265,8 @@ static const NSUInteger MaximumNesting = 6;
 																 partLinks:nil
 																colorLinks:colorLinks
 																 relations:self.relations
-														  knownPartNumbers:self.knownPartNumbers];
+														  knownPartNumbers:self.knownPartNumbers
+														 rubberPartNumbers:self.rubberPartNumbers];
 	__block BOOL	 saved	= NO;
 
 	[store performChanges:^{

@@ -44,7 +44,7 @@ final class LDrawInventoryStoreTests {
 
     private func identity() -> LDrawPartIdentity {
         let data = LDrawPartIdentity.rebrickableData(withPartLinks: nil, colorLinks: [4: 4],
-                                                     relations: nil, knownPartNumbers: nil)
+                                                     relations: nil, knownPartNumbers: nil, rubberPartNumbers: nil)
         return LDrawPartIdentity(catalogRecords: nil, rebrickableData: data, overrides: nil)
     }
 
@@ -127,7 +127,8 @@ final class LDrawInventoryStoreTests {
         builder.notePartNumber("3001", colorID: 4, year: 2026, inDatabaseSet: false)
         try store().saveAvailability(builder.availability(with: nil))
         try store().saveRebrickableIdentityData(LDrawPartIdentity.rebrickableData(
-            withPartLinks: ["3001p11.dat": "3001pr0001"], colorLinks: [4: 4], relations: nil, knownPartNumbers: nil))
+            withPartLinks: ["3001p11.dat": "3001pr0001"], colorLinks: [4: 4], relations: nil, knownPartNumbers: nil,
+            rubberPartNumbers: nil))
         try store().saveIdentityOverrides(["u9001.dat": "3001"])
 
         let reader = store()

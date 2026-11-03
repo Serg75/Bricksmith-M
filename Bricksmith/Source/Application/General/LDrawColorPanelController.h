@@ -37,6 +37,7 @@
 				BOOL				 hasSelection;		// the document's selection holds anything
 				NSArray				*allowedColorCodes;	// the colors those parts may take, or nil for any
 				NSTextField			*footerField;		// says why the list is short
+				CGFloat				 footerSpace;		// the height the list gives up for it
 				BOOL				 isRefiltering;		// the limit changes the list; no color is applied
 }
 
