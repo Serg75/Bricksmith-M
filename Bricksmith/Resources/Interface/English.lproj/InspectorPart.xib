@@ -282,7 +282,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="BX3-2Z-Vcn">
                         <rect key="frame" x="159" y="279" width="87" height="19"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="Qrz-yo-IJd">
                             <font key="font" metaFont="smallSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -296,7 +296,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="kPq-z9-HYz">
                         <rect key="frame" x="159" y="252" width="87" height="19"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="CXO-Nv-xRi">
                             <font key="font" metaFont="smallSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -310,7 +310,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="USU-T7-GzG">
                         <rect key="frame" x="159" y="225" width="87" height="19"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="e0g-dt-1g0">
                             <font key="font" metaFont="smallSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -378,7 +378,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="r04-GJ-C3J">
                         <rect key="frame" x="35" y="67" width="75" height="16"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="mini" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="cgK-4d-VLU">
                             <font key="font" metaFont="miniSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -392,7 +392,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="9MZ-p5-39Q">
                         <rect key="frame" x="35" y="42" width="75" height="16"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="mini" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="EXm-gD-SIu">
                             <font key="font" metaFont="miniSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -406,7 +406,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="lX7-7R-PsR">
                         <rect key="frame" x="35" y="16" width="75" height="16"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="mini" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="Lcb-OO-bfE">
                             <font key="font" metaFont="miniSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -447,7 +447,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="0KQ-lj-Fhj">
                         <rect key="frame" x="161" y="67" width="87" height="16"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="mini" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="s5S-Yq-oe4">
                             <font key="font" metaFont="miniSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -461,7 +461,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="cd4-aq-qbu">
                         <rect key="frame" x="161" y="42" width="87" height="16"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="mini" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="oVd-vS-6m7">
                             <font key="font" metaFont="miniSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -475,7 +475,7 @@ Second Line.</string>
                     </textField>
                     <textField verticalHuggingPriority="750" preferredMaxLayoutWidth="87" id="19L-Uc-W4c">
                         <rect key="frame" x="161" y="16" width="87" height="16"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="mini" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="Wxs-GA-pbw">
                             <font key="font" metaFont="miniSystem"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
