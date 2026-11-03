@@ -12,7 +12,9 @@
 @class IconTextCell;
 @class LDrawDocument;
 @class LDrawPart;
+@class LDrawPartLimit;
 @class LDrawPartLimitReport;
+@class LDrawPartLimitTable;
 @class LDrawPartUsage;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -28,7 +30,18 @@ extern NSString * const PartsLimitDidCheckNotification;
 ////////////////////////////////////////////////////////////////////////////////
 @interface PartsLimitController : NSObject <NSMenuDelegate>
 
+// The model's limit comes from its file, or is the default.
 - (instancetype) initWithDocument:(LDrawDocument *)document;
+
+// The model's limit. Setting it keeps it with the model's file, and checks
+// the model again.
+@property (nonatomic, copy) LDrawPartLimit *limit;
+
+// What the limit allows, when it restricts and has its data.
+- (nullable LDrawPartLimitTable *) restrictingTable;
+
+// Keeps the model's own limit with its file again, after a save wrote it.
+- (void) keepLimitWithFileAtURL:(NSURL *)url;
 
 // Puts the controls into the scope bar, between the model menu and the step
 // controls. The model menu gives up the room.
@@ -55,6 +68,10 @@ extern NSString * const PartsLimitDidCheckNotification;
 
 // Edit > Select Parts with Limit Problems.
 - (BOOL) selectProblemParts;
+
+// The window's Parts menu.
+- (IBAction) choosePartsLimit:(nullable id)sender;
+- (IBAction) showLimitOptions:(nullable id)sender;
 
 @end
 

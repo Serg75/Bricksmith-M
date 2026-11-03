@@ -14,6 +14,7 @@
 #import "LDrawView.h"
 
 @class LDrawColor;
+@class LDrawDocument;
 @class LDrawViewerContainer;
 @class LDrawPartLibrary;
 @class PartBrowserLimitBar;
@@ -61,6 +62,9 @@ extern NSString * const PartBrowserSelectionDidChangeNotification;
 	BOOL					 filtersByCurrentColor;	// the color filter follows the Colors window
 	NSMutableDictionary		*swatches;			// images by color code
 }
+
+// The model whose window holds this browser, or nil for the shared panel.
+@property (nonatomic, weak) LDrawDocument *document;
 
 //Accessors
 - (NSString *) category;

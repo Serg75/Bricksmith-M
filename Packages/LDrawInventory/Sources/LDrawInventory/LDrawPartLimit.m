@@ -13,6 +13,10 @@
 
 #import <LDrawInventory/LDrawInventoryJSON.h>
 
+#import <sys/xattr.h>
+
+NSString * const LDrawPartLimitFileAttributeName = @"com.AllenSmith.Bricksmith.PartsLimit";
+
 static NSString * const LimitKindKey					= @"kind";
 static NSString * const LimitYearsBackKey				= @"yearsBack";
 static NSString * const LimitCountsPickABrickKey		= @"countsPickABrickParts";
@@ -244,6 +248,61 @@ static const NSInteger DefaultYearsBack = 5;
 - (void) encodeWithCoder:(NSCoder *)coder
 {
 	[coder encodeObject:[self dictionaryRepresentation] forKey:@"limit"];
+}
+
+
+// MARK: - KEPT WITH A MODEL FILE -
+
+
+//---------- limitOfFileAtURL: ---------------------------------------[static]--
+///
+/// @abstract	The attribute holds the limit's dictionary as JSON. One that does
+/// 			not read as a dictionary is no limit.
+///
+//------------------------------------------------------------------------------
++ (LDrawPartLimit *) limitOfFileAtURL:(NSURL *)fileURL
+{
+	const char		*path	= [fileURL fileSystemRepresentation];
+	const char		*name	= [LDrawPartLimitFileAttributeName UTF8String];
+	ssize_t			 size	= getxattr(path, name, NULL, 0, 0, 0);
+	NSMutableData	*data	= nil;
+	id				 object	= nil;
+
+	if (size <= 0)
+		return nil;
+
+	data = [NSMutableData dataWithLength:(NSUInteger)size];
+	if (getxattr(path, name, [data mutableBytes], (size_t)size, 0, 0) != size)
+		return nil;
+
+	object = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+	if (LDrawJSONDictionary(object) == nil)
+		return nil;
+	return [self limitWithDictionary:object];
+}
+
+
+//========== writeToFileAtURL:error: ===========================================
+//==============================================================================
+- (BOOL) writeToFileAtURL:(NSURL *)fileURL error:(NSError **)error
+{
+	NSData *data = [NSJSONSerialization dataWithJSONObject:[self dictionaryRepresentation]
+												   options:NSJSONWritingSortedKeys
+													 error:error];
+
+	if (data == nil)
+		return NO;
+
+	if (setxattr([fileURL fileSystemRepresentation], [LDrawPartLimitFileAttributeName UTF8String],
+				 [data bytes], [data length], 0, 0) != 0)
+	{
+		if (error != NULL)
+			*error = [NSError errorWithDomain:NSPOSIXErrorDomain
+										 code:errno
+									 userInfo:@{NSURLErrorKey: fileURL}];
+		return NO;
+	}
+	return YES;
 }
 
 

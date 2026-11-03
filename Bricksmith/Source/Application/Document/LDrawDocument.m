@@ -325,6 +325,9 @@ void AppendChoicesToNewItem(
 	self->partsLimitController = [[PartsLimitController alloc] initWithDocument:self];
 	[self->partsLimitController installAfterView:self->submodelPopUpMenu beforeView:self->scopeStepControlsContainer];
 
+	// The window's Part Browser follows this model's limit and counts its parts.
+	[self->partsBrowser setDocument:self];
+
 	// update scope step display controls
 	[self setStepDisplay:NO];
 	
@@ -636,6 +639,26 @@ void AppendChoicesToNewItem(
 	else
 		[[self documentContents] setPath:nil];
 }//end saveToURL:ofType:forSaveOperation:delegate:didSaveSelector:contextInfo:
+
+
+//========== writeSafelyToURL:ofType:forSaveOperation:error: ===================
+//
+// Purpose:		Writes the file, then keeps the model's parts limit with it,
+//				since a safe save replaces the file.
+//
+//==============================================================================
+- (BOOL) writeSafelyToURL:(NSURL *)url
+				   ofType:(NSString *)typeName
+		 forSaveOperation:(NSSaveOperationType)saveOperation
+					error:(NSError **)outError
+{
+	if([super writeSafelyToURL:url ofType:typeName forSaveOperation:saveOperation error:outError] == NO)
+		return NO;
+
+	[self->partsLimitController keepLimitWithFileAtURL:url];
+	return YES;
+
+}//end writeSafelyToURL:ofType:forSaveOperation:error:
 
 
 //========== dataOfType:error: =================================================
@@ -2484,7 +2507,7 @@ void AppendChoicesToNewItem(
 - (void) randomizeLDrawColors:(id)sender
 {
 	NSArray				*colorable	= [LDrawSelection colorableDirectivesInSelection:[self selectedObjects]];
-	LDrawPartLimitTable	*table		= [[[PartsLimitManager sharedManager] session] restrictingTable];
+	LDrawPartLimitTable	*table		= [self->partsLimitController restrictingTable];
 	NSArray				*colors		= nil;
 
 	colors = [LDrawSelection randomizedColorsForDirectives:colorable

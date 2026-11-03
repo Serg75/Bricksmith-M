@@ -59,6 +59,7 @@ static PartsLimitOptionsController *runningController = nil;
 {
 	NSWindow				*parent;
 	NSPanel					*panel;
+	__weak LDrawDocument	*document;		// whose limit the options change, or nil for the default
 
 	NSPopUpButton			*yearsPopUp;
 	NSSwitch				*pickABrickSwitch;
@@ -74,9 +75,9 @@ static PartsLimitOptionsController *runningController = nil;
 #pragma mark INITIALIZATION
 #pragma mark -
 
-//---------- showWithWindow: -----------------------------------------[static]--
+//---------- showForDocument:window: ---------------------------------[static]--
 //------------------------------------------------------------------------------
-+ (void) showWithWindow:(NSWindow *)window
++ (void) showForDocument:(LDrawDocument *)aDocument window:(NSWindow *)window
 {
 	if(runningController != nil)
 	{
@@ -85,15 +86,16 @@ static PartsLimitOptionsController *runningController = nil;
 	}
 
 	runningController = [[PartsLimitOptionsController alloc] init];
-	runningController->parent = window;
+	runningController->parent	= window;
+	runningController->document	= aDocument;
 	[runningController show];
 
-}//end showWithWindow:
+}//end showForDocument:window:
 
 
 //========== show ==============================================================
 //
-// Purpose:		Builds the sheet from the app's limit and puts it up.
+// Purpose:		Builds the sheet from the model's limit and puts it up.
 //
 //==============================================================================
 - (void) show
@@ -137,7 +139,7 @@ static PartsLimitOptionsController *runningController = nil;
 	colorsSwitch		= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
 	warnsSwitch			= [PreferencesForm switchWithTarget:self action:@selector(optionDidChange:)];
 
-	LDrawPartLimit *limit = [[[PartsLimitManager sharedManager] session] limit];
+	LDrawPartLimit *limit = [[PartsLimitManager sharedManager] limitOfDocument:document];
 
 	// A value the menu lacks, from an older choice, shows as the next longer one.
 	if([yearsPopUp selectItemWithTag:limit.yearsBack] == NO)
@@ -226,14 +228,14 @@ static PartsLimitOptionsController *runningController = nil;
 
 //========== optionDidChange: ==================================================
 //
-// Purpose:		Puts the options into the app's limit. Its kind is read again,
+// Purpose:		Puts the options into the model's limit. Its kind is read again,
 //				since a menu may pick another limit while the sheet is up.
 //
 //==============================================================================
 - (void) optionDidChange:(id)sender
 {
 	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
-	LDrawMutablePartLimit	*limit		= [[[manager session] limit] mutableCopy];
+	LDrawMutablePartLimit	*limit		= [[manager limitOfDocument:document] mutableCopy];
 
 	limit.yearsBack				= [[yearsPopUp selectedItem] tag];
 	limit.countsPickABrickParts	= ([pickABrickSwitch state] == NSControlStateValueOn);
@@ -243,7 +245,7 @@ static PartsLimitOptionsController *runningController = nil;
 	limit.matchesAnyColor		= ([colorsSwitch state] == NSControlStateValueOn);
 	limit.warnsOnly				= ([warnsSwitch state] == NSControlStateValueOn);
 
-	[manager setLimit:[limit copy] window:parent];
+	[manager setLimit:[limit copy] document:document window:parent];
 
 }//end optionDidChange:
 

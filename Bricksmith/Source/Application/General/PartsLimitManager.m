@@ -32,6 +32,7 @@
 NSString * const PartsLimitBrowserSettingDidChangeNotification = @"PartsLimitBrowserSettingDidChangeNotification";
 NSString * const PartsLimitMarksDidChangeNotification = @"PartsLimitMarksDidChangeNotification";
 NSString * const PartsDataUpdateDidEndNotification = @"PartsDataUpdateDidEndNotification";
+NSString * const PartsLimitFrontLimitDidChangeNotification = @"PartsLimitFrontLimitDidChangeNotification";
 
 // About how much the first download is, for the question before it.
 static NSString * const DownloadSizeText = @"about 18 MB";
@@ -166,6 +167,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	NSMutableArray				*waitingCompletions;	// of requests made while an update ran
 	BOOL						 identityDataIsCurrent;	// the saved identity data was checked this launch
 	BOOL						 isAskingToDownload;	// the first download's question is up
+	LDrawPartLimit				*postedFrontLimit;		// the front limit last told about
 }
 
 
@@ -243,6 +245,14 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 											 selector:@selector(updateIdentityDataIfNeeded)
 												 name:LDrawPartLimitDidChangeNotification
 											   object:self.session];
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(windowsDidChange:)
+												 name:NSWindowDidBecomeMainNotification
+											   object:nil];
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(windowsDidChange:)
+												 name:NSWindowWillCloseNotification
+											   object:nil];
 	[self applyMarkSettings];
 
 	// Only data the user already asked for is kept up to date, quietly.
@@ -262,28 +272,102 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 #pragma mark THE LIMIT
 #pragma mark -
 
-//========== setLimit:window: ==================================================
+//========== setLimit:document:window: =========================================
 //
-// Purpose:		Makes the limit the app's one, and keeps it in the defaults.
-//				Available Now needs the catalog, so the first time it asks to
-//				download it.
+// Purpose:		Makes the limit the model's, kept with its file, and the
+//				default for models with none of their own. Available Now needs
+//				the catalog, so the first time it asks to download it.
 //
 //==============================================================================
-- (void) setLimit:(LDrawPartLimit *)limit window:(NSWindow *)window
+- (void) setLimit:(LDrawPartLimit *)limit document:(LDrawDocument *)document window:(NSWindow *)window
 {
+	LDrawDocument *target = document ?: [self frontDocument];
+
 	if(limit.kind == LDrawPartLimitKindAvailableNow && [self.updater hasCatalog] == NO)
 	{
 		[self updateDataForcing:NO window:window completion:^(BOOL success) {
 			if(success)
-				[self setLimit:limit window:window];
+				[self setLimit:limit document:target window:window];
 		}];
 		return;
 	}
 
+	[[target partsLimitController] setLimit:limit];
 	[[NSUserDefaults standardUserDefaults] setObject:[limit dictionaryRepresentation] forKey:PARTS_LIMIT_KEY];
 	[self.session setLimit:limit];
+	[self frontLimitMayHaveChanged];
 
-}//end setLimit:window:
+}//end setLimit:document:window:
+
+
+//========== limitOfDocument: ==================================================
+//
+// Purpose:		The model's limit, or the default with no model.
+//
+//==============================================================================
+- (LDrawPartLimit *) limitOfDocument:(LDrawDocument *)document
+{
+	return [[document partsLimitController] limit] ?: self.session.limit;
+}
+
+
+//========== frontDocument =====================================================
+//
+// Purpose:		The main window's model, or with another window main, such as
+//				a panel, the model whose window is in front of the others'.
+//
+//==============================================================================
+- (LDrawDocument *) frontDocument
+{
+	NSDocument *current = [[NSDocumentController sharedDocumentController] currentDocument];
+
+	if([current isKindOfClass:[LDrawDocument class]])
+		return (LDrawDocument *)current;
+
+	for(NSDocument *document in [NSApp orderedDocuments])
+	{
+		if([document isKindOfClass:[LDrawDocument class]])
+			return (LDrawDocument *)document;
+	}
+	return nil;
+
+}//end frontDocument
+
+
+//========== frontLimit ========================================================
+//==============================================================================
+- (LDrawPartLimit *) frontLimit
+{
+	return [self limitOfDocument:[self frontDocument]];
+}
+
+
+//========== frontRestrictingTable =============================================
+//==============================================================================
+- (LDrawPartLimitTable *) frontRestrictingTable
+{
+	return [self.session restrictingTableForLimit:[self frontLimit]];
+}
+
+
+//========== frontLimitMayHaveChanged ==========================================
+//
+// Purpose:		Tells the windows that follow the front model when its limit
+//				is another than last time.
+//
+//==============================================================================
+- (void) frontLimitMayHaveChanged
+{
+	LDrawPartLimit *limit = [self frontLimit];
+
+	if([limit isEqual:self->postedFrontLimit])
+		return;
+
+	self->postedFrontLimit = limit;
+	[self updateIdentityDataIfNeeded];
+	[[NSNotificationCenter defaultCenter] postNotificationName:PartsLimitFrontLimitDidChangeNotification object:nil];
+
+}//end frontLimitMayHaveChanged
 
 
 //========== titleForLimit: ====================================================
@@ -298,17 +382,16 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 }//end titleForLimit:
 
 
-//========== populateLimitMenu: ================================================
+//========== populateLimitMenu:current:target: =================================
 //
 // Purpose:		Fills the menu with All Parts, Available Now, the sets and the
-//				inventories, then Limit Options. The limit in force has a check
-//				mark.
+//				inventories, then Limit Options, for the target to choose. The
+//				current limit has a check mark.
 //
 //==============================================================================
-- (void) populateLimitMenu:(NSMenu *)menu
+- (void) populateLimitMenu:(NSMenu *)menu current:(LDrawPartLimit *)current target:(id)target
 {
-	LDrawPartLimit	*current	= self.session.limit;
-	NSArray			*limits		= [self.session choosableLimits];
+	NSArray *limits = [self.session choosableLimitsWithOptionsOf:current];
 
 	[menu removeAllItems];
 
@@ -325,7 +408,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 		item = [menu addItemWithTitle:[self titleForLimit:limit]
 							   action:@selector(choosePartsLimit:)
 						keyEquivalent:@""];
-		[item setTarget:self];
+		[item setTarget:target];
 		[item setRepresentedObject:limit];
 		[item setState:[limit isEqual:current] ? NSControlStateValueOn : NSControlStateValueOff];
 	}
@@ -333,22 +416,22 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	[menu addItem:[NSMenuItem separatorItem]];
 	[[menu addItemWithTitle:NSLocalizedString(@"Limit Options…", nil)
 					 action:@selector(showLimitOptions:)
-			  keyEquivalent:@""] setTarget:self];
+			  keyEquivalent:@""] setTarget:target];
 
-}//end populateLimitMenu:
+}//end populateLimitMenu:current:target:
 
 
-//========== populatePullDownLimitMenu: ========================================
+//========== populatePullDownLimitMenu:current:target: =========================
 //
 // Purpose:		Fills a pull-down's menu the same way, keeping its first item,
 //				which is the title.
 //
 //==============================================================================
-- (void) populatePullDownLimitMenu:(NSMenu *)menu
+- (void) populatePullDownLimitMenu:(NSMenu *)menu current:(LDrawPartLimit *)current target:(id)target
 {
 	NSMenuItem *titleItem = [menu itemAtIndex:0];
 
-	[self populateLimitMenu:menu];
+	[self populateLimitMenu:menu current:current target:target];
 	[menu insertItem:titleItem atIndex:0];
 }
 
@@ -546,7 +629,8 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 
 //========== choosePartsLimit: =================================================
 //
-// Purpose:		A limit picked from a menu. Its item carries the limit.
+// Purpose:		A limit picked from View > Parts Limit, for the front model.
+//				Its item carries the limit.
 //
 //==============================================================================
 - (IBAction) choosePartsLimit:(id)sender
@@ -554,7 +638,7 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 	LDrawPartLimit *limit = [sender representedObject];
 
 	if([limit isKindOfClass:[LDrawPartLimit class]])
-		[self setLimit:limit window:[NSApp mainWindow]];
+		[self setLimit:limit document:nil window:[NSApp mainWindow]];
 }
 
 
@@ -562,7 +646,9 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 //==============================================================================
 - (IBAction) showLimitOptions:(id)sender
 {
-	[PartsLimitOptionsController showWithWindow:[NSApp mainWindow]];
+	LDrawDocument *document = [self frontDocument];
+
+	[PartsLimitOptionsController showForDocument:document window:[document windowForSheet] ?: [NSApp mainWindow]];
 }
 
 
@@ -597,15 +683,15 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 //**** NSMenuDelegate ****
 //========== menuNeedsUpdate: ==================================================
 //
-// Purpose:		Fills View > Parts Limit as it opens: the limits, Limit
-//				Options, and Mark Limit Problems.
+// Purpose:		Fills View > Parts Limit as it opens: the limits, with the
+//				front model's checked, Limit Options, and Mark Limit Problems.
 //
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
 	NSMenuItem *marks = nil;
 
-	[self populateLimitMenu:menu];
+	[self populateLimitMenu:menu current:[self frontLimit] target:self];
 	[menu addItem:[NSMenuItem separatorItem]];
 
 	marks = [menu addItemWithTitle:NSLocalizedString(@"Mark Limit Problems", nil)
@@ -640,5 +726,18 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 										 colorCodesWithMaterial:LDrawColorMaterialRubber]];
 
 }//end partLibraryDidChange:
+
+
+//========== windowsDidChange: =================================================
+//
+// Purpose:		Another window came in front, or one is closing. A closing
+//				document leaves the list after this event, so the check waits.
+//
+//==============================================================================
+- (void) windowsDidChange:(NSNotification *)notification
+{
+	[NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(frontLimitMayHaveChanged) object:nil];
+	[self performSelector:@selector(frontLimitMayHaveChanged) withObject:nil afterDelay:0];
+}
 
 @end

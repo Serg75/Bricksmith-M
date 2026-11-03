@@ -20,10 +20,12 @@
 #import <LDrawFeatures/LDrawPartLimitChecker.h>
 #import <LDrawFeatures/LDrawPartLimitPresentation.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
+#import <LDrawInventory/LDrawPartLimit.h>
 
 #import "IconTextCell.h"
 #import "LDrawDocument.h"
 #import "PartsLimitManager.h"
+#import "PartsLimitOptionsController.h"
 #import "PreferencesForm.h"
 
 NSString * const PartsLimitDidCheckNotification = @"PartsLimitDidCheckNotification";
@@ -47,6 +49,7 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 
 	BOOL					 isHidden;
 	LDrawPartLimitChecker	*checker;		// for the document's file; use -checker
+	BOOL					 keepsLimit;	// the limit came from the file or was chosen
 }
 
 
@@ -61,7 +64,14 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 	self = [super init];
 	if (self)
 	{
-		self->document = aDocument;
+		NSURL			*url	= [aDocument fileURL];
+		LDrawPartLimit	*saved	= (url != nil) ? [LDrawPartLimit limitOfFileAtURL:url] : nil;
+		LDrawPartLimit	*shared	= [[[PartsLimitManager sharedManager] session] limit];
+
+		// A model without a limit of its own is not limited. It keeps the default's options.
+		self->document		= aDocument;
+		self->_limit		= saved ?: [shared limitWithKind:LDrawPartLimitKindNone inventoryIdentifier:nil];
+		self->keepsLimit	= (saved != nil);
 
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(limitDidChange:)
@@ -71,6 +81,58 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 	return self;
 
 }//end initWithDocument:
+
+
+#pragma mark -
+#pragma mark THE LIMIT
+#pragma mark -
+
+//========== setLimit: =========================================================
+//
+// Purpose:		Makes the limit the model's own, and keeps it with the file.
+//				An untitled model keeps it once saved.
+//
+//==============================================================================
+- (void) setLimit:(LDrawPartLimit *)newLimit
+{
+	NSURL	*url	= [self->document fileURL];
+	NSError	*error	= nil;
+
+	self->_limit		= [newLimit copy];
+	self->keepsLimit	= YES;
+
+	if(url != nil && [self.limit writeToFileAtURL:url error:&error] == NO)
+		NSLog(@"Could not keep the parts limit with %@: %@", url, error);
+
+	[self updateControls];
+	[self setNeedsCheck];
+	[[PartsLimitManager sharedManager] frontLimitMayHaveChanged];
+
+}//end setLimit:
+
+
+//========== restrictingTable ==================================================
+//==============================================================================
+- (LDrawPartLimitTable *) restrictingTable
+{
+	return [[[PartsLimitManager sharedManager] session] restrictingTableForLimit:self.limit];
+}
+
+
+//========== keepLimitWithFileAtURL: ===========================================
+//
+// Purpose:		A save replaces the file, which can drop its attributes. A
+//				limit the model only took from the default is not kept.
+//
+//==============================================================================
+- (void) keepLimitWithFileAtURL:(NSURL *)url
+{
+	NSError *error = nil;
+
+	if(self->keepsLimit && [self.limit writeToFileAtURL:url error:&error] == NO)
+		NSLog(@"Could not keep the parts limit with %@: %@", url, error);
+
+}//end keepLimitWithFileAtURL:
 
 
 #pragma mark -
@@ -158,7 +220,7 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 	NSColor					*color		= [PartsLimitManager colorForBadgeTint:[badge tint]];
 	NSImage					*image		= nil;
 
-	[[self->limitPopUp itemAtIndex:0] setTitle:[manager titleForLimit:[[manager session] limit]]];
+	[[self->limitPopUp itemAtIndex:0] setTitle:[manager titleForLimit:self.limit]];
 	[self->limitPopUp setHidden:self->isHidden];
 
 	image = [[NSImage imageWithSystemSymbolName:[badge symbolName] accessibilityDescription:nil]
@@ -281,7 +343,7 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 //==============================================================================
 - (void) check
 {
-	LDrawPartLimitTable *table = [[[PartsLimitManager sharedManager] session] table];
+	LDrawPartLimitTable *table = [[[PartsLimitManager sharedManager] session] tableForLimit:self.limit];
 
 	if([[self checker] checkAgainstTable:table])
 		[self redrawMarks];
@@ -333,7 +395,7 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 	NSViewController		*content	= [self->popover contentViewController];
 	LDrawPartLimitReport	*report		= self.report;
 	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
-	NSString				*title		= [manager titleForLimit:[[manager session] limit]];
+	NSString				*title		= [manager titleForLimit:self.limit];
 	NSUInteger				 missing	= [[report missingParts] count];
 	NSTextField				*heading	= nil;
 	NSGridView				*grid		= nil;
@@ -603,6 +665,35 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 
 
 #pragma mark -
+#pragma mark ACTIONS
+#pragma mark -
+
+//========== choosePartsLimit: =================================================
+//
+// Purpose:		A limit picked from the window's Parts menu. Its item carries
+//				the limit.
+//
+//==============================================================================
+- (IBAction) choosePartsLimit:(id)sender
+{
+	LDrawPartLimit *picked = [sender representedObject];
+
+	if([picked isKindOfClass:[LDrawPartLimit class]])
+		[[PartsLimitManager sharedManager] setLimit:picked
+										   document:self->document
+											 window:[self->document windowForSheet]];
+}
+
+
+//========== showLimitOptions: =================================================
+//==============================================================================
+- (IBAction) showLimitOptions:(id)sender
+{
+	[PartsLimitOptionsController showForDocument:self->document window:[self->document windowForSheet]];
+}
+
+
+#pragma mark -
 #pragma mark DELEGATES
 #pragma mark -
 
@@ -614,7 +705,7 @@ static const CGFloat	PartsLimitModelMinWidth	= 80.0;
 //==============================================================================
 - (void) menuNeedsUpdate:(NSMenu *)menu
 {
-	[[PartsLimitManager sharedManager] populatePullDownLimitMenu:menu];
+	[[PartsLimitManager sharedManager] populatePullDownLimitMenu:menu current:self.limit target:self];
 
 }//end menuNeedsUpdate:
 

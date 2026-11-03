@@ -265,9 +265,9 @@ static ImportSetController *runningController = nil;
 
 		if(useAsLimit)
 		{
-			LDrawPartLimit *limit = [[[manager session] limit] limitWithKind:LDrawPartLimitKindInventory
-														 inventoryIdentifier:set.setNumber];
-			[manager setLimit:limit window:self->parent];
+			LDrawPartLimit *limit = [[manager frontLimit] limitWithKind:LDrawPartLimitKindInventory
+													inventoryIdentifier:set.setNumber];
+			[manager setLimit:limit document:nil window:self->parent];
 		}
 		[self close];
 	}];

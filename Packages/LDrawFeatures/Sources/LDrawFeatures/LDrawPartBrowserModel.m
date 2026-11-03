@@ -122,7 +122,8 @@ static NSString * const SetsGroupName			= @"Sets";
 										   && self.searchMode == LDrawPartBrowserSearchAllCategories);
 	NSString			*inventoryID	= [[self class] inventoryIdentifierForCategory:self.currentCategory];
 	NSString			*category		= self.currentCategory;
-	LDrawPartLimitTable	*limitTable		= self.limitSession.restrictingTable;
+	LDrawPartLimit		*limit			= self.limit ?: self.limitSession.limit;
+	LDrawPartLimitTable	*limitTable		= nil;
 	NSArray				*records		= nil;
 	NSSet				*excluded		= nil;
 
@@ -130,12 +131,14 @@ static NSString * const SetsGroupName			= @"Sets";
 	if (searchesAll || inventoryID != nil)
 		category = Category_All;
 
+	if (limit != nil)
+		limitTable = [self.limitSession restrictingTableForLimit:limit];
 	self.activeTable	= limitTable;
 	self->inventoryRows	= nil;
 
 	if (inventoryID != nil && searchesAll == NO)
 	{
-		self.activeTable	= [self.limitSession tableForInventoryIdentifier:inventoryID];
+		self.activeTable	= [self.limitSession tableForInventoryIdentifier:inventoryID withOptionsOf:limit];
 		records				= [self inventoryRowsInCategory:Category_All];
 	}
 	else if (	limitTable.limit.kind == LDrawPartLimitKindInventory

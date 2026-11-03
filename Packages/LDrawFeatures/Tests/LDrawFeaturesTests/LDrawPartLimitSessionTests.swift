@@ -66,11 +66,11 @@ final class LDrawPartLimitSessionTests {
         session.limit = LDrawPartLimit.inventory("42115-1")
 
         #expect(session.limit.kind == .inventory)
-        #expect(session.effectiveLimit.kind == .none)
+        #expect(session.table.limit.kind == .none)
 
         let count = try posts(of: session) { try store.saveSetInventory(set("42115-1", "3001")) }
         #expect(count >= 1)
-        #expect(session.effectiveLimit.kind == .inventory)
+        #expect(session.table.limit.kind == .inventory)
     }
 
     @Test("The part library's keywords reach the identity map")

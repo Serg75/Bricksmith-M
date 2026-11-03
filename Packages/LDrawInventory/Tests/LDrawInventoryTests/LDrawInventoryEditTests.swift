@@ -112,4 +112,27 @@ final class LDrawInventoryEditTests {
         limit.warnsOnly = true
         #expect(table().allowsPickingColorCode(blue, forPartNamed: "3001.dat"))
     }
+
+    @Test("A limit is kept with a model file, beside its text; a file with none or with junk has none")
+    func limitWithFile() throws {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent("model.ldr")
+        let text = Data("0 Model\n".utf8)
+        try text.write(to: file)
+        let limit = LDrawPartLimit.inventory("42115-1").mutableCopy() as! LDrawMutablePartLimit
+        limit.includesSpares = false
+
+        #expect(LDrawPartLimit.limit(ofFileAt: file) == nil)
+
+        try limit.write(toFileAt: file)
+        #expect(LDrawPartLimit.limit(ofFileAt: file) == limit)
+        #expect(try Data(contentsOf: file) == text)
+
+        try LDrawPartLimit.availableNow().write(toFileAt: file)
+        #expect(LDrawPartLimit.limit(ofFileAt: file) == LDrawPartLimit.availableNow())
+
+        let junk = Array("not json".utf8)
+        _ = setxattr(file.path, LDrawPartLimitFileAttributeName, junk, junk.count, 0, 0)
+        #expect(LDrawPartLimit.limit(ofFileAt: file) == nil)
+    }
 }

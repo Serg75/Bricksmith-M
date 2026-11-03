@@ -23,7 +23,7 @@ Phases 0–2 land entirely in the packages. Phases 3–6 add AppKit views, and e
 - Two kinds of limit:
   - **Available now.** A part in a color is allowed when it came in a LEGO set released in the last two years. The span can be changed, or set to any year, which then only rules out colors a part was never made in.
   - **From sets.** The parts of one or more sets, each set counted once or more, plus loose parts. Spare parts in or out.
-- The limit is an editor setting, not part of the model: nothing is written into the file. One limit holds for the whole app. Every window's Parts pop-up and the Parts pane in Settings show it and change it, as they do for the LPub3D Page switch.
+- Each model has its own limit, kept with its file in an extended attribute, so the file's text never changes. A model with none is not limited until a limit is chosen for it. Each window's Parts pop-up shows and changes its model's limit.
 - With a limit on:
   - The Part Browser lists only allowed parts. A set's parts show how many the model uses and how many the sets hold, as `5 / 10`, and the row turns red past the count.
   - A color the part is not made in cannot be picked for it.
@@ -173,7 +173,7 @@ With an **inventory** as the limit, and whenever a set is selected under SETS:
 
 One row per part and color, not per part, because a part can be over its count in one color and under it in another. A row per part would add the two up and hide the problem.
 
-Every browser shows the one limit. The counts come from a model: the browser in a document window counts its own, and the shared Part Browser panel counts the main window's.
+A browser shows the limit of the model it counts: the browser in a document window shows its own model's, and the shared Part Browser panel the main window's.
 
 #### Colors
 
@@ -477,7 +477,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 
 - *`LDrawPartLimitSession`* (LDrawFeatures) holds the limit in force and its table, instead of a static on `LDrawPartLimitCheck`. It builds the table again when the limit, the store or the part library's records change, and posts `LDrawPartLimitDidChangeNotification` once per change. A limit on an inventory the store lacks is kept, but is in force as no limit until the set comes back.
 - *`LDrawRebrickableUpdater`* (LDrawRebrickable) runs the downloads, builds and saves the catalog on a background queue, reads the set list once, and imports a set from the downloads. Every completion runs on the main queue.
-- *`PartsLimitManager`* is the app's one owner of the store, the session and the updater, instead of class methods on `PreferencesDialogController`. It keeps the limit in the defaults under `PARTS_LIMIT_KEY`, and the data in `~/Library/Application Support/Bricksmith/Parts Data`. It fills every limit menu, asks before the first download (about 18 MB), shows the download's progress, and updates the data quietly when `PARTS_DATA_UPDATE_INTERVAL_KEY` days (default 30) have passed, but only once the user has data.
+- *`PartsLimitManager`* is the app's one owner of the store, the session and the updater, instead of class methods on `PreferencesDialogController`. It keeps the default limit in the defaults under `PARTS_LIMIT_KEY`, each model's limit with its file through `PartsLimitController`, and the data in `~/Library/Application Support/Bricksmith/Parts Data`. It fills every limit menu, asks before the first download (about 18 MB), shows the download's progress, and updates the data quietly when `PARTS_DATA_UPDATE_INTERVAL_KEY` days (default 30) have passed, but only once the user has data.
 - *The Parts menu is a pull-down with a box icon, not a "Parts:" label and pop-up*, placed after the model menu against the step controls, which takes less room. The model menu gives up the width. Both hide while a step is arranged. The problem button shows the count and turns orange when the worst problem is *too many*. Its popover lists each kind with **Select**, which selects the parts in the model being edited, or else in the first model that has some, and **Show Piece Count…**.
 - *Documents check from `-docChanged:` and on every limit change*, once per run of the event loop, and redraw only when a part's status changed. With no limit the walk is skipped, once the marks of the earlier limit are cleared.
 - *View → Parts Limit and Window → Inventories* are added in code at launch. **Mark Limit Problems** waits for the marks in Phase 6.
@@ -583,7 +583,7 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitStatus)
 
 Decided:
 
-- **The limit is an editor setting.** It is never written into the model. One limit holds for the whole app, kept in its defaults, and every window shows and switches it.
+- **A limit per model, kept beside the file.** It is never written into the model's text: it goes into an extended attribute of the file, which renames, moves and Finder copies keep, and git or email lose. A model without one is not limited. The last limit chosen is kept in the app's defaults, for the shared windows when no model is open, and its options carry over to new choices.
 
 To confirm. The plan above takes the first answer of each, and each is cheap to change before its phase starts.
 
@@ -603,7 +603,7 @@ To confirm. The plan above takes the first answer of each, and each is cheap to 
 - **"Available now" is a guess from release years.** The UI says what it means ("made in 2025–2026"), not "in stock".
 - **Speed.** The check runs once per edit and is timed in a test. Marked parts draw one by one like ghosts, and there are few of them. *Dim allowed parts* draws many as ghosts, as Steps mode's ghosting already does.
 - **Two renderers.** The stack is shared in LDrawRenderCore, and the shader work is done and checked in both.
-- **One limit for every window.** Two models meant for different sets cannot be checked against different limits at once; switching takes one click in either window. A limit per window, still kept out of the file, can come later without changing the packages: the check already takes its table as an argument.
+- **A limit that does not travel.** The extended attribute is lost when the file goes through git, email or some sync services; the model is then not limited until a limit is chosen again.
 - **Offline and errors.** Every view works from the last data. Errors say what failed and offer Retry.
 
 ## Tests

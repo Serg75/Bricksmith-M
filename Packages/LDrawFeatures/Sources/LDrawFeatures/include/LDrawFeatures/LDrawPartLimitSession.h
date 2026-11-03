@@ -17,8 +17,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// The limit, or what it allows, changed: a new limit, new data in the store,
-/// or a reloaded part library. Object is the session. No userInfo.
+/// What the limits allow may have changed: a new default limit, new data in
+/// the store, or a reloaded part library. Object is the session. No userInfo.
 extern NSString * const LDrawPartLimitDidChangeNotification;
 
 
@@ -26,14 +26,16 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 ///
 /// @class      LDrawPartLimitSession
 ///
-/// @abstract   The editor's one parts limit, and the table built for it.
+/// @abstract   The editor's parts limits and the tables built for them.
 ///
 /// @discussion A host makes one, gives it the store and the part library's
-///             records, and sets the limit it keeps in its own settings. The
-///             session builds the table again whenever one of them changes,
-///             and posts `LDrawPartLimitDidChangeNotification`; every
-///             document checks itself again then. The identity map is built
-///             when first needed. Used on the main thread.
+///             records, and sets the default limit it keeps in its own
+///             settings. Each model may have a limit of its own; the session
+///             builds a table for any limit asked for, and keeps it until the
+///             data changes. Then it posts
+///             `LDrawPartLimitDidChangeNotification`, and every document checks
+///             itself again. The identity map is built when first needed. Used
+///             on the main thread.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawPartLimitSession : NSObject
@@ -44,36 +46,39 @@ extern NSString * const LDrawPartLimitDidChangeNotification;
 /// Where the sets, inventories and parts data come from.
 @property (nonatomic, readonly) LDrawInventoryStore *store;
 
-/// The limit the host chose. Setting it builds the table again and posts the
-/// notification, unless it is the same limit.
+/// The default limit, for models with none of their own. Setting it builds
+/// the table again and posts the notification, unless it is the same limit.
 @property (nonatomic, copy) LDrawPartLimit *limit;
 
-/// The limit in force: `limit`, or no limit when it names an inventory the
-/// store does not have.
-@property (nonatomic, readonly) LDrawPartLimit *effectiveLimit;
-
-/// What `effectiveLimit` allows.
+/// What the default limit allows, as `tableForLimit:` gives it.
 @property (nonatomic, readonly) LDrawPartLimitTable *table;
 
 /// How LDraw parts and colors match Rebrickable's.
 @property (nonatomic, readonly) LDrawPartIdentity *identity;
 
-/// The table when its limit restricts and it has the data it needs, else nil.
-/// Only such a table narrows what the editor offers.
-@property (nonatomic, readonly, nullable) LDrawPartLimitTable *restrictingTable;
-
 /// The year Available now counts back from. Default the current year.
 @property (nonatomic) NSInteger currentYear;
 
-/// The limits a menu offers: All Parts and Available Now, then each set and
-/// combined inventory in the store. Each keeps the current limit's options.
-- (NSArray<LDrawPartLimit *> *) choosableLimits;
+/// What a limit allows. A limit on an inventory the store does not have is in
+/// force as no limit. Kept until the data changes.
+- (LDrawPartLimitTable *) tableForLimit:(LDrawPartLimit *)limit NS_SWIFT_NAME(table(for:));
 
-/// A table for one set or combined inventory, with the limit's options, for
-/// browsing it whatever the limit is. Nil when the store does not have it.
-/// Kept until the session builds its table again.
+/// The limit's table when it restricts and has the data it needs, else nil.
+/// Only such a table narrows what the editor offers.
+- (nullable LDrawPartLimitTable *) restrictingTableForLimit:(LDrawPartLimit *)limit
+	NS_SWIFT_NAME(restrictingTable(for:));
+
+/// The limits a menu offers: All Parts and Available Now, then each set and
+/// combined inventory in the store. Each keeps the options of `limit`.
+- (NSArray<LDrawPartLimit *> *) choosableLimitsWithOptionsOf:(LDrawPartLimit *)limit
+	NS_SWIFT_NAME(choosableLimits(withOptionsOf:));
+
+/// A table for one set or combined inventory, with the options of `limit`,
+/// for browsing it whatever the limit is. Nil when the store does not have
+/// it.
 - (nullable LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier
-	NS_SWIFT_NAME(table(forInventoryIdentifier:));
+												 withOptionsOf:(LDrawPartLimit *)limit
+	NS_SWIFT_NAME(table(forInventoryIdentifier:withOptionsOf:));
 
 /// The part library's records, for the keywords that name Rebrickable parts
 /// and for moved parts, and the LDraw colors that are rubber, such as rubber

@@ -128,6 +128,10 @@ LDrawColorPanelController *sharedColorPanel = nil;
 													 name:LDrawPartLimitDidChangeNotification
 												   object:[[PartsLimitManager sharedManager] session]];
 		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(partsLimitDidChange:)
+													 name:PartsLimitFrontLimitDidChangeNotification
+												   object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(browserSelectionDidChange:)
 													 name:PartBrowserSelectionDidChangeNotification
 												   object:nil];
@@ -541,10 +545,13 @@ LDrawColorPanelController *sharedColorPanel = nil;
 
 
 //========== restrictingTable ==================================================
+//
+// Purpose:		What the front model's limit allows, when it restricts.
+//
 //==============================================================================
 - (LDrawPartLimitTable *) restrictingTable
 {
-	return [[[PartsLimitManager sharedManager] session] restrictingTable];
+	return [[PartsLimitManager sharedManager] frontRestrictingTable];
 }
 
 

@@ -161,11 +161,59 @@ final class LDrawPartLimitCheckerTests {
         try store.saveCombinedInventory(bin)
         let session = session(store, LDrawPartLimit.none())
 
-        #expect(session.choosableLimits().map { $0.inventoryIdentifier ?? "\($0.kind.rawValue)" }
+        #expect(session.choosableLimits(withOptionsOf: session.limit).map { $0.inventoryIdentifier ?? "\($0.kind.rawValue)" }
                 == ["0", "1", "42115-1", bin.identifier])
         #expect(session.needsPartsData)
         #expect(LDrawPartLimitSession(store: LDrawInventoryStore(folderURL: folder.appendingPathComponent("empty")))
                     .needsPartsData == false)
+    }
+
+    // MARK: - A limit per model
+
+    @Test("Each limit gets its own table, kept until the data changes; the default's is the session's")
+    func tablePerLimit() throws {
+        let store = try store()
+        let session = session(store, LDrawPartLimit.none())
+        let set = LDrawPartLimit.inventory("42115-1")
+        let table = session.table(for: set)
+
+        #expect(table.limit.kind == .inventory)
+        #expect(session.table(for: set) === table)
+        #expect(session.table(for: LDrawPartLimit.none()) === session.table)
+        #expect(session.restrictingTable(for: LDrawPartLimit.none()) == nil)
+        #expect(session.restrictingTable(for: set) != nil)
+        #expect(session.table(for: LDrawPartLimit.inventory("60000-1")).limit.kind == .none)
+
+        try store.saveCombinedInventory(LDrawCombinedInventory(name: "Bin"))
+        #expect(session.table(for: set) !== table)
+    }
+
+    @Test("Menus and a set's table keep a model's options; a model's limit needs the parts data")
+    func optionsPerModel() throws {
+        let empty = LDrawPartLimitSession(store: LDrawInventoryStore(folderURL: folder.appendingPathComponent("empty")))
+        let model = LDrawPartLimit.availableNow().mutableCopy() as! LDrawMutablePartLimit
+        model.warnsOnly = true
+
+        #expect(empty.choosableLimits(withOptionsOf: model).allSatisfy { $0.warnsOnly })
+        #expect(empty.needsPartsData == false)
+        _ = empty.table(for: model)
+        #expect(empty.needsPartsData)
+
+        let full = session(try store(), LDrawPartLimit.none())
+        #expect(full.table(forInventoryIdentifier: "42115-1", withOptionsOf: model)?.limit.warnsOnly == true)
+        #expect(full.table(forInventoryIdentifier: "60000-1", withOptionsOf: model) == nil)
+    }
+
+    @Test("The Part Browser follows the limit it is given, else the session's")
+    func browserLimit() throws {
+        let model = LDrawPartBrowserModel(partLibrary: LDrawPartLibrary())
+        model.limitSession = session(try store(), LDrawPartLimit.none())
+        model.reloadFilter()
+        #expect(model.activeTable == nil)
+
+        model.limit = LDrawPartLimit.inventory("42115-1")
+        model.reloadFilter()
+        #expect(model.activeTable?.limit.inventoryIdentifier == "42115-1")
     }
 
     // MARK: - Part Browser and Colors window

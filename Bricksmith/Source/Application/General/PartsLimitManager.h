@@ -2,8 +2,8 @@
 //
 // File:		PartsLimitManager.h
 //
-// Purpose:		The app's one parts limit: where its data is kept, which limit
-//				is chosen, and the menu every window shows it in.
+// Purpose:		The app's parts limits: where their data is kept, the default
+//				limit, each model's limit, and the menus that choose them.
 //
 //  Created by Sergey Slobodenyuk on 2026-10-26.
 //==============================================================================
@@ -11,9 +11,11 @@
 
 #import <LDrawFeatures/LDrawPartLimitPresentation.h>
 
+@class LDrawDocument;
 @class LDrawInventoryStore;
 @class LDrawPartLimit;
 @class LDrawPartLimitSession;
+@class LDrawPartLimitTable;
 @class LDrawRebrickableUpdater;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -26,6 +28,10 @@ extern NSString * const PartsLimitMarksDidChangeNotification;
 
 // Posted when an update of the parts data ends, however it ended. No object.
 extern NSString * const PartsDataUpdateDidEndNotification;
+
+// Posted when the front model's limit may have changed, for the windows that
+// follow it. No object.
+extern NSString * const PartsLimitFrontLimitDidChangeNotification;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -43,9 +49,17 @@ extern NSString * const PartsDataUpdateDidEndNotification;
 // Launch
 - (void) start;
 
-// The limit
-- (void) setLimit:(LDrawPartLimit *)limit window:(nullable NSWindow *)window;
-- (void) populatePullDownLimitMenu:(NSMenu *)menu;
+// The limit. A nil document is the front model, and with none open only the
+// default changes.
+- (void) setLimit:(LDrawPartLimit *)limit
+		 document:(nullable LDrawDocument *)document
+		   window:(nullable NSWindow *)window;
+- (LDrawPartLimit *) limitOfDocument:(nullable LDrawDocument *)document;
+- (nullable LDrawDocument *) frontDocument;
+- (LDrawPartLimit *) frontLimit;
+- (nullable LDrawPartLimitTable *) frontRestrictingTable;
+- (void) frontLimitMayHaveChanged;
+- (void) populatePullDownLimitMenu:(NSMenu *)menu current:(LDrawPartLimit *)current target:(id)target;
 - (NSString *) titleForLimit:(LDrawPartLimit *)limit;
 
 // The marks

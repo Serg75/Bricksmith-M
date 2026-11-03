@@ -23,6 +23,7 @@
 #import <LDrawInventory/LDrawInventoryStore.h>
 #import <LDrawInventory/LDrawPartIdentity.h>
 #import <LDrawInventory/LDrawPartLimit.h>
+#import <LDrawInventory/LDrawPartLimitTable.h>
 #import <LDrawInventory/LDrawSetInventory.h>
 #import <LDrawRebrickable/LDrawRebrickableSetImporter.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
@@ -141,6 +142,10 @@ static const CGFloat TableColumnMinWidth	= 40;
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(modelsDidChange:)
 													 name:LDrawPartLimitDidChangeNotification
+												   object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(modelsDidChange:)
+													 name:PartsLimitFrontLimitDidChangeNotification
 												   object:nil];
 		[self reloadRows];
 	}
@@ -625,7 +630,7 @@ static const CGFloat TableColumnMinWidth	= 40;
 	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
 	LDrawPartLimitSession	*session	= [manager session];
 	LDrawInventoryStore		*store		= [manager store];
-	LDrawPartLimit			*limit		= [session effectiveLimit];
+	LDrawPartLimit			*limit		= [[session tableForLimit:[manager frontLimit]] limit];
 	NSMutableArray			*usages		= [NSMutableArray array];
 	NSArray					*parts		= nil;
 
@@ -825,14 +830,17 @@ static const CGFloat TableColumnMinWidth	= 40;
 
 
 //========== useAsLimit: =======================================================
+//
+// Purpose:		Makes the selected set or inventory the front model's limit.
+//
 //==============================================================================
 - (IBAction) useAsLimit:(id)sender
 {
 	PartsLimitManager	*manager	= [PartsLimitManager sharedManager];
-	LDrawPartLimit		*limit		= [[[manager session] limit] limitWithKind:LDrawPartLimitKindInventory
-														   inventoryIdentifier:selectedIdentifier];
+	LDrawPartLimit		*limit		= [[manager frontLimit] limitWithKind:LDrawPartLimitKindInventory
+													  inventoryIdentifier:selectedIdentifier];
 
-	[manager setLimit:limit window:[self window]];
+	[manager setLimit:limit document:nil window:[self window]];
 
 }//end useAsLimit:
 

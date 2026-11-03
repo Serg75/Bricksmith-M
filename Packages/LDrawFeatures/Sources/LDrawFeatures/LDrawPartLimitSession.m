@@ -33,7 +33,8 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 {
 	NSArray<NSDictionary *>									*catalogRecords;
 	NSSet<NSNumber *>										*rubberColorCodes;
-	NSMutableDictionary<NSString *, LDrawPartLimitTable *>	*inventoryTables;	// by identifier
+	NSMutableDictionary										*limitTables;			// other limits', until data changes
+	BOOL													 hasRestrictingLimits;	// a model's limit restricts
 
 	// The identity map, and the store's data it was built from.
 	LDrawPartIdentity										*builtIdentity;
@@ -84,24 +85,6 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 // MARK: - ACCESSORS -
 
 
-//========== effectiveLimit ====================================================
-//==============================================================================
-- (LDrawPartLimit *) effectiveLimit
-{
-	return self.table.limit;
-}
-
-
-//========== restrictingTable ==================================================
-//==============================================================================
-- (LDrawPartLimitTable *) restrictingTable
-{
-	LDrawPartLimitTable *table = self.table;
-
-	return (table.limit.isRestricting && table.hasData) ? table : nil;
-}
-
-
 //========== identity ==========================================================
 ///
 /// @abstract	Built when first asked, and again when the records or the
@@ -133,6 +116,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 - (BOOL) needsPartsData
 {
 	return		self.limit.kind != LDrawPartLimitKindNone
+			||	self->hasRestrictingLimits
 			||	[[self.store setNumbers] count] > 0
 			||	[[self.store combinedInventories] count] > 0;
 }
@@ -195,12 +179,11 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 // MARK: - INVENTORIES -
 
 
-//========== choosableLimits ===================================================
+//========== choosableLimitsWithOptionsOf: =====================================
 //==============================================================================
-- (NSArray<LDrawPartLimit *> *) choosableLimits
+- (NSArray<LDrawPartLimit *> *) choosableLimitsWithOptionsOf:(LDrawPartLimit *)current
 {
-	LDrawPartLimit	*current	= self.limit;
-	NSMutableArray	*limits		= [NSMutableArray array];
+	NSMutableArray *limits = [NSMutableArray array];
 
 	[limits addObject:[current limitWithKind:LDrawPartLimitKindNone inventoryIdentifier:nil]];
 	[limits addObject:[current limitWithKind:LDrawPartLimitKindAvailableNow inventoryIdentifier:nil]];
@@ -208,31 +191,65 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 		[limits addObject:[current limitWithKind:LDrawPartLimitKindInventory inventoryIdentifier:identifier]];
 	return limits;
 
-}//end choosableLimits
+}//end choosableLimitsWithOptionsOf:
 
 
-//========== tableForInventoryIdentifier: ======================================
+//========== tableForInventoryIdentifier:withOptionsOf: ========================
 //==============================================================================
-- (LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier
+- (LDrawPartLimitTable *) tableForInventoryIdentifier:(NSString *)identifier withOptionsOf:(LDrawPartLimit *)limit
 {
-	LDrawPartLimitTable	*table	= self->inventoryTables[identifier];
-	LDrawPartLimit		*limit	= nil;
+	LDrawPartLimit		*inventory	= [limit limitWithKind:LDrawPartLimitKindInventory inventoryIdentifier:identifier];
+	LDrawPartLimitTable	*table		= [self tableForLimit:inventory];
 
+	return (table.limit.kind == LDrawPartLimitKindInventory) ? table : nil;
+
+}//end tableForInventoryIdentifier:withOptionsOf:
+
+
+//========== tableForLimit: ====================================================
+///
+/// @abstract	The default limit's table is always built; others when first
+/// 			asked for. No limit needs no identity map, so a user who never
+/// 			limits parts never builds one.
+///
+//==============================================================================
+- (LDrawPartLimitTable *) tableForLimit:(LDrawPartLimit *)limit
+{
+	LDrawPartLimitTable	*table		= nil;
+	LDrawPartIdentity	*identity	= nil;
+
+	if ([limit isEqual:self.limit])
+		return self.table;
+
+	table = self->limitTables[limit];
 	if (table != nil)
 		return table;
 
-	limit = [self.limit limitWithKind:LDrawPartLimitKindInventory inventoryIdentifier:identifier];
-	table = [self.store tableForLimit:limit identity:self.identity shortcuts:self.shortcuts year:self.currentYear];
-	if (table.limit.kind != LDrawPartLimitKindInventory)
-		return nil;
+	if (limit.isRestricting && self->hasRestrictingLimits == NO)
+	{
+		// A model's limit needs the parts data even when the default does not.
+		self->hasRestrictingLimits = YES;
+		[self readShortcutsIfNeeded];
+	}
 
-	if (self->inventoryTables == nil)
-		self->inventoryTables = [NSMutableDictionary dictionary];
-	self->inventoryTables[identifier] = table;
-
+	identity	= limit.isRestricting ? self.identity : [LDrawPartIdentity emptyIdentity];
+	table		= [self.store tableForLimit:limit identity:identity shortcuts:self.shortcuts year:self.currentYear];
+	if (self->limitTables == nil)
+		self->limitTables = [NSMutableDictionary dictionary];
+	self->limitTables[limit] = table;
 	return table;
 
-}//end tableForInventoryIdentifier:
+}//end tableForLimit:
+
+
+//========== restrictingTableForLimit: =========================================
+//==============================================================================
+- (LDrawPartLimitTable *) restrictingTableForLimit:(LDrawPartLimit *)limit
+{
+	LDrawPartLimitTable *table = [self tableForLimit:limit];
+
+	return (table.limit.isRestricting && table.hasData) ? table : nil;
+}
 
 
 // MARK: - BUILDING -
@@ -274,7 +291,7 @@ NSString * const LDrawPartLimitDidChangeNotification = @"LDrawPartLimitDidChange
 	BOOL				 limits		= (self.limit.kind != LDrawPartLimitKindNone);
 	LDrawPartIdentity	*identity	= limits ? self.identity : [LDrawPartIdentity emptyIdentity];
 
-	self->inventoryTables	= nil;
+	self->limitTables		= nil;
 	self.table				= [self.store tableForLimit:self.limit
 											   identity:identity
 											  shortcuts:self.shortcuts

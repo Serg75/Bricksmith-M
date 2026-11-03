@@ -1069,27 +1069,41 @@ static const NSInteger CurrentColorFilterTag	= 1;
 
 //========== documentDidCheck: =================================================
 //
-// Purpose:		The counted model changed, so an inventory's counts do too.
+// Purpose:		The counted model changed, so an inventory's counts do too. A
+//				new limit of its own is checked first, so it shows here too.
 //
 //==============================================================================
 - (void) documentDidCheck:(NSNotification *)notification
 {
-	if(self->browserModel.showsInventoryRows && [notification object] == [self countedDocument])
+	LDrawDocument *counted = [self countedDocument];
+
+	if([notification object] != counted)
+		return;
+
+	if([[[PartsLimitManager sharedManager] limitOfDocument:counted] isEqual:self->browserModel.limit] == NO)
+		[self partsLimitDidChange:notification];
+	else if(self->browserModel.showsInventoryRows)
 		[self performSearch];
-}
+
+}//end documentDidCheck:
 
 
 //========== mainWindowDidChange: ==============================================
 //
-// Purpose:		The shared panel counts the main window's model.
+// Purpose:		The shared panel follows the main window's model: its limit and
+//				its counts.
 //
 //==============================================================================
 - (void) mainWindowDidChange:(NSNotification *)notification
 {
-	NSWindow	*window		= [self->partsTable window];
-	BOOL		 isPanel	= ([[[window windowController] document] isKindOfClass:[LDrawDocument class]] == NO);
+	LDrawPartLimit *limit = [[PartsLimitManager sharedManager] limitOfDocument:[self countedDocument]];
 
-	if(isPanel && self->browserModel.showsInventoryRows && [notification object] != window)
+	if(self.document != nil || [notification object] == [self->partsTable window])
+		return;
+
+	if([limit isEqual:self->browserModel.limit] == NO)
+		[self partsLimitDidChange:notification];
+	else if(self->browserModel.showsInventoryRows)
 		[self performSearch];
 }
 
@@ -1175,10 +1189,13 @@ static const NSInteger CurrentColorFilterTag	= 1;
 //==============================================================================
 - (void) prepareModel
 {
+	PartsLimitManager		*manager	= [PartsLimitManager sharedManager];
 	LDrawPartBrowserModel	*model		= self->browserModel;
 	NSString				*inventory	= [LDrawPartBrowserModel inventoryIdentifierForCategory:self->selectedCategory];
-	LDrawPartLimitTable		*table		= [[[PartsLimitManager sharedManager] session] table];
+	LDrawPartLimit			*limit		= [manager limitOfDocument:[self countedDocument]];
+	LDrawPartLimitTable		*table		= [[manager session] tableForLimit:limit];
 
+	model.limit					= limit;
 	model.searchString			= [self->searchField stringValue];
 	model.currentCategory		= self->selectedCategory ?: Category_All;
 	model.searchMode			= self->searchMode;
@@ -1617,21 +1634,13 @@ static const NSInteger CurrentColorFilterTag	= 1;
 
 //========== countedDocument ===================================================
 //
-// Purpose:		The document whose model the counts are for: the window's own,
-//				or for the shared panel, the main window's. With the app in the
-//				background there is no main window, so the frontmost document.
+// Purpose:		The document whose model the counts and the limit are for: the
+//				window's own, or for the shared panel, the front model.
 //
 //==============================================================================
 - (LDrawDocument *) countedDocument
 {
-	id document = [[[self->partsTable window] windowController] document];
-
-	if([document isKindOfClass:[LDrawDocument class]] == NO)
-		document = [[NSDocumentController sharedDocumentController] currentDocument];
-	if(document == nil)
-		document = [[NSApp orderedDocuments] firstObject];
-
-	return [document isKindOfClass:[LDrawDocument class]] ? document : nil;
+	return self.document ?: [[PartsLimitManager sharedManager] frontDocument];
 
 }//end countedDocument
 

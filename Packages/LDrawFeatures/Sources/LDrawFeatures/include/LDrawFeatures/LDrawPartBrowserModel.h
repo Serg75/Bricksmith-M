@@ -19,6 +19,7 @@
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPartLimitStatus.h>
 
+@class LDrawPartLimit;
 @class LDrawPartLimitSession;
 @class LDrawPartLimitTable;
 @class LDrawPartUsage;
@@ -109,9 +110,13 @@ typedef NS_ENUM(NSInteger, LDrawPartBrowserSearchMode)
 @property (nonatomic, assign)         LDrawPartBrowserSearchMode    searchMode;
 @property (nonatomic, readonly)       NSArray                       *filteredParts;
 
-/// The session whose limit the list follows, and whose store lists the sets.
-/// Nil for no limit and no Sets group.
+/// The session that builds the limit's tables, and whose store lists the
+/// sets. Nil for no limit and no Sets group.
 @property (nonatomic, strong, nullable) LDrawPartLimitSession *limitSession;
+
+/// The limit the list follows, such as the front model's. Nil follows the
+/// session's default limit.
+@property (nonatomic, copy, nullable) LDrawPartLimit *limit;
 
 /// What the model uses, for the counts of inventory rows. Nil counts nothing
 /// as used.

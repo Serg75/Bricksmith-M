@@ -9,6 +9,8 @@
 //==============================================================================
 #import <Cocoa/Cocoa.h>
 
+@class LDrawDocument;
+
 NS_ASSUME_NONNULL_BEGIN
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -18,9 +20,9 @@ NS_ASSUME_NONNULL_BEGIN
 ////////////////////////////////////////////////////////////////////////////////
 @interface PartsLimitOptionsController : NSObject
 
-// Shows the sheet, or a panel without a window. Each change applies to the
-// app's limit at once.
-+ (void) showWithWindow:(nullable NSWindow *)window;
+// Shows the sheet, or a panel without a window. Each change applies at once
+// to the model's limit, or with no model to the default.
++ (void) showForDocument:(nullable LDrawDocument *)document window:(nullable NSWindow *)window;
 
 @end
 

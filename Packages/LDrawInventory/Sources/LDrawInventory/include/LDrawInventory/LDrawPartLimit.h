@@ -11,6 +11,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// The extended attribute a model file keeps its limit in.
+extern NSString * const LDrawPartLimitFileAttributeName;
+
 typedef NS_ENUM(NSInteger, LDrawPartLimitKind)
 {
 	/// Every part in every color.
@@ -96,6 +99,13 @@ typedef NS_ENUM(NSInteger, LDrawPartLimitKind)
 /// identifier read as no limit; a missing option takes its default.
 + (LDrawPartLimit *) limitWithDictionary:(nullable NSDictionary<NSString *, id> *)dictionary
 	NS_SWIFT_NAME(fromDictionary(_:));
+
+/// The limit kept with a model file, or nil when it has none. It is kept in an
+/// extended attribute, so the file's text never changes.
++ (nullable LDrawPartLimit *) limitOfFileAtURL:(NSURL *)fileURL NS_SWIFT_NAME(limit(ofFileAt:));
+
+/// Keeps the limit with a model file, replacing the one it had.
+- (BOOL) writeToFileAtURL:(NSURL *)fileURL error:(NSError **)error NS_SWIFT_NAME(write(toFileAt:));
 
 @end
 
