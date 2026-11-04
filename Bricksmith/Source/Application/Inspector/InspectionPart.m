@@ -383,9 +383,9 @@
 
 //========== showDescription: ==================================================
 //
-// Purpose:		Shows the part's description, and on a second line how the part
-//				breaks the parts limit. The description then keeps to one line,
-//				since the field holds two.
+// Purpose:		Shows the part's description, and below it how the part breaks
+//				the parts limit. The description wraps when both fit in the
+//				field, and keeps to one line otherwise.
 //
 //==============================================================================
 - (void) showDescription:(NSString *)description
@@ -398,7 +398,11 @@
 	NSDictionary				*plain		= nil;
 	NSDictionary				*marked		= nil;
 	NSColor						*color		= nil;
+	NSAttributedString			*limitText	= nil;
 	NSMutableAttributedString	*text		= nil;
+	NSCell						*measure	= [[_partDescriptionField cell] copy];
+	NSRect						 bounds		= [_partDescriptionField bounds];
+	NSSize						 needed		= NSZeroSize;
 
 	if(limitLine == nil)
 	{
@@ -412,13 +416,23 @@
 			 [LDrawPartLimitPresentation badgeTintForStatus:[part limitStatus]]];
 
 	[oneLine setLineBreakMode:NSLineBreakByTruncatingTail];
-	plain	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine};
-	marked	= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine,
-				NSForegroundColorAttributeName: color};
-	text	= [[NSMutableAttributedString alloc] initWithString:[description stringByAppendingString:@"\n"]
-													 attributes:plain];
+	plain		= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine};
+	marked		= @{NSFontAttributeName: font, NSParagraphStyleAttributeName: oneLine,
+					NSForegroundColorAttributeName: color};
+	limitText	= [[NSAttributedString alloc] initWithString:limitLine attributes:marked];
+	text		= [[NSMutableAttributedString alloc] initWithString:[description stringByAppendingString:@"\n"]
+														 attributes:@{NSFontAttributeName: font}];
+	[text appendAttributedString:limitText];
 
-	[text appendAttributedString:[[NSAttributedString alloc] initWithString:limitLine attributes:marked]];
+	// A wrapped description that is too long would push the limit line out.
+	[measure setAttributedStringValue:text];
+	needed = [measure cellSizeForBounds:NSMakeRect(0, 0, NSWidth(bounds), CGFLOAT_MAX)];
+	if(needed.height > NSHeight(bounds))
+	{
+		text = [[NSMutableAttributedString alloc] initWithString:[description stringByAppendingString:@"\n"]
+													  attributes:plain];
+		[text appendAttributedString:limitText];
+	}
 
 	// Without this, selecting the text redraws it without its colors.
 	[_partDescriptionField setAllowsEditingTextAttributes:YES];

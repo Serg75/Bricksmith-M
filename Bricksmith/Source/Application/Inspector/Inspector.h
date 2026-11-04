@@ -17,6 +17,7 @@
 	__weak 			NSString	*emptyInspectorTitle;	//window title for empty selection
 	__weak 			NSView		*emptyInspectorView;	//content view used for invalid inspections
 	__weak IBOutlet	NSTextField	*errorTextField;		//inside emptyInspectorView; use to explain the problem.
+					NSSize		 panelMinSize;			//smallest content size set in the nib
 	
 	ObjectInspectionController	*currentInspector;		//controller for the loaded inspector.
 	

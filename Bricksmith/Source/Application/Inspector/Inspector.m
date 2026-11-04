@@ -51,7 +51,8 @@
 	// empty inspector. 
 	emptyInspectorTitle = [inspectorPanel title];
 	emptyInspectorView = [inspectorPanel contentView];
-	
+	panelMinSize = [inspectorPanel contentMinSize];
+
 	//Display a message appropriate to inspecting nothing.
 	[self inspectObject:nil];
 	
@@ -128,6 +129,7 @@
 	}
 	
 	if(foundInspector == NO){
+		[inspectorPanel setContentMinSize:panelMinSize];
 		[inspectorPanel setContentView:emptyInspectorView];
 		[inspectorPanel setTitle:emptyInspectorTitle];
 		[errorTextField setStringValue:errorString];
@@ -165,6 +167,7 @@
 				foundInspector = YES;
 
 				// Show the inspector palette.
+				[self fitPanelToPage:[[objectInspector window] contentView]];
 				[inspectorPanel setContentView:[[objectInspector window] contentView]];
 				[inspectorPanel setTitle:[[objectInspector window] title]];
 				
@@ -177,8 +180,38 @@
 	}//end inspectable check.
 	
 	return foundInspector;
-	
+
 }//end loadInspectorForObject:
+
+
+//========== fitPanelToPage: ===================================================
+//
+// Purpose:		Grows the panel to show all of the page, keeping its top edge in
+//				place, and keeps it from being made smaller than the page.
+//
+// Notes:		Call it before the page goes in the panel, while the page still
+//				has its size from the nib.
+//
+//==============================================================================
+- (void) fitPanelToPage:(NSView *)page
+{
+	NSSize	pageSize	= [page frame].size;
+	NSSize	minSize		= NSMakeSize(MAX(panelMinSize.width,  pageSize.width),
+									 MAX(panelMinSize.height, pageSize.height));
+	NSRect	content		= [inspectorPanel contentRectForFrameRect:[inspectorPanel frame]];
+	CGFloat	extraHeight	= MAX(minSize.height - NSHeight(content), 0);
+
+	[inspectorPanel setContentMinSize:minSize];
+
+	if(NSWidth(content) < minSize.width || extraHeight > 0)
+	{
+		content.origin.y	-= extraHeight;
+		content.size.width	= MAX(NSWidth(content), minSize.width);
+		content.size.height	+= extraHeight;
+		[inspectorPanel setFrame:[inspectorPanel frameRectForContentRect:content] display:YES];
+	}
+
+}//end fitPanelToPage:
 
 
 //========== unloadInspector ===================================================

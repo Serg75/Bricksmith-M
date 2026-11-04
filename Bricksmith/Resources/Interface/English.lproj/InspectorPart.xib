@@ -36,11 +36,11 @@
         <window title="Part Inspector" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" animationBehavior="default" id="3" userLabel="Inspector Window" customClass="NSPanel">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" topStrut="YES"/>
-            <rect key="contentRect" x="487" y="402" width="268" height="365"/>
+            <rect key="contentRect" x="487" y="402" width="268" height="379"/>
             <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1417"/>
             <value key="minSize" type="size" width="268" height="359"/>
             <view key="contentView" id="2">
-                <rect key="frame" x="0.0" y="0.0" width="268" height="365"/>
+                <rect key="frame" x="0.0" y="0.0" width="268" height="379"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" preferredMaxLayoutWidth="106" id="20">
@@ -243,7 +243,7 @@
                         </textFieldCell>
                     </textField>
                     <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="YES" preferredMaxLayoutWidth="228" id="152">
-                        <rect key="frame" x="17" y="319" width="232" height="32"/>
+                        <rect key="frame" x="17" y="319" width="232" height="46"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" selectable="YES" sendsActionOnEndEditing="YES" alignment="left" id="197">
                             <font key="font" metaFont="smallSystemBold"/>
