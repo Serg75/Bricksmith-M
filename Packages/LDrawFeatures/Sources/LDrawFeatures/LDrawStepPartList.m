@@ -54,23 +54,11 @@ static const double STEP_PART_LIST_MAXIMUM_WIDTH_INCHES = 6.0;
 /// well under an inch. The maximum is the width's.
 static const double STEP_PART_LIST_MINIMUM_HEIGHT_INCHES = 0.25;
 
-/// How many directions a part's shape is measured along: the three axes, and
-/// the diagonals of the faces and of the body of a cube. Each is also measured
-/// backwards.
-#define SHAPE_DIRECTION_COUNT 13
-
-static const Vector3 SHAPE_DIRECTIONS[SHAPE_DIRECTION_COUNT] = {
-	{ 1.0,  0.0,  0.0 }, { 0.0,  1.0,  0.0 }, { 0.0,  0.0,  1.0 },
-	{ 1.0,  1.0,  0.0 }, { 1.0, -1.0,  0.0 }, { 1.0,  0.0,  1.0 },
-	{ 1.0,  0.0, -1.0 }, { 0.0,  1.0,  1.0 }, { 0.0,  1.0, -1.0 },
-	{ 1.0,  1.0,  1.0 }, { 1.0,  1.0, -1.0 }, { 1.0, -1.0,  1.0 }, { 1.0, -1.0, -1.0 },
-};
-
-/// How many directions a listed part's own outline is measured along, each
-/// also backwards. Spread evenly over a sphere and dense enough that the corners
-/// found are the corners of the part's hull, so a count kept off the outline
-/// does not touch the part.
-#define OUTLINE_DIRECTION_COUNT 128
+/// How many directions a part's outline is measured along, each also
+/// backwards. Spread evenly over a sphere and dense enough that the corners
+/// found are the corners of the part's hull: a count kept off the outline does
+/// not touch the part, and a picture sized by it does not cut a curved part.
+#define OUTLINE_DIRECTION_COUNT 256
 
 /// How deep a part's subparts are followed. Real parts are far shallower.
 static const NSUInteger MAXIMUM_SHAPE_DEPTH = 24;
@@ -1328,7 +1316,7 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 			return;
 		}
 
-		NSData			*shape		= [self shapePointsOfPiece:piece library:library];
+		NSData			*shape		= [self outlinePointsOfPiece:piece library:library];
 		const Point3	*corners	= shape.bytes;
 		NSUInteger		 count		= shape.length / sizeof(Point3);
 
@@ -1342,44 +1330,15 @@ typedef NS_ENUM(NSInteger, LDrawStepPartListPartness) {
 }//end appendOutlinePointsOfStep:transform:library:path:intoData:
 
 
-//---------- shapePointsOfPiece:library: -----------------------------[static]--
-///
-/// @abstract	The points of a catalog part that reach furthest out, in the
-/// 			part's own coordinates. Empty for a part with nothing to draw.
-///
-/// @discussion	A box around a round or a sloped part is bigger than the part,
-/// 			so the part's own corners are used: for each of a fixed set of
-/// 			directions, the one furthest along it. Kept for as long as the
-/// 			catalog keeps the part, because walking its geometry is slow.
-///
-//------------------------------------------------------------------------------
-+ (NSData *) shapePointsOfPiece:(LDrawModel *)piece library:(LDrawPartLibrary *)library
-{
-	static NSMapTable<LDrawModel *, NSData *> *shapes = nil;
-
-	if (shapes == nil) {
-		shapes = [NSMapTable weakToStrongObjectsMapTable];
-	}
-
-	return [self pointsOfPiece:piece
-					   library:library
-					directions:SHAPE_DIRECTIONS
-						 count:SHAPE_DIRECTION_COUNT
-						 cache:shapes];
-
-}//end shapePointsOfPiece:library:
-
-
 //---------- outlinePointsOfPiece:library: ---------------------------[static]--
 ///
 /// @abstract	The corners of a catalog part's hull, in the part's own
 /// 			coordinates, or nil for a part with nothing to draw.
 ///
-/// @discussion	A part listed on its own is outlined by these rather than by its
-/// 			box: an inverted slope or a turbine leaves much of its box empty,
-/// 			and a count kept off the box sits far below the part. Measured
-/// 			along more directions than `shapePointsOfPiece:library:`, as the
-/// 			labels go right against this outline.
+/// @discussion	A part is outlined by these rather than by its box: an inverted
+/// 			slope or a turbine leaves much of its box empty, and a count kept
+/// 			off the box sits far below the part. Submodels and callout
+/// 			pictures are measured by them too.
 ///
 //------------------------------------------------------------------------------
 + (nullable NSData *) outlinePointsOfPiece:(LDrawModel *)piece library:(LDrawPartLibrary *)library
