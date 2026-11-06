@@ -127,6 +127,8 @@ extern NSString	*Category_Subparts;
 
 // Actions
 - (BOOL)load;
+/// Builds the part catalog again. It does not post LDrawPartLibraryReloaded:
+/// the host does, after reading the parts whose files changed.
 - (void)reloadPartsWithMaxLoadCountHandler:(nullable void (^)(NSUInteger maxPartCount))maxLoadCountHandler
 				  progressIncrementHandler:(nullable void (^)(void))progressIncrementHandler
 						 completionHandler:(nullable void (^)(BOOL success))completionHandler;

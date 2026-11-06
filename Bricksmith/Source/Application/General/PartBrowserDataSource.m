@@ -193,6 +193,12 @@ static const NSInteger CurrentColorFilterTag	= 1;
 													 name: LDrawPartLibraryDidChangeNotification
 												   object: nil ];
 
+		// And when parts are read from other files, so the preview shows them.
+		[[NSNotificationCenter defaultCenter] addObserver: self
+												 selector: @selector(partLibraryReloaded:)
+													 name: LDrawPartLibraryReloaded
+												   object: nil ];
+
 		[self observeLimit];
 	}
 	// Loading "PartBrowserAccessories.nib"
@@ -1035,8 +1041,21 @@ static const NSInteger CurrentColorFilterTag	= 1;
 	[partsTable selectRowIndexes:[NSIndexSet indexSetWithIndex:selectedRow]
 			byExtendingSelection:NO];
 	[self syncSelectionAndPartDisplayed];
-	
+
 }//end sharedPartCatalogDidChange:
+
+
+//========== partLibraryReloaded: ==============================================
+//
+// Purpose:		Library parts now come from other files. A new preview part
+//				finds them.
+//
+//==============================================================================
+- (void) partLibraryReloaded:(NSNotification *)notification
+{
+	[self syncSelectionAndPartDisplayed];
+
+}//end partLibraryReloaded:
 
 
 //========== partsLimitDidChange: ==============================================

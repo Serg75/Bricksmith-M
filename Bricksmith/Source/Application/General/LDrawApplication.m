@@ -384,6 +384,9 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 
 	[paths setPreferredLDrawPath:[userDefaults stringForKey:LDRAW_PATH_KEY]];
 	[paths setInternalLDrawPath:[LDrawPaths internalLDrawPathInBundle:bundle]];
+	[paths setOverridesPath:[userDefaults stringForKey:PART_OVERRIDES_PATH_KEY]];
+	[paths setOverridesEnabled:[userDefaults boolForKey:PART_OVERRIDES_ENABLED_KEY]];
+	[paths setResolution:[userDefaults integerForKey:PART_RESOLUTION_KEY]];
 	[paths setBundledLdconfigPath:[LDrawPaths bundledLdconfigPathInBundle:bundle]];
 	
 	[LDrawUtilities setColumnizesOutput:[userDefaults boolForKey:COLUMNIZE_OUTPUT_KEY]];
@@ -428,6 +431,10 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 			//When the preferences dialog opens, it will automatically search for
 			// the prefs path. Failing to find it, it will force the user to choose
 			// a new one.
+		}
+		else
+		{
+			[self->partLibraryController reportOutdatedPartOverrides];
 		}
 	}];
 	
@@ -756,6 +763,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 #endif
 
 	[self addPartsLimitMenus];
+	[self addPartOverridesMenus];
 
 }//end buildMainMenu
 
@@ -809,6 +817,71 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[windowMenu insertItem:item atIndex:index + 1];
 
 }//end addPartsLimitMenus
+
+
+//========== addPartOverridesMenus =============================================
+//
+// Purpose:		Adds View > Use Part Overrides and Resolution.
+//
+//==============================================================================
+- (void) addPartOverridesMenus
+{
+	NSMenu		*mainMenu	= [NSApp mainMenu];
+	NSMenu		*viewMenu	= [[mainMenu itemWithTag:LDrawViewsMenuTag] submenu];
+	NSMenuItem	*item		= nil;
+
+	if(viewMenu == nil || [viewMenu itemWithTag:LDrawUsePartOverridesMenuTag] != nil)
+		return;
+
+	// After Parts Limit.
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Use Part Overrides", nil)
+									  action:@selector(toggleUsesPartOverrides:)
+							   keyEquivalent:@"o"];
+	[item setKeyEquivalentModifierMask:(NSEventModifierFlagCommand | NSEventModifierFlagOption)];
+	[item setTarget:self->partLibraryController];
+	[item setTag:LDrawUsePartOverridesMenuTag];
+	[viewMenu addItem:item];
+
+	[viewMenu addItem:[self resolutionMenuItem]];
+
+}//end addPartOverridesMenus
+
+
+//========== resolutionMenuItem ================================================
+//
+// Purpose:		View > Resolution, with Low, Normal and High. Option-Command-1, 2
+//				and 3 switch between them.
+//
+//==============================================================================
+- (NSMenuItem *) resolutionMenuItem
+{
+	NSMenu		*menu	= [[NSMenu alloc] initWithTitle:NSLocalizedString(@"Resolution", nil)];
+	NSMenuItem	*item	= [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Resolution", nil)
+												   action:NULL
+											keyEquivalent:@""];
+	NSArray		*titles	= @[NSLocalizedString(@"Low", nil), NSLocalizedString(@"Normal", nil),
+							NSLocalizedString(@"High", nil)];
+	NSArray		*values	= @[@(LDrawResolutionLow), @(LDrawResolutionNormal), @(LDrawResolutionHigh)];
+	NSUInteger	 index	= 0;
+
+	for(index = 0; index < [titles count]; index++)
+	{
+		NSString	*key		= [NSString stringWithFormat:@"%lu", (unsigned long)(index + 1)];
+		NSMenuItem	*choice		= [[NSMenuItem alloc] initWithTitle:titles[index]
+															 action:@selector(chooseResolution:)
+													  keyEquivalent:key];
+
+		[choice setKeyEquivalentModifierMask:(NSEventModifierFlagCommand | NSEventModifierFlagOption)];
+		[choice setTag:[values[index] integerValue]];
+		[choice setTarget:self->partLibraryController];
+		[menu addItem:choice];
+	}
+
+	[item setTag:LDrawResolutionMenuTag];
+	[item setSubmenu:menu];
+	return item;
+
+}//end resolutionMenuItem
 
 
 //========== userName ==========================================================

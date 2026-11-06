@@ -25,12 +25,14 @@
 #import <LDrawCore/LDrawLSynthConfigSource.h>
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPartLibrary.h>
+#import <LDrawCore/LDrawPartOverride.h>
 #import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawRegex.h>
 
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawLSynthPanelModel.h>
 #import <LDrawFeatures/LDrawPartListOrientations.h>
+#import <LDrawFeatures/LDrawPartOverridePresentation.h>
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
@@ -260,6 +262,10 @@ static NSArray<NSNumber *> *MarkColorComponents(NSColor *color)
 
 	// General Pane
 	NSTextField		*LDrawPathTextField;
+	NSTextField		*partOverridesPathField;
+	NSTextField		*partOverridesNote;
+	NSButton		*partOverridesClearButton;
+	NSButton		*partOverridesShowButton;
 	NSTextField		*gridSpacingFineField;
 	NSTextField		*gridSpacingMediumField;
 	NSTextField		*gridSpacingCoarseField;
@@ -555,9 +561,58 @@ PreferencesDialogController *preferencesDialog = nil;
 																	   field:gridSpacingCoarseField]]
 											 footer:gridNote];
 
-	return [PreferencesForm paneWithSections:@[folderSection, gridSection]];
+	return [PreferencesForm paneWithSections:@[folderSection, [self makePartOverridesSection], gridSection]];
 
 }//end makeGeneralPane
+
+
+//========== makePartOverridesSection ==========================================
+//
+// Purpose:		The folder of parts that replace library parts.
+//
+//==============================================================================
+- (NSView *) makePartOverridesSection
+{
+	NSString	*footer			= NSLocalizedString(@"Bricksmith uses a part in this folder instead of the library "
+													@"part of the same name. Lay it out like the LDraw folder, with "
+													@"parts and p folders. High versions go in parts/48 and p/48, "
+													@"low ones in parts/8 and p/8. To see a file you changed, turn "
+													@"View > Use Part Overrides off and on.", nil);
+	NSButton	*chooseButton	= nil;
+	NSView		*folderRow		= nil;
+	NSView		*partsRow		= nil;
+	NSTextField	*note			= nil;
+
+	partOverridesPathField = [PreferencesForm pathFieldWithPlaceholder:NSLocalizedString(@"None", nil)];
+	[partOverridesPathField setTarget:self];
+	[partOverridesPathField setAction:@selector(partOverridesPathFieldChanged:)];
+
+	// Only Return sets a typed path, since that reloads every part.
+	[[partOverridesPathField cell] setSendsActionOnEndEditing:NO];
+
+	chooseButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Choose…", nil)
+											 target:self
+											 action:@selector(choosePartOverridesFolder:)];
+	partOverridesClearButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Clear", nil)
+														 target:self
+														 action:@selector(clearPartOverridesFolder:)];
+	partOverridesShowButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Show in Finder", nil)
+														target:[LDrawApplication sharedPartLibraryController]
+														action:@selector(showPartOverridesFolder:)];
+
+	folderRow = [PreferencesForm rowWithContent:[PreferencesForm controlGroup:@[partOverridesPathField, chooseButton,
+																				partOverridesClearButton]]];
+	partsRow = [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts", nil)
+										note:nil
+									 control:partOverridesShowButton
+								   noteField:&note];
+	partOverridesNote = note;
+
+	return [PreferencesForm sectionWithTitle:NSLocalizedString(@"Part Overrides", nil)
+										rows:@[folderRow, partsRow]
+									  footer:footer];
+
+}//end makePartOverridesSection
 
 
 //========== gridRowWithTitle:field: ===========================================
@@ -1160,6 +1215,9 @@ PreferencesDialogController *preferencesDialog = nil;
 	else
 		[self chooseLDrawFolder:self];
 
+	[partOverridesPathField setStringValue:[[LDrawPaths sharedPaths] overridesPath] ?: @""];
+	[self showPartOverrides];
+
 }//end setGeneralPaneValues
 
 
@@ -1445,9 +1503,131 @@ PreferencesDialogController *preferencesDialog = nil;
 {
 	PartLibraryController *libraryController = [LDrawApplication sharedPartLibraryController];
 
-	[libraryController reloadPartCatalog:^(BOOL success) {}];
+	// A new library can have newer versions of the overridden parts.
+	[libraryController reloadPartCatalog:^(BOOL success) {
+		[self showPartOverrides];
+	}];
 
 }//end reloadParts:
+
+
+//========== choosePartOverridesFolder: ========================================
+//
+// Purpose:		Present a folder choose dialog to find the overrides folder.
+//
+//==============================================================================
+- (IBAction) choosePartOverridesFolder:(id)sender
+{
+	NSOpenPanel	*folderChooser	= [NSOpenPanel openPanel];
+	NSString	*current		= [[LDrawPaths sharedPaths] overridesPath];
+
+	[folderChooser setCanChooseFiles:NO];
+	[folderChooser setCanChooseDirectories:YES];
+	[folderChooser setMessage:NSLocalizedString(@"Choose a folder of parts to use instead of the library's. "
+												@"It holds \"parts\" and \"p\" folders, like the LDraw folder.", nil)];
+	[folderChooser setPrompt:NSLocalizedString([LDrawHostChrome choosePromptKey], nil)];
+
+	if(current != nil)
+		[folderChooser setDirectoryURL:[NSURL fileURLWithPath:current isDirectory:YES]];
+
+	if([folderChooser runModal] == NSModalResponseOK)
+		[self applyPartOverridesFolderPath:[[[folderChooser URLs] objectAtIndex:0] path]];
+
+}//end choosePartOverridesFolder:
+
+
+//========== partOverridesPathFieldChanged: ====================================
+//
+// Purpose:		The user typed a new overrides folder path.
+//
+//==============================================================================
+- (IBAction) partOverridesPathFieldChanged:(id)sender
+{
+	[self applyPartOverridesFolderPath:[partOverridesPathField stringValue]];
+
+}//end partOverridesPathFieldChanged:
+
+
+//========== clearPartOverridesFolder: =========================================
+//
+// Purpose:		Goes back to the library's parts only.
+//
+//==============================================================================
+- (IBAction) clearPartOverridesFolder:(id)sender
+{
+	[self applyPartOverridesFolderPath:nil];
+
+}//end clearPartOverridesFolder:
+
+
+//========== applyPartOverridesFolderPath: =====================================
+//
+// Purpose:		Uses a new overrides folder, or none for an empty path. The part
+//				library controller reads the catalog and the changed parts
+//				again.
+//
+//==============================================================================
+- (void) applyPartOverridesFolderPath:(NSString *)folderPath
+{
+	NSCharacterSet	*whitespace		= [NSCharacterSet whitespaceAndNewlineCharacterSet];
+	NSString		*current		= [[LDrawPaths sharedPaths] overridesPath];
+	NSString		*path			= [[folderPath stringByTrimmingCharactersInSet:whitespace]
+									   stringByExpandingTildeInPath];
+
+	if([path length] == 0)
+		path = nil;
+
+	[partOverridesPathField setStringValue:path ?: @""];
+	if(path == current || [path isEqualToString:current])
+		return;
+
+	[[LDrawApplication sharedPartLibraryController] changePartOverridesFolderPath:path];
+	[self showPartOverrides];
+
+}//end applyPartOverridesFolderPath:
+
+
+//========== showPartOverrides =================================================
+//
+// Purpose:		Says how many parts the overrides folder has, and which of them
+//				the library has newer versions of.
+//
+// Notes:		It does not mark them as reported. It names only a few, so the
+//				launch alert still lists them all.
+//
+//==============================================================================
+- (void) showPartOverrides
+{
+	NSString *folder = [[LDrawPaths sharedPaths] overridesPath];
+
+	[partOverridesClearButton setEnabled:(folder != nil)];
+	[partOverridesShowButton setEnabled:(folder != nil)];
+	[partOverridesNote setToolTip:nil];
+
+	if(folder == nil)
+	{
+		[partOverridesNote setStringValue:NSLocalizedString(@"No folder is chosen.", nil)];
+		return;
+	}
+
+	[partOverridesNote setStringValue:NSLocalizedString(@"Reading…", nil)];
+	[LDrawPartOverride readOverridesWithPaths:[LDrawPaths sharedPaths]
+							completionHandler:^(NSArray<LDrawPartOverride *> *overrides) {
+		NSString *summary = [LDrawPartOverridePresentation summaryOfOverrides:overrides];
+
+		// Another folder may have been chosen while this one was read.
+		if([folder isEqualToString:[[LDrawPaths sharedPaths] overridesPath]] == NO)
+			return;
+
+		if([[LDrawPaths sharedPaths] overridesEnabled] == NO)
+			summary = [summary stringByAppendingFormat:@" %@",
+					   NSLocalizedString(@"Turned off in View > Use Part Overrides.", nil)];
+
+		[self->partOverridesNote setStringValue:summary];
+		[self->partOverridesNote setToolTip:[LDrawPartOverridePresentation detailsOfOverrides:overrides]];
+	}];
+
+}//end showPartOverrides
 
 
 #pragma mark -

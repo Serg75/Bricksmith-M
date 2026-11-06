@@ -28,4 +28,13 @@
 - (void) reloadPartCatalog:(void (^)(BOOL success))completionHandler;
 - (BOOL) validateLDrawFolderWithMessage:(NSString *) folderPath;
 
+// Overrides
+- (void) reportOutdatedPartOverrides;
+- (IBAction) showPartOverridesFolder:(id)sender;
+- (void) changePartOverridesFolderPath:(NSString *)folderPath;
+- (IBAction) toggleUsesPartOverrides:(id)sender;
+
+// Resolution
+- (IBAction) chooseResolution:(id)sender;
+
 @end

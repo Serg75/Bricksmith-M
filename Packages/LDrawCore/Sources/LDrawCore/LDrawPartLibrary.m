@@ -666,11 +666,10 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	 ^(NSDictionary<NSString *,id> *newPartCatalog)
 	 {
 		dispatch_async(dispatch_get_main_queue(), ^{
+			// The host posts LDrawPartLibraryReloaded once the changed parts
+			// are read, so documents do not read them all on their next draw.
 			if (newPartCatalog)
-			{
 				[self setPartCatalog:newPartCatalog];
-				[[NSNotificationCenter defaultCenter] postNotificationName:LDrawPartLibraryReloaded object:self ];
-			}
 			
 			if (completionHandler)
 			{

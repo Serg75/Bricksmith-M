@@ -4806,6 +4806,7 @@ void AppendChoicesToNewItem(
 - (void)libraryReloaded:(NSNotification *)notification
 {
 	[LDrawUtilities unresolveLibraryParts:documentContents];
+	[documentContents noteNeedsDisplay];
 }//end libraryReloaded
 
 

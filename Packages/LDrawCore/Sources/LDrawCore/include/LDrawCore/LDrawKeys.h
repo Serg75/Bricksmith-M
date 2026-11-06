@@ -149,8 +149,8 @@
 // for this notification is the LDrawFile that was edited!
 #define LDrawMPDSubModelAdded							@"LDrawMPDSubModelAdded"
 
-//The library was reloaded.  Documents need to tell their parts
-// to re-resolve their references.
+// Library parts were read again, or the catalog was rebuilt. Documents need to
+// tell their parts to re-resolve their references. The host posts it.
 #define LDrawPartLibraryReloaded						@"LDrawPartLibraryReloaded"
 
 // The LSynth selection appearance changed.  Selected LSynth
@@ -242,6 +242,8 @@ typedef NS_ENUM(NSInteger, LDrawMenuTag)
 	LDrawArrangeTurnAroundMenuTag		= 432,
 	LDrawArrangeTurnUpsideDownMenuTag	= 433,
 	LDrawPartsLimitMenuTag				= 434,
+	LDrawUsePartOverridesMenuTag		= 435,
+	LDrawResolutionMenuTag				= 436,
 
 	// Piece Menu
 	LDrawPieceMenuTag					= 5,
