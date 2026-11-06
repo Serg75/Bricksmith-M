@@ -230,6 +230,7 @@
 - (IBAction) hideParts:(id)sender;
 - (IBAction) showAllParts:(id)sender;
 - (IBAction) gotoModel:(id)sender;
+- (IBAction) compareWithLibrary:(id)sender;
 - (IBAction) snapSelectionToGrid:(id)sender;
 - (IBAction) snapSelectionToGridX:(id)sender;
 - (IBAction) snapSelectionToGridY:(id)sender;

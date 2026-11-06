@@ -57,7 +57,8 @@ curves are plain triangles, such as `s\54087s00.dat`, needs its own high version
 show. Model files keep the normal names, so parts lists and the parts limit do not change.
 
 A switch refreshes the loaded parts as described under "Turning the overrides off".
-`-libraryPathForPartName:` ignores the resolution.
+`-libraryPathForPartName:` ignores the resolution, and the compare window shows both sides at the
+resolution in use.
 
 How to override:
 
@@ -114,8 +115,8 @@ built there.
 Meanwhile the documents keep drawing the parts they had, and `-modelForName:` still returns them,
 so a document that looks its parts up meanwhile does not read them all at once. Last,
 `-dropStaleParts` drops the marked parts no model used, and the controller posts
-`LDrawPartLibraryReloaded`: the documents and the Part Browser preview look their library parts
-up again and redraw from the cache. The controller does the same for the peer
+`LDrawPartLibraryReloaded`: the documents, the Part Browser preview and the compare window look
+their library parts up again and redraw from the cache. The controller does the same for the peer
 files first, since they have no document. Told first, their next draw would read and
 smooth every part at once and stop the app; a resolution switch changes every stud, so that is
 nearly every part. Turning the folder off and on also shows a file in it that was edited while
@@ -126,6 +127,30 @@ are checked again before the documents are told. Every catalog reload, for a new
 a new LDraw folder or Reload in Preferences, reads the changed parts after it, so one progress
 panel shows at a time. The catalog reload itself does not post `LDrawPartLibraryReloaded`. A
 library updated in place, with the same paths, is not found this way.
+
+## Comparing a part
+
+Piece > Compare with Library shows the selected part from the overrides folder next to the
+library's. The two views turn, zoom and scroll together. It is off for a part that names a model of
+its own file, since that part draws the model. After a reload the window builds the part again
+with the same angle, zoom and center, or closes when the two sides are now the same. A minimized
+window waits until it is restored, and a closed one is not built again.
+
+`LDrawPartComparison` builds each side as an MPD file. Its first model is the part's file from
+that side, and after it come that side's files of every part between it and an overridden part.
+A submodel is found before the library, so each side draws its own files whichever way the
+switch is set. A part that leads to no override is the same on both sides and comes from the
+library. A part the library lacks is an empty model on its side, so the library cannot fill it
+in from the overrides folder. Models inside a part's own file are renamed `part#model`, so the
+models of two files cannot have the same name.
+
+Both views stand back from the box around both sides. One view is fitted, and the other copies
+its angle, zoom and center, so the parts line up. After that, each change of either camera is
+copied to the other once the change is done.
+
+Each comparison gets a new pair of views. A Metal view that is given a second file could stop
+being redrawn by AppKit, even though a direct `draw` still worked, so it kept showing the first
+part.
 
 ## Limits
 

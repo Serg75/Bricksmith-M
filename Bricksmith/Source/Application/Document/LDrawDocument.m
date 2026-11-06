@@ -39,6 +39,7 @@
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPartReport.h>
+#import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawQuadrilateral.h>
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawTriangle.h>
@@ -91,6 +92,7 @@
 #import "MovePanel.h"
 #import "PartBrowserDataSource.h"
 #import "PartBrowserPanelController.h"
+#import "PartComparisonController.h"
 #import "PartReplacementMenu.h"
 #import "PartsLimitController.h"
 #import "PartsLimitManager.h"
@@ -2936,6 +2938,35 @@ void AppendChoicesToNewItem(
 }//end gotoModel:
 
 
+//========== compareWithLibrary: ===============================================
+//
+// Purpose:		Shows the selected part from the overrides folder next to the
+//				library's, or says the two are the same. A part that names a
+//				model of this file draws that model, so it is not compared.
+//
+//==============================================================================
+- (IBAction) compareWithLibrary:(id)sender
+{
+	LDrawPart	*part		= [self selectedPart];
+	NSAlert		*alert		= nil;
+	NSString	*message	= NSLocalizedString(@"%@ is the same in the overrides folder and the library.", nil);
+	NSString	*reason		= NSLocalizedString(@"Neither the part nor any part it uses is in the overrides "
+												@"folder.", nil);
+
+	if(part == nil || [part referencedMPDSubmodel] != nil)
+		return;
+
+	if([[PartComparisonController sharedController] showPartNamed:[part referenceName] color:[part LDrawColor]])
+		return;
+
+	alert = [[NSAlert alloc] init];
+	[alert setMessageText:[NSString stringWithFormat:message, [part displayName]]];
+	[alert setInformativeText:reason];
+	[alert beginSheetModalForWindow:[self windowForSheet] completionHandler:nil];
+
+}//end compareWithLibrary:
+
+
 //========== snapSelectionToGrid: ==============================================
 //
 // Purpose:		Aligns all selected parts to the current grid setting.
@@ -5355,6 +5386,13 @@ void AppendChoicesToNewItem(
 		case LDrawGotoModelMenuTag:
 			enable = (selectedPart != nil && [selectedItems count] == 1);
 			break;		
+			
+		case LDrawCompareWithLibraryMenuTag:
+			enable = (	selectedPart != nil
+					  &&	[selectedItems count] == 1
+					  &&	[selectedPart referencedMPDSubmodel] == nil
+					  &&	[[LDrawPaths sharedPaths] overridesPath] != nil );
+			break;
 			
 		case LDrawSetGroupMenuTag:
 			enable = [LDrawMLCadGroup selectionCanSetGroup:selectedItems];

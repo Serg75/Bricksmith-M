@@ -821,13 +821,15 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 
 //========== addPartOverridesMenus =============================================
 //
-// Purpose:		Adds View > Use Part Overrides and Resolution.
+// Purpose:		Adds View > Use Part Overrides and Resolution, and Piece >
+//				Compare with Library.
 //
 //==============================================================================
 - (void) addPartOverridesMenus
 {
 	NSMenu		*mainMenu	= [NSApp mainMenu];
 	NSMenu		*viewMenu	= [[mainMenu itemWithTag:LDrawViewsMenuTag] submenu];
+	NSMenu		*pieceMenu	= [[mainMenu itemWithTag:LDrawPieceMenuTag] submenu];
 	NSMenuItem	*item		= nil;
 
 	if(viewMenu == nil || [viewMenu itemWithTag:LDrawUsePartOverridesMenuTag] != nil)
@@ -843,6 +845,13 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 	[viewMenu addItem:item];
 
 	[viewMenu addItem:[self resolutionMenuItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Compare with Library…", nil)
+									  action:@selector(compareWithLibrary:)
+							   keyEquivalent:@""];
+	[item setTag:LDrawCompareWithLibraryMenuTag];
+	[pieceMenu addItem:[NSMenuItem separatorItem]];
+	[pieceMenu addItem:item];
 
 }//end addPartOverridesMenus
 

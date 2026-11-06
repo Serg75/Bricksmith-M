@@ -252,6 +252,7 @@ typedef NS_ENUM(NSInteger, LDrawMenuTag)
 	LDrawSnapToGridMenuTag				= 503,
 	LDrawGotoModelMenuTag				= 504,
 	LDrawSetGroupMenuTag				= 510,
+	LDrawCompareWithLibraryMenuTag		= 511,
 
 	// Models Menu
 	LDrawModelsMenuTag					= 6,

@@ -4,7 +4,7 @@
 //
 //  Tests for drawing the high or low version of a part: which file a name
 //  finds, which loaded parts change after a switch, and how high versions in the
-//  overrides folder are checked.
+//  overrides folder are checked and compared.
 //
 //  Created by Sergey Slobodenyuk on 2026-11-06.
 //
@@ -126,6 +126,8 @@ struct LDrawResolutionTests {
         #expect(folders.paths(.low).path(forPartName: "4-4cyli.dat") == fix)
         #expect(folders.paths(.high).path(forPartName: "4-4cyli.dat", usingOverrides: false)
                 == folders.path(folders.library, "p/48/4-4cyli.dat"))
+        #expect(LDrawPartComparison(partName: "4-4cyli.dat", paths: folders.paths(.high)).changedPartNames
+                == ["4-4cyli.dat"])
     }
 
     @Test("A high version added later is found after the folder is turned off and on")
@@ -177,5 +179,15 @@ struct LDrawResolutionTests {
         #expect(high.update == "2012-02")
         #expect(high.libraryUpdate == "2023-05")
         #expect(high.libraryIsNewer)
+    }
+
+    @Test("Comparing in High shows the high subpart, and in Normal nothing differs")
+    func comparing() throws {
+        let folders = try Folders()
+        defer { folders.remove() }
+
+        #expect(LDrawPartComparison(partName: "56145.dat", paths: folders.paths(.high)).changedPartNames
+                == ["s\\54087s00.dat"])
+        #expect(LDrawPartComparison(partName: "56145.dat", paths: folders.paths(.normal)).changedPartNames.isEmpty)
     }
 }
