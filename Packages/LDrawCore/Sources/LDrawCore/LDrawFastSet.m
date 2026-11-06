@@ -95,20 +95,35 @@
     }
 }
 
-//========== objectEnumerator =================================================
+//========== enumerateValuesUsingBlock: =======================================
 //
-// Purpose:		Enumerate the set contents. A one-element set is wrapped in a
-//				temporary array so callers always get an NSEnumerator.
+// Purpose:		Calls the block with each entry, as an NSValue of the pointer.
+//				The block may add or remove entries. It walks a copy, and skips
+//				an entry that was removed before its turn.
 //
 //==============================================================================
-- (NSEnumerator *)objectEnumerator {
+- (void)enumerateValuesUsingBlock:(void (NS_NOESCAPE ^)(NSValue *value))block {
     if ([data isKindOfClass:[NSMutableSet class]]) {
-        return [data objectEnumerator];
+        for (NSValue *value in [data allObjects]) {
+            if ([self containsValue:value]) {
+                block(value);
+            }
+        }
     } else if (data != nil) {
-        return @[data].objectEnumerator;
-    } else {
-        return @[].objectEnumerator;
+        block(data);
     }
+}
+
+//========== containsValue: ===================================================
+//
+// Purpose:		Whether the entry is in the set.
+//
+//==============================================================================
+- (BOOL)containsValue:(NSValue *)value {
+    if ([data isKindOfClass:[NSMutableSet class]]) {
+        return [data containsObject:value];
+    }
+    return [data isEqualToValue:value];
 }
 
 @end

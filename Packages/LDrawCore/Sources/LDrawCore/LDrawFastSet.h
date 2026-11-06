@@ -28,7 +28,8 @@
 /// If the set shrinks to one element, storage collapses back to a pointer.
 - (void)removeObject:(id)object;
 
-/// Enumerate the stored objects.
-- (NSEnumerator *)objectEnumerator;
+/// Calls the block with each stored object, as an NSValue of its pointer. The
+/// block may add or remove objects; one removed before its turn is skipped.
+- (void)enumerateValuesUsingBlock:(void (NS_NOESCAPE ^)(NSValue *value))block;
 
 @end

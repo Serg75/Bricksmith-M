@@ -791,11 +791,13 @@
 //==============================================================================
 - (void)dealloc
 {
-	for (NSValue * o in observers.objectEnumerator)
-	{
+	// The block must not retain self while it is being freed.
+	__unsafe_unretained LDrawDirective *dying = self;
+
+	[observers enumerateValuesUsingBlock:^(NSValue *o) {
 		id<LDrawObserver> oo = [o pointerValue];
-		[oo observableSaysGoodbyeCruelWorld:self];
-	}
+		[oo observableSaysGoodbyeCruelWorld:dying];
+	}];
 }
 
 
@@ -808,11 +810,12 @@
 //==============================================================================
 - (void)sendMessageToObservers:(LDrawObserverMessage) msg
 {
-	for (NSValue * o in observers.objectEnumerator)
-	{
+	// An observer often stops observing when told, as a part does when its
+	// submodel leaves the file.
+	[observers enumerateValuesUsingBlock:^(NSValue *o) {
 		id<LDrawObserver> oo = [o pointerValue];
 		[oo receiveMessage:msg who:self];
-	}
+	}];
 }
 
 
@@ -835,11 +838,10 @@
 	{
 		invalFlags |= newFlags;
 
-		for (NSValue * o in observers.objectEnumerator)
-		{
+		[observers enumerateValuesUsingBlock:^(NSValue *o) {
 			id<LDrawObserver> oo = [o pointerValue];
 			[oo statusInvalidated:newFlags who:self];
-		}
+		}];
 	}
 }
 
