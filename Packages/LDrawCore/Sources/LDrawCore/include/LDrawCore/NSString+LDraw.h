@@ -29,6 +29,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSComparisonResult)numericCompare:(NSString *)string;
 - (NSArray *) separateByLine;
 - (NSString *) ldraw_stringByRemovingWhitespace;
+/// The spaces between the words of an LDraw line: whitespace and a byte order
+/// mark, which a file can start with.
++ (NSCharacterSet *) ldraw_lineSpaceCharacterSet;
 
 @end
 

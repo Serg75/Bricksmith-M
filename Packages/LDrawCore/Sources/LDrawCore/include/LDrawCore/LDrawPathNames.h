@@ -21,6 +21,7 @@
 
 #define PRIMITIVES_DIRECTORY_NAME				@"p"
 	#define PRIMITIVES_48_DIRECTORY_NAME		@"48"
+	#define PRIMITIVES_8_DIRECTORY_NAME			@"8"
 
 #define PARTS_DIRECTORY_NAME					@"parts" //match case of LDraw.org complete distribution zip package.
 	#define SUBPARTS_DIRECTORY_NAME				@"s"

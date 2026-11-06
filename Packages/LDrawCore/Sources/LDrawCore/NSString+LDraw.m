@@ -162,4 +162,25 @@
 }//end ldraw_stringByRemovingWhitespace
 
 
+//========== ldraw_lineSpaceCharacterSet ========================================
+//
+// Purpose:		Whitespace and the byte order mark, which a file can start with.
+//
+//==============================================================================
++ (NSCharacterSet *) ldraw_lineSpaceCharacterSet
+{
+	static NSCharacterSet	*spaces		= nil;
+	static dispatch_once_t	 onceToken;
+
+	dispatch_once(&onceToken, ^{
+		NSMutableCharacterSet *set = [NSMutableCharacterSet whitespaceCharacterSet];
+
+		[set addCharactersInString:@"﻿"];
+		spaces = [set copy];
+	});
+	return spaces;
+
+}//end ldraw_lineSpaceCharacterSet
+
+
 @end

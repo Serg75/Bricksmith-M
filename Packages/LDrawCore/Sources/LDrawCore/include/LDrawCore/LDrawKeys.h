@@ -64,6 +64,16 @@
 // Whether the parts without a mark draw see-through.
 #define PARTS_LIMIT_DIMS_OTHER_PARTS_KEY			@"Parts Limit Dims Other Parts"
 #define LDRAW_PATH_KEY								@"LDraw Path"
+// The folder whose parts replace library parts of the same name. Absent means
+// none.
+#define PART_OVERRIDES_PATH_KEY						@"Part Overrides Path"
+// Whether parts come from the overrides folder. Off keeps the folder.
+#define PART_OVERRIDES_ENABLED_KEY					@"Part Overrides Enabled"
+// Which version of a part is drawn: an LDrawResolution.
+#define PART_RESOLUTION_KEY							@"Part Resolution"
+// The overrides already reported as older than the library, as "name update"
+// of the library's part, so each is reported once.
+#define PART_OVERRIDES_REPORTED_KEY					@"Part Overrides Reported"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
 #define ROTATE_MODE_KEY								@"Rotate Mode"

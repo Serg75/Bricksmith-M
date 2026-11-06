@@ -14,6 +14,7 @@
 #import <LDrawCore/LDrawColor.h>
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPaths.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawFeatures/LDrawGrid.h>
 #import <LDrawFeatures/LDrawPartBrowserModel.h>
@@ -76,6 +77,8 @@ static const float TooManyMarkRGB[3]		= { 1.00f, 0.55f, 0.00f };
 	[initialDefaults setObject:[self componentsOfRGB:NotAvailableMarkRGB]	forKey:PARTS_LIMIT_NOT_AVAILABLE_COLOR_KEY];
 	[initialDefaults setObject:[self componentsOfRGB:TooManyMarkRGB]		forKey:PARTS_LIMIT_TOO_MANY_COLOR_KEY];
 	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
+	[initialDefaults setObject:@YES								forKey:PART_OVERRIDES_ENABLED_KEY];
+	[initialDefaults setObject:@(LDrawResolutionNormal)			forKey:PART_RESOLUTION_KEY];
 
 	//
 	// Grid Spacing

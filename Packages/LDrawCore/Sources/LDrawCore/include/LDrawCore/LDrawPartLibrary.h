@@ -38,6 +38,8 @@ extern NSString *PART_NUMBER_KEY;
 extern NSString *PART_NAME_KEY;
 extern NSString *PART_CATEGORY_KEY;
 extern NSString *PART_KEYWORDS_KEY;
+// YES in the record of a part only the overrides folder has.
+extern NSString *PART_ONLY_IN_OVERRIDES_KEY;
 extern NSString	*PARTS_LIST_KEY;
 extern NSString	*VERSION_KEY;
 extern NSString	*COMPATIBILITY_VERSION_KEY;
@@ -85,6 +87,8 @@ extern NSString	*Category_Subparts;
 + (nullable instancetype)sharedPartLibraryIfRegistered;
 
 // Accessors
+// The record lists leave out the parts only the overrides folder has while it
+// is turned off, and the category list the categories only those parts fill.
 - (NSArray *)allPartCatalogRecords;
 - (NSArray *)categories;
 - (NSArray *)categoryHierarchy;
@@ -96,6 +100,17 @@ extern NSString	*Category_Subparts;
 
 /// The catalog's record of the part, such as "3001.dat", or nil.
 - (nullable NSDictionary *)partCatalogRecordForPartName:(NSString *)partName;
+
+/// The records, without the parts only the overrides folder has when
+/// `useOverrides` is NO.
++ (NSArray<NSDictionary *> *)partCatalogRecords:(NSArray<NSDictionary *> *)records
+								 usingOverrides:(BOOL)useOverrides
+	NS_SWIFT_NAME(partCatalogRecords(_:usingOverrides:));
+
+/// The categories that one of the records is filed under, in their order.
++ (NSArray<NSString *> *)categories:(NSArray<NSString *> *)categories
+					  usedByRecords:(NSArray<NSDictionary *> *)records
+	NS_SWIFT_NAME(categories(_:usedBy:));
 
 - (void)setDelegate:(nullable id<LDrawPartLibraryDelegate>)delegateIn;
 - (void)setFavorites:(NSArray *)favoritesIn;

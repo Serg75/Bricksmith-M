@@ -59,6 +59,8 @@
 ///				LDraw/Unofficial/parts/
 ///				LDraw/Unofficial/parts/s/
 ///
+///				and the same p and parts folders of the overrides folder.
+///
 ///				It is important that the part name added to the library bear
 ///				the correct reference style. For LDraw/p/ and LDraw/parts/, it
 ///				is simply the filename (in lowercase). But for subdirectories,
@@ -92,7 +94,7 @@
 	NSString		*ldrawPath				= [sharedPaths preferredLDrawPath];
 	NSMutableArray	*searchPaths			= [NSMutableArray array];
 	
-	NSString		*prefix_primitives48	= [NSString stringWithFormat:@"%@\\", PRIMITIVES_48_DIRECTORY_NAME];
+	NSString		*prefix_48				= [NSString stringWithFormat:@"%@\\", PRIMITIVES_48_DIRECTORY_NAME];
 	NSString		*prefix_subparts		= [NSString stringWithFormat:@"%@\\", SUBPARTS_DIRECTORY_NAME];
 	
 	//make sure the LDraw folder is still valid; otherwise, why bother doing anything?
@@ -102,22 +104,17 @@
 		return;
 	}
 	
-	// Snapshot the validated configuration. The scan below runs on a background
-	// queue and derives every search path from this object, while the host can
-	// call -setPreferredLDrawPath: on +sharedPaths at any time (changing the
-	// folder in Preferences does exactly that, then kicks off a reload). Copying
-	// the paths we just validated keeps a mid-scan change from retargeting this
-	// scan, and keeps us off the shared object's mutable state. Only these two
-	// locations are read here; nothing below asks for -ldconfigPath.
-	LDrawPaths		*paths					= [[LDrawPaths alloc] init];
+	// The scan below runs on a background queue, while the host can change the
+	// paths of +sharedPaths at any time. It works on a copy with the folder just
+	// validated, so a change made meanwhile cannot retarget it.
+	LDrawPaths		*paths					= [sharedPaths copy];
 	[paths setPreferredLDrawPath:ldrawPath];
-	[paths setInternalLDrawPath:[sharedPaths internalLDrawPath]];
 	
 	dispatch_queue_t catalogAccessQueue = dispatch_queue_create("org.ldraw.LDrawCore.CatalogLoader", NULL);
 	dispatch_async(catalogAccessQueue, ^{
 
-		void (^addSearchPath)(NSString *, NSString *, NSString *) =
-			^(NSString *path, NSString *category, NSString *prefix)
+		void (^addSearchPath)(NSString *, NSString *, NSString *, BOOL) =
+			^(NSString *path, NSString *category, NSString *prefix, BOOL fromOverrides)
 		{
 			// partsPathForDomain: returns nil when the host never set the
 			// corresponding base (preferred vs internal). A nil value in a
@@ -136,6 +133,7 @@
 			{
 				record[@"prefix"] = prefix;
 			}
+			record[@"overrides"] = @(fromOverrides);
 			[searchPaths addObject:record];
 		};
 
@@ -143,28 +141,36 @@
 		NSString *subpartsCategory   = [LDrawLocalization stringForKey:Category_Subparts];
 
 		// Parts
-		addSearchPath([paths partsPathForDomain:LDrawUserOfficial], nil, nil);
-		addSearchPath([paths partsPathForDomain:LDrawUserUnofficial], nil, nil);
-		addSearchPath([paths partsPathForDomain:LDrawInternalOfficial], nil, nil);
-		addSearchPath([paths partsPathForDomain:LDrawInternalUnofficial], nil, nil);
+		addSearchPath([paths partsPathForDomain:LDrawUserOfficial], nil, nil, NO);
+		addSearchPath([paths partsPathForDomain:LDrawUserUnofficial], nil, nil, NO);
+		addSearchPath([paths partsPathForDomain:LDrawInternalOfficial], nil, nil, NO);
+		addSearchPath([paths partsPathForDomain:LDrawInternalUnofficial], nil, nil, NO);
 
 		// Primitives
-		addSearchPath([paths primitivesPathForDomain:LDrawUserOfficial], primitivesCategory, nil);
-		addSearchPath([paths primitivesPathForDomain:LDrawUserUnofficial], primitivesCategory, nil);
-		addSearchPath([paths primitivesPathForDomain:LDrawInternalOfficial], primitivesCategory, nil);
-		addSearchPath([paths primitivesPathForDomain:LDrawInternalUnofficial], primitivesCategory, nil);
+		addSearchPath([paths primitivesPathForDomain:LDrawUserOfficial], primitivesCategory, nil, NO);
+		addSearchPath([paths primitivesPathForDomain:LDrawUserUnofficial], primitivesCategory, nil, NO);
+		addSearchPath([paths primitivesPathForDomain:LDrawInternalOfficial], primitivesCategory, nil, NO);
+		addSearchPath([paths primitivesPathForDomain:LDrawInternalUnofficial], primitivesCategory, nil, NO);
 
 		// Primitives 48
-		addSearchPath([paths primitives48PathForDomain:LDrawUserOfficial], primitivesCategory, prefix_primitives48);
-		addSearchPath([paths primitives48PathForDomain:LDrawUserUnofficial], primitivesCategory, prefix_primitives48);
-		addSearchPath([paths primitives48PathForDomain:LDrawInternalOfficial], primitivesCategory, prefix_primitives48);
-		addSearchPath([paths primitives48PathForDomain:LDrawInternalUnofficial], primitivesCategory, prefix_primitives48);
+		addSearchPath([paths primitives48PathForDomain:LDrawUserOfficial], primitivesCategory, prefix_48, NO);
+		addSearchPath([paths primitives48PathForDomain:LDrawUserUnofficial], primitivesCategory, prefix_48, NO);
+		addSearchPath([paths primitives48PathForDomain:LDrawInternalOfficial], primitivesCategory, prefix_48, NO);
+		addSearchPath([paths primitives48PathForDomain:LDrawInternalUnofficial], primitivesCategory, prefix_48, NO);
 
 		// Subparts
-		addSearchPath([paths subpartsPathForDomain:LDrawUserOfficial], subpartsCategory, prefix_subparts);
-		addSearchPath([paths subpartsPathForDomain:LDrawUserUnofficial], subpartsCategory, prefix_subparts);
-		addSearchPath([paths subpartsPathForDomain:LDrawInternalOfficial], subpartsCategory, prefix_subparts);
-		addSearchPath([paths subpartsPathForDomain:LDrawInternalUnofficial], subpartsCategory, prefix_subparts);
+		addSearchPath([paths subpartsPathForDomain:LDrawUserOfficial], subpartsCategory, prefix_subparts, NO);
+		addSearchPath([paths subpartsPathForDomain:LDrawUserUnofficial], subpartsCategory, prefix_subparts, NO);
+		addSearchPath([paths subpartsPathForDomain:LDrawInternalOfficial], subpartsCategory, prefix_subparts, NO);
+		addSearchPath([paths subpartsPathForDomain:LDrawInternalUnofficial], subpartsCategory, prefix_subparts, NO);
+
+		// The overrides folder goes after every library folder. The first file
+		// of a name is cataloged, so it adds its own parts, marked as its own,
+		// but keeps the library's names and categories.
+		addSearchPath([paths partsPathForDomain:LDrawUserOverrides], nil, nil, YES);
+		addSearchPath([paths primitivesPathForDomain:LDrawUserOverrides], primitivesCategory, nil, YES);
+		addSearchPath([paths primitives48PathForDomain:LDrawUserOverrides], primitivesCategory, prefix_48, YES);
+		addSearchPath([paths subpartsPathForDomain:LDrawUserOverrides], subpartsCategory, prefix_subparts, YES);
 
 		NSString							*partCatalogPath	= [paths partCatalogPath];
 		NSMutableDictionary<NSString*, id>	*newPartCatalog 	= [NSMutableDictionary dictionary];
@@ -192,6 +198,7 @@
 						 toCatalog:newPartCatalog
 					 underCategory:[record objectForKey:@"category"] //override all internal categories
 						namePrefix:[record objectForKey:@"prefix"]
+					 fromOverrides:[[record objectForKey:@"overrides"] boolValue]
 		  progressIncrementHandler:progressIncrementHandler];
 		}
 		
@@ -225,12 +232,15 @@
 //									  Part references in LDraw/parts/s should be
 //									  prefixed with the DOS path "s\". Pass nil
 //									  to ignore the prefix.
+//				fromOverrides		- the folder is in the overrides folder, so
+//									  a part it adds is marked as only there.
 //
 //==============================================================================
 - (void) addPartsInFolder:(NSString *)folderPath
 				toCatalog:(NSMutableDictionary *)catalog
 			underCategory:(NSString *)categoryOverride
 			   namePrefix:(NSString *)namePrefix
+			fromOverrides:(BOOL)fromOverrides
  progressIncrementHandler:(void (^)(void))progressIncrementHandler
 {
 	NSFileManager		*fileManager			= [[NSFileManager alloc] init];
@@ -316,6 +326,10 @@
 																			  
 						[catalog_category addObject:categoryEntry];
 						
+						// The library has no part of this name.
+						if(fromOverrides)
+							[categoryRecord setObject:@YES forKey:PART_ONLY_IN_OVERRIDES_KEY];
+
 						// Also file the part in a master list by reference name.
 						[catalog_partNumbers setObject:categoryRecord
 												forKey:partNumber];

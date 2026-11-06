@@ -51,6 +51,7 @@ NSString	*PART_NUMBER_KEY	= @"Part Number";
 NSString	*PART_NAME_KEY		= @"Part Name";
 NSString	*PART_CATEGORY_KEY	= @"Category";
 NSString	*PART_KEYWORDS_KEY	= @"Keywords";
+NSString	*PART_ONLY_IN_OVERRIDES_KEY	= @"Only In Overrides";
 
 // Raw dictionary containing each part filed by number.
 NSString	*PARTS_LIST_KEY				= @"Part List";
@@ -160,24 +161,93 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 - (NSArray *)allPartCatalogRecords
 {
 	NSDictionary	*partList	= [self->partCatalog objectForKey:PARTS_LIST_KEY];
-	
+
 	// all the reference numbers for parts.
-	return [partList allValues];
-	
+	return [self recordsInUse:[partList allValues]];
+
 } // end allPartCatalogRecords
+
+
+//========== recordsInUse: =====================================================
+//
+// Purpose:		Leaves out the parts only the overrides folder has while it is
+//				turned off.
+//
+//==============================================================================
+- (NSArray *)recordsInUse:(NSArray *)records
+{
+	return [[self class] partCatalogRecords:records
+							 usingOverrides:[[LDrawPaths sharedPaths] overridesEnabled]];
+
+} // end recordsInUse:
+
+
+//---------- partCatalogRecords:usingOverrides: ----------------------[static]--
+//
+// Purpose:		The records, without the parts only the overrides folder has
+//				when it is not used.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSDictionary *> *)partCatalogRecords:(NSArray<NSDictionary *> *)records
+								 usingOverrides:(BOOL)useOverrides
+{
+	NSIndexSet *kept = nil;
+
+	if (useOverrides)
+		return records;
+
+	kept = [records indexesOfObjectsPassingTest:^BOOL(NSDictionary *record, NSUInteger index, BOOL *stop) {
+		return [[record objectForKey:PART_ONLY_IN_OVERRIDES_KEY] boolValue] == NO;
+	}];
+	return [records objectsAtIndexes:kept];
+
+} // end partCatalogRecords:usingOverrides:
 
 
 //========== categories ========================================================
 //
-// Purpose:		Returns all the categories in the library, sorted in no 
-//				particular order. 
+// Purpose:		Returns all the categories in the library, sorted in no
+//				particular order. While the overrides folder is off, a category
+//				that only its parts fill is left out.
 //
 //==============================================================================
 - (NSArray *)categories
 {
-	return [[self->partCatalog objectForKey:PARTS_CATALOG_KEY] allKeys];
-	
+	NSArray *names = [[self->partCatalog objectForKey:PARTS_CATALOG_KEY] allKeys];
+
+	if ([[LDrawPaths sharedPaths] overridesEnabled] == NO)
+		names = [[self class] categories:names usedByRecords:[self allPartCatalogRecords]];
+
+	return names;
+
 } // end categories
+
+
+//---------- categories:usedByRecords: -------------------------------[static]--
+//
+// Purpose:		The categories that one of the records is filed under.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSString *> *)categories:(NSArray<NSString *> *)categories
+					  usedByRecords:(NSArray<NSDictionary *> *)records
+{
+	NSMutableSet	*used	= [NSMutableSet setWithCapacity:[categories count]];
+	NSIndexSet		*kept	= nil;
+
+	for (NSDictionary *record in records)
+	{
+		NSString *category = [record objectForKey:PART_CATEGORY_KEY];
+
+		if (category != nil)
+			[used addObject:category];
+	}
+
+	kept = [categories indexesOfObjectsPassingTest:^BOOL(NSString *name, NSUInteger index, BOOL *stop) {
+		return [used containsObject:name];
+	}];
+	return [categories objectsAtIndexes:kept];
+
+} // end categories:usedByRecords:
 
 
 //========== categoryHierarchy =================================================
@@ -346,9 +416,9 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 		if (partInfo)
 			[parts addObject:partInfo];
 	}
-	
-	return parts;
-	
+
+	return [self recordsInUse:parts];
+
 } // end favoritePartNames
 
 
@@ -390,8 +460,8 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 			if (partInfo)
 				[partsInCategory addObject:partInfo];
 		}
-		
-		parts = partsInCategory;
+
+		parts = [self recordsInUse:partsInCategory];
 	}
 	
 	return parts;

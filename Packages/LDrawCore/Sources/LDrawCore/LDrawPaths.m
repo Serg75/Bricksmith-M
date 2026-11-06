@@ -15,6 +15,10 @@
 
 #import <LDrawCore/LDrawPathNames.h>
 
+// What a part's name starts with to name its high or low version.
+static NSString * const HighPrefix	= PRIMITIVES_48_DIRECTORY_NAME @"\\";
+static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
+
 @interface LDrawPaths ()
 {
 	// Guards the three host-supplied paths. The host can reassign the preferred
@@ -31,19 +35,35 @@
 
 	NSString		*preferredLDrawPath;
 	NSString		*internalLDrawPath;
+	NSString		*overridesPath;
 	NSString		*bundledLdconfigPath;
 
-	// The folders pathForPartName: searches, built from the two paths above.
-	// Cleared when either path changes.
-	NSArray			*searchPaths;
+	// The folders a part is looked up in: the library's, and the overrides
+	// folder's. Built from the paths above, and cleared by any change.
+	NSArray			*librarySearchPaths;
+	NSArray			*overridesSearchPaths;
 
-	// Counts changes to the two paths, so a search list built from old paths
-	// is not stored.
+	// The names under each "48" or "8" folder, by folder, so a part's version
+	// is only looked for where it exists. Cleared by any change, so turning the
+	// overrides off and on finds a file added meanwhile.
+	NSMutableDictionary<NSString *, NSSet<NSString *> *>	*versionNames;
+
+	// Counts changes, so a list built from old settings is not stored.
 	NSUInteger		pathGeneration;
+
+	// Whether pathForPartName: uses the overrides folder. It keeps its path
+	// while turned off.
+	BOOL			overridesEnabled;
+
+	// Which version of a part pathForPartName: looks for first.
+	LDrawResolution	resolution;
 }
 
 /// Host-provided fallback LDConfig.ldr. Thread-safe.
 - (NSString *)bundledLdconfigPath;
+
+/// Clears the folder and name lists. Call it with pathsLock held.
+- (void)clearListsLocked;
 
 @end
 
@@ -101,9 +121,31 @@
 	self = [super init];
 	if (self != nil)
 	{
-		pathsLock = OS_UNFAIR_LOCK_INIT;
+		pathsLock			= OS_UNFAIR_LOCK_INIT;
+		overridesEnabled	= YES;
 	}
 	return self;
+}
+
+
+//========== copyWithZone: =====================================================
+//
+// Purpose:		A copy with the same paths and settings, for work that must not
+//				see a change made meanwhile.
+//
+//==============================================================================
+- (id)copyWithZone:(NSZone *)zone
+{
+	LDrawPaths *copy = [[[self class] allocWithZone:zone] init];
+
+	[copy setPreferredLDrawPath:[self preferredLDrawPath]];
+	[copy setInternalLDrawPath:[self internalLDrawPath]];
+	[copy setOverridesPath:[self overridesPath]];
+	[copy setBundledLdconfigPath:[self bundledLdconfigPath]];
+	[copy setOverridesEnabled:[self overridesEnabled]];
+	[copy setResolution:[self resolution]];
+
+	return copy;
 }
 
 
@@ -139,9 +181,8 @@
 	NSString *newPath = [pathIn copy];
 
 	os_unfair_lock_lock(&pathsLock);
-	internalLDrawPath	= newPath;
-	searchPaths			= nil;
-	pathGeneration++;
+	internalLDrawPath = newPath;
+	[self clearListsLocked];
 	os_unfair_lock_unlock(&pathsLock);
 }
 
@@ -168,10 +209,111 @@
 	NSString *newPath = [pathIn copy];
 
 	os_unfair_lock_lock(&pathsLock);
-	preferredLDrawPath	= newPath;
-	searchPaths			= nil;
-	pathGeneration++;
+	preferredLDrawPath = newPath;
+	[self clearListsLocked];
 	os_unfair_lock_unlock(&pathsLock);
+}
+
+
+//========== overridesPath =====================================================
+//==============================================================================
+- (NSString *)overridesPath
+{
+	os_unfair_lock_lock(&pathsLock);
+	NSString *path = overridesPath;	// retained by ARC while locked
+	os_unfair_lock_unlock(&pathsLock);
+
+	return path;
+}
+
+
+//========== setOverridesPath: =================================================
+//
+// Purpose:		Sets the folder whose parts replace library parts of the same
+//				name. An empty path means none.
+//
+//==============================================================================
+- (void)setOverridesPath:(NSString *)pathIn
+{
+	NSString *newPath = ([pathIn length] > 0) ? [pathIn copy] : nil;
+
+	os_unfair_lock_lock(&pathsLock);
+	overridesPath = newPath;
+	[self clearListsLocked];
+	os_unfair_lock_unlock(&pathsLock);
+}
+
+
+//========== overridesEnabled ==================================================
+//
+// Purpose:		Whether pathForPartName: looks in the overrides folder. YES
+//				unless it was turned off.
+//
+//==============================================================================
+- (BOOL)overridesEnabled
+{
+	os_unfair_lock_lock(&pathsLock);
+	BOOL enabled = overridesEnabled;
+	os_unfair_lock_unlock(&pathsLock);
+
+	return enabled;
+}
+
+
+//========== setOverridesEnabled: ==============================================
+//==============================================================================
+- (void)setOverridesEnabled:(BOOL)flag
+{
+	os_unfair_lock_lock(&pathsLock);
+	overridesEnabled = flag;
+	[self clearListsLocked];
+	os_unfair_lock_unlock(&pathsLock);
+}
+
+
+//========== resolution ========================================================
+//==============================================================================
+- (LDrawResolution)resolution
+{
+	os_unfair_lock_lock(&pathsLock);
+	LDrawResolution current = resolution;
+	os_unfair_lock_unlock(&pathsLock);
+
+	return current;
+}
+
+
+//========== setResolution: ====================================================
+//
+// Purpose:		High looks for "48\" and Low for "8\" in front of a part's name
+//				first, and falls back to the part itself. An unknown value, such
+//				as one saved by a later version, means Normal.
+//
+//==============================================================================
+- (void)setResolution:(LDrawResolution)newResolution
+{
+	if (newResolution != LDrawResolutionLow && newResolution != LDrawResolutionHigh)
+		newResolution = LDrawResolutionNormal;
+
+	os_unfair_lock_lock(&pathsLock);
+	resolution = newResolution;
+	[self clearListsLocked];
+	os_unfair_lock_unlock(&pathsLock);
+}
+
+
+//========== clearListsLocked ==================================================
+//
+// Purpose:		Clears the folder and name lists, so they are built again from
+//				the new settings.
+//
+//==============================================================================
+- (void)clearListsLocked
+{
+	librarySearchPaths		= nil;
+	overridesSearchPaths	= nil;
+	versionNames			= nil;
+	pathGeneration++;
 }
 
 
@@ -216,7 +358,11 @@
 	NSString	*baseLDrawPath	= nil;
 	NSString	*path			= nil;
 	
-	if (domain == LDrawUserOfficial || domain == LDrawUserUnofficial)
+	if (domain == LDrawUserOverrides)
+	{
+		return [[self overridesPath] stringByAppendingPathComponent:PARTS_DIRECTORY_NAME];
+	}
+	else if (domain == LDrawUserOfficial || domain == LDrawUserUnofficial)
 	{
 		baseLDrawPath = [self preferredLDrawPath];
 	}
@@ -246,7 +392,11 @@
 	NSString	*baseLDrawPath	= nil;
 	NSString	*path			= nil;
 	
-	if (domain == LDrawUserOfficial || domain == LDrawUserUnofficial)
+	if (domain == LDrawUserOverrides)
+	{
+		return [[self overridesPath] stringByAppendingPathComponent:PRIMITIVES_DIRECTORY_NAME];
+	}
+	else if (domain == LDrawUserOfficial || domain == LDrawUserUnofficial)
 	{
 		baseLDrawPath = [self preferredLDrawPath];
 	}
@@ -446,6 +596,7 @@
 //				LDraw/parts			(parts)
 //				LDraw/parts/s		(subparts)
 //				LDraw/unofficial	(unofficial parts root -- Allen's addition)
+//				Overrides/p and Overrides/parts, which win over all of these.
 //
 //				For regular parts and primitives, the partName is simply the 
 //				filename as found in LDraw/parts or LDraw/p. But for subparts, 
@@ -464,49 +615,253 @@
 //==============================================================================
 - (NSString *)pathForPartName:(NSString *)partName
 {
-	NSFileManager	*fileManager	= [[NSFileManager alloc] init];
-	NSMutableString *fixedPartName	= [NSMutableString stringWithString:partName];
-	NSString		*partPath		= nil;
-	NSArray			*folders		= nil;
+	return [self pathForPartName:partName usingOverrides:[self overridesEnabled]];
 
+} // end pathForPartName:
+
+
+//========== pathForPartName:usingOverrides: ===================================
+//
+// Purpose:		Finds the part with or without the overrides folder, whether
+//				or not it is turned off.
+//
+// Notes:		The overrides folder comes before the library, so a fix is used
+//				at every resolution. In each, a high or low version comes before
+//				the part itself.
+//
+//==============================================================================
+- (NSString *)pathForPartName:(NSString *)partName usingOverrides:(BOOL)useOverrides
+{
+	NSString	*prefix		= [self resolutionPrefixForPartName:partName];
+	NSArray		*library	= [self searchFoldersForOverrides:NO];
+	NSArray		*groups		= useOverrides ? @[[self searchFoldersForOverrides:YES], library] : @[library];
+	NSString	*path		= nil;
+
+	for (NSArray<NSString *> *folders in groups)
+	{
+		if (prefix != nil)
+			path = [self pathForVersion:prefix ofPartName:partName inFolders:folders];
+		if (path == nil)
+			path = [self pathForPartName:partName inFolders:folders];
+		if (path != nil)
+			break;
+	}
+
+	return path;
+
+} // end pathForPartName:usingOverrides:
+
+
+//========== resolutionPrefixForPartName: ======================================
+//
+// Purpose:		"48\" in High and "8\" in Low, or nil when the part itself is
+//				wanted: in Normal, or for a name that already names a version.
+//
+//==============================================================================
+- (NSString *)resolutionPrefixForPartName:(NSString *)partName
+{
+	LDrawResolution current = [self resolution];
+
+	if (current == LDrawResolutionNormal || [[self class] partNameWithoutResolution:partName] != nil)
+		return nil;
+
+	return (current == LDrawResolutionHigh) ? HighPrefix : LowPrefix;
+
+} // end resolutionPrefixForPartName:
+
+
+//---------- partNameWithoutResolution: ------------------------------[static]--
+//
+// Purpose:		The part a high or low version is of, e.g. "s\x.dat" for
+//				"48\s\x.dat", or nil when the name names no version.
+//
+//------------------------------------------------------------------------------
++ (NSString *)partNameWithoutResolution:(NSString *)partName
+{
+	NSString *name = [partName stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+
+	for (NSString *prefix in @[HighPrefix, LowPrefix])
+	{
+		if ([name length] > [prefix length]
+			&& [name compare:prefix options:NSCaseInsensitiveSearch range:NSMakeRange(0, [prefix length])]
+			   == NSOrderedSame)
+		{
+			return [name substringFromIndex:[prefix length]];
+		}
+	}
+	return nil;
+
+} // end partNameWithoutResolution:
+
+
+//========== searchFoldersForOverrides: ========================================
+//
+// Purpose:		The parts and p folders of the overrides folder, or of the
+//				library, in search order.
+//
+//==============================================================================
+- (NSArray<NSString *> *)searchFoldersForOverrides:(BOOL)overrides
+{
+	NSArray			*folders		= nil;
 	NSUInteger		generation		= 0;
 
 	os_unfair_lock_lock(&pathsLock);
-	folders		= searchPaths;
+	folders		= overrides ? overridesSearchPaths : librarySearchPaths;
 	generation	= pathGeneration;
 	os_unfair_lock_unlock(&pathsLock);
 
 	if (folders == nil)
 	{
 		// Built without the lock, because these calls take it and it does not
-		// nest. Folders that are not set are left out.
-		NSMutableArray *found = [NSMutableArray arrayWithCapacity:8];
+		// nest.
+		NSArray *domains = @[@(LDrawUserOfficial), @(LDrawUserUnofficial),
+							 @(LDrawInternalOfficial), @(LDrawInternalUnofficial)];
 
-		for (NSNumber *domain in @[@(LDrawUserOfficial), @(LDrawUserUnofficial),
-								   @(LDrawInternalOfficial), @(LDrawInternalUnofficial)])
-		{
-			NSString *parts			= [self partsPathForDomain:domain.integerValue];
-			NSString *primitives	= [self primitivesPathForDomain:domain.integerValue];
-
-			if (parts != nil)
-			{
-				[found addObject:parts];
-			}
-			if (primitives != nil)
-			{
-				[found addObject:primitives];
-			}
-		}
-		folders = found;
+		if (overrides)
+			domains = @[@(LDrawUserOverrides)];
+		folders = [self foldersForDomains:domains];
 
 		os_unfair_lock_lock(&pathsLock);
 		if (pathGeneration == generation)
 		{
-			searchPaths = folders;
+			if (overrides)
+				overridesSearchPaths = folders;
+			else
+				librarySearchPaths = folders;
 		}
 		os_unfair_lock_unlock(&pathsLock);
 	}
-	
+
+	return folders;
+
+} // end searchFoldersForOverrides:
+
+
+//========== pathForVersion:ofPartName:inFolders: ==============================
+//
+// Purpose:		The last of the folders whose "48" or "8" folder has the part,
+//				or nil. Only a folder whose list names the part is checked on
+//				disk.
+//
+//==============================================================================
+- (NSString *)pathForVersion:(NSString *)prefix
+				  ofPartName:(NSString *)partName
+				   inFolders:(NSArray<NSString *> *)folders
+{
+	NSString		*subfolder	= [prefix substringToIndex:[prefix length] - 1];
+	NSString		*name		= [[partName stringByReplacingOccurrencesOfString:@"\\" withString:@"/"]
+								   lowercaseString];
+	NSMutableArray	*holders	= [NSMutableArray array];
+
+	for (NSString *folder in folders)
+	{
+		NSString *versionFolder = [folder stringByAppendingPathComponent:subfolder];
+
+		if ([[self namesInVersionFolder:versionFolder] containsObject:name])
+			[holders addObject:versionFolder];
+	}
+
+	return ([holders count] > 0) ? [self pathForPartName:partName inFolders:holders] : nil;
+
+} // end pathForVersion:ofPartName:inFolders:
+
+
+//========== namesInVersionFolder: =============================================
+//
+// Purpose:		The paths of the files under a "48" or "8" folder, lowercase and
+//				with slashes. Empty when there is no such folder.
+//
+//==============================================================================
+- (NSSet<NSString *> *)namesInVersionFolder:(NSString *)folder
+{
+	NSSet<NSString *>	*names		= nil;
+	NSUInteger			 generation	= 0;
+
+	os_unfair_lock_lock(&pathsLock);
+	names		= versionNames[folder];
+	generation	= pathGeneration;
+	os_unfair_lock_unlock(&pathsLock);
+
+	if (names == nil)
+	{
+		// Read without the lock, which is never held across a file-system call.
+		NSDirectoryEnumerator		*walk		= [[[NSFileManager alloc] init] enumeratorAtPath:folder];
+		NSMutableSet<NSString *>	*found		= [NSMutableSet set];
+		NSString					*relative	= nil;
+
+		while ((relative = [walk nextObject]) != nil)
+			[found addObject:[relative lowercaseString]];
+		names = [found copy];
+
+		os_unfair_lock_lock(&pathsLock);
+		if (pathGeneration == generation)
+		{
+			if (versionNames == nil)
+				versionNames = [NSMutableDictionary dictionary];
+			versionNames[folder] = names;
+		}
+		os_unfair_lock_unlock(&pathsLock);
+	}
+
+	return names;
+
+} // end namesInVersionFolder:
+
+
+//========== libraryPathForPartName: ===========================================
+//
+// Purpose:		The library's own file of the part, as named: no overrides
+//				folder, and no high or low version.
+//
+//==============================================================================
+- (NSString *)libraryPathForPartName:(NSString *)partName
+{
+	return [self pathForPartName:partName inFolders:[self searchFoldersForOverrides:NO]];
+
+} // end libraryPathForPartName:
+
+
+//========== foldersForDomains: ================================================
+//
+// Purpose:		The parts and primitives folders of each domain. Folders that
+//				are not set are left out.
+//
+//==============================================================================
+- (NSArray<NSString *> *)foldersForDomains:(NSArray<NSNumber *> *)domains
+{
+	NSMutableArray *found = [NSMutableArray arrayWithCapacity:2 * [domains count]];
+
+	for (NSNumber *domain in domains)
+	{
+		NSString *parts			= [self partsPathForDomain:domain.integerValue];
+		NSString *primitives	= [self primitivesPathForDomain:domain.integerValue];
+
+		if (parts != nil)
+		{
+			[found addObject:parts];
+		}
+		if (primitives != nil)
+		{
+			[found addObject:primitives];
+		}
+	}
+
+	return found;
+
+} // end foldersForDomains:
+
+
+//========== pathForPartName:inFolders: ========================================
+//
+// Purpose:		The last of the folders that has the part, or nil.
+//
+//==============================================================================
+- (NSString *)pathForPartName:(NSString *)partName inFolders:(NSArray<NSString *> *)folders
+{
+	NSFileManager	*fileManager	= [[NSFileManager alloc] init];
+	NSMutableString *fixedPartName	= [NSMutableString stringWithString:partName];
+	NSString		*partPath		= nil;
+
 	// LDraw references parts in subfolders by their relative pathnames in DOS 
 	// (e.g., "s\765s01.dat"). Convert to UNIX for simple searching.
 	[fixedPartName replaceOccurrencesOfString:@"\\" //DOS path separator (doubled for escape-sequence)
@@ -535,7 +890,7 @@
 	
 	return partPath;
 	
-} // end pathForPartName:
+} // end pathForPartName:inFolders:
 
 
 //========== pathForTextureName: ===============================================

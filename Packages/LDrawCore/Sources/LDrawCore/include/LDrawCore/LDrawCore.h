@@ -105,6 +105,7 @@
 #import <LDrawCore/LDrawModelManager.h>
 #import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawPartLimitStatus.h>
+#import <LDrawCore/LDrawPartOverride.h>
 #import <LDrawCore/LDrawPartReport.h>
 #import <LDrawCore/LDrawPartSpecific.h>
 #import <LDrawCore/LDrawStepPartListEntry.h>

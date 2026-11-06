@@ -38,6 +38,7 @@
 #import <LDrawFeatures/LDrawPartLimitPresentation.h>
 #import <LDrawFeatures/LDrawPartLimitSession.h>
 #import <LDrawFeatures/LDrawPartListOrientations.h>
+#import <LDrawFeatures/LDrawPartOverridePresentation.h>
 #import <LDrawFeatures/LDrawPartReplacements.h>
 #import <LDrawFeatures/LDrawPartUsage.h>
 #import <LDrawFeatures/LDrawPreferences.h>
