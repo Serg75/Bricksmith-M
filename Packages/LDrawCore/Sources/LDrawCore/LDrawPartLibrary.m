@@ -74,7 +74,21 @@ NSString	*Category_Primitives		= @"Primitives";
 NSString	*Category_Subparts			= @"Subparts";
 
 @interface LDrawPartLibrary ()
+{
+	// Each loaded part, and the names of the parts its file uses. Loaded parts
+	// are flattened, so this is the only record of what they are made of.
+	NSMutableDictionary<NSString *, NSSet<NSString *> *>	*usedPartNames;
+
+	// Each loaded part, and the file it was read from.
+	NSMutableDictionary<NSString *, NSString *>				*loadedPaths;
+
+	// Loaded parts whose files changed. They are kept, so documents can still
+	// draw them, and are read again when a part file uses them.
+	NSMutableSet<NSString *>								*staleNames;
+}
 - (void)notifyDelegateFavoritesChanged;
+- (nullable LDrawModel *)readModelNamed:(NSString *)partName;
+- (void)forgetPartNames:(NSArray<NSString *> *)partNames;
 @end
 
 @implementation LDrawPartLibrary
@@ -136,6 +150,9 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	self = [super init];
 	
 	loadedFiles                 = [NSMutableDictionary dictionaryWithCapacity:400];
+	usedPartNames				= [NSMutableDictionary dictionaryWithCapacity:400];
+	loadedPaths					= [NSMutableDictionary dictionaryWithCapacity:400];
+	staleNames					= [NSMutableSet set];
 	loadedImages				= [[NSMutableDictionary alloc] init];
 	optimizedRepresentations    = [NSMutableDictionary dictionaryWithCapacity:400];
 	optimizedTextures			= [[NSMutableDictionary alloc] init];
@@ -757,17 +774,11 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 				 inGroup:(dispatch_group_t)parentGroup
 {
 	(void)parentGroup;
-	LDrawModel *model = [self->loadedFiles objectForKey:partName];
-	if (model == nil)
-	{
-		NSString *partPath = [[LDrawPaths sharedPaths] pathForPartName:partName];
-		model = [self readModelAtPath:partPath asynchronously:NO completionHandler:NULL];
-		if (model != nil)
-		{
-			[self->loadedFiles setObject:model forKey:partName];
-		}
-	}
-	
+	// A part whose file changed is read again here, so the part file being
+	// read is flattened with the new one.
+	if ([self->loadedFiles objectForKey:partName] == nil || [self->staleNames containsObject:partName])
+		[self readModelNamed:partName];
+
 } // end loadModelForName:
 
 
@@ -946,24 +957,14 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 //==============================================================================
 - (LDrawModel *)modelForName:(NSString *) imageName
 {
-	LDrawModel	*model		= nil;
-	NSString	*partPath	= nil;
-	
-	// Has it already been parsed?
-	model = [self->loadedFiles objectForKey:imageName];
+	// Has it already been parsed? A part whose file changed is still returned,
+	// so documents draw it until all changed parts are read.
+	LDrawModel *model = [self->loadedFiles objectForKey:imageName];
 
-
+	// This case is only hit when a library part uses another library part, e.g.
+	// a brick grabs a collection-of-studs part.
 	if (model == nil)
-	{
-		// Well, this means we have to try getting it off the disk!
-		// This case is only hit when a library part uses another library part, e.g.
-		// a brick grabs a collection-of-studs part.
-		partPath	= [[LDrawPaths sharedPaths] pathForPartName:imageName];
-		model		= [self readModelAtPath:partPath asynchronously:NO completionHandler:NULL];
-		
-		if (model != nil)
-			[self->loadedFiles setObject:model forKey:imageName];
-	}
+		model = [self readModelNamed:imageName];
 
 	return model;
 	
@@ -1019,6 +1020,157 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 {
 	return [self->loadedFiles objectForKey:imageName];
 }
+
+
+#pragma mark -
+#pragma mark REFRESHING
+#pragma mark -
+
+//========== markPartsWhoseFilesChangedWithCompletionHandler: ==================
+//
+// Purpose:		Marks each loaded part that would now be read from another file,
+//				and each loaded part that uses one, however deep. The files are
+//				checked on a background queue, against a copy of the paths.
+//
+// Notes:		The handler runs on the main queue with every marked part,
+//				including ones marked before and not read yet. Marked parts stay
+//				loaded until they are read again or dropped.
+//
+//==============================================================================
+- (void)markPartsWhoseFilesChangedWithCompletionHandler:(void (^)(NSSet<NSString *> *partNames))handler
+{
+	NSDictionary	*paths		= [self->loadedPaths copy];
+	NSDictionary	*uses		= [self->usedPartNames copy];
+	LDrawPaths		*settings	= [[LDrawPaths sharedPaths] copy];
+
+	dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+		NSSet *changed = [[self class] partNamesWhoseFilesChanged:paths uses:uses paths:settings];
+
+		// The users are found from the parts loaded now, since a part read
+		// meanwhile may use a changed one.
+		dispatch_async(dispatch_get_main_queue(), ^{
+			[self->staleNames unionSet:[[self class] partNamesUsingPartNames:changed uses:self->usedPartNames]];
+			handler([self->staleNames copy]);
+		});
+	});
+
+} // end markPartsWhoseFilesChangedWithCompletionHandler:
+
+
+//========== freshModelForName: ================================================
+//
+// Purpose:		The part, read again first when it is marked or not loaded.
+//
+//==============================================================================
+- (LDrawModel *)freshModelForName:(NSString *)partName
+{
+	[self loadModelForName:partName inGroup:NULL];
+	return [self->loadedFiles objectForKey:partName];
+
+} // end freshModelForName:
+
+
+//========== dropStaleParts ====================================================
+//
+// Purpose:		Drops the marked parts that were not read again, so they are
+//				read the next time they are asked for.
+//
+//==============================================================================
+- (void)dropStaleParts
+{
+	[self forgetPartNames:[self->staleNames allObjects]];
+	[self->staleNames removeAllObjects];
+
+} // end dropStaleParts
+
+
+//========== forgetPartNames: ==================================================
+//
+// Purpose:		Removes the parts and what is recorded about them.
+//
+//==============================================================================
+- (void)forgetPartNames:(NSArray<NSString *> *)partNames
+{
+	[self->loadedFiles removeObjectsForKeys:partNames];
+	[self->usedPartNames removeObjectsForKeys:partNames];
+	[self->loadedPaths removeObjectsForKeys:partNames];
+
+} // end forgetPartNames:
+
+
+//---------- partNamesWhoseFilesChanged:uses:paths: ------------------[static]--
+//
+// Purpose:		The loaded parts that paths now finds in another file, and the
+//				used parts that were missing and are now found.
+//
+//------------------------------------------------------------------------------
++ (NSSet<NSString *> *)partNamesWhoseFilesChanged:(NSDictionary<NSString *, NSString *> *)loadedPaths
+											 uses:(NSDictionary<NSString *, NSSet<NSString *> *> *)uses
+											paths:(LDrawPaths *)paths
+{
+	NSMutableSet<NSString *>	*changed	= [NSMutableSet set];
+	NSMutableSet<NSString *>	*missing	= [NSMutableSet set];
+
+	[loadedPaths enumerateKeysAndObjectsUsingBlock:^(NSString *partName, NSString *path, BOOL *stop) {
+		if ([path isEqualToString:[paths pathForPartName:partName]] == NO)
+			[changed addObject:partName];
+	}];
+
+	for (NSSet<NSString *> *usedNames in [uses objectEnumerator])
+		[missing unionSet:usedNames];
+	[missing minusSet:[NSSet setWithArray:[loadedPaths allKeys]]];
+
+	for (NSString *partName in missing)
+	{
+		if ([paths pathForPartName:partName] != nil)
+			[changed addObject:partName];
+	}
+
+	return changed;
+
+} // end partNamesWhoseFilesChanged:uses:paths:
+
+
+//---------- partNamesUsingPartNames:uses: ---------------------------[static]--
+//
+// Purpose:		The given names, and each name in uses that uses one of them,
+//				however deep. uses maps a part to the names its file uses.
+//
+//------------------------------------------------------------------------------
++ (NSSet<NSString *> *)partNamesUsingPartNames:(NSSet<NSString *> *)partNames
+										  uses:(NSDictionary<NSString *, NSSet<NSString *> *> *)uses
+{
+	NSMutableDictionary<NSString *, NSMutableArray<NSString *> *>	*users	= [NSMutableDictionary dictionary];
+	NSMutableSet<NSString *>										*found	= [partNames mutableCopy];
+	NSMutableArray<NSString *>										*queue	= [[partNames allObjects] mutableCopy];
+
+	[uses enumerateKeysAndObjectsUsingBlock:^(NSString *user, NSSet<NSString *> *usedNames, BOOL *stop) {
+		for (NSString *used in usedNames)
+		{
+			if (users[used] == nil)
+				users[used] = [NSMutableArray array];
+			[users[used] addObject:user];
+		}
+	}];
+
+	while ([queue count] > 0)
+	{
+		NSString *partName = [queue lastObject];
+
+		[queue removeLastObject];
+		for (NSString *user in users[partName])
+		{
+			if ([found containsObject:user] == NO)
+			{
+				[found addObject:user];
+				[queue addObject:user];
+			}
+		}
+	}
+
+	return found;
+
+} // end partNamesUsingPartNames:uses:
 
 
 #pragma mark -
@@ -1101,52 +1253,64 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 } // end readImageAtPath:
 
 
-//========== readModelAtPath:asynchronously:completionHandler: =================
+//========== readModelNamed: ===================================================
 //
-// Purpose:		Parses the model found at the given path, adds it to the list of 
-//				loaded parts, and returns the model.
+// Purpose:		Reads, flattens and keeps the library part of the given name.
+//				Records its file and the names of the parts it uses, read
+//				before flattening.
 //
-// Notes:		The model is returned from the method if asynchronous is NO.
-//				Otherwise, returns nil and passes the completed model via the 
-//				block instead. 
+// Returns:		The model, or nil when no file has the part. Then a part kept
+//				from an old file is dropped.
 //
 //==============================================================================
-- (LDrawModel *)readModelAtPath:(NSString *)partPath
-				 asynchronously:(BOOL)asynchronous
-			  completionHandler:(void (^)(LDrawModel *))completionBlock
+- (LDrawModel *)readModelNamed:(NSString *)partName
 {
-	NSString            *fileContents   = nil;
-	NSArray             *lines          = nil;
-	LDrawFile           *parsedFile     = nil;
-	LDrawModel          *model          = nil;
+	NSString		*partPath	= [[LDrawPaths sharedPaths] pathForPartName:partName];
+	NSString		*contents	= nil;
+	NSArray			*lines		= nil;
+	LDrawFile		*parsedFile	= nil;
+	LDrawModel		*model		= nil;
+	NSMutableSet	*used		= [NSMutableSet set];
 
-	(void)asynchronous;
-	(void)completionBlock;
+	// Unmarked first, so a file that uses itself is not read again.
+	[self->staleNames removeObject:partName];
 
-	if (partPath != nil)
+	if (partPath == nil)
 	{
-		// We found it in the LDraw folder; now all we need to do is get the 
-		// model for it. 
-		fileContents    = [LDrawUtilities stringFromFile:partPath];
-		lines           = [fileContents separateByLine];
-		
-		parsedFile      = [[LDrawFile alloc] initWithLines:lines
-												   inRange:NSMakeRange(0, [lines count])
-											   parentGroup:NULL];
+		[self forgetPartNames:@[partName]];
+		return nil;
 	}
-	
+
+	contents	= [LDrawUtilities stringFromFile:partPath];
+	lines		= [contents separateByLine];
+	parsedFile	= [[LDrawFile alloc] initWithLines:lines
+										   inRange:NSMakeRange(0, [lines count])
+									   parentGroup:NULL];
+
+	for (LDrawDirective *directive in [parsedFile allEnclosedElements])
+	{
+		if ([directive isKindOfClass:[LDrawPart class]])
+			[used addObject:[(LDrawPart *)directive referenceName]];
+	}
+
 	[parsedFile optimizeStructure];
-	model = [[parsedFile submodels] objectAtIndex:0];
+	model = [[parsedFile submodels] firstObject];
 	// We are "leaking" the enclosing file, but returning an internal model 
 	// without disconnecting it from its file is pretty dodgy and it would 
-	// be easy to code a bug in. We'd be better off returning the file 
-	// itself, or perhaps removing the model from its file (since everything 
-	// is theoretically flattened). 
-//	[parsedFile release];
-	
+	// be easy to code a bug in.
+
+	if (model != nil)
+	{
+		[self->loadedFiles setObject:model forKey:partName];
+		[self->usedPartNames setObject:[used copy] forKey:partName];
+		[self->loadedPaths setObject:partPath forKey:partName];
+	}
+	else
+		[self forgetPartNames:@[partName]];
+
 	return model;
-	
-} // end readModelAtPath:
+
+} // end readModelNamed:
 
 
 @end

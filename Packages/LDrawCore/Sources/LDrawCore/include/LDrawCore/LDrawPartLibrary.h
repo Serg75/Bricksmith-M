@@ -22,6 +22,7 @@
 #import <LDrawCore/LDrawColorLibrary.h>
 
 @class LDrawModel;
+@class LDrawPaths;
 @class LDrawPart;
 @class LDrawTexture;
 @protocol LDrawPartLibraryDelegate;
@@ -143,6 +144,31 @@ extern NSString	*Category_Subparts;
 - (nullable LDrawModel *)modelForName:(NSString *) partName;
 - (nullable LDrawModel *)modelForNameThreadSafe:(NSString *) partName;
 
+// Refreshing. Main thread only.
+/// After a change to the paths, marks each loaded part that would now be read
+/// from another file, and each one that uses such a part. The files are checked
+/// on a background queue. The handler runs on the main queue with every marked
+/// part, including ones marked before. Marked parts stay loaded, so documents
+/// can draw them, until they are read again or dropped.
+- (void)markPartsWhoseFilesChangedWithCompletionHandler:(void (^)(NSSet<NSString *> *partNames))handler;
+/// The part, read again first when it is marked or not loaded. Nil when no
+/// file has it.
+- (nullable LDrawModel *)freshModelForName:(NSString *)partName;
+/// Drops the marked parts that were not read again, so they are read the next
+/// time they are asked for.
+- (void)dropStaleParts;
+/// The parts in loadedPaths that paths finds in another file now, and the parts
+/// named in uses that were missing and are found now. loadedPaths maps a part
+/// to its file, and uses maps a part to the names its file uses.
++ (NSSet<NSString *> *)partNamesWhoseFilesChanged:(NSDictionary<NSString *, NSString *> *)loadedPaths
+											 uses:(NSDictionary<NSString *, NSSet<NSString *> *> *)uses
+											paths:(LDrawPaths *)paths
+	NS_SWIFT_NAME(partNamesWhoseFilesChanged(_:uses:paths:));
+/// The names, and each part in uses that uses one of them, however deep.
++ (NSSet<NSString *> *)partNamesUsingPartNames:(NSSet<NSString *> *)partNames
+										  uses:(NSDictionary<NSString *, NSSet<NSString *> *> *)uses
+	NS_SWIFT_NAME(partNames(using:uses:));
+
 // Utilites
 // Redraws a texture image into a power-of-two pixel buffer in the one format
 // both Metal and OpenGL upload. The caller owns the returned buffer.
@@ -153,9 +179,6 @@ extern NSString	*Category_Subparts;
 - (nullable CGImageRef)readImageAtPath:(nullable NSString *)imagePath
 			   asynchronously:(BOOL)asynchronous
 			completionHandler:(nullable void (^)(CGImageRef _Nullable))completionBlock;
-- (nullable LDrawModel *)readModelAtPath:(nullable NSString *)partPath
-				 asynchronously:(BOOL)asynchronous
-			  completionHandler:(nullable void (^)(LDrawModel * _Nullable))completionBlock;
 
 @end
 

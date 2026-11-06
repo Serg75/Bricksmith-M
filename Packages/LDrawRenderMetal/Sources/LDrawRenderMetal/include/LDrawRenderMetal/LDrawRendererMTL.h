@@ -52,6 +52,10 @@ NS_ASSUME_NONNULL_BEGIN
 									  scale:(CGFloat)scale
 							   outlineWidth:(CGFloat)outlineWidth CF_RETURNS_RETAINED;
 
+/// Draws a directive once off screen, so the meshes it draws with are built
+/// now and views only reuse them. Call it on the main thread.
++ (void) prepareDrawingOfDirective:(LDrawDirective *)directive;
+
 @end
 
 NS_ASSUME_NONNULL_END

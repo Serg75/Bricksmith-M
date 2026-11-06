@@ -62,6 +62,9 @@ NS_ASSUME_NONNULL_BEGIN
 // retained by the model manager until the document signs out.
 - (nullable LDrawModel *) requestModel:(NSString *) partName withDocument:(LDrawFile *) whoIsAsking;
 
+/// The files loaded for signed-in documents, not counting the documents' own.
+- (NSArray<LDrawFile *> *) peerFiles;
+
 
 @end
 

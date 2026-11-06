@@ -880,6 +880,31 @@ static NSString				*defaultAuthor		= @"anonymous";
 } // end unresolveLibraryParts
 
 
+//---------- libraryPartNamesInDirective: ----------------------------[static]--
+//
+// Purpose:		The names of the library parts the directive uses, at any depth.
+//				Parts that name one of its submodels are left out.
+//
+//------------------------------------------------------------------------------
++ (NSSet<NSString *> *)libraryPartNamesInDirective:(LDrawDirective *)directive
+{
+	NSMutableSet<NSString *>	*names		= [NSMutableSet set];
+	NSArray						*elements	= @[directive];
+
+	if ([directive respondsToSelector:@selector(allEnclosedElements)])
+		elements = [elements arrayByAddingObjectsFromArray:[(LDrawContainer *)directive allEnclosedElements]];
+
+	for (LDrawDirective *element in elements)
+	{
+		if ([element isKindOfClass:[LDrawPart class]] && [(LDrawPart *)element referencedMPDSubmodel] == nil)
+			[names addObject:[(LDrawPart *)element referenceName]];
+	}
+
+	return names;
+
+} // end libraryPartNamesInDirective:
+
+
 //---------- hoverCoordinateAxisIsQuestionable: ----------------------[static]--
 //
 // Purpose:		Display the 3D world coordinates of the mouse as it hovers over

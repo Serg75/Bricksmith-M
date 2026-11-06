@@ -1133,6 +1133,33 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 } // end newImageOfDirective:center:zoomPercentage:size:scale:outlineWidth:
 
 
+//---------- prepareDrawingOfDirective: ------------------------------[static]--
+//
+// Purpose:		Draws a directive once off screen, so the meshes it draws with
+//				are built now and views only reuse them.
+//
+//------------------------------------------------------------------------------
++ (void)prepareDrawingOfDirective:(LDrawDirective *)directive
+{
+	Box3		bounds	= [directive boundingBox3];
+	CGImageRef	picture	= NULL;
+
+	if (V3EqualBoxes(bounds, InvalidBox))
+		return;
+
+	// Big enough on screen that the renderer draws it in full, not as a box.
+	picture = [self newImageOfDirective:directive
+								 center:V3CenterOfBox(bounds)
+						 zoomPercentage:100
+								   size:CGSizeMake(128, 128)
+								  scale:1
+						   outlineWidth:0];
+	if (picture != NULL)
+		CGImageRelease(picture);
+
+} // end prepareDrawingOfDirective:
+
+
 //========== drawMarqueeWithEncoder: ===========================================
 //
 // Purpose:		Draws marquee selection box.

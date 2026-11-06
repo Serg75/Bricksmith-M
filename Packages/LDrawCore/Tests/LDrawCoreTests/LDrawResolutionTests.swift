@@ -3,7 +3,8 @@
 //  UnitTests
 //
 //  Tests for drawing the high or low version of a part: which file a name
-//  finds, and how high versions in the overrides folder are checked.
+//  finds, which loaded parts change after a switch, and how high versions in the
+//  overrides folder are checked.
 //
 //  Created by Sergey Slobodenyuk on 2026-11-06.
 //
@@ -139,6 +140,30 @@ struct LDrawResolutionTests {
         high.setOverridesEnabled(true)
 
         #expect(high.path(forPartName: "4-4disc.dat") == folders.path(folders.overrides, "p/48/4-4disc.dat"))
+    }
+
+    @Test("After a switch to Normal, the parts loaded from their high versions have changed")
+    func changedFiles() throws {
+        let folders = try Folders()
+        defer { folders.remove() }
+        let loaded = ["s\\54087s00.dat": folders.path(folders.overrides, "parts/48/s/54087s00.dat"),
+                      "4-4cyli.dat": folders.path(folders.library, "p/48/4-4cyli.dat"),
+                      "4-4disc.dat": folders.path(folders.library, "p/4-4disc.dat")]
+
+        #expect(LDrawPartLibrary.partNamesWhoseFilesChanged(loaded, uses: [:], paths: folders.paths(.normal))
+                == ["s\\54087s00.dat", "4-4cyli.dat"])
+        #expect(LDrawPartLibrary.partNamesWhoseFilesChanged(loaded, uses: [:], paths: folders.paths(.high)).isEmpty)
+    }
+
+    @Test("A used part that was missing and is found now has changed")
+    func foundFiles() throws {
+        let folders = try Folders()
+        defer { folders.remove() }
+        let loaded = ["56145.dat": folders.path(folders.library, "parts/56145.dat")]
+        let uses: [String: Set<String>] = ["56145.dat": ["4-4disc.dat", "gone.dat"]]
+
+        #expect(LDrawPartLibrary.partNamesWhoseFilesChanged(loaded, uses: uses, paths: folders.paths(.normal))
+                == ["4-4disc.dat"])
     }
 
     @Test("A high version the library lacks is checked against the part itself")

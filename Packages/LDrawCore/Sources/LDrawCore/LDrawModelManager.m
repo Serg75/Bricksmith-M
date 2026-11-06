@@ -398,4 +398,22 @@ static LDrawModelManager *SharedModelManager = nil;
 	return nil;
 }
 
+
+//========== peerFiles =========================================================
+//
+//	Purpose:	The files loaded for signed-in documents, not counting the
+//				documents' own.
+//
+//==============================================================================
+- (NSArray<LDrawFile *> *) peerFiles
+{
+	NSMutableArray<LDrawFile *> *files = [NSMutableArray array];
+
+	for(ModelServiceTable *table in [serviceTables objectEnumerator])
+		[files addObjectsFromArray:[table->trackedFiles allValues]];
+
+	return files;
+
+}//end peerFiles
+
 @end

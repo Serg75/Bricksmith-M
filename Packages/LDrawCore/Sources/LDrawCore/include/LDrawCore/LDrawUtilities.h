@@ -108,6 +108,10 @@ enum {
 + (void)updateNamesForMovedParts:(NSArray *)movedParts;
 + (LDrawViewOrientation)viewOrientationForAngle:(Tuple3)rotationAngle;
 + (void)unresolveLibraryParts:(LDrawDirective *)directive;
+/// The names of the library parts the directive uses, at any depth. Parts that
+/// name one of its submodels are left out.
++ (NSSet<NSString *> *)libraryPartNamesInDirective:(LDrawDirective *)directive
+	NS_SWIFT_NAME(libraryPartNames(in:));
 
 /// Hover-coordinate axis: confidence 0 means the axis is unknown /
 /// questionable. The host still maps that to NSColor.
