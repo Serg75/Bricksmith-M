@@ -743,25 +743,69 @@
 // Purpose:		Arranges the directives in such a way that the file will be 
 //				drawn faster. This method should *never* be called on files 
 //				which the user has created himself, since it reorganizes the 
-//				file contents. It is intended only for parts read from the part  
+//				file contents. It is intended only for parts read from the part
 //				library.
+//
+// Notes:		Each model is flattened after the submodels it uses. Flattening
+//				copies a used submodel, and the copy is outside the file, so it
+//				could not find a submodel of its own.
 //
 //==============================================================================
 - (void) optimizeStructure
 {
-	LDrawMPDModel   *currentModel   = nil;
-	NSArray         *modelsInFile   = [self subdirectives];
-	NSInteger       numberModels    = [modelsInFile count];
-	NSInteger       counter         = 0;
-	
-	//Write out each MPD submodel, one after another.
-	for(counter = 0; counter < numberModels; counter++)
+	NSArray<LDrawMPDModel *>		*models		= [self subdirectives];
+	NSMutableArray<NSIndexSet *>	*uses		= [NSMutableArray arrayWithCapacity:[models count]];
+	NSRange							 all		= NSMakeRange(0, [models count]);
+	NSMutableIndexSet				*waiting	= [NSMutableIndexSet indexSetWithIndexesInRange:all];
+	NSUInteger						 next		= 0;
+
+	for(LDrawMPDModel *model in models)
+		[uses addObject:[self indexesOfModelsUsedBy:model]];
+
+	while([waiting count] > 0)
 	{
-		currentModel = [modelsInFile objectAtIndex:counter];
-		[currentModel optimizeStructure];
+		next = [waiting indexPassingTest:^BOOL(NSUInteger index, BOOL *stop) {
+			return [uses[index] indexPassingTest:^BOOL(NSUInteger used, BOOL *stopUsed) {
+				return [waiting containsIndex:used];
+			}] == NSNotFound;
+		}];
+		// Models that use each other go in file order.
+		if(next == NSNotFound)
+			next = [waiting firstIndex];
+
+		[models[next] optimizeStructure];
+		[waiting removeIndex:next];
 	}
 
 }//end optimizeStructure
+
+
+//========== indexesOfModelsUsedBy: ============================================
+//
+// Purpose:		The indexes of the other models of this file that the model uses.
+//
+//==============================================================================
+- (NSIndexSet *) indexesOfModelsUsedBy:(LDrawMPDModel *)model
+{
+	NSArray				*models		= [self subdirectives];
+	NSMutableIndexSet	*indexes	= [NSMutableIndexSet indexSet];
+
+	for(id directive in [model allEnclosedElements])
+	{
+		LDrawModel	*used	= nil;
+		NSUInteger	 index	= NSNotFound;
+
+		if([directive isKindOfClass:[LDrawPart class]] == NO)
+			continue;
+
+		used	= [(LDrawPart *)directive referencedMPDSubmodel];
+		index	= (used != nil && used != model) ? [models indexOfObjectIdenticalTo:used] : NSNotFound;
+		if(index != NSNotFound)
+			[indexes addIndex:index];
+	}
+	return indexes;
+
+}//end indexesOfModelsUsedBy:
 
 
 //========== renameModel:toName: ===============================================

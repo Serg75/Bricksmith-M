@@ -54,8 +54,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// The MPD text of one side, as lines.
 - (NSArray<NSString *> *) linesUsingOverrides:(BOOL)useOverrides;
 
-/// That text, parsed. The first model is flattened like a library part, so it
-/// draws as one smoothed mesh.
+/// That text, parsed and flattened like a library part, so the part draws as
+/// one smoothed mesh.
 - (LDrawFile *) fileUsingOverrides:(BOOL)useOverrides;
 
 @end
