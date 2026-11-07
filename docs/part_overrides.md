@@ -142,7 +142,9 @@ A submodel is found before the library, so each side draws its own files whichev
 switch is set. A part that leads to no override is the same on both sides and comes from the
 library. A part the library lacks is an empty model on its side, so the library cannot fill it
 in from the overrides folder. Models inside a part's own file are renamed `part#model`, so the
-models of two files cannot have the same name.
+models of two files cannot have the same name. The first model is then flattened, as the library
+flattens a part. Otherwise each use of a submodel would be its own mesh, and smoothing could not
+cross from one to the next, so a curved part would show bands that a model does not.
 
 Both views stand back from the box around both sides. One view is fitted, and the other copies
 its angle, zoom and center, so the parts line up. After that, each change of either camera is

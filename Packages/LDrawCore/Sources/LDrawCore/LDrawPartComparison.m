@@ -337,12 +337,19 @@ static NSString *UsedName(NSArray<NSString *> *fields)
 
 
 //========== fileUsingOverrides: ===============================================
+///
+/// @abstract	That side, parsed. The first model is flattened as the library
+/// 			flattens a part, so it draws as one mesh and is smoothed across
+/// 			the parts it uses, as in a model.
+///
 //==============================================================================
 - (LDrawFile *) fileUsingOverrides:(BOOL)useOverrides
 {
-	NSString *text = [[self linesUsingOverrides:useOverrides] componentsJoinedByString:@"\r\n"];
+	NSString	*text	= [[self linesUsingOverrides:useOverrides] componentsJoinedByString:@"\r\n"];
+	LDrawFile	*file	= [LDrawFile parseFromFileContents:text] ?: [LDrawFile file];
 
-	return [LDrawFile parseFromFileContents:text] ?: [LDrawFile file];
+	[[file firstModel] optimizeStructure];
+	return file;
 
 }//end fileUsingOverrides:
 
