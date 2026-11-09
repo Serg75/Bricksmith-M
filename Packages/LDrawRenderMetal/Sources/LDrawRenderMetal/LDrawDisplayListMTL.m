@@ -563,11 +563,59 @@ static void endWideLines(id<MTLRenderCommandEncoder> renderEncoder, struct LDraw
 } // end endWideLines
 
 
+//========== wideLineQuadIndices =================================================
+//
+// Purpose:	Returns indices for the two triangles of each of this many lines'
+//			quads. Line i uses corners 4i to 4i + 3.
+//
+// Notes:	The triangles share two corners, so the GPU runs the line vertex
+//			shader four times a line, not six. The buffer only grows.
+//
+//================================================================================
+static id<MTLBuffer> wideLineQuadIndices(NSUInteger lineCount)
+{
+	static id<MTLBuffer>	buffer		= nil;
+	static NSUInteger		capacity	= 0;
+
+	if (lineCount > capacity)
+	{
+		NSUInteger		newCapacity	= MAX(capacity, 4096);
+
+		while (newCapacity < lineCount)
+			newCapacity *= 2;
+
+		NSUInteger		length		= newCapacity * 6 * sizeof(uint32_t);
+		id<MTLDevice>	device		= MetalGPU.device;
+		id<MTLBuffer>	newBuffer	= [device newBufferWithLength:length options:MTLResourceStorageModeShared];
+		uint32_t *		index		= (uint32_t *)newBuffer.contents;
+		uint32_t		corner		= 0;
+		NSUInteger		i;
+
+		for (i = 0; i < newCapacity; ++i, corner += 4, index += 6)
+		{
+			index[0] = corner;
+			index[1] = corner + 1;
+			index[2] = corner + 2;
+			index[3] = corner + 2;
+			index[4] = corner + 1;
+			index[5] = corner + 3;
+		}
+
+		newBuffer.label	= @"Wide Line Quads";
+		buffer			= newBuffer;
+		capacity		= newCapacity;
+	}
+
+	return buffer;
+
+} // end wideLineQuadIndices
+
+
 //========== drawWideLines =======================================================
 //
 // Purpose:	Draws a mesh's edge and conditional lines as quads.
 //
-// Notes:	The caller sets the line pipeline. Six vertices make one line's
+// Notes:	The caller sets the line pipeline. Four vertices make one line's
 //			quad.
 //
 //================================================================================
@@ -578,24 +626,29 @@ static void drawWideLines(id<MTLRenderCommandEncoder>	renderEncoder,
 						  struct LDrawDLPerTex *		tptr,
 						  NSUInteger					instanceCount)
 {
-	struct LDrawDLWideLines *	wide	= &session->wide_lines;
-	struct LineUniform			line	= { .viewport_size	= wide->viewport_size,
-											.width			= wide->width,
-											.conditional	= 0 };
+	struct LDrawDLWideLines *	wide		= &session->wide_lines;
+	struct LineUniform			line		= { .viewport_size	= wide->viewport_size,
+												.width			= wide->width,
+												.conditional	= 0 };
+	NSUInteger					edgeCount	= tptr->line_count / 2;
+	NSUInteger					condCount	= tptr->cond_quad_count / 4;
+	id<MTLBuffer>				quads		= wideLineQuadIndices(MAX(edgeCount, condCount));
 
-	if (tptr->line_count)
+	if (edgeCount)
 	{
 		[renderEncoder setVertexBytes:&line length:sizeof(line) atIndex:BufferIndexLineUniforms];
 		[renderEncoder setVertexBuffer:indexBuffer
 								offset:tptr->line_off * sizeof(uint32_t)
 							   atIndex:BufferIndexLineIndices];
-		[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-						  vertexStart:0
-						  vertexCount:tptr->line_count / 2 * 6
-						instanceCount:instanceCount];
+		[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+								  indexCount:edgeCount * 6
+								   indexType:MTLIndexTypeUInt32
+								 indexBuffer:quads
+						   indexBufferOffset:0
+							   instanceCount:instanceCount];
 	}
 
-	if (tptr->cond_quad_count)
+	if (condCount)
 	{
 		line.conditional = 1;
 
@@ -603,10 +656,12 @@ static void drawWideLines(id<MTLRenderCommandEncoder>	renderEncoder,
 		[renderEncoder setVertexBuffer:condIndexBuffer
 								offset:tptr->cond_quad_off * sizeof(uint32_t)
 							   atIndex:BufferIndexLineIndices];
-		[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-						  vertexStart:0
-						  vertexCount:tptr->cond_quad_count / 4 * 6
-						instanceCount:instanceCount];
+		[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+								  indexCount:condCount * 6
+								   indexType:MTLIndexTypeUInt32
+								 indexBuffer:quads
+						   indexBufferOffset:0
+							   instanceCount:instanceCount];
 	}
 
 } // end drawWideLines

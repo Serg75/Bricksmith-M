@@ -204,10 +204,9 @@ struct LineVertexOutput {
 	float4	color;
 };
 
-// The six corners of a line's quad: x picks the end, y the side.
-constant float2 wideLineCorners[6] = {
-	float2(0, -1), float2(0, 1), float2(1, -1),
-	float2(1, -1), float2(0, 1), float2(1, 1)
+// The four corners of a line's quad: x picks the end, y the side.
+constant float2 wideLineCorners[4] = {
+	float2(0, -1), float2(0, 1), float2(1, -1), float2(1, 1)
 };
 
 // Where a vertex of the part is, in clip space.
@@ -262,7 +261,7 @@ static float3 outlineColor(float3 color)
 }
 
 // A corner of a line's quad, so the line can be wider than a pixel. A line
-// takes six vertices, and reads its ends through the index buffer. The part's
+// takes four vertices, and reads its ends through the index buffer. The part's
 // edge color becomes its outline color. depthAcrossWidth is how much the depth
 // changes along the line over one line width.
 static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
@@ -280,8 +279,8 @@ static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
 	depthAcrossWidth = 0.0;
 
 	device const InstanceInput&	part	= inst[iid];
-	uint						first	= (vid / 6) * (line.conditional ? 4 : 2);
-	float2						corner	= wideLineCorners[vid % 6];
+	uint						first	= (vid / 4) * (line.conditional ? 4 : 2);
+	float2						corner	= wideLineCorners[vid % 4];
 	PackedVertex				end0	= verts[indices[first]];
 	PackedVertex				end1	= verts[indices[first + 1]];
 	float4						color	= float4(end0.color);
@@ -308,7 +307,7 @@ static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
 									   clipPosition(verts[indices[first + 3]], part, uni));
 	}
 
-	// All six corners on one point draw nothing.
+	// All four corners on one point draw nothing.
 	if (shows == false) {
 		out.position = float4(0.0, 0.0, 0.0, 1.0);
 		return out;

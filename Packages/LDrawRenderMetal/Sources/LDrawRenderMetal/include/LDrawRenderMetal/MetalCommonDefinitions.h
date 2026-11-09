@@ -96,7 +96,8 @@ typedef struct TexturePlaneData {
 	vector_float4	plane_t;
 } TexturePlaneData;
 
-// How a wide line is drawn. Each line is a quad of two triangles.
+// How a wide line is drawn. Each line is a quad of two triangles on four
+// shared corners.
 typedef struct LineUniform {
 	vector_float2	viewport_size;		// in pixels
 	float			width;				// in pixels
