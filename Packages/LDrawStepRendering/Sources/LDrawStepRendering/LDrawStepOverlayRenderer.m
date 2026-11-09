@@ -419,6 +419,7 @@ typedef struct TurnedViewStripLayout {
 - (void) drawPageSurroundInContext:(CGContextRef)context viewSize:(Size2)viewSize
 {
 	CGRect					pageRect	= LDrawStepRectFromBox(self.presentation.pageRect);
+	CGRect					viewRect	= CGRectMake(0.0, 0.0, viewSize.width, viewSize.height);
 	LDrawStepPartListChrome	chrome		= [self chrome];
 
 	if (CGRectIsEmpty(pageRect)) {
@@ -426,11 +427,15 @@ typedef struct TurnedViewStripLayout {
 	}
 
 	// The whole view with the page cut out of it, which is what the even-odd
-	// rule does with two nested rectangles.
+	// rule does with two nested rectangles. Only the view is dimmed: in a
+	// context larger than the view, the rule would fill the page beyond it.
+	CGContextSaveGState(context);
+	CGContextClipToRect(context, viewRect);
 	LDrawStepSetRGBA(context, chrome.pageSurroundRGBA);
-	CGContextAddRect(context, CGRectMake(0.0, 0.0, viewSize.width, viewSize.height));
+	CGContextAddRect(context, viewRect);
 	CGContextAddRect(context, pageRect);
 	CGContextEOFillPath(context);
+	CGContextRestoreGState(context);
 
 }//end drawPageSurroundInContext:viewSize:
 
