@@ -26,6 +26,10 @@ static const CGFloat MEDIUM_FONT_WEIGHT = 0.23;
 /// rounded up.
 static const CGFloat SYSTEM_FONT_TALL_LINE_LIMIT = 21.0;
 
+/// How many pixels a picture's size may differ from its rectangle's and still be
+/// drawn at its own size. A picture is made a whole number of pixels wide.
+static const CGFloat PICTURE_SIZE_SLACK = 1.5;
+
 
 // MARK: - GEOMETRY AND COLOR -
 
@@ -167,9 +171,23 @@ void LDrawStepAddOval(CGContextRef context, CGRect rect)
 /// @discussion	CoreGraphics draws a picture with y running up, so the context
 ///				is turned over for it.
 ///
+///				A picture about the size of its rectangle in pixels is moved
+///				onto whole pixels at its own size. CoreGraphics then copies it,
+///				instead of resampling it many times slower.
+///
 //==============================================================================
 void LDrawStepDrawImage(CGContextRef context, CGImageRef image, CGRect rect)
 {
+	CGRect	pixels	= CGContextConvertRectToDeviceSpace(context, rect);
+	CGFloat	width	= CGImageGetWidth(image);
+	CGFloat	height	= CGImageGetHeight(image);
+
+	if (fabs(CGRectGetWidth(pixels) - width) <= PICTURE_SIZE_SLACK
+		&& fabs(CGRectGetHeight(pixels) - height) <= PICTURE_SIZE_SLACK) {
+		pixels	= CGRectMake(round(CGRectGetMinX(pixels)), round(CGRectGetMinY(pixels)), width, height);
+		rect	= CGContextConvertRectToUserSpace(context, pixels);
+	}
+
 	CGContextSaveGState(context);
 	CGContextTranslateCTM(context, CGRectGetMinX(rect), CGRectGetMaxY(rect));
 	CGContextScaleCTM(context, 1.0, -1.0);
