@@ -67,21 +67,6 @@ private final class RecordingHost: NSObject, LDrawStepCalloutEditHost {
 @Suite("Making a callout's edit through a host", .usesStepSettings)
 struct LDrawStepCalloutApplyTests {
 
-    // Parsing and copying type-1 lines ask the library to preload their files.
-    // These fixtures use nonexistent names; the core library needs no renderer.
-    private static let library: LDrawPartLibrary = {
-        if let registered = LDrawPartLibrary.sharedPartLibraryIfRegistered() {
-            return registered
-        }
-        let library = LDrawPartLibrary()
-        LDrawPartLibrary.registerSharedPartLibrary(library)
-        return library
-    }()
-
-    init() {
-        _ = Self.library
-    }
-
     @Test("Selected parts survive conversion, saving, reopening and expansion")
     func conversionRoundTrip() throws {
         let file = LDrawFile()

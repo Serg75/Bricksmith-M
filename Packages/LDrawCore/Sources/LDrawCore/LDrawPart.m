@@ -1061,9 +1061,10 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	// we don't know what kind of thing we are, checking the cache type will
 	// always return unresolved.  But I don't think I want to force-resolve 
 	// here - resolving later prevents thrash.
+	// With no library registered, as in tests, there is nothing to load into.
 	if(shouldParse == YES && newPartName != nil && [newPartName length] > 0)
 	{
-		[[LDrawPartLibrary sharedPartLibrary] loadModelForName:referenceName inGroup:parentGroup];
+		[[LDrawPartLibrary sharedPartLibraryIfRegistered] loadModelForName:referenceName inGroup:parentGroup];
 
 	}
 	
@@ -1625,8 +1626,9 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 		
 		modelToDraw = [self referencedMPDSubmodel];
 		
+		// With no library registered, as in tests, the part is not found.
 		if(modelToDraw == nil)
-			modelToDraw = [[LDrawPartLibrary sharedPartLibrary] modelForNameThreadSafe:referenceName];
+			modelToDraw = [[LDrawPartLibrary sharedPartLibraryIfRegistered] modelForNameThreadSafe:referenceName];
 
 		flatCopy    = [modelToDraw copy];
 		
