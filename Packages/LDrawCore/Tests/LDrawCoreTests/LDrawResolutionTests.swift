@@ -190,4 +190,26 @@ struct LDrawResolutionTests {
                 == ["s\\54087s00.dat"])
         #expect(LDrawPartComparison(partName: "56145.dat", paths: folders.paths(.normal)).changedPartNames.isEmpty)
     }
+
+    @Test("Finding many parts at once finds the files one at a time finds")
+    func manyAtOnce() throws {
+        let folders = try Folders()
+        defer { folders.remove() }
+        try folders.write("p/4-4disc.dat", in: folders.overrides, ["0 Fixed Disc"])
+        let names: Set<String> = ["4-4cyli.dat", "4-4disc.dat", "56145.dat", "s\\54087s00.dat", "48\\4-4cyli.dat",
+                                  "4-4CYLI.DAT", "S\\54087S00.DAT", "missing.dat", "s\\missing.dat"]
+
+        for resolution in [LDrawResolution.normal, .low, .high] {
+            for overrides in [true, false] {
+                let paths = folders.paths(resolution)
+                paths.setOverridesEnabled(overrides)
+                let oneByOne = Dictionary(uniqueKeysWithValues: names.compactMap { name in
+                    paths.path(forPartName: name).map { (name, $0) }
+                })
+
+                #expect(oneByOne.count == 7)
+                #expect(paths.paths(forPartNames: names) == oneByOne, "resolution \(resolution.rawValue), overrides \(overrides)")
+            }
+        }
+    }
 }

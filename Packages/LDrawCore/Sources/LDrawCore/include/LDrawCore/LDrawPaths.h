@@ -104,6 +104,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// turned off. The overrides folder comes before the library, and in each, the
 /// resolution's version of the part comes before the part itself.
 - (nullable NSString *)pathForPartName:(NSString *)partName usingOverrides:(BOOL)useOverrides;
+/// The file of each part, found as pathForPartName: finds it, keyed by the
+/// names given. Parts with no file are left out. Each folder is listed once, so
+/// this is much faster than a call per part when there are thousands.
+- (NSDictionary<NSString *, NSString *> *)pathsForPartNames:(NSSet<NSString *> *)partNames;
 /// The library's own file of the part as named: no overrides folder, and no
 /// high or low version.
 - (nullable NSString *)libraryPathForPartName:(NSString *)partName;

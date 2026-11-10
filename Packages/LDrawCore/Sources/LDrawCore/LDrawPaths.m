@@ -625,12 +625,56 @@ static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
 // Purpose:		Finds the part with or without the overrides folder, whether
 //				or not it is turned off.
 //
+//==============================================================================
+- (NSString *)pathForPartName:(NSString *)partName usingOverrides:(BOOL)useOverrides
+{
+	return [self pathForPartName:partName usingOverrides:useOverrides listings:nil];
+
+} // end pathForPartName:usingOverrides:
+
+
+//========== pathsForPartNames: ================================================
+//
+// Purpose:		The file of each part, found as pathForPartName: finds it. Each
+//				folder is listed once, in place of a check per part and folder.
+//
+//==============================================================================
+- (NSDictionary<NSString *, NSString *> *)pathsForPartNames:(NSSet<NSString *> *)partNames
+{
+	NSMutableDictionary	*listings		= [NSMutableDictionary dictionary];
+	NSMutableDictionary	*paths			= [NSMutableDictionary dictionaryWithCapacity:[partNames count]];
+	BOOL				 useOverrides	= [self overridesEnabled];
+
+	for (NSString *partName in partNames)
+	{
+		@autoreleasepool
+		{
+			NSString *path = [self pathForPartName:partName usingOverrides:useOverrides listings:listings];
+
+			if (path != nil)
+				paths[partName] = path;
+		}
+	}
+
+	return paths;
+
+} // end pathsForPartNames:
+
+
+//========== pathForPartName:usingOverrides:listings: ==========================
+//
+// Purpose:		Finds the part. With listings, each folder is checked in its
+//				listing, which is read the first time and kept in listings.
+//				Without, each file is checked on disk.
+//
 // Notes:		The overrides folder comes before the library, so a fix is used
 //				at every resolution. In each, a high or low version comes before
 //				the part itself.
 //
 //==============================================================================
-- (NSString *)pathForPartName:(NSString *)partName usingOverrides:(BOOL)useOverrides
+- (NSString *)pathForPartName:(NSString *)partName
+			   usingOverrides:(BOOL)useOverrides
+					 listings:(NSMutableDictionary<NSString *, NSSet<NSString *> *> *)listings
 {
 	NSString	*prefix		= [self resolutionPrefixForPartName:partName];
 	NSArray		*library	= [self searchFoldersForOverrides:NO];
@@ -640,16 +684,16 @@ static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
 	for (NSArray<NSString *> *folders in groups)
 	{
 		if (prefix != nil)
-			path = [self pathForVersion:prefix ofPartName:partName inFolders:folders];
+			path = [self pathForVersion:prefix ofPartName:partName inFolders:folders listings:listings];
 		if (path == nil)
-			path = [self pathForPartName:partName inFolders:folders];
+			path = [self pathForPartName:partName inFolders:folders listings:listings];
 		if (path != nil)
 			break;
 	}
 
 	return path;
 
-} // end pathForPartName:usingOverrides:
+} // end pathForPartName:usingOverrides:listings:
 
 
 //========== resolutionPrefixForPartName: ======================================
@@ -747,6 +791,7 @@ static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
 - (NSString *)pathForVersion:(NSString *)prefix
 				  ofPartName:(NSString *)partName
 				   inFolders:(NSArray<NSString *> *)folders
+					listings:(NSMutableDictionary<NSString *, NSSet<NSString *> *> *)listings
 {
 	NSString		*subfolder	= [prefix substringToIndex:[prefix length] - 1];
 	NSString		*name		= [[partName stringByReplacingOccurrencesOfString:@"\\" withString:@"/"]
@@ -761,9 +806,9 @@ static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
 			[holders addObject:versionFolder];
 	}
 
-	return ([holders count] > 0) ? [self pathForPartName:partName inFolders:holders] : nil;
+	return ([holders count] > 0) ? [self pathForPartName:partName inFolders:holders listings:listings] : nil;
 
-} // end pathForVersion:ofPartName:inFolders:
+} // end pathForVersion:ofPartName:inFolders:listings:
 
 
 //========== namesInVersionFolder: =============================================
@@ -858,7 +903,22 @@ static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
 //==============================================================================
 - (NSString *)pathForPartName:(NSString *)partName inFolders:(NSArray<NSString *> *)folders
 {
-	NSFileManager	*fileManager	= [[NSFileManager alloc] init];
+	return [self pathForPartName:partName inFolders:folders listings:nil];
+
+} // end pathForPartName:inFolders:
+
+
+//========== pathForPartName:inFolders:listings: ===============================
+//
+// Purpose:		The last of the folders that has the part, or nil. Checked in
+//				the listings when they are given, or else on disk.
+//
+//==============================================================================
+- (NSString *)pathForPartName:(NSString *)partName
+					inFolders:(NSArray<NSString *> *)folders
+					 listings:(NSMutableDictionary<NSString *, NSSet<NSString *> *> *)listings
+{
+	NSFileManager	*fileManager	= (listings == nil) ? [[NSFileManager alloc] init] : nil;
 	NSMutableString *fixedPartName	= [NSMutableString stringWithString:partName];
 	NSString		*partPath		= nil;
 
@@ -877,20 +937,65 @@ static NSString * const LowPrefix	= PRIMITIVES_8_DIRECTORY_NAME @"\\";
 	}
 	else
 	{
-		// We have a file path name; try each directory.
-		
+		// We have a file path name; try each directory. The name is split once,
+		// so a listing check builds no path for a part at the top of a folder.
+		NSString	*subfolder	= [fixedPartName stringByDeletingLastPathComponent];
+		NSString	*fileName	= [[fixedPartName lastPathComponent] lowercaseString];
+
 		for (NSString *basePath in folders)
 		{
-			NSString *testPath = [basePath stringByAppendingPathComponent:fixedPartName];
-			
-			if ([fileManager fileExistsAtPath:testPath])
-				partPath = testPath;
+			NSString	*folder		= nil;
+			NSString	*testPath	= nil;
+			BOOL		 exists		= NO;
+
+			if (listings != nil)
+			{
+				folder	= ([subfolder length] > 0) ? [basePath stringByAppendingPathComponent:subfolder] : basePath;
+				exists	= [self listings:listings ofFolder:folder haveName:fileName];
+			}
+			else
+			{
+				testPath	= [basePath stringByAppendingPathComponent:fixedPartName];
+				exists		= [fileManager fileExistsAtPath:testPath];
+			}
+
+			if (exists)
+				partPath = testPath ?: [basePath stringByAppendingPathComponent:fixedPartName];
 		}
 	}
-	
+
 	return partPath;
-	
-} // end pathForPartName:inFolders:
+
+} // end pathForPartName:inFolders:listings:
+
+
+//========== listings:ofFolder:haveName: =======================================
+//
+// Purpose:		Whether the folder lists the lowercase file name. The folder is
+//				read the first time it is asked about. Names are compared
+//				without case, as a Mac volume compares them.
+//
+//==============================================================================
+- (BOOL)listings:(NSMutableDictionary<NSString *, NSSet<NSString *> *> *)listings
+		ofFolder:(NSString *)folder
+		haveName:(NSString *)fileName
+{
+	NSSet<NSString *>	*names	= listings[folder];
+
+	if (names == nil)
+	{
+		NSArray			*contents	= [[[NSFileManager alloc] init] contentsOfDirectoryAtPath:folder error:NULL];
+		NSMutableSet	*found		= [NSMutableSet setWithCapacity:[contents count]];
+
+		for (NSString *name in contents)
+			[found addObject:[name lowercaseString]];
+		names				= found;
+		listings[folder]	= names;
+	}
+
+	return [names containsObject:fileName];
+
+} // end listings:ofFolder:haveName:
 
 
 //========== pathForTextureName: ===============================================

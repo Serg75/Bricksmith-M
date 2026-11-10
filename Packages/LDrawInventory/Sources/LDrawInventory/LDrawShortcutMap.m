@@ -12,6 +12,9 @@
 
 #import <LDrawInventory/LDrawShortcutMap.h>
 
+#import <fcntl.h>
+#import <unistd.h>
+
 #import <LDrawInventory/LDrawPartIdentity.h>
 
 #import <LDrawCore/LDrawPaths.h>
@@ -48,6 +51,35 @@ static NSArray<NSString *> *Fields(NSString *line)
 }//end Fields
 
 
+//========== FileStart =========================================================
+///
+/// @abstract	Up to length bytes from the start of the file, or nil when it
+/// 			cannot be read. Plain calls, since NSFileHandle costs more than
+/// 			the read for thousands of small files.
+///
+//==============================================================================
+static NSData *FileStart(NSString *path, NSUInteger length)
+{
+	NSMutableData	*data	= [NSMutableData dataWithLength:length];
+	int				 file	= open([path fileSystemRepresentation], O_RDONLY);
+	NSUInteger		 count	= 0;
+	ssize_t			 got	= 0;
+
+	if (file < 0)
+		return nil;
+
+	while (count < length && (got = read(file, (char *)[data mutableBytes] + count, length - count)) > 0)
+		count += (NSUInteger)got;
+	close(file);
+
+	if (got < 0)
+		return nil;
+	[data setLength:count];
+	return data;
+
+}//end FileStart
+
+
 //========== MayHavePieces =====================================================
 ///
 /// @abstract	Whether the text can be a shortcut or a moved part. Most parts
@@ -56,8 +88,11 @@ static NSArray<NSString *> *Fields(NSString *line)
 //==============================================================================
 static BOOL MayHavePieces(NSString *text)
 {
-	return		[text rangeOfString:@"~Moved"].location != NSNotFound
-			||	[text rangeOfString:@"Shortcut" options:NSCaseInsensitiveSearch].location != NSNotFound;
+	const char *bytes = [text UTF8String];
+
+	// Searched as bytes, which is many times faster than an NSString search.
+	return		bytes != NULL
+			&&	(strstr(bytes, "~Moved") != NULL || strcasestr(bytes, "shortcut") != NULL);
 }
 
 
@@ -131,21 +166,26 @@ static BOOL MayHavePieces(NSString *text)
 //---------- libraryMapWithPartNames: --------------------------------[static]--
 ///
 /// @abstract	Reads the start of each part. A shortcut or a moved part is read
-/// 			whole; any other part only needs its header.
+/// 			whole; any other part only needs its header. The files of all
+/// 			the parts are found at the first read.
 ///
 //------------------------------------------------------------------------------
 + (instancetype) libraryMapWithPartNames:(NSSet<NSString *> *)partNames
 {
-	NSSet *names = [partNames copy];
+	NSSet					*names	= [partNames copy];
+	__block NSDictionary	*paths	= nil;
 
 	return [[self alloc] initWithFileReader:^NSString *(NSString *partName) {
-		NSString		*path	= [names containsObject:partName] ? [[LDrawPaths sharedPaths] pathForPartName:partName]
-																  : nil;
-		NSFileHandle	*file	= (path != nil) ? [NSFileHandle fileHandleForReadingAtPath:path] : nil;
-		NSData			*start	= [file readDataUpToLength:LibraryReadLength error:NULL];
-		NSString		*text	= (start != nil) ? [LDrawUtilities stringFromFileData:start] : nil;
+		NSString	*path	= nil;
+		NSData		*start	= nil;
+		NSString	*text	= nil;
 
-		[file closeAndReturnError:NULL];
+		if (paths == nil)
+			paths = [[LDrawPaths sharedPaths] pathsForPartNames:names];
+
+		path	= paths[partName];
+		start	= (path != nil) ? FileStart(path, LibraryReadLength) : nil;
+		text	= (start != nil) ? [LDrawUtilities stringFromFileData:start] : nil;
 
 		if ([start length] == LibraryReadLength && MayHavePieces(text))
 			text = [LDrawUtilities stringFromFile:path];
