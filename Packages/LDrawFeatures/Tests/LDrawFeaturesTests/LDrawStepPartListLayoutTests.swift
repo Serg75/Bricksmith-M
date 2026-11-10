@@ -958,12 +958,34 @@ struct LDrawStepPartListLayoutTests {
             #expect(label.size.width < placement.cellFrame.size.width, "\(name)")
             #expect(abs(maxY(label) - (maxY(placement.iconFrame) + settings.cellPadding)) < 0.001, "\(name)")
 
-            if spaceRight > spaceLeft {
+            if spaceRight > spaceLeft + 0.01 {
                 #expect(abs(label.origin.x - (span.hi + gap)) < 0.01, "\(name): right of the part")
             }
             else {
                 #expect(abs(maxX(label) - (span.lo - gap)) < 0.01, "\(name): left of the part")
             }
+        }
+    }
+
+    /// A square plate at the parts list's 45 degrees has the same room on both
+    /// sides, give or take rounding. Its count never goes to the right, so it
+    /// does not change sides on a zoom. At a small scale it sits in the strip,
+    /// centered.
+    @Test("A part alike on both sides never has its count on the right")
+    func symmetricPartsKeepTheirCountOnTheLeft() throws {
+        let view = LDrawStepPartListLayout.viewTransform(latitude: 23, longitude: -45)
+
+        for step in 0...40 {
+            var settings = metrics()
+            settings.baseScale *= 0.5 + Double(step) * 0.025
+            let result = LDrawStepPartListLayout.layout(forEntries: [entry("3031.dat", width: 80, height: 8,
+                                                                           depth: 80)],
+                                                        constraint: constraint(.area),
+                                                        viewTransform: view,
+                                                        metrics: settings)
+            let plate = try #require(result.placements.first)
+
+            #expect(middleX(plate.labelFrame) < middleX(plate.iconFrame) + 0.001, "scale \(settings.baseScale)")
         }
     }
 

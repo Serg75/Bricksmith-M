@@ -64,6 +64,11 @@ static const double LABEL_CLEARANCE_GAPS = 2.0;
 /// The step, in points, between the places a moving label tries.
 static const double LABEL_SEARCH_STEP = 1.0;
 
+/// Rooms beside a part within this many points of each other are the same. A
+/// part that looks alike from both sides measures a hair more room on one side
+/// or the other at each scale, and its label would change sides on a zoom.
+static const double ROOM_TIE_SLACK = 0.01;
+
 /// A label put exactly `decorationGap` from its part can come out a hair nearer
 /// after rounding. Testing with this much less of a gap counts it as clear.
 static const double TOUCH_SLACK = 1e-6;
@@ -2082,7 +2087,8 @@ typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartL
 	if (isBlocked) {
 		double roomOnLeft	= left - gap - room.origin.x;
 		double roomOnRight	= V2BoxMaxX(room) - (right + gap);
-		BOOL   goesRight	= (roomOnRight > roomOnLeft) || (roomOnRight == roomOnLeft && prefersRight);
+		BOOL   isTie		= fabs(roomOnRight - roomOnLeft) <= ROOM_TIE_SLACK;
+		BOOL   goesRight	= isTie ? prefersRight : roomOnRight > roomOnLeft;
 
 		if (goesRight && roomOnRight >= size.width) {
 			x = right + gap;
