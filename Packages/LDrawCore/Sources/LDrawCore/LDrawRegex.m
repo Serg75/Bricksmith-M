@@ -13,6 +13,41 @@
 
 #import <LDrawCore/LDrawRegex.h>
 
+
+//---------- LDrawCompiledRegex ------------------------------------------------
+//
+// Purpose:		The compiled pattern, or nil for an empty or bad pattern.
+//				Patterns are compiled once and kept, since the parser asks for
+//				the same few on every line. Safe from any thread.
+//
+//------------------------------------------------------------------------------
+static NSRegularExpression *LDrawCompiledRegex(NSString *pattern)
+{
+	static NSCache		*cache	= nil;
+	static dispatch_once_t once;
+	id					 regex	= nil;
+
+	if (pattern.length == 0)
+		return nil;
+
+	dispatch_once(&once, ^{
+		cache = [[NSCache alloc] init];
+		[cache setCountLimit:256];
+	});
+
+	regex = [cache objectForKey:pattern];
+	if (regex == nil)
+	{
+		regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:NULL];
+		// A bad pattern is kept as NSNull so it is not compiled again.
+		// The key is copied because the cache does not copy it.
+		[cache setObject:(regex ?: [NSNull null]) forKey:[pattern copy]];
+	}
+
+	return (regex == [NSNull null]) ? nil : regex;
+}
+
+
 @implementation NSString (LDrawRegex)
 
 //========== isMatchedByRegex: ================================================
@@ -23,18 +58,12 @@
 //==============================================================================
 - (BOOL)isMatchedByRegex:(NSString *)pattern
 {
-	if (pattern.length == 0) {
-		return NO;
-	}
-	NSError *error = nil;
-	NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
-																		   options:0
-																			 error:&error];
+	NSRegularExpression *regex = LDrawCompiledRegex(pattern);
 	if (regex == nil) {
 		return NO;
 	}
 	NSRange range = NSMakeRange(0, self.length);
-	return [regex firstMatchInString:self options:0 range:range] != nil;
+	return [regex rangeOfFirstMatchInString:self options:0 range:range].location != NSNotFound;
 }
 
 //========== captureComponentsMatchedByRegex: =================================
@@ -47,13 +76,7 @@
 //==============================================================================
 - (NSArray<NSString *> *)captureComponentsMatchedByRegex:(NSString *)pattern
 {
-	if (pattern.length == 0) {
-		return @[];
-	}
-	NSError *error = nil;
-	NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
-																		   options:0
-																			 error:&error];
+	NSRegularExpression *regex = LDrawCompiledRegex(pattern);
 	if (regex == nil) {
 		return @[];
 	}
@@ -83,13 +106,7 @@
 //==============================================================================
 - (NSArray<NSArray<NSString *> *> *)arrayOfCaptureComponentsMatchedByRegex:(NSString *)pattern
 {
-	if (pattern.length == 0) {
-		return @[];
-	}
-	NSError *error = nil;
-	NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern
-																		   options:0
-																			 error:&error];
+	NSRegularExpression *regex = LDrawCompiledRegex(pattern);
 	if (regex == nil) {
 		return @[];
 	}
