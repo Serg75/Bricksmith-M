@@ -118,17 +118,36 @@ extension StepOverlayTests {
         func discarded() throws {
             let fixture = CalloutFixture()
             let box = try fixture.box()
+            let picture = try #require(box.pictures.first)
             let source = CountingSource()
             let store = store(source)
 
             store.makePictures(for: [box], waitingForZoom: false)
             let drawn = source.count
+            let shown = try #require(store.image(for: picture))
 
             store.discardPictures()
-            #expect(store.image(for: try #require(box.pictures.first)) == nil)
-
             store.makePictures(for: [box], waitingForZoom: true)
+
             #expect(source.count == drawn * 2)
+            #expect(store.image(for: picture) !== shown)
+        }
+
+        /// The host redraws only after it has made the new pictures.
+        @Test("A discarded picture stays on show until a new one is made")
+        func discardedPictureStaysOnShow() throws {
+            let fixture = CalloutFixture()
+            let box = try fixture.box()
+            let picture = try #require(box.pictures.first)
+            let source = CountingSource()
+            let store = store(source)
+
+            store.makePictures(for: [box], waitingForZoom: false)
+            let shown = try #require(store.image(for: picture))
+
+            store.discardPictures()
+
+            #expect(store.image(for: picture) === shown)
         }
 
         @Test("With nothing to draw pictures, there are none")

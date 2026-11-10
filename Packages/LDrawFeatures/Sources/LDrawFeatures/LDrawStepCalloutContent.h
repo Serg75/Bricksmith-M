@@ -29,10 +29,13 @@ extern void LDrawStepCalloutAppendRotation(NSMutableString *key, Matrix4 matrix)
 
 /// A picture of what `assembly` has built up to and including one of its
 /// steps, seen from `viewTransform`. Its parts in the main color take `color`.
-/// `subjectKey` names what it shows whatever its size.
+/// `subjectKey` names what it shows whatever its size. With
+/// `ghostsEarlierSteps`, the earlier steps draw as ghosts when step display
+/// ghosts the steps already built.
 - (instancetype) initWithRect:(Box2)rect
 					 assembly:(LDrawModel *)assembly
 				  throughStep:(NSUInteger)lastStepIndex
+		   ghostsEarlierSteps:(BOOL)ghostsEarlierSteps
 				viewTransform:(Matrix4)viewTransform
 						color:(nullable LDrawColor *)color
 			   zoomPercentage:(double)zoomPercentage

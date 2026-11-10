@@ -2553,6 +2553,15 @@ typedef NS_ENUM(NSInteger, StepPartListSelection) {
 					 object:nil];
 	}
 
+	for (NSString *name in @[LDrawStepGhostingDidChangeNotification,
+							 LDrawGhostAlphaDidChangeNotification]) {
+
+		[center addObserver:self
+				   selector:@selector(ghostingDidChange:)
+					   name:name
+					 object:nil];
+	}
+
 }//end subscribeToChanges
 
 
@@ -2589,6 +2598,21 @@ typedef NS_ENUM(NSInteger, StepPartListSelection) {
 	[self setNeedsReload];
 
 }//end setNeedsReloadForNotification:
+
+
+//========== ghostingDidChange: ================================================
+///
+/// @abstract	The user changed whether or how the steps already built draw as
+///				ghosts. A callout's step pictures show them, so they are drawn
+///				again.
+///
+//==============================================================================
+- (void) ghostingDidChange:(NSNotification *)notification
+{
+	[self.overlayView discardCalloutPictures];
+	[self setNeedsReload];
+
+}//end ghostingDidChange:
 
 
 //========== cameraDidChange: ==================================================

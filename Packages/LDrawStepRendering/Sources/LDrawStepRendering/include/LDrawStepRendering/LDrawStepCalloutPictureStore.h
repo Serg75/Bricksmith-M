@@ -100,7 +100,8 @@ NS_ASSUME_NONNULL_BEGIN
 	CF_RETURNS_NOT_RETAINED NS_SWIFT_NAME(image(for:));
 
 /// Forgets every picture, so each is drawn again when next made. Call it when
-/// what the pictures show may have changed.
+/// what the pictures show may have changed. Until then the pictures on show
+/// are still given out, so a draw in between does not leave the boxes blank.
 - (void) discardPictures;
 
 @end

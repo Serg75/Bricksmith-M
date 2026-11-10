@@ -32,6 +32,9 @@ static const double DEFAULT_SCALE = 2.0;
 	NSMutableDictionary<NSString *, id>	*pictures;
 	/// The picture on show of each thing the boxes show, whatever its size.
 	NSMutableDictionary<NSString *, id>	*shownPictures;
+	/// The pictures on show were discarded. They are drawn until new ones are
+	/// made, so the boxes do not go blank, but no picture waits on them.
+	BOOL								 shownAreStale;
 	/// The boxes pictures were last made for.
 	NSArray<LDrawStepCalloutBox *>		*boxes;
 	/// Pictures left on show at another size were not drawn again when the
@@ -76,7 +79,7 @@ static const double DEFAULT_SCALE = 2.0;
 		for (LDrawStepCalloutPicture *picture in box.pictures) {
 			NSString	*key	= [self keyForPicture:picture];
 			id			 image	= self->pictures[key];
-			id			 kept	= self->shownPictures[picture.subjectKey];
+			id			 kept	= self->shownAreStale ? nil : self->shownPictures[picture.subjectKey];
 
 			[inUse addObject:key];
 
@@ -99,6 +102,7 @@ static const double DEFAULT_SCALE = 2.0;
 	}
 
 	self->shownPictures = shown;
+	self->shownAreStale = NO;
 
 	if (isWaiting) {
 		[self performSelector:@selector(updateAfterZoom) withObject:nil afterDelay:PICTURE_SETTLE_DELAY];
@@ -129,7 +133,11 @@ static const double DEFAULT_SCALE = 2.0;
 ///
 /// @abstract	Forgets every picture.
 ///
-/// @discussion	A redraw still waiting for the zoom is called off. It would draw
+/// @discussion	The pictures on show stay on show until new ones are made. The
+///				host draws again only after it has made them, and a draw in
+///				between would leave the boxes blank for a moment.
+///
+///				A redraw still waiting for the zoom is called off. It would draw
 ///				for the boxes last shown, which are from before the change
 ///				that asks for this.
 ///
@@ -139,7 +147,7 @@ static const double DEFAULT_SCALE = 2.0;
 	[self cancelUpdate];
 
 	[self->pictures removeAllObjects];
-	[self->shownPictures removeAllObjects];
+	self->shownAreStale = YES;
 
 }//end discardPictures
 

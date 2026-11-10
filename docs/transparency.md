@@ -43,6 +43,8 @@ What is drawn behind the layers, opaque parts or the background, shows through w
 
 So one layer looks exactly as before over anything, and so does a part of one color. The shader still returns a premultiplied color with how much of what is drawn gets through, so the fixed blend and pictures with a clear background are unchanged.
 
+Ghosts, and transparent parts blended one at a time, go through the plain pipeline instead. Its color takes the source by its alpha, and its alpha takes the source's alpha as it is (`MTLBlendFactorOne`). A picture drawn on a clear background is then a correct premultiplied image, and a ghost in it is as faint as in a view. With `SourceAlpha` for the alpha as well, a ghost of alpha 0.3 came out at 0.09 over the clear background, with its color still scaled by 0.3. Laid over a callout's box it was almost the box's color. On screen the background is opaque, so the view never showed it.
+
 ## What the GPU does, and why the code looks the way it does
 
 These were measured on an M3 and drive the design:

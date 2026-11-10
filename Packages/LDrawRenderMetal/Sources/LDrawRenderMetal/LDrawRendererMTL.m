@@ -247,12 +247,16 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 	// source contributes nothing, so it can write depth through the same
 	// pipeline state. That is also why alpha-to-coverage stays off here and the
 	// fragment shader never discards on alpha -- see MAIN LOOP 4.
+	//
+	// Alpha takes the source's own alpha, not its square. A picture drawn on a
+	// clear background is then read as premultiplied, and a ghost in it is as
+	// faint as in a view.
 	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = pipelineDescriptor.colorAttachments[0];
 	colorAttachment.blendingEnabled = YES;
 	colorAttachment.rgbBlendOperation = MTLBlendOperationAdd;
 	colorAttachment.alphaBlendOperation = MTLBlendOperationAdd;
 	colorAttachment.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-	colorAttachment.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+	colorAttachment.sourceAlphaBlendFactor = MTLBlendFactorOne;
 	colorAttachment.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 	colorAttachment.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 

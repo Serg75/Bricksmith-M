@@ -58,11 +58,16 @@ NS_ASSUME_NONNULL_BEGIN
 /// A model of what `model` has built up to and including one of its steps,
 /// turned by `viewTransform` for a camera that is not rotated. Its parts in the
 /// main color take `color`. `model` itself is not changed.
+///
+/// With `ghostsEarlierSteps`, what the earlier steps built goes in a step of
+/// its own before the last one, and the model is in step display. So it draws
+/// them as ghosts when step display ghosts the steps already built.
 + (LDrawModel *) modelForModel:(LDrawModel *)model
 				   throughStep:(NSUInteger)lastStepIndex
 				 viewTransform:(Matrix4)viewTransform
 						 color:(nullable LDrawColor *)color
-	NS_SWIFT_NAME(model(for:throughStep:viewTransform:color:));
+			ghostsEarlierSteps:(BOOL)ghostsEarlierSteps
+	NS_SWIFT_NAME(model(for:throughStep:viewTransform:color:ghostsEarlierSteps:));
 
 /// Whether this placement gets a part in the model: everything but a broken
 /// reference. The chrome draws a placeholder in the other cells.

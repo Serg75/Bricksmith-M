@@ -447,15 +447,17 @@ static BOOL BoxHasArea(Box2 box)
 	/// What the model is made from: an assembly up to a step, or a layout.
 	LDrawModel	*_assembly;
 	NSUInteger	 _lastStepIndex;
+	BOOL		 _ghostsEarlierSteps;
 	LDrawColor	*_color;
 	LDrawFile	*_file;
 	Matrix4		 _viewTransform;
 }
 
-//========== initWithRect:assembly:throughStep:viewTransform:color:... =========
+//========== initWithRect:assembly:throughStep:ghostsEarlierSteps:... ==========
 - (instancetype) initWithRect:(Box2)rect
 					 assembly:(LDrawModel *)assembly
 				  throughStep:(NSUInteger)lastStepIndex
+		   ghostsEarlierSteps:(BOOL)ghostsEarlierSteps
 				viewTransform:(Matrix4)viewTransform
 						color:(nullable LDrawColor *)color
 			   zoomPercentage:(double)zoomPercentage
@@ -464,19 +466,20 @@ static BOOL BoxHasArea(Box2 box)
 {
 	self = [super init];
 	if (self) {
-		self->_rect				= rect;
-		self->_assembly			= assembly;
-		self->_lastStepIndex	= lastStepIndex;
-		self->_viewTransform	= viewTransform;
-		self->_color			= color;
-		self->_zoomPercentage	= zoomPercentage;
-		self->_center			= center;
-		self->_subjectKey		= [subjectKey copy];
-		self->_contentKey		= [NSString stringWithFormat:@"%@|%.2f", subjectKey, zoomPercentage];
+		self->_rect					= rect;
+		self->_assembly				= assembly;
+		self->_lastStepIndex		= lastStepIndex;
+		self->_ghostsEarlierSteps	= ghostsEarlierSteps;
+		self->_viewTransform		= viewTransform;
+		self->_color				= color;
+		self->_zoomPercentage		= zoomPercentage;
+		self->_center				= center;
+		self->_subjectKey			= [subjectKey copy];
+		self->_contentKey			= [NSString stringWithFormat:@"%@|%.2f", subjectKey, zoomPercentage];
 	}
 	return self;
 
-}//end initWithRect:assembly:throughStep:viewTransform:color:...
+}//end initWithRect:assembly:throughStep:ghostsEarlierSteps:...
 
 
 //---------- pictureOfModel:throughStep:viewTransform:rect:... -------[static]--
@@ -491,6 +494,7 @@ static BOOL BoxHasArea(Box2 box)
 	return [[self alloc] initWithRect:rect
 							 assembly:model
 						  throughStep:stepIndex
+				   ghostsEarlierSteps:NO
 						viewTransform:viewTransform
 								color:nil
 					   zoomPercentage:zoomPercentage
@@ -561,7 +565,8 @@ static BOOL BoxHasArea(Box2 box)
 		self->_model = [LDrawStepPartListModelBuilder modelForModel:self->_assembly
 														throughStep:self->_lastStepIndex
 													  viewTransform:self->_viewTransform
-															  color:self->_color];
+															  color:self->_color
+												 ghostsEarlierSteps:self->_ghostsEarlierSteps];
 	}
 
 	return self->_model;

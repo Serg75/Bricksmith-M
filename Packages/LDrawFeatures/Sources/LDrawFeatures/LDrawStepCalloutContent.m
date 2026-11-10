@@ -864,9 +864,12 @@ typedef NSMutableArray<NSMutableArray<LDrawStepCalloutCell *> *> LDrawStepCallou
 {
 	double					 scale		= options.assemblyScale;
 	Box2					 frame		= LDrawStepCalloutMovedBox(cell.pictureFrame, cell.origin);
+	// A step's picture can ghost the steps before it. A finished submodel's cannot.
+	BOOL					 isStep		= (cell.step != nil);
 	LDrawStepCalloutPicture	*picture	= [[LDrawStepCalloutPicture alloc] initWithRect:frame
 																			   assembly:cell.submodel
 																			throughStep:cell.lastStepIndex
+																	 ghostsEarlierSteps:isStep
 																		  viewTransform:cell.view
 																				  color:cell.entry.color
 																		 zoomPercentage:scale * 100.0

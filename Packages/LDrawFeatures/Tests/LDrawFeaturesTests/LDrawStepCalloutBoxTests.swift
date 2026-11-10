@@ -303,15 +303,49 @@ extension StepPartListStaticSettings {
             #expect(box.summarizedStepCount == 0)
         }
 
+        /// The names of the parts a picture draws, step by step.
+        private func partNames(of picture: LDrawStepCalloutPicture) -> [[String]] {
+            picture.model.steps().compactMap { $0 as? LDrawStep }
+                .map { $0.subdirectives().compactMap { ($0 as? LDrawPart)?.referenceName() } }
+        }
+
         @Test("A step's picture holds everything built up to that step")
         func stripPicturesAddUp() throws {
             let box = try onPage(calloutFixture(before: [handedOver()]))
-            let first = try #require(box.pictures.first?.model.steps().first as? LDrawStep)
-            let second = try #require(box.pictures.last?.model.steps().first as? LDrawStep)
+            let first = try #require(box.pictures.first)
+            let second = try #require(box.pictures.last)
 
-            #expect(first.subdirectives().count == 1)
-            #expect(second.subdirectives().count == 2)
-            #expect(box.pictures.first?.contentKey != box.pictures.last?.contentKey)
+            #expect(partNames(of: first).joined().count == 1)
+            #expect(partNames(of: second).joined().count == 2)
+            #expect(first.contentKey != second.contentKey)
+        }
+
+        /// So the picture ghosts the steps before it when the view ghosts them.
+        @Test("A step's picture keeps its own parts in a last step, shown in step display")
+        func stripPictureSetsItsStepApart() throws {
+            let fixture = calloutFixture(before: [handedOver()],
+                                         steps: [[part("3003.dat")], [LDrawComment()], [part("3004.dat")]])
+            let box = try onPage(fixture)
+            try #require(box.pictures.count == 2)
+            let first = box.pictures[0]
+            let second = box.pictures[1]
+
+            #expect(partNames(of: first) == [["3003.dat"]])
+            #expect(first.model.stepDisplay() == false)
+
+            #expect(partNames(of: second) == [["3003.dat"], ["3004.dat"]])
+            #expect(second.model.stepDisplay() == true)
+            #expect(second.model.maximumStepIndexForStepDisplay() == 1)
+        }
+
+        @Test("A submodel shown finished is drawn in one step, with nothing to ghost")
+        func finishedPictureIsOneStep() throws {
+            let box = try onPage(calloutFixture(before: [handedOver()], mode: "ASSEMBLED"))
+            let picture = try #require(box.pictures.first)
+
+            #expect(box.pictures.count == 1)
+            #expect(partNames(of: picture) == [["3003.dat", "3004.dat"]])
+            #expect(picture.model.stepDisplay() == false)
         }
 
         /// A host shows the picture it has at another size while the zoom changes.

@@ -145,7 +145,7 @@
 }//end iconKeyForLayout:viewTransform:
 
 
-//---------- modelForModel:throughStep:viewTransform:color: ----------[static]--
+//---------- modelForModel:throughStep:viewTransform:color:... -------[static]--
 ///
 /// @abstract	A model of what `model` has built up to and including a step,
 /// 			turned by `viewTransform`.
@@ -159,6 +159,7 @@
 				   throughStep:(NSUInteger)lastStepIndex
 				 viewTransform:(Matrix4)viewTransform
 						 color:(nullable LDrawColor *)color
+			ghostsEarlierSteps:(BOOL)ghostsEarlierSteps
 {
 	LDrawModel	*built	= [LDrawModel new];
 	LDrawStep	*step	= [built addStep];
@@ -171,6 +172,11 @@
 	lastStepIndex = MIN(lastStepIndex, steps.count - 1);
 
 	for (NSUInteger index = 0; index <= lastStepIndex; index++) {
+
+		// The last step's parts go apart from those built before it, if any.
+		if (ghostsEarlierSteps && index == lastStepIndex && [[step subdirectives] count] > 0) {
+			step = [built addStep];
+		}
 
 		[(LDrawStep *)steps[index] applyToAllParts:^(LDrawPart *part) {
 
@@ -210,9 +216,16 @@
 		}];
 	}
 
+	// Step display draws the last step solid, and the one before it as a
+	// ghost when the user asks for that.
+	if ([[built steps] count] > 1) {
+		[built setStepDisplay:YES];
+		[built setMaximumStepIndexForStepDisplay:1];
+	}
+
 	return built;
 
-}//end modelForModel:throughStep:viewTransform:color:
+}//end modelForModel:throughStep:viewTransform:color:...
 
 
 //---------- partForEntry:submodelsFromFile: -------------------------[static]--
