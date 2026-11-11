@@ -37,6 +37,7 @@
 @class LDrawView;
 @class LDrawModel;
 @class LDrawMPDModel;
+@class LDrawOriginPartUpdate;
 @class LDrawPart;
 @class LDrawStep;
 @class LDrawStepCalloutPath;
@@ -261,6 +262,7 @@
 - (BOOL) replaceDirective:(LDrawDirective *)oldDirective withDirective:(LDrawDirective *)newDirective;
 - (void) moveDirective:(LDrawDrawableElement *)object inDirection:(Vector3)moveVector;
 - (void) applyMoves:(NSArray<LDrawDirectiveMove *> *)moves actionName:(NSString *)actionName;
+- (void) applyPartUpdates:(NSArray<LDrawOriginPartUpdate *> *)updates actionName:(NSString *)actionName;
 - (void) preserveDirectiveState:(LDrawDirective *)directive;
 - (void) replaceParts:(NSArray<LDrawPart *> *)parts withPartNamed:(NSString *)partName color:(LDrawColor *)color;
 - (void) rotatePart:(LDrawPart *)part byDegrees:(Tuple3)rotationDegrees aroundPoint:(Point3)rotationCenter;

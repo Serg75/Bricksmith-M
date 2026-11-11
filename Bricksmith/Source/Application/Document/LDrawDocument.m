@@ -2545,14 +2545,12 @@ void AppendChoicesToNewItem(
 
 //========== changeOrigin: =====================================================
 //
-// Purpose:		Applies origin-change matrices (undo). The host still localizes
-//				the undo name and redisplays.
+// Purpose:		Applies origin-change matrices as one undoable action.
 //
 //==============================================================================
 - (IBAction) changeOrigin:(NSButton *)sender
 {
-	NSUndoManager         *undoManager = [self undoManager];
-	LDrawOriginChangeKind  kind        = LDrawOriginChangeByPosition;
+	LDrawOriginChangeKind kind = LDrawOriginChangeByPosition;
 
 	if([LDrawStructure originChangeKind:&kind forMenuTag:[sender tag]] == NO)
 		kind = LDrawOriginChangeByPosition;
@@ -2561,17 +2559,8 @@ void AppendChoicesToNewItem(
 																kind:kind];
 	if([updates count] == 0) return;
 
-	for(LDrawOriginPartUpdate *update in updates)
-	{
-		[[undoManager prepareWithInvocationTarget:self]
-			setTransformation:update.previousComponents forPart:update.part];
-
-		Matrix4 matrix = update.matrix;
-		[update.part setTransformationMatrix:&matrix];
-	}
-
-	[undoManager setActionName:NSLocalizedString([LDrawStructure changeOriginUndoActionKey], nil)];
-	[[self documentContents] noteNeedsDisplay];
+	[self applyPartUpdates:updates
+				actionName:NSLocalizedString([LDrawStructure changeOriginUndoActionKey], nil)];
 
 }//end changeOrigin:
 
@@ -3885,6 +3874,40 @@ void AppendChoicesToNewItem(
 	[[self documentContents] noteNeedsDisplay];
 
 }//end applyMoves:actionName:
+
+
+//========== applyPartUpdates:actionName: ======================================
+//
+// Purpose:		Undo-aware call to give several parts new matrices as one
+//				action. It registers the old matrices through itself, so undo
+//				and redo keep the action's name.
+//
+//==============================================================================
+- (void) applyPartUpdates:(NSArray<LDrawOriginPartUpdate *> *)updates
+			   actionName:(NSString *)actionName
+{
+	NSUndoManager	*undoManager	= [self undoManager];
+	NSMutableArray	*reverseUpdates	= [NSMutableArray arrayWithCapacity:[updates count]];
+
+	for(LDrawOriginPartUpdate *update in updates)
+	{
+		LDrawOriginPartUpdate	*reverse	= [LDrawOriginPartUpdate new];
+		Matrix4					matrix		= update.matrix;
+
+		reverse.part	= update.part;
+		reverse.matrix	= [update.part transformationMatrix];
+		// Undo runs the list backward, so a part listed twice ends where it started.
+		[reverseUpdates insertObject:reverse atIndex:0];
+
+		[update.part setTransformationMatrix:&matrix];
+		[update.part noteNeedsDisplay];
+	}
+
+	[[undoManager prepareWithInvocationTarget:self] applyPartUpdates:reverseUpdates actionName:actionName];
+	[undoManager setActionName:actionName];
+	[[self documentContents] noteNeedsDisplay];
+
+}//end applyPartUpdates:actionName:
 
 
 //========== preserveDirectiveState: ===========================================
