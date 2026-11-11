@@ -409,6 +409,50 @@ struct LDrawStepCalloutApplyTests {
         #expect(fixture.file.write() == converted)
     }
 
+    @Test("Step settings stay behind, while callout settings and unknown LPub lines block")
+    func extractionKeepsStepSettings() throws {
+        let fixture = CalloutFixture()
+        let step = fixture.main.addStep()
+        let settings = ["ASSEM CAMERA_ANGLES LOCAL 23 135.46",
+                        "ASSEM PLACEMENT LOCAL CENTER PAGE INSIDE",
+                        "PLI MODEL_SCALE LOCAL 0.5"].map { CalloutFixture.parsed($0) }
+        #expect(settings[0] is LPubPliCameraAngles)
+        #expect(settings[1] is LPubPlacement)
+        #expect(settings[2] is LPubModelScale)
+        for line in settings { step.add(line) }
+        let a = CalloutFixture.part("a.dat")
+        let b = CalloutFixture.part("b.dat")
+        step.add(a as LDrawDirective)
+        step.add(b as LDrawDirective)
+        #expect(LDrawStepCalloutEdit.canConvert(selection: [a, b]))
+
+        let between = CalloutFixture.parsed("ASSEM MODEL_SCALE LOCAL 2")
+        step.insert(between, at: 4)
+        #expect(!LDrawStepCalloutEdit.canConvert(selection: [a, b]))
+        #expect(LDrawStepCalloutEdit.canConvert(selection: [b]))
+        step.remove(between)
+
+        for text in ["CALLOUT ALLOC VERTICAL", "BUFEXCHG A STORE"] {
+            let line = CalloutFixture.parsed(text)
+            step.insert(line, at: 0)
+            #expect(!LDrawStepCalloutEdit.canConvert(selection: [a, b]), "\(text)")
+            step.remove(line)
+        }
+
+        let original = fixture.file.write()
+        let host = ConversionUndoHost()
+        let edit = LDrawStepCalloutEdit.edit(convertingSelection: [a, b])
+        host.undo.beginUndoGrouping()
+        #expect(edit.apply(to: step, host: host))
+        host.undo.endUndoGrouping()
+        for (index, line) in settings.enumerated() {
+            #expect(step.subdirectives().object(at: index) as? LDrawDirective === line)
+        }
+        #expect(LDrawStepCallout.callouts(forStep: step).count == 1)
+        host.undo.undo()
+        #expect(fixture.file.write() == original)
+    }
+
     @Test("Extraction rejects affected groups and selections spanning layout changes")
     func extractionPreservesScopes() {
         let fixture = CalloutFixture()

@@ -21,6 +21,7 @@
 #import <LDrawCore/LDrawStep.h>
 #import <LDrawCore/LDrawStepPartListEntry.h>
 #import <LDrawCore/LDrawUtilities.h>
+#import <LDrawCore/LPubAssemShowStepNumber.h>
 #import <LDrawCore/LPubCallout.h>
 #import <LDrawCore/LPubCalloutAlloc.h>
 #import <LDrawCore/LPubCalloutBackground.h>
@@ -31,11 +32,19 @@
 #import <LDrawCore/LPubCalloutPointer.h>
 #import <LDrawCore/LPubCalloutSeparator.h>
 #import <LDrawCore/LPubCalloutSubmodelColor.h>
+#import <LDrawCore/LPubModelScale.h>
+#import <LDrawCore/LPubPageNumberDisplay.h>
+#import <LDrawCore/LPubPageOrientation.h>
+#import <LDrawCore/LPubPageSize.h>
 #import <LDrawCore/LPubPlacement.h>
+#import <LDrawCore/LPubPliCameraAngles.h>
 #import <LDrawCore/LPubPliConstrain.h>
 #import <LDrawCore/LPubPliIgnore.h>
+#import <LDrawCore/LPubPliPartRotation.h>
+#import <LDrawCore/LPubPliShow.h>
 #import <LDrawCore/LPubPliSubstitute.h>
 #import <LDrawCore/LPubRemoveGroup.h>
+#import <LDrawCore/LPubResolution.h>
 
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
@@ -434,28 +443,43 @@ static BOOL InvertsNextPart(LDrawDirective *line)
 }
 
 
-/// Whether a line sets page grouping, PLI size or a group removal. These
-/// stay in their step when parts leave it.
-static BOOL IsStepLayoutLine(LDrawDirective *line)
-{
-	if ([line isKindOfClass:[LPubPliConstrain class]] || [line isKindOfClass:[LPubRemoveGroup class]]) {
-		return YES;
-	}
-	if ([line isKindOfClass:[LPubCommand class]] == NO) {
-		return NO;
-	}
-	NSArray<NSString *> *words = ((LPubCommand *)line).lPubCommandWords;
-	return words.count == 2
-		&& [words[0] isEqualToString:@"MULTI_STEP"]
-		&& [@[@"BEGIN", @"END", @"DIVIDER"] containsObject:words[1]];
-}
-
-
 /// Whether a line is an LPub CALLOUT line.
 static BOOL IsCalloutLine(LDrawDirective *line)
 {
 	return [line isKindOfClass:[LPubCommand class]]
 		&& [[(LPubCommand *)line lPubCommandWords].firstObject isEqualToString:LPUB_CALLOUT];
+}
+
+
+/// Whether a line sets page grouping, a group removal, or how the step, its
+/// parts list or the page looks. These stay in their step when parts leave it.
+/// A callout setting does not count, since the new callout would take it up.
+static BOOL IsStepLayoutLine(LDrawDirective *line)
+{
+	static NSArray<Class>	*settingClasses	= nil;
+	static dispatch_once_t	 onceToken;
+
+	dispatch_once(&onceToken, ^{
+		settingClasses = @[[LPubAssemShowStepNumber class], [LPubCalloutBackground class],
+						   [LPubCalloutBorder class], [LPubCalloutFont class], [LPubCalloutMargins class],
+						   [LPubModelScale class], [LPubPageNumberDisplay class], [LPubPageOrientation class],
+						   [LPubPageSize class], [LPubPlacement class], [LPubPliCameraAngles class],
+						   [LPubPliConstrain class], [LPubPliPartRotation class], [LPubPliShow class],
+						   [LPubRemoveGroup class], [LPubResolution class]];
+	});
+
+	if ([line isKindOfClass:[LPubCommand class]] == NO || IsCalloutLine(line)) {
+		return NO;
+	}
+	for (Class settingClass in settingClasses) {
+		if ([line isKindOfClass:settingClass]) {
+			return YES;
+		}
+	}
+	NSArray<NSString *> *words = ((LPubCommand *)line).lPubCommandWords;
+	return words.count == 2
+		&& [words[0] isEqualToString:@"MULTI_STEP"]
+		&& [@[@"BEGIN", @"END", @"DIVIDER"] containsObject:words[1]];
 }
 
 
