@@ -127,6 +127,19 @@ let package = Package(
             dependencies: ["LDrawCore"],
             path: "Packages/LDrawCore/Tests/LDrawCoreTests"
         ),
+        // No-op display-list functions, so tests can link LDrawRenderCore without a backend. No
+        // product uses it.
+        .target(
+            name: "LDrawRenderTestStubs",
+            dependencies: ["LDrawRenderCore"],
+            path: "Packages/LDrawTestSupport/Sources/LDrawRenderTestStubs",
+            publicHeadersPath: "."
+        ),
+        .testTarget(
+            name: "LDrawEditingTests",
+            dependencies: ["LDrawEditing", "LDrawCore", "LDrawRenderTestStubs"],
+            path: "Packages/LDrawEditing/Tests/LDrawEditingTests"
+        ),
         .testTarget(
             name: "LDrawFeaturesTests",
             dependencies: ["LDrawFeatures", "LDrawCore", "LDrawInventory", "LDrawTestSupport"],

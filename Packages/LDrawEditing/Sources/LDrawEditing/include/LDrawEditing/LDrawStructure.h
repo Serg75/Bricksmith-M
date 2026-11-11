@@ -17,6 +17,7 @@
 #import <LDrawCore/MatrixMath.h>
 
 #import <LDrawEditing/LDrawCompliantNameChange.h>
+#import <LDrawEditing/LDrawDirectiveMove.h>
 #import <LDrawEditing/LDrawOriginPartUpdate.h>
 #import <LDrawEditing/LDrawSplitExpansion.h>
 #import <LDrawEditing/LDrawStepExportFile.h>
@@ -173,6 +174,24 @@ typedef NS_ENUM(NSInteger, LDrawMoveToParentCleanup) {
 
 /// Localization key for the undo action. The host still localizes.
 + (NSString *)changeOriginUndoActionKey;
+
+/// Shift from the origin to the bottom center of the model's bounds in all its
+/// steps, rounded to the grid. The vertical step is a brick or plate height, as
+/// in snap-to-grid. Zero when the model has no bounds.
++ (Vector3)centeringShiftForModel:(LDrawModel *)model gridSpacing:(float)gridSpacing;
+
+/// Moves that put the model's bottom center at the origin. Its contents move
+/// back by the shift, and the parts in other models of the file that use it
+/// move so those models look the same. Empty when the model cannot be
+/// centered. The host still applies them (undo).
++ (NSArray<LDrawDirectiveMove *> *)centeringMovesForModel:(LDrawModel *)model gridSpacing:(float)gridSpacing;
+
+/// Menu enable: the model is off center and has no texture, which cannot move.
++ (BOOL)canCenterModel:(nullable LDrawModel *)model gridSpacing:(float)gridSpacing;
+
+/// Localization key for the undo action, a format that takes the model's name.
+/// The host still localizes.
++ (NSString *)centerModelUndoActionFormatKey;
 
 @end
 

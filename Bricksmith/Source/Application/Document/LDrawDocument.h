@@ -30,6 +30,7 @@
 @class ExtendedSplitView;
 @class LDrawContainer;
 @class LDrawDirective;
+@class LDrawDirectiveMove;
 @class LDrawDrawableElement;
 @class LDrawFile;
 @class LDrawFileOutlineView;
@@ -250,6 +251,7 @@
 - (IBAction) addCommentClicked:(id)sender;
 - (IBAction) addRawCommandClicked:(id)sender;
 - (IBAction) addRelatedPartClicked:(id)sender;
+- (IBAction) centerModel:(id)sender;
 - (void) modelSelected:(id)sender;
 
 // Undoable Activities
@@ -258,6 +260,7 @@
 - (void) deleteDirective:(LDrawDirective *)doomedDirective;
 - (BOOL) replaceDirective:(LDrawDirective *)oldDirective withDirective:(LDrawDirective *)newDirective;
 - (void) moveDirective:(LDrawDrawableElement *)object inDirection:(Vector3)moveVector;
+- (void) applyMoves:(NSArray<LDrawDirectiveMove *> *)moves actionName:(NSString *)actionName;
 - (void) preserveDirectiveState:(LDrawDirective *)directive;
 - (void) replaceParts:(NSArray<LDrawPart *> *)parts withPartNamed:(NSString *)partName color:(LDrawColor *)color;
 - (void) rotatePart:(LDrawPart *)part byDegrees:(Tuple3)rotationDegrees aroundPoint:(Point3)rotationCenter;

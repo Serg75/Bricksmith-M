@@ -1196,6 +1196,26 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 }//end displacementForNudge:
 
 
+//========== verticalGridSpacing: ==============================================
+//
+// Purpose:		Returns the grid step along a part's up axis. Bricks are taller
+//				than they are wide, so a grid of 20 (one stud) gives 24 (one
+//				brick), and a grid of 10 gives 8 (one plate).
+//
+//==============================================================================
++ (float) verticalGridSpacing:(float)gridSpacing
+{
+	if(fmod(gridSpacing, 20) == 0)
+		return gridSpacing * 24.0 / 20.0;
+
+	if(fmod(gridSpacing, 10) == 0)
+		return gridSpacing * 8.0 / 10.0;
+
+	return gridSpacing;
+
+}//end verticalGridSpacing:
+
+
 //========== componentsSnappedToGrid:minimumAngle: =============================
 //
 // Purpose:		Returns a copy of the part's current components, but snapped to 
@@ -1261,13 +1281,7 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	//Get the adjusted grid spacing along the y direction. Remember that Lego 
 	// bricks are not cubical, so the grid along the brick's y-axis should be 
 	// spaced differently from the grid along its other sides.
-	gridSpacingYAxis = gridSpacing;
-	
-	if(fmod(gridSpacing, 20) == 0)
-		gridSpacingYAxis *= 24.0 / 20.0;
-	
-	else if(fmod(gridSpacing, 10) == 0)
-		gridSpacingYAxis *= 8.0 / 10.0;
+	gridSpacingYAxis = [LDrawPart verticalGridSpacing:gridSpacing];
 		
 	//The actual grid spacing, in world coordinates. We will adjust the approrpiate 
 	// x, y, or z based on which one the part's y-axis is aligned.

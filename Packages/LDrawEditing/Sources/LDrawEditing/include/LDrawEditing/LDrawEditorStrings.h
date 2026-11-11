@@ -42,6 +42,10 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)shouldSilentRevertExternalChangeWhenDocumentEdited:(BOOL)edited
 										fileNewerThanKnown:(BOOL)fileNewer;
 
+/// The name with its middle cut out for an ellipsis when it is longer than
+/// maximumLength, for menu items such as undo names.
++ (NSString *)shortenedName:(NSString *)name maximumLength:(NSUInteger)maximumLength;
+
 @end
 
 NS_ASSUME_NONNULL_END

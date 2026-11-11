@@ -3672,6 +3672,32 @@ void AppendChoicesToNewItem(
 }//end convertToHighResPrimitives:
 
 
+//========== centerModel: ======================================================
+//
+// Purpose:		Moves the active model's bottom center to its origin, in steps
+//				of the current grid. The parts that use the model move the other
+//				way, so the models that use it look the same.
+//
+//==============================================================================
+- (IBAction) centerModel:(id)sender
+{
+	LDrawMPDModel	*activeModel	= [[self documentContents] activeModel];
+	float			gridSpacing		= [LDrawGrid spacingForMode:[self gridSpacingMode]
+											   fromUserDefaults:[NSUserDefaults standardUserDefaults]];
+	NSArray			*moves			= [LDrawStructure centeringMovesForModel:activeModel
+																 gridSpacing:gridSpacing];
+	NSString		*modelName		= [LDrawEditorStrings shortenedName:[activeModel browsingDescription]
+														  maximumLength:30];
+	NSString		*format			= NSLocalizedString([LDrawStructure centerModelUndoActionFormatKey], nil);
+
+	if([moves count] == 0)
+		return;
+
+	[self applyMoves:moves actionName:[NSString stringWithFormat:format, modelName]];
+
+}//end centerModel:
+
+
 #pragma mark -
 #pragma mark UNDOABLE ACTIVITIES
 #pragma mark -
@@ -3829,6 +3855,36 @@ void AppendChoicesToNewItem(
 	[object noteNeedsDisplay];
 								  
 }//end moveDirective:inDirection:
+
+
+//========== applyMoves:actionName: ============================================
+//
+// Purpose:		Undo-aware call to apply several moves as one action. It
+//				registers the reverse moves through itself, so undo and redo
+//				keep the action's name.
+//
+//==============================================================================
+- (void) applyMoves:(NSArray<LDrawDirectiveMove *> *)moves
+		 actionName:(NSString *)actionName
+{
+	NSUndoManager	*undoManager	= [self undoManager];
+	NSMutableArray	*reverseMoves	= [NSMutableArray arrayWithCapacity:[moves count]];
+
+	for(LDrawDirectiveMove *move in moves)
+	{
+		[move.directive moveBy:move.displacement];
+		[move.directive noteNeedsDisplay];
+
+		LDrawDirectiveMove *reverse = [[LDrawDirectiveMove alloc] initWithDirective:move.directive
+																	   displacement:V3Negate(move.displacement)];
+		[reverseMoves addObject:reverse];
+	}
+
+	[[undoManager prepareWithInvocationTarget:self] applyMoves:reverseMoves actionName:actionName];
+	[undoManager setActionName:actionName];
+	[[self documentContents] noteNeedsDisplay];
+
+}//end applyMoves:actionName:
 
 
 //========== preserveDirectiveState: ===========================================
@@ -5407,6 +5463,14 @@ void AppendChoicesToNewItem(
 		case LDrawAddModelSelectionMenuTag:
 			enable = [LDrawStructure selectionCanSplitModel:selectedItems];
 			break;
+
+		case LDrawCenterModelMenuTag:
+		{
+			float gridSpacing = [LDrawGrid spacingForMode:self->gridMode
+										 fromUserDefaults:[NSUserDefaults standardUserDefaults]];
+			enable = [LDrawStructure canCenterModel:activeModel gridSpacing:gridSpacing];
+			break;
+		}
 		
 		case LDrawSubmodelReferenceMenuTag:
 			//we can't insert a reference to the active model into itself.

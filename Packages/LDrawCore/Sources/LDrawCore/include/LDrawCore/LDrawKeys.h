@@ -262,6 +262,7 @@ typedef NS_ENUM(NSInteger, LDrawMenuTag)
 	LDrawSubmodelReferenceMenuTag		= 604, //used for all items in the Insert Reference menu.
 	LDrawRawCommandMenuTag				= 605,
 	LDrawAddModelSelectionMenuTag		= 606,
+	LDrawCenterModelMenuTag				= 607,
 	LDrawRelatedPartMenuTag				= 610, //used to add related parts dynamically.
 
     LDrawLSynthMenuTag					= 630,

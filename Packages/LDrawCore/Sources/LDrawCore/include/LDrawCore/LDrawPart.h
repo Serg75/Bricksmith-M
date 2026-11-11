@@ -108,6 +108,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void) collectPartReport:(LDrawPartReport *)report;
 - (void) applyToAllParts:(LDrawPartVisitor) visitor;
 
+/// The grid step along a part's up axis, for a grid of gridSpacing along stud widths.
++ (float) verticalGridSpacing:(float)gridSpacing;
 - (TransformComponents) componentsSnappedToGrid:(float) gridSpacing minimumAngle:(float)degrees;
 - (TransformComponents) componentsSnappedToGrid:(float) gridSpacing byAxis:(Vector3)axis;
 - (TransformComponents) components:(TransformComponents)components snappedToGrid:(float)gridSpacing minimumAngle:(float)degrees;

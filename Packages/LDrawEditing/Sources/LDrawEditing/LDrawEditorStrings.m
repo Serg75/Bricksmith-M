@@ -170,4 +170,40 @@
 }
 
 
+//---------- shortenedName:maximumLength: ----------------------------[static]--
+//
+// Purpose:		Cuts the middle out of a long name and puts an ellipsis there,
+//				so both ends still show. Never splits a character.
+//
+//------------------------------------------------------------------------------
++ (NSString *)shortenedName:(NSString *)name maximumLength:(NSUInteger)maximumLength
+{
+	NSUInteger length = [name length];
+
+	// A limit under 3 leaves no room for both ends around the ellipsis.
+	if (length <= maximumLength || maximumLength < 3)
+	{
+		return name;
+	}
+
+	// One place goes to the ellipsis. The start keeps the odd one.
+	NSUInteger kept      = maximumLength - 1;
+	NSUInteger headEnd   = (kept + 1) / 2;
+	NSUInteger tailStart = length - kept / 2;
+	NSRange    headCut   = [name rangeOfComposedCharacterSequenceAtIndex:headEnd];
+	NSRange    tailCut   = [name rangeOfComposedCharacterSequenceAtIndex:tailStart];
+
+	// A cut inside a character moves out of it, so the name only gets shorter.
+	headEnd = headCut.location;
+	if (tailCut.location < tailStart)
+	{
+		tailStart = NSMaxRange(tailCut);
+	}
+
+	return [NSString stringWithFormat:@"%@…%@",
+			[name substringToIndex:headEnd],
+			[name substringFromIndex:tailStart]];
+}
+
+
 @end

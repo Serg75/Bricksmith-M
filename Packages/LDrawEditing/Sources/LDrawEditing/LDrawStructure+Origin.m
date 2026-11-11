@@ -15,8 +15,26 @@
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LDrawPart.h>
 #import <LDrawCore/LDrawKeys.h>
+#import <LDrawCore/LDrawTexture.h>
+#import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawCore/LDrawPartSpecific.h>
+
+
+//---------- roundedToStep() ---------------------------------------------------
+//
+// Purpose:		Rounds value to the nearest multiple of step. A step of zero or
+//				less leaves the value as it is.
+//
+//------------------------------------------------------------------------------
+static float roundedToStep(float value, float step)
+{
+	if (step <= 0)
+	{
+		return value;
+	}
+	return roundf(value / step) * step;
+}
 
 
 @implementation LDrawStructure (Origin)
@@ -235,6 +253,122 @@
 + (NSString *)changeOriginUndoActionKey
 {
 	return @"UndoChangeOrigin";
+}
+
+
+//---------- centeringShiftForModel:gridSpacing: ---------------------[static]--
+//
+// Purpose:		Shift from the origin to the bottom center of the model's
+//				bounds, rounded to the grid so parts on the grid stay on it.
+//				Counts every step, not only the ones on display.
+//
+//------------------------------------------------------------------------------
++ (Vector3)centeringShiftForModel:(LDrawModel *)model gridSpacing:(float)gridSpacing
+{
+	if (model == nil)
+	{
+		return ZeroPoint3;
+	}
+
+	// Suppressed parts have no bounds, so settle suppression first.
+	[model updateGroupSuppressionIfNeeded];
+	Box3 bounds = [LDrawUtilities boundingBox3ForDirectives:[model steps]];
+	if (V3EqualBoxes(bounds, InvalidBox))
+	{
+		return ZeroPoint3;
+	}
+
+	Point3 center       = V3CenterOfBox(bounds);
+	float  verticalStep = [LDrawPart verticalGridSpacing:gridSpacing];
+
+	// LDraw's Y axis points down, so the bottom is the largest Y.
+	return V3Make(roundedToStep(center.x, gridSpacing),
+				  roundedToStep(bounds.max.y, verticalStep),
+				  roundedToStep(center.z, gridSpacing));
+}
+
+
+//---------- centeringMovesForModel:gridSpacing: ---------------------[static]--
+//
+// Purpose:		Moves the model's contents back by the centering shift. Each
+//				part that uses the model moves by the same shift, turned the
+//				way the part is turned, so the contents land where they were.
+//
+//------------------------------------------------------------------------------
++ (NSArray<LDrawDirectiveMove *> *)centeringMovesForModel:(LDrawModel *)model gridSpacing:(float)gridSpacing
+{
+	if ([self canCenterModel:model gridSpacing:gridSpacing] == NO)
+	{
+		return @[];
+	}
+
+	Vector3         shift = [self centeringShiftForModel:model gridSpacing:gridSpacing];
+	Vector3         back  = V3Negate(shift);
+	NSMutableArray *moves = [NSMutableArray array];
+
+	for (LDrawStep *step in [model steps])
+	{
+		for (LDrawDirective *directive in [step subdirectives])
+		{
+			if ([directive conformsToProtocol:@protocol(LDrawMovableDirective)])
+			{
+				[moves addObject:[[LDrawDirectiveMove alloc] initWithDirective:(id)directive
+																  displacement:back]];
+			}
+		}
+	}
+
+	for (LDrawModel *otherModel in [[model enclosingFile] submodels])
+	{
+		if (otherModel == model) continue;
+		[otherModel applyToAllParts:^(LDrawPart *part){
+			if ([part referencedMPDSubmodel] != model) return;
+			Matrix4 rotation     = Matrix4ClearTranslation([part transformationMatrix]);
+			Vector3 displacement = V3MulPointByProjMatrix(shift, rotation);
+			[moves addObject:[[LDrawDirectiveMove alloc] initWithDirective:part
+															  displacement:displacement]];
+		}];
+	}
+
+	return moves;
+}
+
+
+//---------- canCenterModel:gridSpacing: -----------------------------[static]--
+//
+// Purpose:		Menu enable for Center Model.
+//
+//------------------------------------------------------------------------------
++ (BOOL)canCenterModel:(LDrawModel *)model gridSpacing:(float)gridSpacing
+{
+	if (model == nil)
+	{
+		return NO;
+	}
+
+	// A texture cannot move, so the model would come apart around it.
+	for (LDrawStep *step in [model steps])
+	{
+		for (LDrawDirective *directive in [step subdirectives])
+		{
+			if ([directive isKindOfClass:[LDrawTexture class]]) return NO;
+		}
+	}
+
+	Vector3 shift = [self centeringShiftForModel:model gridSpacing:gridSpacing];
+	return V3EqualPoints(shift, ZeroPoint3) == NO;
+}
+
+
+//---------- centerModelUndoActionFormatKey --------------------------[static]--
+//
+// Purpose:		Localization key after centering a model. The format takes the
+//				model's name.
+//
+//------------------------------------------------------------------------------
++ (NSString *)centerModelUndoActionFormatKey
+{
+	return @"UndoCenterModel";
 }
 
 @end

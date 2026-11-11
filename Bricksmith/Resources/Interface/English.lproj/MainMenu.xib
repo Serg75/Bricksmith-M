@@ -844,6 +844,11 @@ CA
                                     <action selector="convertToHighResPrimitives:" target="-1" id="Bmg-WS-qtT"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Center Model" tag="607" toolTip="Moves the bottom center of the model to its origin, in steps of the grid. The places that use the model move the other way, so they look the same." id="cMd-Ct-r7q">
+                                <connections>
+                                    <action selector="centerModel:" target="-1" id="cMd-Ac-t8w"/>
+                                </connections>
+                            </menuItem>
                             <menuItem isSeparatorItem="YES" tag="602" id="wW2-q7-00T">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
