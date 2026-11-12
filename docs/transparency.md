@@ -17,7 +17,7 @@ All of it is in `Packages/LDrawRenderMetal`.
 2. When the drawing finds transparent parts, it gets the lists ready, and a tile shader (`clearTransparentLists`) empties each tile's lists inside the render pass. A tile's later fragments come after it, so no list is emptied late. The lists are made only when a frame has transparent parts, with no guess from the frame before.
 3. Transparent parts draw with depth testing against the opaque ones, but without depth writes. Their fragment shader (`transparentFragmentShader`, `transparentWideLineFragmentShader`) writes no color. It adds the fragment to its pixel's list: color, depth, the MSAA samples it covers, and for a line, line bits (see below). Thin lines draw with the faces' pipeline, and their vertices carry a normal as a face's do, so the drawing tells the shader when thin lines come. The samples take 4 bits, so the lists need 4 samples or fewer; the renderer uses 4.
 4. A triangle over the whole surface (`transparencyResolveFragmentShader`) runs once per MSAA sample. It reads its pixel's list, keeps the nearest 16 fragments that cover its sample in order, and blends them over what is drawn in that sample, as the next section tells. Fragments past the nearest 16 are blended as one layer of their average color, behind the others. Each fragment is passed down all 16 places, swapping where it is nearer, so the 16 stay in registers. Blending each sample on its own keeps edges right where a transparent edge crosses an opaque one: a sample the transparent part does not cover keeps the opaque color.
-5. Ghosts, drag handles and the marquee draw after, as before.
+5. Ghosts draw after the transparent parts go into the lists and before the lists blend, so the two blend in depth order, as "Ghosts" tells. Drag handles and the marquee draw after, as before.
 
 All of this happens in the frame's one render pass, so the multisample targets stay in tile memory on Apple GPUs.
 
@@ -43,7 +43,19 @@ What is drawn behind the layers, opaque parts or the background, shows through w
 
 So one layer looks exactly as before over anything, and so does a part of one color. The shader still returns a premultiplied color with how much of what is drawn gets through, so the fixed blend and pictures with a clear background are unchanged.
 
-Ghosts, and transparent parts blended one at a time, go through the plain pipeline instead. Its color takes the source by its alpha, and its alpha takes the source's alpha as it is (`MTLBlendFactorOne`). A picture drawn on a clear background is then a correct premultiplied image, and a ghost in it is as faint as in a view. With `SourceAlpha` for the alpha as well, a ghost of alpha 0.3 came out at 0.09 over the clear background, with its color still scaled by 0.3. Laid over a callout's box it was almost the box's color. On screen the background is opaque, so the view never showed it.
+Transparent parts blended one at a time, and ghosts where no transparent part is, blend as other parts do instead. Their color takes the source by its alpha, and its alpha takes the source's alpha as it is (`MTLBlendFactorOne`). A picture drawn on a clear background is then a correct premultiplied image, and a ghost in it is as faint as in a view. With `SourceAlpha` for the alpha as well, a ghost of alpha 0.3 came out at 0.09 over the clear background, with its color still scaled by 0.3. Laid over a callout's box it was almost the box's color. On screen the background is opaque, so the view never showed it.
+
+## Ghosts
+
+A ghost is a part of an earlier step, or of a removed group, drawn see-through. It must read as an ordinary part, so only its front surface blends: a depth prepass finds it, then a pass that tests depth for Equal blends it once. Every ghost is prepassed before any blends, so a ghost behind another is hidden by it, as solid parts hide each other.
+
+A transparent part of the step on display can be in front of a ghost or behind it. Ghosts used to blend after the transparent parts were done. Transparent parts write no depth, so a ghost behind one blended over it, and the part took on the ghost's color. Trans-clear over a ghost came out the same color as the ghost alone.
+
+With the lists, the ghosts draw after the transparent parts are in them and before they blend. Where a ghost's pixel already has a list, its front surface goes into it, marked as a ghost, and the blend sorts it in with the rest. A ghost is not plastic, so it goes in depth order with every layer, as a gray does, and in a sample with nothing else it blends as it would on its own. Where the pixel has no list, the ghost returns its color and blends at once. Ghosts add nothing to an empty list, so every ghost in a pixel takes the same way, and the lists grow only where ghosts and transparent parts meet. The prepass has pipelines of its own, which draw no color and run once for a pixel; the blend pass runs once for each sample, since it takes the sample to put into a list. Both use the same vertex shaders, so they get the same depths and the Equal test holds.
+
+Without the lists, the prepass also marks the stencil, in its top bit, where a ghost is in front of what is opaque. Between the prepass and the blend, the transparent parts blend once with a test that keeps, where the stencil is marked, the faces at the ghost's depth or behind it. After the ghosts blend, they blend again with the usual test, which now keeps the faces in front of the ghost and those where there is no ghost. So each face blends once, before or after the ghost. The depth target has a stencil for this on every GPU.
+
+The prepass puts the ghost's depth where the opaque depth was, so the first of those tests cannot tell a transparent face behind an opaque part from one in front of it. So before the prepass, the transparent parts are drawn once without color, and the stencil's other 7 bits count the fragments that fail the depth test in each sample: the hidden ones. The pass behind the ghosts then skips that many fragments in the sample before it blends any. The parts are drawn far to near, so the ones it skips are the hidden ones.
 
 ## What the GPU does, and why the code looks the way it does
 
@@ -64,7 +76,7 @@ Stacked LEGO parts have faces that lie exactly on each other, such as the top of
 - With outlines, faces also get a bias that scales with slope, up to a limit set as a depth. A face steeper than 45 degrees to the eye reaches that limit by its slope alone, so the limit for transparent faces is 16 steps higher. Without that, a transparent face lying on an opaque one got the same bias as it and fought it for depth, as on the studs under a transparent plate in a 3/4 view.
 - A transparent face sorts a little behind the lines on its edges: twice the tie. It does not scale with slope either, so a face seen almost edge on does not sort behind a part that is really behind it. On such a face a line can sort behind it, as it can on an opaque face.
 - Lines that lie on each other blend once, as the depth test does for opaque lines. Examples are an edge that two subparts both draw, and the overlapping ends of two wide lines at a corner. A line is skipped when one of the last 4 lines blended has the same color and is within the depth leeway of either; faces blended between them do not count. The leeway matters at corners: a wide line's quad keeps the depth of its ends, so where two lines' ends overlap, each one's depth follows its own slope, and on an edge that recedes from the eye they can be thousands of steps apart. So a wide line's leeway is how much its depth changes along it over two line widths, two for corners sharper than square. A thin line's is a tie. Faces that lie on each other still blend twice, since they are two layers of plastic.
-- The line bits sit beside the samples, below the depth: a mark that the fragment is a line, and its leeway as a tie times a power of 4, rounded up, in 3 bits. Colors are kept exactly, so a face at full alpha stays opaque.
+- The line bits sit beside the samples, below the depth: a mark that the fragment is a line, and its leeway as a tie times a power of 4, rounded up, in 3 bits. A ghost has the lowest of those 3 bits and no line mark. Colors are kept exactly, so a face at full alpha stays opaque.
 
 ## Room for fragments
 
@@ -85,6 +97,8 @@ On a GPU without the lists, transparent parts are still sorted by their origins 
 ## Cost
 
 On an M3 at 2243 x 1414 pixels, the Porsche (16 transparent parts among about 2000) took about 2.3 ms more GPU time per frame: 0.4 ms to clear the heads and blend, the rest for shading the transparent surfaces once per sample. A frame with no transparent parts costs nothing extra. When a close-up fills the view with several layers of transparent walls, the fragment buffer can reach a few hundred MB.
+
+In a frame with transparent parts and ghosts, the ghosts' blend pass runs once per sample. This has not been measured. Without the lists, the transparent parts are drawn three times in such a frame: once to count the hidden fragments, once behind the ghosts and once in front.
 
 The cost grows with the number of transparent fragments, not parts. A stress model of about 1050 transparent parts, glass towers ten bricks high and a field of small parts, put 17 to 25 million fragments in a frame, about 8 per pixel. In a Release build it took 73 to 110 ms of GPU time per frame, depending on the angle and the launch, against 11 to 13 ms for the sorted blending. The CPU took about 2 ms; drawing all 1047 transparent parts one at a time took 0.6 ms of it. Of the GPU time:
 
@@ -110,5 +124,5 @@ These times were taken with the "over" blend. Blending by channel adds 10 to 27%
 - Trans-clear still lays a white haze over a colored transparent part behind it, as with "over". Real clear plastic would hardly change it.
 - The fragments past the nearest 16 blend as one average layer in depth order, so they do not filter by channel.
 - Without the lists, parts blend with "over", so red behind blue looks a gray purple there.
-- A ghost is drawn after the lists are blended, so it shows over a transparent part even where it is behind it.
-- A part with both opaque and transparent faces goes into the lists as a whole. Its opaque faces do not write depth, so ghosts and drag handles drawn later are not hidden by them.
+- Without the lists, under a ghost, the transparent fragments an opaque part hides are skipped by count, as the first ones drawn in the sample. Where a seen fragment is drawn before a hidden one, as can happen within one part that an opaque part cuts through, the hidden one blends in its place. Past 127 hidden fragments in a sample, the rest blend.
+- A part with both opaque and transparent faces goes into the lists as a whole. Its opaque faces do not write depth, so drag handles drawn later are not hidden by them.

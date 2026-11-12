@@ -124,6 +124,10 @@ static id<MTLRenderPipelineState>	_marqueePipelineState;
 static id<MTLRenderPipelineState>	_transparentClearPipelineState;
 static id<MTLRenderPipelineState>	_transparentPipelineState;
 static id<MTLRenderPipelineState>	_transparentWideLinePipelineState;
+static id<MTLRenderPipelineState>	_ghostPrepassPipelineState;
+static id<MTLRenderPipelineState>	_ghostPrepassWideLinePipelineState;
+static id<MTLRenderPipelineState>	_ghostListPipelineState;
+static id<MTLRenderPipelineState>	_ghostListWideLinePipelineState;
 static id<MTLRenderPipelineState>	_transparentResolvePipelineState;
 static id<MTLDepthStencilState>		_depthStencilState;
 static dispatch_semaphore_t			_inFlightSemaphore;
@@ -184,6 +188,20 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 	return state.transparentLists;
 }
 
+// How parts and ghosts blend onto what is drawn: the color by its alpha, and
+// the alpha as it is.
+static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAttachment)
+{
+	colorAttachment.writeMask = MTLColorWriteMaskAll;
+	colorAttachment.blendingEnabled = YES;
+	colorAttachment.rgbBlendOperation = MTLBlendOperationAdd;
+	colorAttachment.alphaBlendOperation = MTLBlendOperationAdd;
+	colorAttachment.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+	colorAttachment.sourceAlphaBlendFactor = MTLBlendFactorOne;
+	colorAttachment.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+	colorAttachment.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+}
+
 
 @implementation LDrawRenderer (Metal)
 
@@ -240,26 +258,20 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 
 	pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 	pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-	pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	pipelineDescriptor.depthAttachmentPixelFormat = DepthStencilPixelFormat;
+	pipelineDescriptor.stencilAttachmentPixelFormat = DepthStencilPixelFormat;
 	pipelineDescriptor.sampleCount = MSAASampleCount;
 
-	// Blending. The ghost depth prepass leans on this: at an alpha of 0 the
-	// source contributes nothing, so it can write depth through the same
-	// pipeline state. That is also why alpha-to-coverage stays off here and the
-	// fragment shader never discards on alpha -- see MAIN LOOP 4.
+	// Blending. The passes that draw no color lean on this: at an alpha of 0
+	// the source contributes nothing, so they can write depth and stencil
+	// through the same pipeline state. That is also why alpha-to-coverage stays
+	// off here and the fragment shader never discards on alpha -- see
+	// drawDeferredInstance.
 	//
 	// Alpha takes the source's own alpha, not its square. A picture drawn on a
 	// clear background is then read as premultiplied, and a ghost in it is as
 	// faint as in a view.
-	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = pipelineDescriptor.colorAttachments[0];
-	colorAttachment.blendingEnabled = YES;
-	colorAttachment.rgbBlendOperation = MTLBlendOperationAdd;
-	colorAttachment.alphaBlendOperation = MTLBlendOperationAdd;
-	colorAttachment.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-	colorAttachment.sourceAlphaBlendFactor = MTLBlendFactorOne;
-	colorAttachment.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-	colorAttachment.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-
+	setPartBlending(pipelineDescriptor.colorAttachments[0]);
 
 	NSError *error = nil;
 	_pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
@@ -341,7 +353,8 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 	marqueeDesc.vertexFunction = [library newFunctionWithName:@"vertex_shader_2D"];
 	marqueeDesc.fragmentFunction = [library newFunctionWithName:@"fragment_shader_2D"];
 	marqueeDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // TODO: view.colorPixelFormat;
-	marqueeDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	marqueeDesc.depthAttachmentPixelFormat = DepthStencilPixelFormat;
+	marqueeDesc.stencilAttachmentPixelFormat = DepthStencilPixelFormat;
 	marqueeDesc.sampleCount = MSAASampleCount;
 
 	// Enable blending for transparency
@@ -389,7 +402,8 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 																						  error:&error];
 
 	descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-	descriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+	descriptor.depthAttachmentPixelFormat = DepthStencilPixelFormat;
+	descriptor.stencilAttachmentPixelFormat = DepthStencilPixelFormat;
 	descriptor.sampleCount = MSAASampleCount;
 
 	// The lists take the fragments, so the color is left alone.
@@ -406,6 +420,39 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 
 	id<MTLRenderPipelineState> wideLinePipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
 
+	// The ghosts' depth prepass has the vertex shaders of their blend pass, so
+	// the blend finds the depths it tests for.
+	id<MTLFunction> ghostVertex			= [library newFunctionWithName:@"transparentVertexShader"];
+	id<MTLFunction> ghostWideLineVertex	= [library newFunctionWithName:@"transparentWideLineVertexShader"];
+
+	descriptor.vertexFunction = ghostVertex;
+	descriptor.fragmentFunction = [library newFunctionWithName:@"ghostPrepassFragmentShader"];
+	descriptor.vertexDescriptor = vertexDescriptor;
+
+	id<MTLRenderPipelineState> ghostPrepassPipeline = [device newRenderPipelineStateWithDescriptor:descriptor
+																							 error:&error];
+
+	descriptor.vertexFunction = ghostWideLineVertex;
+	descriptor.vertexDescriptor = nil;
+
+	id<MTLRenderPipelineState> ghostPrepassWideLinePipeline = [device newRenderPipelineStateWithDescriptor:descriptor
+																									 error:&error];
+
+	// Where no transparent part is, ghosts blend as other parts do.
+	setPartBlending(descriptor.colorAttachments[0]);
+	descriptor.vertexFunction = ghostVertex;
+	descriptor.fragmentFunction = [library newFunctionWithName:@"ghostFragmentShader"];
+	descriptor.vertexDescriptor = vertexDescriptor;
+
+	id<MTLRenderPipelineState> ghostPipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
+
+	descriptor.vertexFunction = ghostWideLineVertex;
+	descriptor.fragmentFunction = [library newFunctionWithName:@"ghostWideLineFragmentShader"];
+	descriptor.vertexDescriptor = nil;
+
+	id<MTLRenderPipelineState> ghostWideLinePipeline = [device newRenderPipelineStateWithDescriptor:descriptor
+																							  error:&error];
+
 	// The blend gets premultiplied colors.
 	MTLRenderPipelineColorAttachmentDescriptor *colorAttachment = descriptor.colorAttachments[0];
 	colorAttachment.writeMask = MTLColorWriteMaskAll;
@@ -421,7 +468,9 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 
 	id<MTLRenderPipelineState> resolvePipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
 
-	if (clearPipeline == nil || listPipeline == nil || wideLinePipeline == nil || resolvePipeline == nil) {
+	if (	clearPipeline == nil || listPipeline == nil || wideLinePipeline == nil
+		||	ghostPrepassPipeline == nil || ghostPrepassWideLinePipeline == nil
+		||	ghostPipeline == nil || ghostWideLinePipeline == nil || resolvePipeline == nil) {
 		NSLog(@"Error occurred when creating transparency pipeline states: %@", error);
 		return;
 	}
@@ -429,6 +478,10 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 	_transparentClearPipelineState = clearPipeline;
 	_transparentPipelineState = listPipeline;
 	_transparentWideLinePipelineState = wideLinePipeline;
+	_ghostPrepassPipelineState = ghostPrepassPipeline;
+	_ghostPrepassWideLinePipelineState = ghostPrepassWideLinePipeline;
+	_ghostListPipelineState = ghostPipeline;
+	_ghostListWideLinePipelineState = ghostWideLinePipeline;
 	_transparentResolvePipelineState = resolvePipeline;
 
 } // end setupTransparency:vertexDescriptor:
@@ -481,7 +534,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	if (CGSizeEqualToSize(size, state.lastDrawableSize)) { return; }
 
 	state.msaaColorTexture = newMultisampleTexture(MTLPixelFormatBGRA8Unorm, size, @"MSAA Color Texture");
-	state.depthTexture = newMultisampleTexture(MTLPixelFormatDepth32Float, size, @"Depth Texture");
+	state.depthTexture = newMultisampleTexture(DepthStencilPixelFormat, size, @"Depth Texture");
 	state.lastDrawableSize = size;
 }
 
@@ -499,7 +552,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	if (CGSizeEqualToSize(size, state.offscreenSize)) { return; }
 
 	state.offscreenColorTexture = newMultisampleTexture(MTLPixelFormatBGRA8Unorm, size, @"Offscreen Color Texture");
-	state.offscreenDepthTexture = newMultisampleTexture(MTLPixelFormatDepth32Float, size, @"Offscreen Depth Texture");
+	state.offscreenDepthTexture = newMultisampleTexture(DepthStencilPixelFormat, size, @"Offscreen Depth Texture");
 	state.offscreenSize = size;
 }
 
@@ -801,6 +854,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
 	renderPassDescriptor.depthAttachment.clearDepth = 1.0;
 
+	renderPassDescriptor.stencilAttachment.texture = depthTexture;
+	renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
+	renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionDontCare;
+	renderPassDescriptor.stencilAttachment.clearStencil = 0;
+
 	id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 	renderEncoder.label = @"Drawable Render Encoder";
 
@@ -914,15 +972,19 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 			return NO;
 		}
 
-		settings->clear_pipeline			= _transparentClearPipelineState;
-		settings->list_pipeline				= _transparentPipelineState;
-		settings->list_wide_line_pipeline	= _transparentWideLinePipelineState;
-		settings->resolve_pipeline			= _transparentResolvePipelineState;
-		settings->face_pipeline				= facePipeline;
-		settings->heads						= lists.heads;
-		settings->fragments					= lists.fragments;
-		settings->counters					= lists.counters;
-		settings->uniform					= lists.uniform;
+		settings->clear_pipeline					= _transparentClearPipelineState;
+		settings->list_pipeline						= _transparentPipelineState;
+		settings->list_wide_line_pipeline			= _transparentWideLinePipelineState;
+		settings->ghost_prepass_pipeline			= _ghostPrepassPipelineState;
+		settings->ghost_prepass_wide_line_pipeline	= _ghostPrepassWideLinePipelineState;
+		settings->ghost_pipeline					= _ghostListPipelineState;
+		settings->ghost_wide_line_pipeline			= _ghostListWideLinePipelineState;
+		settings->resolve_pipeline					= _transparentResolvePipelineState;
+		settings->face_pipeline						= facePipeline;
+		settings->heads								= lists.heads;
+		settings->fragments							= lists.fragments;
+		settings->counters							= lists.counters;
+		settings->uniform							= lists.uniform;
 
 		return YES;
 	};

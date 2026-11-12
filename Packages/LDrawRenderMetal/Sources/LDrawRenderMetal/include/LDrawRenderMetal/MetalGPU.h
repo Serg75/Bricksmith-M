@@ -17,6 +17,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 extern const int MSAASampleCount;
 
+// The depth target of every pass. Its stencil marks where a ghost is in front.
+extern const MTLPixelFormat DepthStencilPixelFormat;
+
 //------------------------------------------------------------------------------
 ///
 /// @class      MetalGPU

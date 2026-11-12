@@ -90,7 +90,8 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 			handlesDesc.vertexFunction = vertexFunction;
 			handlesDesc.fragmentFunction = fragmentFunction;
 			handlesDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-			handlesDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+			handlesDesc.depthAttachmentPixelFormat = DepthStencilPixelFormat;
+			handlesDesc.stencilAttachmentPixelFormat = DepthStencilPixelFormat;
 			handlesDesc.sampleCount = MSAASampleCount;
 
 			NSError *error = nil;

@@ -45,6 +45,13 @@ struct LDrawDLTransparentLists {
 	// Put faces and thin lines, and wide lines, into the lists.
 	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	list_pipeline;
 	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	list_wide_line_pipeline;
+	// Draw the depth of ghosts' faces and thin lines, and wide lines.
+	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	ghost_prepass_pipeline;
+	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	ghost_prepass_wide_line_pipeline;
+	// Blend ghosts' faces and thin lines, and wide lines. Where a transparent
+	// part is, they put them into the lists.
+	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	ghost_pipeline;
+	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	ghost_wide_line_pipeline;
 	// Blends each pixel's list over what is drawn.
 	__unsafe_unretained id<MTLRenderPipelineState> _Nullable	resolve_pipeline;
 	// The usual faces, put back afterwards.

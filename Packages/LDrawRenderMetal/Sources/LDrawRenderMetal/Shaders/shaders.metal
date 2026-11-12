@@ -395,10 +395,12 @@ constant uint TRANSPARENT_DEPTH_TIE		= 16;
 // The byte below the depth holds the samples a fragment covers in its low 4
 // bits. A line marks itself in the top bit, so the blend can tell lines that
 // lie on each other from faces that do, and keeps in the 3 bits below it how
-// far apart in depth another line on it may be.
+// far apart in depth another line on it may be. A ghost has the lowest of
+// those 3 bits and no line bit.
 constant uint TRANSPARENT_SAMPLE_BITS	= 0x0Fu;
-constant uint TRANSPARENT_LINE_BITS		= 0xF0u;
+constant uint TRANSPARENT_FLAG_BITS		= 0xF0u;
 constant uint TRANSPARENT_LINE_BIT		= 0x80u;
+constant uint TRANSPARENT_GHOST_BITS	= 0x10u;
 constant uint TRANSPARENT_LEEWAY_SHIFT	= 4;
 constant uint TRANSPARENT_LEEWAY_MAX	= 7;
 
@@ -419,11 +421,11 @@ static uint lineLeeway(uint bits)
 	return TRANSPARENT_DEPTH_TIE << (2 * ((bits >> TRANSPARENT_LEEWAY_SHIFT) & TRANSPARENT_LEEWAY_MAX));
 }
 
-// Adds a transparent color at one sample to its pixel's list, with the line
-// bits of a line in lineFlags or 0 for a face. The shader runs once for each sample of a
-// face that nothing opaque hides, and those runs get the same color and
-// depth, so they share one fragment and each adds its sample to it.
-static void addTransparentFragment(TransparentLists lists, float4 color, uint lineFlags, float depth, float2 position,
+// Adds a transparent color at one sample to its pixel's list, with the flag
+// bits of a line or a ghost, or 0 for a face. The shader runs once for each
+// sample of a face that nothing opaque hides, and those runs get the same
+// color and depth, so they share one fragment and each adds its sample to it.
+static void addTransparentFragment(TransparentLists lists, float4 color, uint flags, float depth, float2 position,
 								   uint sample)
 {
 	uint2	pixel		= uint2(position);
@@ -447,7 +449,7 @@ static void addTransparentFragment(TransparentLists lists, float4 color, uint li
 			uint						firstSteps	= firstDepth >> 8;
 
 			if (	first.color == packed
-				&&	(firstDepth & TRANSPARENT_LINE_BITS) == lineFlags
+				&&	(firstDepth & TRANSPARENT_FLAG_BITS) == flags
 				&&	(firstDepth & sampleBit) == 0
 				&&	max(firstSteps, steps) - min(firstSteps, steps) <= 1)
 			{
@@ -471,7 +473,7 @@ static void addTransparentFragment(TransparentLists lists, float4 color, uint li
 
 			mine = counter * lists.uniform->slice + taken;
 			lists.fragments[mine].color = packed;
-			atomic_store_explicit(&lists.fragments[mine].depth_mask, depthBits | lineFlags | sampleBit,
+			atomic_store_explicit(&lists.fragments[mine].depth_mask, depthBits | flags | sampleBit,
 								  memory_order_relaxed);
 		}
 
@@ -608,6 +610,65 @@ fragment void transparentWideLineFragmentShader(
 	addTransparentFragment(lists, in.color, in.line_flags, depthAtPixelCenter(in.clip_zw), in.position.xy, sample);
 }
 
+// Where a ghost's pixel has transparent fragments, puts the ghost's color into
+// the list, so the two blend in depth order, and returns no color. Elsewhere
+// it returns the color to blend at once. Ghosts never start a list, so every
+// ghost in a pixel takes the same way.
+static float4 addGhostFragment(TransparentLists lists, float4 color, float depth, float2 position, uint sample)
+{
+	uint2	pixel	= uint2(position);
+	uint	head	= atomic_load_explicit(&lists.heads[pixel.y * lists.uniform->width + pixel.x],
+										   memory_order_relaxed);
+
+	if (head == TransparentListEnd)
+		return color;
+
+	addTransparentFragment(lists, color, TRANSPARENT_GHOST_BITS, depth, position, sample);
+
+	return float4(0.0);
+}
+
+// The ghosts' depth prepass in a frame with lists. It draws no color, and
+// runs once for a pixel, not for each sample.
+fragment void ghostPrepassFragmentShader()
+{
+}
+
+// Blends a ghost's face or thin line in a frame with lists.
+[[early_fragment_tests]]
+fragment float4 ghostFragmentShader(
+	TransparentVertexOutput			in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	constant FragmentUniform&		uni			[[buffer(BufferIndexFragmentUniforms)]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	device atomic_uint				*counters	[[buffer(BufferIndexTransparentCounters)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]],
+	texture2d<float>				tex			[[texture(0)]])
+{
+	TransparentLists	lists	= { heads, fragments, counters, &uniform };
+	float4				color	= markedColor(shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex),
+											  in.mark, in.position.xy);
+
+	return addGhostFragment(lists, color, depthAtPixelCenter(in.clip_zw), in.position.xy, sample);
+}
+
+// Blends a ghost's wide line in a frame with lists, as the shader above
+// blends its faces.
+[[early_fragment_tests]]
+fragment float4 ghostWideLineFragmentShader(
+	TransparentLineVertexOutput		in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	device atomic_uint				*counters	[[buffer(BufferIndexTransparentCounters)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+{
+	TransparentLists lists = { heads, fragments, counters, &uniform };
+
+	return addGhostFragment(lists, in.color, depthAtPixelCenter(in.clip_zw), in.position.xy, sample);
+}
+
 // Empties the lists of the pixels in one tile, in the render pass before the
 // transparent parts are drawn. A tile's later fragments come after it. In a
 // tile dispatch the grid position is the pixel in the render target.
@@ -726,7 +787,8 @@ static bool isSameHue(float3 a, float3 b)
 // of the channel goes first: what it stops cannot come back, and red behind
 // blue looks dark. Layers of one hue blend as plain blending does. It runs per
 // sample, so a sample a fragment does not cover keeps what is drawn there.
-// Lines that lie on each other count once.
+// Lines that lie on each other count once. A ghost blends in depth order with
+// every layer.
 fragment float4 transparencyResolveFragmentShader(
 	ResolveVertexOutput				in			[[stage_in]],
 	uint							sample		[[sample_id]],
@@ -830,6 +892,7 @@ fragment float4 transparencyResolveFragmentShader(
 
 	uint2	recentLines[TRANSPARENT_RECENT_LINES];
 	uint	inPlace	= 0;				// a bit for each layer that keeps its place in depth
+	uint	ghosts	= 0;				// a bit for each ghost's layer
 	float4	surface	= float4(0.0);		// an opaque face that hides the layers behind it
 
 	for (uint k = 0; k < TRANSPARENT_RECENT_LINES; ++k)
@@ -875,6 +938,10 @@ fragment float4 transparencyResolveFragmentShader(
 			recentLines[0]	= sorted[i];
 			inPlace			|= 1u << i;
 		}
+		else if ((sorted[i].x & TRANSPARENT_FLAG_BITS) == TRANSPARENT_GHOST_BITS)
+		{
+			ghosts |= 1u << i;
+		}
 
 		// An opaque face, such as one of a part that is also transparent,
 		// blends last, as what is drawn behind the layers does.
@@ -913,9 +980,9 @@ fragment float4 transparencyResolveFragmentShader(
 
 	// Each layer's hue, as a number from 1. A layer is compared only with the
 	// first layer of each hue found so far. 0 is for a layer that goes in
-	// depth order with every layer: a gray, the average behind the sorted
-	// ones, or one past the last hue kept. Lines get a hue below. For each hue, its brightest value in each
-	// channel.
+	// depth order with every layer: a gray, a ghost, which is not plastic, the
+	// average behind the sorted ones, or one past the last hue kept. Lines get
+	// a hue below. For each hue, its brightest value in each channel.
 	uint	hue[TRANSPARENT_LAYER_MAX];
 	float3	hueColors[TRANSPARENT_HUE_MAX];
 	float3	hueTop[TRANSPARENT_HUE_MAX];
@@ -933,7 +1000,9 @@ fragment float4 transparencyResolveFragmentShader(
 	{
 		hue[k] = 0;
 
-		if (layers[k].a == 0.0 || ((inPlace >> k) & 1u) != 0 || isGray(layers[k].rgb))
+		if (	layers[k].a == 0.0
+			||	(((inPlace | ghosts) >> k) & 1u) != 0
+			||	isGray(layers[k].rgb))
 			continue;
 
 		#pragma unroll
@@ -964,7 +1033,7 @@ fragment float4 transparencyResolveFragmentShader(
 	}
 
 	// A line takes the hue of the face behind it, which it is drawn on, so it
-	// moves with that face. Behind a gray it stays at 0.
+	// moves with that face. Behind a gray or a ghost it stays at 0.
 	uint below = 0;		// the hue of the nearest face behind
 
 	#pragma unroll
