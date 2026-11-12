@@ -24,6 +24,14 @@
 #import "MetalUtilities.h"
 #import <LDrawCore/MatrixMath.h>
 
+// The shaders' material values must match the ones a color's alpha carries.
+_Static_assert(MaterialPlain			== LDrawRenderMaterialPlain,			"material values differ");
+_Static_assert(MaterialChrome			== LDrawRenderMaterialChrome,			"material values differ");
+_Static_assert(MaterialPearlescent		== LDrawRenderMaterialPearlescent,		"material values differ");
+_Static_assert(MaterialSatinMetallic	== LDrawRenderMaterialSatinMetallic,	"material values differ");
+_Static_assert(MaterialMatteMetallic	== LDrawRenderMaterialMatteMetallic,	"material values differ");
+_Static_assert(MaterialMetal			== LDrawRenderMaterialMetal,			"material values differ");
+
 // This turns on normal smoothing.
 #define WANT_SMOOTH 1
 
@@ -2379,7 +2387,8 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 
 	if (!is_wire_frame)
 	{
-		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && (cur_color[3] < 1.0f || cmp_color[3] < 1.0f));
+		int meta_alpha = LDrawRenderColorIsTranslucent(cur_color[3]) || LDrawRenderColorIsTranslucent(cmp_color[3]);
+		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && meta_alpha);
 		if (want_sort)
 		{
 			// Sort case.  We want sort if:

@@ -12,6 +12,7 @@
 
 #import <Foundation/Foundation.h>
 
+#import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawCore/LDrawMetaCommand.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -163,11 +164,13 @@ typedef NS_ENUM(int, LDrawColorMaterialT)
 - (LDrawColorT)			edgeColorCode;
 - (void)				getColorRGBA:(float *)inComponents;
 - (void)				getEdgeColorRGBA:(float *)inComponents;
+- (void)				getRenderColorRGBA:(float *)inComponents;
 - (NSString *)			localizedName;
 - (uint8_t)				luminance;
 - (LDrawColorMaterialT)	material;
 - (nullable NSString *)	materialParameters;
 - (NSString *)			name;
+- (LDrawRenderMaterial)	renderMaterial;
 
 - (void) setColorCode:(LDrawColorT)newCode;
 - (void) setColorRGBA:(float *)newComponents;

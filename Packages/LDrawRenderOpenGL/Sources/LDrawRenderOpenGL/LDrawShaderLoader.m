@@ -10,7 +10,42 @@
 
 #import "LDrawShaderLoader.h"
 #import "LDrawRenderOpenGLResources.h"
+#import <LDrawCore/LDrawCoreRenderer.h>
 #import <LDrawCore/LDrawUtilities.h>
+
+//========== shader_defines =============================================
+//
+// Purpose:		The text put before a shader: the GLSL version, the stage,
+//				and the material values a color's alpha carries.
+//
+// Notes:		The material values are taken from LDrawRenderMaterial, so
+//				the shader always has the same ones.
+//
+//=======================================================================
+static NSString * shader_defines(BOOL vertex_shader)
+{
+	static const struct { const char * name; LDrawRenderMaterial value; } materials[] = {
+		{ "MaterialPlain",			LDrawRenderMaterialPlain },
+		{ "MaterialChrome",			LDrawRenderMaterialChrome },
+		{ "MaterialPearlescent",	LDrawRenderMaterialPearlescent },
+		{ "MaterialSatinMetallic",	LDrawRenderMaterialSatinMetallic },
+		{ "MaterialMatteMetallic",	LDrawRenderMaterialMatteMetallic },
+		{ "MaterialMetal",			LDrawRenderMaterialMetal },
+	};
+
+	NSMutableString *	defines	= [NSMutableString string];
+	int					vertex	= vertex_shader ? 1 : 0;
+
+	[defines appendFormat:@"#version 120\n#define VSHADER %d\n#define FSHADER %d\n", vertex, 1 - vertex];
+
+	// A float each, since the shader compares them with a varying.
+	for (size_t i = 0; i < sizeof(materials) / sizeof(materials[0]); ++i)
+		[defines appendFormat:@"#define %s %d.0\n", materials[i].name, (int)materials[i].value];
+
+	return defines;
+
+} // end shader_defines
+
 
 //========== load_shader ================================================
 //
@@ -61,17 +96,18 @@ static GLuint	load_shader(NSString * file_path, GLenum shader_type, const char *
 //
 // Purpose:		Load a shader from disk.
 //
-// Notes:		Automatically adds prefixes to select GLSL 120 and define
-//				FSHADER or VSHADER for the two types of shaders.
-//				
+// Notes:		Automatically adds prefixes to select GLSL 120, define
+//				FSHADER or VSHADER for the two types of shaders, and define
+//				the material values.
+//
 //				Automatically binds the attribute list consecutively pre-
 //				link.
 //
 //=======================================================================
 GLuint	LDrawLoadShaderFromFile(NSString * file_path, const char * _Nullable const * _Nullable attrib_list)
 {
-	GLuint vshader = load_shader(file_path,GL_VERTEX_SHADER,"#version 120\n#define VSHADER 1\n#define FSHADER 0\n");
-	GLuint fshader = load_shader(file_path,GL_FRAGMENT_SHADER,"#version 120\n#define VSHADER 0\n#define FSHADER 1\n");
+	GLuint vshader = load_shader(file_path,GL_VERTEX_SHADER,[shader_defines(YES) UTF8String]);
+	GLuint fshader = load_shader(file_path,GL_FRAGMENT_SHADER,[shader_defines(NO) UTF8String]);
 	if (!vshader || !fshader) 
 		return 0;
 	GLuint prog = glCreateProgram();

@@ -1231,7 +1231,8 @@ void LDrawDLDraw(
 		// 1. There is alpha baked into our meshes permanently or
 		// 2. Our mesh uses meta colors and the current meta colors have alpha.
 	
-		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && (cur_color[3] < 1.0f || cmp_color[3] < 1.0f));
+		int meta_alpha = LDrawRenderColorIsTranslucent(cur_color[3]) || LDrawRenderColorIsTranslucent(cmp_color[3]);
+		int want_sort = (dl->flags & dl_has_alpha) || ((dl->flags & dl_has_meta) && meta_alpha);
 		if (want_sort)
 		{
 			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, 0, 1.0f, mark);

@@ -13,6 +13,166 @@ using namespace metal;
 // in the package public headers so CPU and GPU cannot drift apart.
 #import "../include/LDrawRenderMetal/MetalCommonDefinitions.h"
 
+// MARK: - Metallic finishes -
+
+
+// Takes the material out of a color's alpha, which carries both as
+// 2 * material + alpha.
+static float takeMaterial(thread float4& color)
+{
+	float material = floor(color.a * 0.5);
+
+	color.a -= 2.0 * material;
+	return material;
+}
+
+// How far the direction to the eye leans, as a tangent, at the ends of the
+// longer side of a view with no perspective.
+constant float FLAT_VIEW_SPREAD = 0.15;
+
+// The flakes of a metal paint sit in a grid of cubes fixed to the part. The
+// grid is turned, so that a part's flat faces do not lie in its planes, where
+// a face would flicker between two cubes.
+constant float3x3 FLAKE_GRID = float3x3(float3(2.0, 3.0, 6.0) / 7.0,
+										float3(3.0, -6.0, 2.0) / 7.0,
+										float3(6.0, 2.0, -3.0) / 7.0);
+
+// How wide a flake is drawn, in pixels.
+constant float FLAKE_PIXELS = 1.5;
+
+// A value from 0 to 1 for a cube of the flake grid.
+static float cubeNoise(float3 cube)
+{
+	float3 mixed = fract(cube * 0.1031);
+
+	mixed += dot(mixed, mixed.zyx + 31.32);
+	return fract((mixed.x + mixed.y) * mixed.z);
+}
+
+// A value from 0 to 1 that differs from flake to flake, with flakes about
+// FLAKE_PIXELS wide. across and down are how the place changes over one pixel.
+static float flakeNoise(float3 position, float3 across, float3 down)
+{
+	// Cube sizes are powers of 2. Two sizes blend, so a zoom fades flakes in
+	// and out and none appears at once.
+	float	pixelSize	= sqrt(length(across) * length(down));
+	float	level		= log2(max(pixelSize, 1e-6) * FLAKE_PIXELS);
+	float	perUnit		= exp2(-floor(level));		// cubes along one unit of the grid
+	float	blend		= fract(level);
+	float	noise		= 0.0;
+
+	// The mean of four places in the pixel, so a flake slides from pixel to
+	// pixel when the model moves, and does not jump.
+	for (int i = 0; i < 4; i++) {
+		float3	place	= position + ((i & 1) ? 0.25 : -0.25) * across + ((i & 2) ? 0.25 : -0.25) * down;
+		float3	small	= floor(place * perUnit);
+		float3	large	= floor(small * 0.5);
+
+		noise += 0.25 * mix(cubeNoise(small), cubeNoise(large), blend);
+	}
+
+	// A blend of two values is nearer the middle, so it is spread out again.
+	float	spread	= rsqrt(blend * blend + (1.0 - blend) * (1.0 - blend));
+
+	return saturate(0.5 + (noise - 0.5) * spread);
+}
+
+// The studio that metallic parts reflect is bright above. Its floor is dark far
+// away and lighter below.
+constant float	STUDIO_FLOOR_FAR	= 0.20;
+constant float	STUDIO_FLOOR		= 0.60;
+constant float	STUDIO_WALL			= 0.75;
+constant float	STUDIO_CEILING		= 0.25;		// added to the wall, straight up
+
+// A round lamp up and to the left. Its size is 1 less the cosine of its angle.
+constant float3	STUDIO_KEY_DIRECTION	= float3(-0.503, 0.704, 0.503);
+constant float	STUDIO_KEY_SIZE			= 0.2;
+constant float	STUDIO_KEY_LIGHT		= 0.8;
+
+// A narrow band of light to the right. It draws a bright line down a chrome
+// cylinder.
+constant float	STUDIO_STRIP_X			= 0.85;
+constant float	STUDIO_STRIP_HALF_WIDTH	= 0.07;
+constant float	STUDIO_STRIP_LIGHT		= 1.2;
+
+// A wide lamp behind the eye, so a face toward the eye is lit as plain parts
+// are.
+constant float	STUDIO_FILL_LIGHT		= 0.5;
+constant float	STUDIO_FILL_SHARPNESS	= 3.0;
+
+// How soft a mirror's reflection is, and how much softer the roughest surface's
+// is. The blur grows with the square of the roughness.
+constant float	MIRROR_BLUR	= 0.015;
+constant float	ROUGH_BLUR	= 1.4142;
+
+// How much of a lamp shows this far inside its edge. A blurred lamp is wider
+// and dimmer.
+static float lampLight(float inside, float size, float blur)
+{
+	return smoothstep(-blur, blur, inside) * size / (size + blur);
+}
+
+// The light the studio sends from a direction, as soft as the blur.
+static float studioLight(float3 direction, float blur)
+{
+	float	above		= smoothstep(-blur, blur, direction.y);
+	float	floorLight	= mix(STUDIO_FLOOR, STUDIO_FLOOR_FAR, exp(4.0 * min(0.0, direction.y)));
+	float	light		= mix(floorLight, STUDIO_WALL, above) + STUDIO_CEILING * max(0.0, direction.y);
+
+	float	inKey		= dot(direction, STUDIO_KEY_DIRECTION) - (1.0 - STUDIO_KEY_SIZE);
+	float	inStrip		= STUDIO_STRIP_HALF_WIDTH - abs(direction.x - STUDIO_STRIP_X);
+
+	light += STUDIO_KEY_LIGHT * lampLight(inKey, STUDIO_KEY_SIZE, blur);
+	light += STUDIO_STRIP_LIGHT * lampLight(inStrip, STUDIO_STRIP_HALF_WIDTH, blur);
+	light += STUDIO_FILL_LIGHT * exp(STUDIO_FILL_SHARPNESS * (direction.z - 1.0));
+
+	return light;
+}
+
+// How much of a finish is metal, how rough it is, and how much the flakes in
+// it make the reflection differ from place to place.
+static float3 metalRoughnessAndFlakes(float material)
+{
+	int finish = int(material);
+
+	if (finish == MaterialChrome)			return float3(1.0, 0.05, 0.0);
+	if (finish == MaterialMetal)			return float3(0.9, 0.30, 0.17);
+	if (finish == MaterialPearlescent)		return float3(0.8, 0.28, 0.0);
+	if (finish == MaterialSatinMetallic)	return float3(0.6, 0.55, 0.10);
+	if (finish == MaterialMatteMetallic)	return float3(0.6, 0.65, 0.17);
+
+	return float3(0.0, 1.0, 0.0);
+}
+
+// A lit face of a metallic finish: less of the plain lit color, and the studio
+// reflected in the finish's own color.
+static float3 metallicColor(float3 color, float3 lit, float3 normal, float3 view_eye, float3 finish, float flake)
+{
+	float	metal	= finish.x;
+	float	rough	= finish.y;
+	float	flakes	= 1.0 + finish.z * (2.0 * flake - 1.0);
+	float3	view	= normalize(view_eye);
+
+	// Both sides of a face reflect.
+	normal = (dot(normal, view) < 0.0) ? -normal : normal;
+
+	float	facing		= saturate(dot(normal, view));
+	float3	mirrored	= reflect(-view, normal);
+	float	blur		= MIRROR_BLUR + ROUGH_BLUR * rough * rough;
+
+	// Metal reflects in its own color, and anything reflects more at a
+	// glancing angle.
+	float3	straight	= mix(float3(0.04), color, metal);
+	float3	glancing	= max(float3(1.0 - rough), straight);
+	float3	reflectance	= mix(straight, glancing, pow(1.0 - facing, 5.0));
+
+	return lit * (1.0 - metal) + reflectance * studioLight(mirrored, blur) * flakes;
+}
+
+
+// MARK: - Parts -
+
+
 // Vertex shader
 
 struct VertexInput {
@@ -24,11 +184,12 @@ struct VertexInput {
 struct VertexOutput {
 	float4	position [[position]];
 	float4	color;
-	float4	position_eye;
 	float3	normal_eye;
-	float	tex_mix;
+	float3	view_eye;
+	float3	flake_position;
 	float2	tex_coord;
 	float4	mark [[flat]];
+	float	material [[flat]];
 };
 
 // The color of a marked part's edges: the mark's, at the edge's alpha.
@@ -62,12 +223,35 @@ static VertexOutput partVertex(VertexInput					in,
 	float4 eye_pos = uni.model_view_matrix * pos_obj;
 
 	out.position = uni.projection_matrix * eye_pos;
-	out.position_eye = eye_pos;
+
+	// In the part's own coordinates, which stay small enough for cubeNoise.
+	out.flake_position = FLAKE_GRID * in.position.xyz;
+
+	// Toward the eye, for reflections. With no perspective the eye is taken to
+	// be near the middle of the view, so a flat mirror is not one flat color.
+	bool	perspective	= (uni.projection_matrix[3][3] == 0.0);
+	float2	halfView	= 1.0 / float2(uni.projection_matrix[0][0], uni.projection_matrix[1][1]);
+	float2	lean		= out.position.xy * halfView / max(abs(halfView.x), abs(halfView.y));
+
+	out.view_eye = perspective ? -eye_pos.xyz : float3(-FLAT_VIEW_SPREAD * lean, 1.0);
 
 	float4 col = in.color;
 	if (in.color.a == 0.0) {
 		col = mix(inst[iid].color_current, inst[iid].color_complement, in.color.r);
 	};
+
+	out.material = takeMaterial(col);
+
+	// Green = 1 in a meta color marks a line in the part's color, or the edge
+	// color. Neither has a finish.
+	if (in.color.a == 0.0 && in.color.g == 1.0) {
+		out.material = MaterialPlain;
+	}
+
+	// A face with no normal has nothing to reflect.
+	if (in.normal.x == 0.0 && in.normal.y == 0.0 && in.normal.z == 0.0) {
+		out.material = MaterialPlain;
+	}
 
 	// A vertex in the edge color is on an edge line.
 	if (in.color.a == 0.0 && in.color.r == 1.0) {
@@ -78,13 +262,8 @@ static VertexOutput partVertex(VertexInput					in,
 	// reaches a color baked into the mesh as well as a meta one.
 	col.a *= ghost_alpha;
 
-	out.color.a = col.a;
-	out.color.rgb = col.rgb;
+	out.color = col;
 	out.mark = inst[iid].mark;
-
-	if (in.normal.x == 0.0 && in.normal.y == 0.0 && in.normal.z == 0.0) {
-		out.color = col;
-	};
 
 	float2 tex_coord;
 	tex_coord.x = dot(texGen.plane_s, in.position);
@@ -112,18 +291,27 @@ struct FragmentInput {
 	float4	color;
 	float2	tex_coord;
 	float3	normal_eye;
+	float3	view_eye;
+	float3	flake_position;
 	float4	mark [[flat]];
+	float	material [[flat]];
 };
 
 struct FragmentOutput {
 	float4	frag_color;
 };
 
-// The color of a face or line lit by the two lights, under its texture.
-static float4 shadedColor(float4 color, float3 normal_eye, float2 tex_coord,
-						  constant FragmentUniform& uni, texture2d<float> tex)
+// The color of a face or line lit by the two lights, under its texture. A
+// metallic finish also reflects the studio.
+static float4 shadedColor(float4 color, float3 normal_eye, float3 view_eye, float material, float2 tex_coord,
+						  float3 flake_position, constant FragmentUniform& uni, texture2d<float> tex)
 {
 	float3 normal = normalize(normal_eye);
+
+	// How the place in the flake grid changes over one pixel. Taken here, for
+	// every fragment, because that is not known inside a branch.
+	float3 flake_across	= dfdx(flake_position);
+	float3 flake_down	= dfdy(flake_position);
 
 	float4 final_color = color;
 	float light_source_0_k = dot(normal, uni.light_source[0].position.xyz);
@@ -132,6 +320,18 @@ static float4 shadedColor(float4 color, float3 normal_eye, float2 tex_coord,
 		(uni.light_source[0].diffuse.rgb * max(0.0, light_source_0_k) +
 		 uni.light_source[1].diffuse.rgb * max(0.0, light_source_1_k) +
 		 uni.light_model.ambient.rgb);
+
+	if (material != MaterialPlain) {
+		float3	finish	= metalRoughnessAndFlakes(material);
+		float	flake	= 0.5;
+
+		// A finish with no flakes skips the noise, which is the costly part.
+		if (finish.z > 0.0) {
+			flake = flakeNoise(flake_position, flake_across, flake_down);
+		}
+
+		final_color.rgb = metallicColor(color.rgb, final_color.rgb, normal, view_eye, finish, flake);
+	}
 
 	constexpr sampler linear_sampler(mip_filter::linear,
 									 mag_filter::linear,
@@ -176,17 +376,27 @@ static float4 markedColor(float4 color, float4 mark, float2 pixel)
 	return color;
 }
 
+// The color of a part's face or thin line at a fragment: lit, then marked.
+template <typename Fragment>
+static float4 partColor(Fragment in, constant FragmentUniform& uni, texture2d<float> tex)
+{
+	float4 shaded = shadedColor(in.color, in.normal_eye, in.view_eye, in.material, in.tex_coord,
+								in.flake_position, uni, tex);
+
+	return markedColor(shaded, in.mark, in.position.xy);
+}
+
 fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 									   constant FragmentUniform& uni [[buffer(BufferIndexFragmentUniforms)]],
 									   texture2d<float> tex [[texture(0)]])
 {
 	FragmentOutput out;
 
-	out.frag_color = markedColor(shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex), in.mark,
-								 in.position.xy);
+	out.frag_color = partColor(in, uni, tex);
 
 	return out;
 }
+
 
 
 // MARK: - Outlines -
@@ -292,6 +502,9 @@ static LineVertexOutput wideLineVertex(device const PackedVertex	*verts,
 
 		color = float4(mix(current.rgb, outlineColor(current.rgb), color.r), current.a);
 	}
+
+	// A line has no finish.
+	takeMaterial(color);
 
 	// Only lines in the edge color take the mark; others keep their color.
 	color.a		*= ghost_alpha;
@@ -495,8 +708,11 @@ struct TransparentVertexOutput {
 	float4	color;
 	float2	tex_coord;
 	float3	normal_eye;
+	float3	view_eye;
+	float3	flake_position;
 	float2	clip_zw [[center_perspective]];		// for the depth at the pixel's center
 	float4	mark [[flat]];
+	float	material [[flat]];
 };
 
 vertex TransparentVertexOutput transparentVertexShader(
@@ -510,12 +726,15 @@ vertex TransparentVertexOutput transparentVertexShader(
 	VertexOutput			part	= partVertex(in, inst, uni, texGen, ghost_alpha, iid);
 	TransparentVertexOutput	out;
 
-	out.position	= part.position;
-	out.color		= part.color;
-	out.tex_coord	= part.tex_coord;
-	out.normal_eye	= part.normal_eye;
-	out.clip_zw		= part.position.zw;
-	out.mark		= part.mark;
+	out.position		= part.position;
+	out.color			= part.color;
+	out.tex_coord		= part.tex_coord;
+	out.normal_eye		= part.normal_eye;
+	out.view_eye		= part.view_eye;
+	out.flake_position	= part.flake_position;
+	out.clip_zw			= part.position.zw;
+	out.mark			= part.mark;
+	out.material		= part.material;
 
 	return out;
 }
@@ -586,8 +805,7 @@ fragment void transparentFragmentShader(
 	texture2d<float>				tex			[[texture(0)]])
 {
 	TransparentLists	lists	= { heads, fragments, counters, &uniform };
-	float4				color	= markedColor(shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex),
-											  in.mark, in.position.xy);
+	float4				color	= partColor(in, uni, tex);
 	bool				isLine	= thinLines != 0;
 	float				behind	= isLine ? 0.0 : TRANSPARENT_FACE_DEPTH_OFFSET;
 	uint				flags	= isLine ? lineBits(0.0) : 0u;		// a thin line gets the least leeway
@@ -647,8 +865,7 @@ fragment float4 ghostFragmentShader(
 	texture2d<float>				tex			[[texture(0)]])
 {
 	TransparentLists	lists	= { heads, fragments, counters, &uniform };
-	float4				color	= markedColor(shadedColor(in.color, in.normal_eye, in.tex_coord, uni, tex),
-											  in.mark, in.position.xy);
+	float4				color	= partColor(in, uni, tex);
 
 	return addGhostFragment(lists, color, depthAtPixelCenter(in.clip_zw), in.position.xy, sample);
 }

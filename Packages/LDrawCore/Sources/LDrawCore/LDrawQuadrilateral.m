@@ -278,7 +278,7 @@
 		else
 		{
 			float rgba[4];
-			[self->color getColorRGBA:rgba];
+			[self->color getRenderColorRGBA:rgba];
 			[renderer drawQuad:v normal:n color:rgba];
 		}
 	}

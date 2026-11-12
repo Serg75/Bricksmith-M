@@ -588,6 +588,20 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 }//end getEdgeColorRGBA:
 
 
+//========== getRenderColorRGBA: ===============================================
+//
+// Purpose:		Fills the array with the color a renderer draws: the RGBA
+//				components, with the finish packed into the alpha.
+//
+//==============================================================================
+- (void) getRenderColorRGBA:(float *)inComponents
+{
+	[self getColorRGBA:inComponents];
+	inComponents[3] = LDrawRenderColorPackAlpha(inComponents[3], [self renderMaterial]);
+
+}//end getRenderColorRGBA:
+
+
 //========== localizedName =====================================================
 //
 // Purpose:		Returns the name for the specified color code. If possible, the 
@@ -665,6 +679,36 @@ void RGBtoHSV( float r, float g, float b, float *h, float *s, float *v );
 	return self->name;
 	
 }//end name
+
+
+//========== renderMaterial ====================================================
+//
+// Purpose:		Returns the finish a renderer draws this color with.
+//
+// Notes:		LDConfig calls two kinds of plastic pearlescent and tells them
+//				apart only by name: the Pearl colors are smooth, and the others,
+//				such as Flat_Silver, are dull with fine flakes.
+//
+//==============================================================================
+- (LDrawRenderMaterial) renderMaterial
+{
+	switch(self->material)
+	{
+		case LDrawColorMaterialChrome:			return LDrawRenderMaterialChrome;
+		case LDrawColorMaterialMatteMetallic:	return LDrawRenderMaterialMatteMetallic;
+		case LDrawColorMaterialMetal:			return LDrawRenderMaterialMetal;
+
+		case LDrawColorMaterialPearlescent:
+			if([self->name hasPrefix:@"Pearl_"])
+				return LDrawRenderMaterialPearlescent;
+			else
+				return LDrawRenderMaterialSatinMetallic;
+
+		default:
+			return LDrawRenderMaterialPlain;
+	}
+
+}//end renderMaterial
 
 
 #pragma mark -

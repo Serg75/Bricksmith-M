@@ -86,22 +86,32 @@ void LDrawDLBuilderSetTex(struct LDrawDLBuilder * ctx, struct LDrawTextureSpec *
 } // end LDrawDLBuilderSetTex
 
 
+//========== flag_color ==========================================================
+//
+// Purpose:	Sets the DL flags a color calls for: it is a meta color, or it is
+//			translucent.
+//
+//================================================================================
+static void flag_color(struct LDrawDLBuilder * ctx, const float c[4])
+{
+	// Alpha = 0 means meta color.
+		 if (c[3] == 0.0f)							ctx->flags |= dl_has_meta;
+	else if (LDrawRenderColorIsTranslucent(c[3]))	ctx->flags |= dl_has_alpha;
+
+} // end flag_color
+
+
 //========== LDrawDLBuilderAddTri ================================================
 //
 // Purpose: Add one triangle to our DL using the current texture.
 //
-// Notes:	This routine 'sniffs' the alpha as it goes by and keeps the DL flags
-//			correct - this is how a DL "knows" if it is translucent.
-//
-//			We accumulate the tri by allocating a 3-vertex DL link and queueing it
+// Notes:	We accumulate the tri by allocating a 3-vertex DL link and queueing it
 //			onto the triangle list for the current texture.
 //
 //================================================================================
 void LDrawDLBuilderAddTri(struct LDrawDLBuilder * ctx, const float v[9], float n[3], float c[4])
 {
-	// Alpha = 0 means meta color.  0 < Alpha < 1 means translucency.	
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
+	flag_color(ctx, c);
 	
 	int i;
 	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 3);
@@ -227,8 +237,7 @@ static void add_quad_as_quad(struct LDrawDLBuilder * ctx, const float v[12], flo
 //================================================================================
 void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4])
 {
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
+	flag_color(ctx, c);
 
 	if (supported_primitives() & dl_supports_quads)
 		add_quad_as_quad(ctx,v,n,c);
@@ -245,8 +254,7 @@ void LDrawDLBuilderAddQuad(struct LDrawDLBuilder * ctx, const float v[12], float
 //================================================================================
 void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const float v[6], float n[3], float c[4])
 {
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
+	flag_color(ctx, c);
 
 	int i;
 	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 2);
@@ -278,8 +286,8 @@ void LDrawDLBuilderAddLine(struct LDrawDLBuilder * ctx, const float v[6], float 
 // Purpose:	Add one conditional line to the current DL builder in the current texture.
 //
 // Notes:	A backend that does not draw conditional lines drops them here, before
-//			the alpha is sniffed, so that they cannot pull translucency flags onto
-//			a DL that will never show them.
+//			their color sets any flag, so that they cannot make translucent a DL
+//			that will never show them.
 //
 //================================================================================
 void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[12], float n[3], float c[4])
@@ -287,8 +295,7 @@ void LDrawDLBuilderAddCondLine(struct LDrawDLBuilder * ctx, const float v[12], f
 	if ((supported_primitives() & dl_supports_conditional_lines) == 0)
 		return;
 
-		 if (c[3] == 0.0f)	ctx->flags |= dl_has_meta;
-	else if (c[3] != 1.0f)	ctx->flags |= dl_has_alpha;
+	flag_color(ctx, c);
 
 	int i;
 	struct LDrawDLBuilderVertexLink * nl = (struct LDrawDLBuilderVertexLink *) LDrawPoolAllocate(ctx->alloc, sizeof(struct LDrawDLBuilderVertexLink) + sizeof(float) * VERT_STRIDE * 4);

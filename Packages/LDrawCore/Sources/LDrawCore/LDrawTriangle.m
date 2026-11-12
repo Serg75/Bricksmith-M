@@ -264,7 +264,7 @@
 		else
 		{
 			float rgba[4];
-			[self->color getColorRGBA:rgba];
+			[self->color getRenderColorRGBA:rgba];
 			[renderer drawTri:v normal:n color:rgba];
 		}
 	}

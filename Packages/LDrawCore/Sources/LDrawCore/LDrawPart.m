@@ -441,7 +441,7 @@ int floatNearGrid(double v, double grid, double epsi)
 				else
 				{
 					float c[4];
-					[self->color getColorRGBA:c];
+					[self->color getRenderColorRGBA:c];
 					[renderer pushColor:c];
 				}
 			}

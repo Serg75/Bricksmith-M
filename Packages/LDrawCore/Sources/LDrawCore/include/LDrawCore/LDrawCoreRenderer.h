@@ -62,6 +62,50 @@ struct	LDrawTextureSpec {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// MATERIALS
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The finish a renderer draws a color with. A color given to a renderer carries it in its alpha,
+// as 2 * material + alpha. A plain color has material 0, so its alpha is unchanged. These are not
+// the values of LDrawColorMaterialT.
+typedef NS_ENUM(int, LDrawRenderMaterial)
+{
+	LDrawRenderMaterialPlain			= 0,
+	LDrawRenderMaterialChrome			= 1,
+	LDrawRenderMaterialPearlescent		= 2,	// smooth, with a soft shine
+	LDrawRenderMaterialSatinMetallic	= 3,	// dull, with fine flakes
+	LDrawRenderMaterialMatteMetallic	= 4,
+	LDrawRenderMaterialMetal			= 5
+};
+
+// The alpha that carries a material. Alpha 0 means a meta color, so it carries none.
+static inline float LDrawRenderColorPackAlpha(float alpha, LDrawRenderMaterial material)
+{
+	return (alpha > 0.0f) ? alpha + 2.0f * (float)material : alpha;
+}
+
+// The alpha of a render color, without its material.
+static inline float LDrawRenderColorAlpha(float packedAlpha)
+{
+	return packedAlpha - 2.0f * (float)(int)(packedAlpha * 0.5f);
+}
+
+// The material of a render color, as a number.
+static inline int LDrawRenderColorMaterial(float packedAlpha)
+{
+	return (int)(packedAlpha * 0.5f);
+}
+
+// Whether a render color lets what is behind it show.
+static inline bool LDrawRenderColorIsTranslucent(float packedAlpha)
+{
+	return LDrawRenderColorAlpha(packedAlpha) < 1.0f;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // Opaque Display List Handles
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////

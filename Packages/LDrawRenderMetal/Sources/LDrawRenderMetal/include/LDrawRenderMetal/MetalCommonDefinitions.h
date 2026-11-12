@@ -79,6 +79,16 @@ typedef struct VertexUniform {
 #define MarkStyleTint			3
 #define MarkStyleOutline		4
 
+// The finish a color's alpha carries: the alpha is 2 * material + alpha. The
+// values match LDrawRenderMaterial, which this header cannot include. A static
+// assert checks them.
+#define MaterialPlain			0
+#define MaterialChrome			1
+#define MaterialPearlescent		2
+#define MaterialSatinMetallic	3
+#define MaterialMatteMetallic	4
+#define MaterialMetal			5
+
 // Instance data shared between CPU and GPU for hardware instancing
 typedef struct InstanceInput {
 	vector_float4	transform_x;

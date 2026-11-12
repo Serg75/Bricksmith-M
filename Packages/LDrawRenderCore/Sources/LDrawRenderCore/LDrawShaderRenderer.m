@@ -16,6 +16,22 @@
 #import <LDrawCore/MatrixMath.h>
 #import <LDrawCore/LDrawColorLibrary.h>
 
+//========== set_complement ======================================================
+//
+// Purpose:	Works out the complement of a color, which edges are drawn in.
+//
+// Notes:	The complement's alpha carries no finish, so a part drawn in the
+//			edge color has none.
+//
+//================================================================================
+static void set_complement(const float color[4], float complement[4])
+{
+	complementColor(color, complement);
+	complement[3] = LDrawRenderColorAlpha(color[3]);
+
+} // end set_complement
+
+
 //========== set_color4fv ========================================================
 //
 // Purpose:	Copies an RGBA color, but handles the special ptrs 0L and -1L by 
@@ -25,6 +41,9 @@
 // Notes:	The shader, when it sees alpha = 0, mixes between the attribute-set
 //			current and complement by blending with the red channel: red = 0 is
 //			current, red = 1 is complement.
+//
+//			Green = 1 in a magic color tells the shader to draw no finish. The
+//			complement always has it; set_line_color4fv adds it for lines.
 //
 //================================================================================
 static void set_color4fv(float * c, float storage[4])
@@ -48,6 +67,26 @@ static void set_color4fv(float * c, float storage[4])
 		memcpy(storage,c,sizeof(float)*4);
 	}
 } // end set_color4fv
+
+
+//========== set_line_color4fv ===================================================
+//
+// Purpose:	Copies a line's color as set_color4fv does, without a finish.
+//
+// Notes:	A magic color gets green = 1, which tells the shader to leave out
+//			the part's finish. A color of its own loses the finish in its alpha.
+//
+//================================================================================
+static void set_line_color4fv(float * c, float storage[4])
+{
+	set_color4fv(c, storage);
+
+	if (storage[3] == 0.0f)
+		storage[1] = 1.0f;
+	else
+		storage[3] = LDrawRenderColorAlpha(storage[3]);
+
+} // end set_line_color4fv
 
 
 
@@ -263,7 +302,7 @@ static void set_color4fv(float * c, float storage[4])
 		color_now[1] = color[1];
 		color_now[2] = color[2];
 		color_now[3] = color[3];
-		complementColor(color_now, compl_now);
+		set_complement(color_now, compl_now);
 	}
 } // end pushColor:
 
@@ -282,7 +321,7 @@ static void set_color4fv(float * c, float storage[4])
 	color_now[1] = top[1];
 	color_now[2] = top[2];
 	color_now[3] = top[3];
-	complementColor(color_now, compl_now);
+	set_complement(color_now, compl_now);
 } // end popColor:
 
 
@@ -497,8 +536,8 @@ static void set_color4fv(float * c, float storage[4])
 
 	float c[4];
 
-	set_color4fv(color,c);
-	
+	set_line_color4fv(color,c);
+
 	LDrawDLBuilderAddLine(dl_now,vertices,normal,c);
 } // end drawLine:normal:color:
 
@@ -514,8 +553,8 @@ static void set_color4fv(float * c, float storage[4])
 
 	float c[4];
 
-	set_color4fv(color,c);
-	
+	set_line_color4fv(color,c);
+
 	LDrawDLBuilderAddCondLine(dl_now,vertices,normal,c);
 
 } // end drawConditionalLine:normal:color:
