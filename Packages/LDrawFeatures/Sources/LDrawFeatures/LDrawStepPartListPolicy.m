@@ -270,10 +270,10 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 
 //---------- metrics:fittingAllowedSize: -----------------------------[static]--
 ///
-/// @abstract	The same metrics, with the height budget taken from the room the
-/// 			frame may take.
+/// @abstract	The same metrics, with the height budget and the widest content
+/// 			taken from the room the frame may take.
 ///
-/// @discussion	The budget is content height, so it leaves room for the padding
+/// @discussion	Both are content sizes, so they leave room for the padding
 /// 			these metrics carry.
 ///
 //------------------------------------------------------------------------------
@@ -282,7 +282,8 @@ static double PageRatioForPointsPerPageInch(double pointsPerPageInch)
 {
 	// The packer reads 0 as no limit, so no room left gives the smallest
 	// budget instead.
-	metrics.maximumHeight = MAX(1.0, allowedSize.height - 2.0 * metrics.framePadding);
+	metrics.maximumHeight	= MAX(1.0, allowedSize.height - 2.0 * metrics.framePadding);
+	metrics.maximumWidth	= MAX(1.0, allowedSize.width  - 2.0 * metrics.framePadding);
 
 	return metrics;
 

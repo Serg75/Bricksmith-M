@@ -102,6 +102,10 @@ typedef struct LDrawStepPartListMetrics
 	/// that shrinks icons, down to `minimumScale`, or drops shelves after that.
 	double	maximumHeight;
 
+	/// Points of content width available, or 0 for unbounded. AREA, SQUARE and
+	/// HEIGHT pick only shelf widths within it when any fits.
+	double	maximumWidth;
+
 } LDrawStepPartListMetrics;
 
 

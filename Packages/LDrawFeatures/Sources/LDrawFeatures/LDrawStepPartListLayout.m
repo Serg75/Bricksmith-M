@@ -1027,6 +1027,7 @@ typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartL
 	metrics.framePadding				= 6.0;
 	metrics.maximumCellWidthFraction	= 0.6;
 	metrics.maximumHeight				= 0.0;
+	metrics.maximumWidth				= 0.0;
 
 	return metrics;
 
@@ -1813,6 +1814,7 @@ typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartL
 	LDrawStepPartListPacking				*best			= nil;
 	double									 bestScore		= 0.0;
 	BOOL									 bestFits		= NO;
+	BOOL									 bestFitsWidth	= NO;
 
 	for (NSNumber *candidate in candidates) {
 
@@ -1820,8 +1822,14 @@ typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartL
 														  contentWidth:candidate.doubleValue
 															   metrics:metrics];
 
-		double	score	= 0.0;
-		BOOL	fits	= YES;
+		double	score		= 0.0;
+		BOOL	fits		= YES;
+
+		// A packing wider than the room would be packed again at the room's
+		// full width, so a narrower one wins first. The half point allows for
+		// rounding.
+		BOOL	fitsWidth	= (metrics.maximumWidth <= 0.0
+							   || packing.usedWidth <= metrics.maximumWidth + 0.5);
 
 		switch (constraint.mode) {
 
@@ -1844,13 +1852,15 @@ typedef NSMapTable<LDrawStepPartListRow *, NSArray<NSNumber *> *> LDrawStepPartL
 		}
 
 		BOOL better = (best == nil)
-					|| (fits && !bestFits)
-					|| (fits == bestFits && score < bestScore);
+					|| (fitsWidth && !bestFitsWidth)
+					|| (fitsWidth == bestFitsWidth && fits && !bestFits)
+					|| (fitsWidth == bestFitsWidth && fits == bestFits && score < bestScore);
 
 		if (better) {
-			best		= packing;
-			bestScore	= score;
-			bestFits	= fits;
+			best			= packing;
+			bestScore		= score;
+			bestFits		= fits;
+			bestFitsWidth	= fitsWidth;
 		}
 	}
 

@@ -558,6 +558,33 @@ struct LDrawStepPartListLayoutTests {
         #expect(abs(result.contentSize.width - (rowWidths(result).max() ?? 0)) < 0.001)
     }
 
+    /// Cells of one height pack smallest on one shelf, so only the width limit
+    /// can wrap them.
+    @Test("AREA keeps to the widest content it is given")
+    func areaKeepsToTheMaximumWidth() throws {
+        let entries = (0..<6).map { entry("300\($0).dat", width: 40, height: 24) }
+        let free = layout(entries, constraint(.area))
+
+        try #require(free.rowCount == 1)
+
+        var limited = metrics()
+        limited.maximumWidth = free.contentSize.width / 2
+        let wrapped = layout(entries, constraint(.area), limited)
+
+        #expect(wrapped.rowCount > 1)
+        #expect(wrapped.contentSize.width <= limited.maximumWidth + 0.5)
+    }
+
+    @Test("A width limit narrower than every cell still gives a packing")
+    func aWidthLimitNarrowerThanEveryCellStillPacks() {
+        var limited = metrics()
+        limited.maximumWidth = 5
+
+        let result = layout(mixedEntries, constraint(.area), limited)
+
+        #expect(result.placements.count == mixedEntries.count)
+    }
+
     // MARK: - HEIGHT
 
     @Test("A pinned height is respected, and the box grows sideways")

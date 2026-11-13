@@ -134,6 +134,19 @@ extension StepPartListStaticSettings {
             #expect(abs(fitted.maximumHeight - 324) < 0.0001)
         }
 
+        @Test("The widest content is the room less the padding")
+        func theWidestContentIsTheRoomLessThePadding() {
+            var metrics = LDrawStepPartListLayout.defaultMetrics()
+            metrics.framePadding = 18
+
+            let fitted = LDrawStepPartListPolicy.metrics(metrics, fittingAllowedSize: Size2(width: 500, height: 300))
+            let tiny = LDrawStepPartListPolicy.metrics(metrics, fittingAllowedSize: Size2(width: 10, height: 300))
+
+            #expect(abs(fitted.maximumWidth - 464) < 0.0001)
+            #expect(tiny.maximumWidth == 1, "0 would mean no limit")
+            #expect(LDrawStepPartListLayout.defaultMetrics().maximumWidth == 0)
+        }
+
         /// The page less two 0.05 in margins and two 0.08125 in paddings, fitted
         /// after scaling. It is the same paper height at every zoom.
         @Test("On the page the height budget is the page less its margins and padding, at any zoom")
