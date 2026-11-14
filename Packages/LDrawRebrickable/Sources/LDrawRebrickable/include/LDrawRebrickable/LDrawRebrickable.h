@@ -5,8 +5,8 @@
 //
 //  Purpose:    Umbrella header. Gets part data from Rebrickable: the CSV
 //              downloads, the catalog and set list built from them, set
-//              imports and the color table. The only package that touches
-//              the network. Depends on LDrawInventory.
+//              imports and the color table. Uses the network. Depends on
+//              LDrawInventory.
 //
 //              Data from Rebrickable.com. Its terms ask for that credit, and
 //              for automated downloads at most once a day.

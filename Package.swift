@@ -23,8 +23,10 @@ let package = Package(
         .library(name: "LDrawConnectivity", targets: ["LDrawConnectivity"]),
         // Inventories, part availability, and the parts limit built from them. No network.
         .library(name: "LDrawInventory", targets: ["LDrawInventory"]),
-        // Rebrickable's downloads, read into LDrawInventory's types. The only network code.
+        // Rebrickable's downloads, read into LDrawInventory's types. Uses the network.
         .library(name: "LDrawRebrickable", targets: ["LDrawRebrickable"]),
+        // Updates of an LDraw folder from LDraw's part library. Uses the network.
+        .library(name: "LDrawLibraryUpdate", targets: ["LDrawLibraryUpdate"]),
     ],
     targets: [
         .target(
@@ -117,6 +119,14 @@ let package = Package(
                 .linkedLibrary("z"),
             ]
         ),
+        .target(
+            name: "LDrawLibraryUpdate",
+            path: "Packages/LDrawLibraryUpdate/Sources/LDrawLibraryUpdate",
+            publicHeadersPath: "include",
+            linkerSettings: [
+                .linkedLibrary("z"),
+            ]
+        ),
         // Helpers for the test targets. No product uses it.
         .target(
             name: "LDrawTestSupport",
@@ -167,6 +177,11 @@ let package = Package(
             resources: [
                 .copy("Fixtures"),
             ]
+        ),
+        .testTarget(
+            name: "LDrawLibraryUpdateTests",
+            dependencies: ["LDrawLibraryUpdate", "LDrawTestSupport"],
+            path: "Packages/LDrawLibraryUpdate/Tests/LDrawLibraryUpdateTests"
         ),
         .testTarget(
             name: "LDrawConnectivityTests",
