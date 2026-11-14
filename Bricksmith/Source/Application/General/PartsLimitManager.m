@@ -23,11 +23,11 @@
 #import <LDrawRebrickable/LDrawRebrickableDownloads.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
+#import "DownloadProgressPanel.h"
 #import "InventoriesWindowController.h"
 #import "LDrawDocument.h"
 #import "PartsLimitController.h"
 #import "PartsLimitOptionsController.h"
-#import "PreferencesForm.h"
 
 NSString * const PartsLimitBrowserSettingDidChangeNotification = @"PartsLimitBrowserSettingDidChangeNotification";
 NSString * const PartsLimitMarksDidChangeNotification = @"PartsLimitMarksDidChangeNotification";
@@ -38,132 +38,9 @@ NSString * const PartsLimitFrontLimitDidChangeNotification = @"PartsLimitFrontLi
 static NSString * const DownloadSizeText = @"about 18 MB";
 
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// class PartsDataProgressPanel
-//
-// Shows a download's progress in a sheet, or a panel without a window.
-//
-////////////////////////////////////////////////////////////////////////////////
-@interface PartsDataProgressPanel : NSObject
-- (instancetype) initWithProgress:(NSProgress *)progress window:(nullable NSWindow *)window;
-- (void) close;
-@end
-
-
-@implementation PartsDataProgressPanel
-{
-	NSPanel				*panel;
-	NSWindow			*parent;
-	NSProgress			*progress;
-	NSProgressIndicator	*indicator;
-	NSTextField			*label;
-}
-
-//========== initWithProgress:window: ==========================================
-//
-// Purpose:		Shows a small panel with a bar, a line of text and Cancel.
-//
-//==============================================================================
-- (instancetype) initWithProgress:(NSProgress *)aProgress window:(NSWindow *)window
-{
-	self = [super init];
-	if (self)
-	{
-		NSButton *cancel = [NSButton buttonWithTitle:NSLocalizedString(@"Cancel", nil)
-											  target:self
-											  action:@selector(cancel:)];
-
-		self->progress	= aProgress;
-		self->parent	= window;
-		self->panel		= [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 380, 110)
-													 styleMask:NSWindowStyleMaskTitled
-													   backing:NSBackingStoreBuffered
-														 defer:NO];
-		self->label		= [NSTextField labelWithString:NSLocalizedString(@"Downloading parts data from "
-																		 @"Rebrickable.com…", nil)];
-		self->indicator	= [[NSProgressIndicator alloc] init];
-
-		[self->indicator setIndeterminate:NO];
-		[self->indicator setMinValue:0];
-		[self->indicator setMaxValue:1];
-		[cancel setKeyEquivalent:@"\e"];
-
-		NSStackView *stack = [NSStackView stackViewWithViews:@[self->label, self->indicator, cancel]];
-		[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
-		[stack setAlignment:NSLayoutAttributeTrailing];
-		[[self->indicator widthAnchor] constraintEqualToConstant:340].active = YES;
-		[[self->label leadingAnchor] constraintEqualToAnchor:[self->indicator leadingAnchor]].active = YES;
-
-		NSView *content = [PreferencesForm containerForView:stack margins:NSEdgeInsetsMake(20, 20, 20, 20)];
-		[self->panel setContentView:content];
-		[self->panel setContentSize:[content fittingSize]];
-
-		[self->progress addObserver:self forKeyPath:@"fractionCompleted" options:0 context:NULL];
-
-		if(window != nil)
-			[window beginSheet:self->panel completionHandler:nil];
-		else
-		{
-			[self->panel center];
-			[self->panel makeKeyAndOrderFront:nil];
-		}
-	}
-	return self;
-
-}//end initWithProgress:window:
-
-
-//========== observeValueForKeyPath:ofObject:change:context: ===================
-//
-// Purpose:		Moves the bar. After the downloads the catalog is built, which
-//				reports no progress, so the bar spins.
-//
-//==============================================================================
-- (void) observeValueForKeyPath:(NSString *)keyPath
-					   ofObject:(id)object
-						 change:(NSDictionary *)change
-						context:(void *)context
-{
-	double fraction = [self->progress fractionCompleted];
-
-	dispatch_async(dispatch_get_main_queue(), ^{
-		[self->indicator setDoubleValue:fraction];
-		if(fraction >= 1.0)
-		{
-			[self->indicator setIndeterminate:YES];
-			[self->indicator startAnimation:nil];
-			[self->label setStringValue:NSLocalizedString(@"Building the parts catalog…", nil)];
-		}
-	});
-}
-
-
-//========== cancel: ===========================================================
-//==============================================================================
-- (void) cancel:(id)sender
-{
-	[self->progress cancel];
-}
-
-
-//========== close =============================================================
-//==============================================================================
-- (void) close
-{
-	[self->progress removeObserver:self forKeyPath:@"fractionCompleted"];
-
-	if(self->parent != nil)
-		[self->parent endSheet:self->panel];
-	[self->panel orderOut:nil];
-}
-
-@end
-
-
 @implementation PartsLimitManager
 {
-	PartsDataProgressPanel		*progressPanel;
+	DownloadProgressPanel		*progressPanel;
 	NSMutableArray				*waitingCompletions;	// of requests made while an update ran
 	BOOL						 identityDataIsCurrent;	// the saved identity data was checked this launch
 	BOOL						 isAskingToDownload;	// the first download's question is up
@@ -616,7 +493,12 @@ static NSString * const DownloadSizeText = @"about 18 MB";
 		[self updateDidEndWithSuccess:success];
 	}];
 
-	self->progressPanel = [[PartsDataProgressPanel alloc] initWithProgress:progress window:window];
+	self->progressPanel = [[DownloadProgressPanel alloc]
+						   initWithProgress:progress
+									 window:window
+									makeKey:YES
+									message:NSLocalizedString(@"Downloading parts data from Rebrickable.com…", nil)
+						   finishingMessage:NSLocalizedString(@"Building the parts catalog…", nil)];
 
 }//end startUpdateForcing:window:completion:
 

@@ -11,6 +11,7 @@
 import Testing
 import Foundation
 import LDrawRebrickable
+import LDrawTestSupport
 
 /// The stub protocol's answers are process-wide, so these run one at a time.
 @Suite("Network, stubbed", .serialized)

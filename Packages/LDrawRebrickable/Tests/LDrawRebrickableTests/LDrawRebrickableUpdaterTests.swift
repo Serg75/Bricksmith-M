@@ -13,6 +13,7 @@ import Foundation
 import LDrawCore
 import LDrawInventory
 import LDrawRebrickable
+import LDrawTestSupport
 
 extension LDrawRebrickableNetworkTests {
 

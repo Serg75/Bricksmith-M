@@ -162,7 +162,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LDrawRebrickableTests",
-            dependencies: ["LDrawRebrickable", "LDrawInventory", "LDrawCore"],
+            dependencies: ["LDrawRebrickable", "LDrawInventory", "LDrawCore", "LDrawTestSupport"],
             path: "Packages/LDrawRebrickable/Tests/LDrawRebrickableTests",
             resources: [
                 .copy("Fixtures"),

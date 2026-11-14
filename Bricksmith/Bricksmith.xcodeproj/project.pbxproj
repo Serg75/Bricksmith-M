@@ -409,7 +409,9 @@
 		BB11000000000000000012 /* InventoriesWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000012 /* InventoriesWindowController.h */; };
 		BB11000000000000000013 /* InventoriesWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000013 /* InventoriesWindowController.m */; };
 		BB11000000000000000014 /* PartsLimitManager.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000014 /* PartsLimitManager.h */; };
+		BB11000000000000000026 /* DownloadProgressPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000026 /* DownloadProgressPanel.h */; };
 		BB11000000000000000015 /* PartsLimitManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000015 /* PartsLimitManager.m */; };
+		BB11000000000000000027 /* DownloadProgressPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000027 /* DownloadProgressPanel.m */; };
 		BB11000000000000000016 /* PartsLimitOptionsController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000016 /* PartsLimitOptionsController.h */; };
 		BB11000000000000000017 /* PartsLimitOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000017 /* PartsLimitOptionsController.m */; };
 		BB11000000000000000024 /* PartComparisonController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000024 /* PartComparisonController.h */; };
@@ -431,7 +433,9 @@
 		BB12000000000000000012 /* InventoriesWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000012 /* InventoriesWindowController.h */; };
 		BB12000000000000000013 /* InventoriesWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000013 /* InventoriesWindowController.m */; };
 		BB12000000000000000014 /* PartsLimitManager.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000014 /* PartsLimitManager.h */; };
+		BB12000000000000000026 /* DownloadProgressPanel.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000026 /* DownloadProgressPanel.h */; };
 		BB12000000000000000015 /* PartsLimitManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000015 /* PartsLimitManager.m */; };
+		BB12000000000000000027 /* DownloadProgressPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000027 /* DownloadProgressPanel.m */; };
 		BB12000000000000000016 /* PartsLimitOptionsController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000016 /* PartsLimitOptionsController.h */; };
 		BB12000000000000000017 /* PartsLimitOptionsController.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000017 /* PartsLimitOptionsController.m */; };
 		BB12000000000000000024 /* PartComparisonController.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000024 /* PartComparisonController.h */; };
@@ -765,7 +769,9 @@
 		BB10000000000000000012 /* InventoriesWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InventoriesWindowController.h; sourceTree = "<group>"; };
 		BB10000000000000000013 /* InventoriesWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InventoriesWindowController.m; sourceTree = "<group>"; };
 		BB10000000000000000014 /* PartsLimitManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartsLimitManager.h; sourceTree = "<group>"; };
+		BB10000000000000000026 /* DownloadProgressPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DownloadProgressPanel.h; sourceTree = "<group>"; };
 		BB10000000000000000015 /* PartsLimitManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitManager.m; sourceTree = "<group>"; };
+		BB10000000000000000027 /* DownloadProgressPanel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DownloadProgressPanel.m; sourceTree = "<group>"; };
 		BB10000000000000000016 /* PartsLimitOptionsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartsLimitOptionsController.h; sourceTree = "<group>"; };
 		BB10000000000000000017 /* PartsLimitOptionsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PartsLimitOptionsController.m; sourceTree = "<group>"; };
 		BB10000000000000000024 /* PartComparisonController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PartComparisonController.h; sourceTree = "<group>"; };
@@ -1060,7 +1066,9 @@
 				0B4F5E0F0F31632C00355631 /* PartLibraryController.h */,
 				0B4F5E100F31632C00355631 /* PartLibraryController.m */,
 				BB10000000000000000014 /* PartsLimitManager.h */,
+				BB10000000000000000026 /* DownloadProgressPanel.h */,
 				BB10000000000000000015 /* PartsLimitManager.m */,
+				BB10000000000000000027 /* DownloadProgressPanel.m */,
 				BB10000000000000000016 /* PartsLimitOptionsController.h */,
 				BB10000000000000000017 /* PartsLimitOptionsController.m */,
 				0BF729B608AD849300E3DA53 /* PreferencesDialogController.h */,
@@ -1478,6 +1486,7 @@
 				BB11000000000000000010 /* ImportSetController.h in Headers */,
 				BB11000000000000000012 /* InventoriesWindowController.h in Headers */,
 				BB11000000000000000014 /* PartsLimitManager.h in Headers */,
+				BB11000000000000000026 /* DownloadProgressPanel.h in Headers */,
 				BB11000000000000000016 /* PartsLimitOptionsController.h in Headers */,
 				BB11000000000000000018 /* PartsLimitController.h in Headers */,
 				BB11000000000000000022 /* PartReplacementMenu.h in Headers */,
@@ -1557,6 +1566,7 @@
 				BB12000000000000000010 /* ImportSetController.h in Headers */,
 				BB12000000000000000012 /* InventoriesWindowController.h in Headers */,
 				BB12000000000000000014 /* PartsLimitManager.h in Headers */,
+				BB12000000000000000026 /* DownloadProgressPanel.h in Headers */,
 				BB12000000000000000016 /* PartsLimitOptionsController.h in Headers */,
 				BB12000000000000000018 /* PartsLimitController.h in Headers */,
 				BB12000000000000000022 /* PartReplacementMenu.h in Headers */,
@@ -1901,6 +1911,7 @@
 				BB11000000000000000011 /* ImportSetController.m in Sources */,
 				BB11000000000000000013 /* InventoriesWindowController.m in Sources */,
 				BB11000000000000000015 /* PartsLimitManager.m in Sources */,
+				BB11000000000000000027 /* DownloadProgressPanel.m in Sources */,
 				BB11000000000000000017 /* PartsLimitOptionsController.m in Sources */,
 				BB11000000000000000019 /* PartsLimitController.m in Sources */,
 				BB11000000000000000023 /* PartReplacementMenu.m in Sources */,
@@ -1982,6 +1993,7 @@
 				BB12000000000000000011 /* ImportSetController.m in Sources */,
 				BB12000000000000000013 /* InventoriesWindowController.m in Sources */,
 				BB12000000000000000015 /* PartsLimitManager.m in Sources */,
+				BB12000000000000000027 /* DownloadProgressPanel.m in Sources */,
 				BB12000000000000000017 /* PartsLimitOptionsController.m in Sources */,
 				BB12000000000000000019 /* PartsLimitController.m in Sources */,
 				BB12000000000000000023 /* PartReplacementMenu.m in Sources */,
