@@ -40,6 +40,7 @@
 #import "PartBrowserPanelController.h"
 #import "PartLibraryController.h"
 #import "PartsLimitManager.h"
+#import "PartsUpdateController.h"
 #import "PreferencesDialogController.h"
 #import "ToolPalette.h"
 #import "TransformerIntMinus1.h"
@@ -435,6 +436,7 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		else
 		{
 			[self->partLibraryController reportOutdatedPartOverrides];
+			[[PartsUpdateController sharedController] checkAtLaunch];
 		}
 	}];
 	
@@ -517,7 +519,8 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 		[donation runModal];
 	}
 	
-	return NSTerminateNow;
+	// A parts update must not stop halfway through moving files.
+	return [[PartsUpdateController sharedController] shouldTerminate];
 	
 }//end applicationShouldTerminate:
 
@@ -764,8 +767,34 @@ extern int16_t InstallConnexionHandlers(ConnexionMessageHandlerProc messageHandl
 
 	[self addPartsLimitMenus];
 	[self addPartOverridesMenus];
+	[self addPartsUpdateMenu];
 
 }//end buildMainMenu
+
+
+//========== addPartsUpdateMenu ================================================
+//
+// Purpose:		Adds Check for Parts Update… to the application menu, after
+//				Settings….
+//
+//==============================================================================
+- (void) addPartsUpdateMenu
+{
+	PartsUpdateController	*controller	= [PartsUpdateController sharedController];
+	NSMenu					*appMenu	= [[[NSApp mainMenu] itemAtIndex:0] submenu];
+	NSInteger				 index		= [appMenu indexOfItemWithTarget:self andAction:@selector(doPreferences:)];
+	NSMenuItem				*item		= nil;
+
+	if([appMenu indexOfItemWithTarget:controller andAction:@selector(checkForPartsUpdate:)] >= 0)
+		return;
+
+	item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Check for Parts Update…", nil)
+									  action:@selector(checkForPartsUpdate:)
+							   keyEquivalent:@""];
+	[item setTarget:controller];
+	[appMenu insertItem:item atIndex:(index >= 0) ? index + 1 : MIN(2, [appMenu numberOfItems])];
+
+}//end addPartsUpdateMenu
 
 
 //========== addPartsLimitMenus ================================================

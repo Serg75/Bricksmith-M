@@ -36,12 +36,14 @@
 #import <LDrawFeatures/LDrawPreferences.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LSynthConfiguration.h>
+#import <LDrawLibraryUpdate/LDrawLibraryUpdatePolicy.h>
 #import <LDrawRebrickable/LDrawRebrickableUpdater.h>
 
 #import "LDrawApplication.h"
 #import "LDrawHostChrome.h"
 #import "PartLibraryController.h"
 #import "PartsLimitManager.h"
+#import "PartsUpdateController.h"
 #import "PreferencesForm.h"
 #import "UserDefaultsCategory.h"
 
@@ -262,6 +264,9 @@ static NSArray<NSNumber *> *MarkColorComponents(NSColor *color)
 
 	// General Pane
 	NSTextField		*LDrawPathTextField;
+	NSTextField		*libraryUpdateNote;
+	NSButton		*libraryUpdateButton;
+	NSPopUpButton	*libraryUpdateModePopUp;
 	NSTextField		*partOverridesPathField;
 	NSTextField		*partOverridesNote;
 	NSButton		*partOverridesClearButton;
@@ -411,6 +416,11 @@ PreferencesDialogController *preferencesDialog = nil;
 												 name:PartsDataUpdateDidEndNotification
 											   object:nil];
 
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(setLibraryUpdateValues)
+												 name:PartsUpdateStateDidChangeNotification
+											   object:nil];
+
 	return self;
 
 }//end init
@@ -512,7 +522,8 @@ PreferencesDialogController *preferencesDialog = nil;
 - (NSScrollView *) makeGeneralPane
 {
 	NSString	*folderNote		= NSLocalizedString(@"The folder holds the LDraw part definitions in its \"p\" "
-													@"and \"parts\" folders. Download it from www.ldraw.org.", nil);
+													@"and \"parts\" folders. Download it from www.ldraw.org. "
+													@"Parts updates come from library.ldraw.org.", nil);
 	NSString	*reloadNote		= NSLocalizedString(@"Read the folder again after you add parts to it.", nil);
 	NSString	*gridNote		= NSLocalizedString(@"How far parts move along the studs. A 1 × 1 brick is "
 													@"20 units wide and 24 units tall.", nil);
@@ -521,6 +532,7 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSButton	*reloadButton	= nil;
 	NSView		*folderRow		= nil;
 	NSView		*reloadRow		= nil;
+	NSArray		*folderRows		= nil;
 	NSView		*folderSection	= nil;
 	NSView		*gridSection	= nil;
 
@@ -544,9 +556,10 @@ PreferencesDialogController *preferencesDialog = nil;
 									  control:reloadButton
 									noteField:NULL];
 
-	folderSection = [PreferencesForm sectionWithTitle:NSLocalizedString(@"LDraw Folder", nil)
-												 rows:@[folderRow, reloadRow]
-											   footer:folderNote];
+	folderRows		= [@[folderRow, reloadRow] arrayByAddingObjectsFromArray:[self makeLibraryUpdateRows]];
+	folderSection	= [PreferencesForm sectionWithTitle:NSLocalizedString(@"LDraw Folder", nil)
+												   rows:folderRows
+												 footer:folderNote];
 
 	gridSpacingFineField	= [PreferencesForm numberFieldWithWidth:60 target:self action:gridAction];
 	gridSpacingMediumField	= [PreferencesForm numberFieldWithWidth:60 target:self action:gridAction];
@@ -564,6 +577,46 @@ PreferencesDialogController *preferencesDialog = nil;
 	return [PreferencesForm paneWithSections:@[folderSection, [self makePartOverridesSection], gridSection]];
 
 }//end makeGeneralPane
+
+
+//========== makeLibraryUpdateRows =============================================
+//
+// Purpose:		The update the LDraw folder holds, and whether a launch looks
+//				for a newer one.
+//
+//==============================================================================
+- (NSArray<NSView *> *) makeLibraryUpdateRows
+{
+	NSArray<NSString *>	*modeTitles	= @[NSLocalizedString(@"Never", nil),
+										NSLocalizedString(@"Ask before installing", nil),
+										NSLocalizedString(@"Install without asking", nil)];
+	NSArray<NSNumber *>	*modeTags	= @[@(LDrawLibraryUpdateModeNever),
+										@(LDrawLibraryUpdateModeAsk),
+										@(LDrawLibraryUpdateModeInstall)];
+	NSTextField			*note		= nil;
+	NSView				*updateRow	= nil;
+	NSView				*modeRow	= nil;
+
+	libraryUpdateButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Check Now", nil)
+													target:[PartsUpdateController sharedController]
+													action:@selector(checkForPartsUpdate:)];
+
+	libraryUpdateModePopUp = [PreferencesForm popUpWithTitles:modeTitles
+														 tags:modeTags
+													   target:self
+													   action:@selector(libraryUpdateModeChanged:)];
+
+	updateRow	= [PreferencesForm rowWithTitle:NSLocalizedString(@"Parts update", nil)
+										   note:nil
+										control:libraryUpdateButton
+									  noteField:&note];
+	modeRow		= [PreferencesForm rowWithTitle:NSLocalizedString(@"Look for updates at launch", nil)
+										control:libraryUpdateModePopUp];
+
+	libraryUpdateNote = note;
+	return @[updateRow, modeRow];
+
+}//end makeLibraryUpdateRows
 
 
 //========== makePartOverridesSection ==========================================
@@ -1217,8 +1270,49 @@ PreferencesDialogController *preferencesDialog = nil;
 
 	[partOverridesPathField setStringValue:[[LDrawPaths sharedPaths] overridesPath] ?: @""];
 	[self showPartOverrides];
+	[self setLibraryUpdateValues];
 
 }//end setGeneralPaneValues
+
+
+//========== setLibraryUpdateValues ============================================
+//
+// Purpose:		Shows which update the LDraw folder holds, when LDraw's server
+//				was last asked, and what a launch does about updates.
+//
+//==============================================================================
+- (void) setLibraryUpdateValues
+{
+	PartsUpdateController	*controller	= [PartsUpdateController sharedController];
+	NSString				*release	= [controller installedRelease];
+	NSDate					*checked	= [controller lastCheckDate];
+	NSInteger				 mode		= [[NSUserDefaults standardUserDefaults] integerForKey:LIBRARY_UPDATE_MODE_KEY];
+	NSString				*holds		= nil;
+	NSString				*when		= nil;
+
+	if(release != nil)
+		holds = [NSString stringWithFormat:NSLocalizedString(@"The folder holds update %@.", nil), release];
+	else
+		holds = NSLocalizedString(@"The folder does not say which update it holds.", nil);
+
+	if(checked != nil)
+	{
+		NSString *date = [NSDateFormatter localizedStringFromDate:checked
+														dateStyle:NSDateFormatterMediumStyle
+														timeStyle:NSDateFormatterShortStyle];
+		when = [NSString stringWithFormat:NSLocalizedString(@"Checked %@", nil), date];
+	}
+	else
+		when = NSLocalizedString(@"Not checked yet", nil);
+
+	[libraryUpdateNote setStringValue:[NSString stringWithFormat:@"%@ %@", holds, when]];
+	[libraryUpdateButton setEnabled:([controller isBusy] == NO)];
+
+	// A value saved by hand that the menu lacks shows as asking.
+	if([libraryUpdateModePopUp selectItemWithTag:mode] == NO)
+		[libraryUpdateModePopUp selectItemWithTag:LDrawLibraryUpdateModeAsk];
+
+}//end setLibraryUpdateValues
 
 
 //========== setMousePaneValues ================================================
@@ -1506,9 +1600,18 @@ PreferencesDialogController *preferencesDialog = nil;
 	// A new library can have newer versions of the overridden parts.
 	[libraryController reloadPartCatalog:^(BOOL success) {
 		[self showPartOverrides];
+		[self setLibraryUpdateValues];
 	}];
 
 }//end reloadParts:
+
+
+//========== libraryUpdateModeChanged: =========================================
+//==============================================================================
+- (IBAction) libraryUpdateModeChanged:(id)sender
+{
+	[[NSUserDefaults standardUserDefaults] setInteger:[[sender selectedItem] tag] forKey:LIBRARY_UPDATE_MODE_KEY];
+}
 
 
 //========== choosePartOverridesFolder: ========================================

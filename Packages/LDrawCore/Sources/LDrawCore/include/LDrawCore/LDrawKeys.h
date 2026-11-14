@@ -74,6 +74,16 @@
 // The overrides already reported as older than the library, as "name update"
 // of the library's part, so each is reported once.
 #define PART_OVERRIDES_REPORTED_KEY					@"Part Overrides Reported"
+// How the LDraw folder is kept up to date at launch: 0 never looks for an
+// update, 1 asks before installing one, 2 installs it.
+#define LIBRARY_UPDATE_MODE_KEY						@"Library Update Mode"
+// When LDraw's server was last asked for its releases.
+#define LIBRARY_UPDATE_CHECK_DATE_KEY				@"Library Update Check Date"
+// The update the user chose to skip, such as "2026-11".
+#define LIBRARY_UPDATE_SKIPPED_RELEASE_KEY			@"Library Update Skipped Release"
+// The parts the last update added: the "folder" it updated, its "release", and
+// the parts' "names".
+#define LIBRARY_UPDATE_NEW_PARTS_KEY				@"Library Update New Parts"
 #define MOUSE_DRAGGING_BEHAVIOR_KEY					@"Mouse Dragging Behavior"
 #define RIGHT_BUTTON_BEHAVIOR_KEY					@"Right Button Behavior"
 #define ROTATE_MODE_KEY								@"Rotate Mode"

@@ -27,6 +27,7 @@
 #endif
 
 #import "LDrawDocument.h"
+#import "PartsUpdateController.h"
 
 // How long parts are loaded between updates of the progress panel, in seconds.
 static const NSTimeInterval ReloadStepDuration = 0.04;
@@ -104,6 +105,7 @@ static const NSUInteger OutdatedAlertVisibleLines = 10;
 	
 	// Try loading an existing library first.
 	[library setFavorites:favorites];
+	[self noteLibraryRelease];
 	success = [library load];
 	
 	if(success == NO)
@@ -130,6 +132,7 @@ static const NSUInteger OutdatedAlertVisibleLines = 10;
 {
 	AMSProgressPanel* progressPanel	= [AMSProgressPanel progressPanel];
 	
+	[self noteLibraryRelease];
 	self->catalogLoads++;
 	[progressPanel setMessage:@"Loading Parts"];
 	[progressPanel showProgressPanel];
@@ -173,6 +176,23 @@ static const NSUInteger OutdatedAlertVisibleLines = 10;
 //	NSLog(@"%@", list);
 	
 }//end reloadPartCatalog
+
+
+//========== noteLibraryRelease ================================================
+//
+// Purpose:		Before the catalog is read or scanned, tells the library which
+//				update the LDraw folder holds, and which parts its last update
+//				added.
+//
+//==============================================================================
+- (void) noteLibraryRelease
+{
+	PartsUpdateController *updateController = [PartsUpdateController sharedController];
+
+	[[LDrawPartLibrary sharedPartLibrary] setLibraryRelease:[updateController installedRelease]];
+	[updateController restoreNewParts];
+
+}//end noteLibraryRelease
 
 
 //========== validateLDrawFolderWithMessage: ===================================

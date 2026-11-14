@@ -79,6 +79,7 @@ static const float TooManyMarkRGB[3]		= { 1.00f, 0.55f, 0.00f };
 	[initialDefaults setObject:@NO								forKey:PARTS_LIMIT_DIMS_OTHER_PARTS_KEY];
 	[initialDefaults setObject:@YES								forKey:PART_OVERRIDES_ENABLED_KEY];
 	[initialDefaults setObject:@(LDrawResolutionNormal)			forKey:PART_RESOLUTION_KEY];
+	[initialDefaults setObject:@1								forKey:LIBRARY_UPDATE_MODE_KEY]; // asks first
 
 	//
 	// Grid Spacing
