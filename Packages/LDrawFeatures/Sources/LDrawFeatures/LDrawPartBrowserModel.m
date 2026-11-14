@@ -218,9 +218,14 @@ static NSString * const SetsGroupName			= @"Sets";
 //==============================================================================
 - (NSArray *)inventoryRowsInCategory:(NSString *)category
 {
-	NSArray			*favorites	= [self.partLibrary favoritePartNames];
 	NSNumber		*color		= self.colorFilter;
 	NSMutableArray	*rows		= [NSMutableArray array];
+	NSSet			*listed		= nil;	// the parts Favorites or the last update lists, else nil
+
+	if ([category isEqualToString:Category_Favorites])
+		listed = [NSSet setWithArray:[self.partLibrary favoritePartNames]];
+	else if ([category isEqualToString:Category_LastUpdate])
+		listed = [NSSet setWithArray:[[self.partLibrary partCatalogRecordsFromLastUpdate] valueForKey:PART_NUMBER_KEY]];
 
 	self->inventoryRows = [self buildInventoryRows];
 
@@ -230,10 +235,10 @@ static NSString * const SetsGroupName			= @"Sets";
 
 		if (color != nil && [row[LDrawPartBrowserColorCodeKey] isEqual:color] == NO)
 			continue;
-		if ([category isEqualToString:Category_Favorites] && [favorites containsObject:partName] == NO)
+		if (listed != nil && [listed containsObject:partName] == NO)
 			continue;
-		if (	[category isEqualToString:Category_All] == NO
-			&&	[category isEqualToString:Category_Favorites] == NO
+		if (	listed == nil
+			&&	[category isEqualToString:Category_All] == NO
 			&&	[row[PART_CATEGORY_KEY] isEqualToString:category] == NO )
 			continue;
 

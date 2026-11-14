@@ -44,6 +44,7 @@ extern NSString *PART_ONLY_IN_OVERRIDES_KEY;
 extern NSString	*PARTS_LIST_KEY;
 extern NSString	*VERSION_KEY;
 extern NSString	*COMPATIBILITY_VERSION_KEY;
+extern NSString	*LIBRARY_RELEASE_KEY;
 
 extern NSString	*CategoryNameKey;
 extern NSString	*CategoryDisplayNameKey;
@@ -51,6 +52,7 @@ extern NSString	*CategoryChildrenKey;
 
 extern NSString	*Category_All;
 extern NSString	*Category_Favorites;
+extern NSString	*Category_LastUpdate;
 extern NSString	*Category_Alias;
 extern NSString *Category_Moved;
 extern NSString	*Category_Primitives;
@@ -124,6 +126,24 @@ extern NSString	*Category_Subparts;
 
 /// CFBundleVersion, else CFBundleShortVersionString, else @"1.0".
 + (NSString *)catalogVersionInBundle:(NSBundle *)bundle;
+
+/// The update the LDraw folder holds, such as "2026-10", or nil when it is not
+/// known. The host sets it before it loads or scans the catalog: a load checks
+/// the saved catalog against it, and a scan writes it into the new one.
+- (void)setLibraryRelease:(nullable NSString *)release;
+
+/// Whether a saved catalog was scanned from another update of the LDraw folder
+/// than `release`, so the folder changed since the scan. A catalog the folder
+/// cannot save again is kept.
++ (BOOL)catalogNeedsScan:(NSDictionary *)catalog
+			  forRelease:(nullable NSString *)release
+			  folderPath:(NSString *)folderPath;
+
+/// The parts the last update of the LDraw folder added, such as "3001.dat".
+/// While the catalog has any of them, they are listed as a category of their
+/// own with the title, after Favorites. Moved parts and aliases are left out.
+- (void)setPartNamesFromLastUpdate:(NSArray<NSString *> *)partNames title:(nullable NSString *)title;
+- (NSArray<NSDictionary *> *)partCatalogRecordsFromLastUpdate;
 
 // Actions
 - (BOOL)load;

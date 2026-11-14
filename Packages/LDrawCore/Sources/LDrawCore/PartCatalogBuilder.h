@@ -31,6 +31,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// Host app version stamped into the catalog file. Nil falls back to @"1.0".
 - (void)setCatalogVersion:(nullable NSString *)version;
 
+/// The update of the LDraw folder, such as "2026-10", stamped into the catalog
+/// file. Nil stamps none.
+- (void)setLibraryRelease:(nullable NSString *)release;
+
 - (void) makePartCatalogWithMaxLoadCountHandler:(void (^)(NSUInteger maxPartCount))maxLoadCountHandler
 					   progressIncrementHandler:(void (^)(void))progressIncrementHandler
 							  completionHandler:(void (^)(NSDictionary<NSString*, id> *newCatalog))completionHandler;

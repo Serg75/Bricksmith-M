@@ -61,6 +61,7 @@ NSString	*PARTS_LIST_KEY				= @"Part List";
 
 NSString	*VERSION_KEY				= @"Version";
 NSString	*COMPATIBILITY_VERSION_KEY	= @"CompatibilityVersion";
+NSString	*LIBRARY_RELEASE_KEY		= @"LibraryRelease";
 
 NSString	*CategoryNameKey			= @"Name";
 NSString	*CategoryDisplayNameKey 	= @"DisplayName";
@@ -68,6 +69,7 @@ NSString	*CategoryChildrenKey		= @"Children";
 
 NSString	*Category_All				= @"AllCategories";
 NSString	*Category_Favorites 		= @"Favorites";
+NSString	*Category_LastUpdate		= @"LastUpdate";
 NSString	*Category_Alias 			= @"Alias";
 NSString	*Category_Moved 			= @"Moved";
 NSString	*Category_Primitives		= @"Primitives";
@@ -85,6 +87,14 @@ NSString	*Category_Subparts			= @"Subparts";
 	// Loaded parts whose files changed. They are kept, so documents can still
 	// draw them, and are read again when a part file uses them.
 	NSMutableSet<NSString *>								*staleNames;
+
+	// The update the LDraw folder holds. A load checks the saved catalog
+	// against it, and a scan stamps it into the new one.
+	NSString												*libraryRelease;
+
+	// The parts the folder's last update added, and their category's title.
+	NSArray<NSString *>										*lastUpdatePartNames;
+	NSString												*lastUpdateTitle;
 }
 - (void)notifyDelegateFavoritesChanged;
 - (nullable LDrawModel *)readModelNamed:(NSString *)partName;
@@ -289,6 +299,14 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 		CategoryNameKey: Category_Favorites,
 		CategoryDisplayNameKey: [self displayNameForCategory:Category_Favorites],
 	}];
+
+	if ([[self partCatalogRecordsFromLastUpdate] count] > 0)
+	{
+		[libraryItems addObject:@{
+			CategoryNameKey: Category_LastUpdate,
+			CategoryDisplayNameKey: [self displayNameForCategory:Category_LastUpdate],
+		}];
+	}
 							 
 	[fullCategoryList addObject:@{
 		CategoryNameKey: @"Library",
@@ -406,6 +424,10 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	{
 		displayName = [LDrawLocalization stringForKey:@"FavoritesCategory"];
 	}
+	else if ([categoryName isEqualToString:Category_LastUpdate])
+	{
+		displayName = self->lastUpdateTitle ?: categoryName;
+	}
 	else
 	{
 		displayName = [LDrawLocalization stringForKey:categoryName];
@@ -461,6 +483,13 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	{
 		parts = [self favoritePartCatalogRecords];
 	}
+	else if ([categoryName isEqualToString:Category_LastUpdate])
+	{
+		// Nil, as for a category the library does not have.
+		parts = [self partCatalogRecordsFromLastUpdate];
+		if ([parts count] == 0)
+			parts = nil;
+	}
 	else
 	{
 		NSArray 		*category			= [[partCatalog objectForKey:PARTS_CATALOG_KEY] objectForKey:categoryName];
@@ -484,6 +513,36 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	return parts;
 
 } // end partCatalogRecordsInCategory:
+
+
+//========== partCatalogRecordsFromLastUpdate ==================================
+//
+// Purpose:		Returns the records of the parts the LDraw folder's last update
+//				added. A moved part or an alias is another name for a part, not
+//				a new one, so they are left out.
+//
+//==============================================================================
+- (NSArray<NSDictionary *> *)partCatalogRecordsFromLastUpdate
+{
+	NSDictionary	*partList	= [self->partCatalog objectForKey:PARTS_LIST_KEY];
+	NSMutableArray	*parts		= [NSMutableArray array];
+
+	for (NSString *partName in self->lastUpdatePartNames)
+	{
+		NSDictionary	*partInfo	= [partList objectForKey:partName];
+		NSString		*category	= [partInfo objectForKey:PART_CATEGORY_KEY];
+
+		if (	partInfo != nil
+			&&	[category isEqualToString:Category_Moved] == NO
+			&&	[category isEqualToString:Category_Alias] == NO )
+		{
+			[parts addObject:partInfo];
+		}
+	}
+
+	return [self recordsInUse:parts];
+
+} // end partCatalogRecordsFromLastUpdate
 
 
 #pragma mark -
@@ -511,6 +570,19 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 {
 	[self->favorites removeAllObjects];
 	[self->favorites addObjectsFromArray:favoritesIn];
+}
+
+
+//========== setPartNamesFromLastUpdate:title: =================================
+//
+// Purpose:		Sets the parts listed as the last update's, and the name of
+//				their category. The host saved them when it updated the folder.
+//
+//==============================================================================
+- (void)setPartNamesFromLastUpdate:(NSArray<NSString *> *)partNames title:(NSString *)title
+{
+	self->lastUpdatePartNames	= [partNames copy];
+	self->lastUpdateTitle		= [title copy];
 }
 
 
@@ -578,6 +650,18 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 }
 
 
+//========== setLibraryRelease: ================================================
+//
+// Purpose:		The update the LDraw folder holds, for the next load or scan of
+//				the catalog.
+//
+//==============================================================================
+- (void)setLibraryRelease:(NSString *)release
+{
+	self->libraryRelease = [release copy];
+}
+
+
 //---------- catalogVersionInBundle: ---------------------------------[static]--
 //
 // Purpose:		CFBundleVersion, else CFBundleShortVersionString, else @"1.0".
@@ -630,14 +714,20 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 		newCatalog	= [NSDictionary dictionaryWithContentsOfFile:catalogPath];
 		version 	= [newCatalog objectForKey:VERSION_KEY];
 		
-		if (version)
-		{
-			[self setPartCatalog:newCatalog];
-		}
-		else
+		if (version == nil)
 		{
 			// Older part catalogs don't have enough info in them
 			partsListExists = NO;
+		}
+		else if ([[self class] catalogNeedsScan:newCatalog
+									 forRelease:self->libraryRelease
+									 folderPath:[catalogPath stringByDeletingLastPathComponent]])
+		{
+			partsListExists = NO;
+		}
+		else
+		{
+			[self setPartCatalog:newCatalog];
 		}
 
 	}
@@ -645,6 +735,29 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	return partsListExists;
 
 } // end load
+
+
+//---------- catalogNeedsScan:forRelease:folderPath: ----------------[static]--
+//
+// Purpose:		Whether a saved catalog was scanned from another update of the
+//				LDraw folder than the one it holds now, so it lacks its
+//				changes. A catalog that cannot be saved again is kept, or every
+//				launch would scan the folder.
+//
+//------------------------------------------------------------------------------
++ (BOOL)catalogNeedsScan:(NSDictionary *)catalog
+			  forRelease:(NSString *)release
+			  folderPath:(NSString *)folderPath
+{
+	id scanned = [catalog objectForKey:LIBRARY_RELEASE_KEY];
+
+	if ([scanned isKindOfClass:[NSString class]] == NO)
+		scanned = nil;
+
+	if ((scanned == nil && release == nil) || [scanned isEqual:release])
+		return NO;
+	return [[NSFileManager defaultManager] isWritableFileAtPath:folderPath];
+}
 
 
 //========== reloadParts: ======================================================
@@ -659,6 +772,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 {
 	PartCatalogBuilder* catalogBuilder = [[PartCatalogBuilder alloc] init];
 	[catalogBuilder setCatalogVersion:self->catalogVersion];
+	[catalogBuilder setLibraryRelease:self->libraryRelease];
 	
 	[catalogBuilder makePartCatalogWithMaxLoadCountHandler:maxLoadCountHandler
 								  progressIncrementHandler:progressIncrementHandler

@@ -20,6 +20,7 @@
 @implementation PartCatalogBuilder
 {
 	NSString *catalogVersion;
+	NSString *libraryRelease;
 }
 
 
@@ -32,6 +33,18 @@
 - (void)setCatalogVersion:(NSString *)version
 {
 	catalogVersion = [version copy];
+}
+
+
+//========== setLibraryRelease: ================================================
+//
+// Purpose:		The update of the LDraw folder written into a newly built
+//				catalog.
+//
+//==============================================================================
+- (void)setLibraryRelease:(NSString *)release
+{
+	libraryRelease = [release copy];
 }
 
 //========== makePartCatalogWithDelegate: ======================================
@@ -207,6 +220,8 @@
 			version = @"1.0";
 		[newPartCatalog setObject:version forKey:VERSION_KEY];
 		[newPartCatalog setObject:@"1.0"  forKey:COMPATIBILITY_VERSION_KEY];
+		if (libraryRelease != nil)
+			[newPartCatalog setObject:libraryRelease forKey:LIBRARY_RELEASE_KEY];
 		
 		//Save the part catalog out for future reference.
 		[newPartCatalog writeToFile:partCatalogPath atomically:YES];
