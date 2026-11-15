@@ -333,6 +333,11 @@ void AppendChoicesToNewItem(
 	// The window's Part Browser follows this model's limit and counts its parts.
 	[self->partsBrowser setDocument:self];
 
+	// From macOS 26 the small switch draws wider than its frame and runs into
+	// its label. The mini one is the size the small one was before.
+	if(@available(macOS 26.0, *))
+		[self->lpubPageSwitch setControlSize:NSControlSizeMini];
+
 	// update scope step display controls
 	[self setStepDisplay:NO];
 	
