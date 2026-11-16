@@ -40,3 +40,11 @@ void LDrawDLDraw(LDrawRenderEncoder			renderEncoder,
 				 const float				mark[4])
 {
 }
+
+
+void LDrawDLHighlight(struct LDrawDLSession *	session,
+					  struct LDrawDL *			dl,
+					  const float				transform[16],
+					  int						highlight)
+{
+}

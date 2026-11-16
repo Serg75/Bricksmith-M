@@ -122,6 +122,10 @@ struct	LDrawDragHandleInstance;
 	float							mark_stack[COLOR_STACK_DEPTH*4];
 	int								mark_stack_top;
 
+	// Highlight stack: an LDrawRenderHighlight for each push. Empty means none.
+	LDrawRenderHighlight			highlight_stack[COLOR_STACK_DEPTH];
+	int								highlight_stack_top;
+
 	// Metal
 	LDrawRenderEncoder				_Nullable _renderEncoder;
 }

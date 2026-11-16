@@ -74,6 +74,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// a part drawn outside a model, such as in a preview, never dims.
 @property (nonatomic) BOOL isLimitChecked;
 
+/// The band drawn around the part, apart from its selection. A submodel gets
+/// one band around all of it. Neither saved nor copied.
+@property (nonatomic) LDrawRenderHighlight highlight;
+
 /// The style of the parts limit's marks. The host sets it from its settings,
 /// then redraws. With LDrawRenderMarkNone no part is marked.
 + (LDrawRenderMarkStyle) limitMarkStyle;

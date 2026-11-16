@@ -420,13 +420,17 @@ constant float2 wideLineCorners[4] = {
 };
 
 // Where a vertex of the part is, in clip space.
-static float4 clipPosition(PackedVertex point, device const InstanceInput& inst, constant VertexUniform& uni)
+static float4 clipPosition(float4 p, device const InstanceInput& inst, constant VertexUniform& uni)
 {
-	float4 p		= float4(float3(point.position), 1.0);
-	float4 pos_obj	= float4(dot(p, inst.transform_x), dot(p, inst.transform_y),
-							 dot(p, inst.transform_z), dot(p, inst.transform_w));
+	float4 pos_obj = float4(dot(p, inst.transform_x), dot(p, inst.transform_y),
+							dot(p, inst.transform_z), dot(p, inst.transform_w));
 
 	return uni.projection_matrix * (uni.model_view_matrix * pos_obj);
+}
+
+static float4 clipPosition(PackedVertex point, device const InstanceInput& inst, constant VertexUniform& uni)
+{
+	return clipPosition(float4(float3(point.position), 1.0), inst, uni);
 }
 
 // A conditional line shows when its control points fall on the same side of
@@ -1410,4 +1414,143 @@ vertex VertexOut2D vertex_shader_2D(const device float2 *in [[buffer(0)]],
 
 fragment float4 fragment_shader_2D() {
 	return float4(0.0, 1.0, 0.5, 0.5);
+}
+
+
+// MARK: - Highlights -
+
+
+// The mask value where no part is. A mask holds the depth of the nearest
+// highlighted surface at each pixel of the area.
+constant float HIGHLIGHT_NONE	= 2.0;
+
+// The distance used past the reach.
+constant float HIGHLIGHT_FAR	= 1000.0;
+
+struct HighlightMaskOutput {
+	float4	position [[position]];
+};
+
+// A vertex of a highlighted part, placed on the area its mask covers.
+vertex HighlightMaskOutput highlightMaskVertexShader(
+	VertexInput					in		[[stage_in]],
+	device const InstanceInput	*inst	[[buffer(BufferIndexPerInstanceData)]],
+	constant VertexUniform&		uni		[[buffer(BufferIndexVertexUniforms)]])
+{
+	HighlightMaskOutput out;
+
+	out.position = clipPosition(in.position, inst[0], uni);
+
+	return out;
+}
+
+// The depth of a highlighted surface. The depth test keeps the nearest.
+fragment float highlightMaskFragmentShader(HighlightMaskOutput in [[stage_in]])
+{
+	return in.position.z;
+}
+
+// For each pixel of the area, and each highlight: how far along its row the
+// nearest pixel of the part is, and that pixel's depth.
+kernel void highlightAcrossKernel(
+	texture2d<float, access::read>	primary		[[texture(0)]],
+	texture2d<float, access::read>	secondary	[[texture(1)]],
+	texture2d<float, access::write>	across		[[texture(2)]],
+	constant HighlightUniform&		uni			[[buffer(BufferIndexHighlightUniforms)]],
+	uint2							at			[[thread_position_in_grid]])
+{
+	if (int(at.x) >= uni.size.x || int(at.y) >= uni.size.y) {
+		return;
+	}
+	float4 nearest = float4(HIGHLIGHT_FAR, HIGHLIGHT_NONE, HIGHLIGHT_FAR, HIGHLIGHT_NONE);
+
+	for (int step = -uni.reach; step <= uni.reach; step++) {
+		int		x		= int(at.x) + step;
+		float	away	= abs(float(step));
+
+		if (x < 0 || x >= uni.size.x) {
+			continue;
+		}
+		float first		= primary.read(uint2(x, at.y)).r;
+		float second	= uni.has_secondary ? secondary.read(uint2(x, at.y)).r : HIGHLIGHT_NONE;
+
+		if (first < HIGHLIGHT_NONE && away < nearest.x) {
+			nearest.xy = float2(away, first);
+		}
+		if (second < HIGHLIGHT_NONE && away < nearest.z) {
+			nearest.zw = float2(away, second);
+		}
+	}
+	across.write(nearest, at);
+}
+
+// For each pixel of the area, and each highlight: how far the nearest pixel of
+// the part is, from what lies along the rows above and below, and its depth.
+kernel void highlightDownKernel(
+	texture2d<float, access::read>	across	[[texture(0)]],
+	texture2d<float, access::write>	nearest	[[texture(1)]],
+	constant HighlightUniform&		uni		[[buffer(BufferIndexHighlightUniforms)]],
+	uint2							at		[[thread_position_in_grid]])
+{
+	if (int(at.x) >= uni.size.x || int(at.y) >= uni.size.y) {
+		return;
+	}
+	float2 square	= float2(HIGHLIGHT_FAR * HIGHLIGHT_FAR);
+	float2 depth	= float2(HIGHLIGHT_NONE);
+
+	for (int step = -uni.reach; step <= uni.reach; step++) {
+		int y = int(at.y) + step;
+
+		if (y < 0 || y >= uni.size.y) {
+			continue;
+		}
+		float4	row		= across.read(uint2(at.x, y));
+		float	down	= float(step * step);
+
+		if (row.x < HIGHLIGHT_FAR && row.x * row.x + down < square.x) {
+			square.x	= row.x * row.x + down;
+			depth.x		= row.y;
+		}
+		if (row.z < HIGHLIGHT_FAR && row.z * row.z + down < square.y) {
+			square.y	= row.z * row.z + down;
+			depth.y		= row.w;
+		}
+	}
+	nearest.write(float4(sqrt(square.x), depth.x, sqrt(square.y), depth.y), at);
+}
+
+struct HighlightBandOutput {
+	float4	color [[color(0)]];
+	float	depth [[depth(any)]];
+};
+
+// A pixel of a highlight's band, drawn over everything else. It takes the
+// depth of the nearest pixel of the part, brought toward the eye, so the depth
+// test tells whether the part's edge is in front of what is drawn there.
+fragment HighlightBandOutput highlightBandFragmentShader(
+	ResolveVertexOutput				in		[[stage_in]],
+	texture2d<float, access::read>	nearest	[[texture(0)]],
+	constant HighlightUniform&		uni		[[buffer(BufferIndexHighlightUniforms)]])
+{
+	HighlightBandOutput	out;
+	int2				at		= int2(in.position.xy) - uni.origin;
+
+	if (at.x < 0 || at.y < 0 || at.x >= uni.size.x || at.y >= uni.size.y) {
+		discard_fragment();
+	}
+	float4	near	= nearest.read(uint2(at));
+	float	away	= (uni.level == 0) ? near.x : near.z;
+	float	radius	= uni.radius[uni.level];
+
+	// Inside the part, or past the band. The secondary band stays off the
+	// primary part.
+	if (away < 0.5 || away > radius + 0.5 || (uni.level == 1 && near.x < 0.5)) {
+		discard_fragment();
+	}
+	float alpha = saturate(radius + 0.5 - away) * (uni.shown ? 1.0 : uni.hidden_alpha[uni.level]);
+
+	out.color = float4(uni.color[uni.level].rgb, alpha);
+	out.depth = max(((uni.level == 0) ? near.y : near.w) - uni.depth_offset[uni.level], 0.0);
+
+	return out;
 }

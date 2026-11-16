@@ -51,7 +51,9 @@ typedef enum BufferIndex {
 	BufferIndexTransparencyUniforms		= 4,
 	// A lone uint: 1 while thin lines go into the lists, whose vertices do not
 	// tell them from faces.
-	BufferIndexTransparentThinLines		= 5
+	BufferIndexTransparentThinLines		= 5,
+	// The band around highlighted parts, in the fragment and compute stages.
+	BufferIndexHighlightUniforms		= 6
 } BufferIndex;
 
 // Attribute index values shared between shader and CPU code to ensure Metal shader vertex attribute indices
@@ -150,6 +152,25 @@ typedef struct TransparencyUniform {
 	unsigned int	height;			// rows of list heads
 	unsigned int	slice;			// fragments each counter can hand out
 } TransparencyUniform;
+
+
+// MARK: - Highlights -
+
+// The band around highlighted parts. It is worked out on an area of the
+// surface around them, in textures of its own. Index 0 of each pair is the
+// primary highlight, 1 the secondary.
+typedef struct HighlightUniform {
+	vector_float4	color[2];			// of the band where the part is in front
+	float			radius[2];			// of the band, in pixels
+	float			hidden_alpha[2];	// of the band where something hides the part
+	float			depth_offset[2];	// how far the band comes toward the eye, as a depth
+	vector_int2		origin;				// of the area on the surface, in pixels
+	vector_int2		size;				// of the area, in pixels
+	int				reach;				// pixels looked at each way for the nearest part
+	int				level;				// the highlight a draw is for, 0 or 1
+	int				shown;				// 1 for the band in front, 0 for the one behind
+	int				has_secondary;		// 0 when no part has the secondary highlight
+} HighlightUniform;
 
 
 #endif /* MetalCommonDefinitions_h */

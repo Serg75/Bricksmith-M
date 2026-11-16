@@ -428,6 +428,47 @@ static void set_line_color4fv(float * c, float storage[4])
 } // end popMark
 
 
+//========== highlightNow ========================================================
+//
+// Purpose: the innermost highlight pushed, or none.
+//
+//================================================================================
+- (LDrawRenderHighlight)highlightNow
+{
+	return (highlight_stack_top == 0) ? LDrawRenderHighlightNone : highlight_stack[highlight_stack_top - 1];
+
+} // end highlightNow
+
+
+//========== pushHighlight: ======================================================
+//
+// Purpose: give everything drawn from here down one band, until the matching
+//			pop.
+//
+//================================================================================
+- (void)pushHighlight:(LDrawRenderHighlight)highlight
+{
+	assert(highlight_stack_top < COLOR_STACK_DEPTH);
+
+	highlight_stack[highlight_stack_top] = highlight;
+	++highlight_stack_top;
+
+} // end pushHighlight:
+
+
+//========== popHighlight ========================================================
+//
+// Purpose: undo the innermost outstanding highlight.
+//
+//================================================================================
+- (void)popHighlight
+{
+	assert(highlight_stack_top > 0);
+	--highlight_stack_top;
+
+} // end popHighlight
+
+
 //========== pushTexture: ========================================================
 //
 // Purpose: change the current texture to a new one, specified by a spec with
@@ -656,6 +697,9 @@ static void set_line_color4fv(float * c, float storage[4])
 		[self ghostIdNow],
 		[self alphaModulationNow],
 		[self markNow]);
+
+	if ([self highlightNow] != LDrawRenderHighlightNone)
+		LDrawDLHighlight(session, (struct LDrawDL *) dl, transform_now, (int)[self highlightNow]);
 
 } // end drawDL:
 

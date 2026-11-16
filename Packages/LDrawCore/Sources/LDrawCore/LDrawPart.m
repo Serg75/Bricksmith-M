@@ -414,6 +414,8 @@ int floatNearGrid(double v, double grid, double epsi)
 
 		if(cacheModel)
 		{
+			if(self.highlight != LDrawRenderHighlightNone)
+				[renderer pushHighlight:self.highlight];
 			if(isMarked)
 				[renderer pushMark:mark];
 			if(isDimmed)
@@ -508,6 +510,8 @@ int floatNearGrid(double v, double grid, double epsi)
 				[renderer popAlphaModulation];
 			if(isMarked)
 				[renderer popMark];
+			if(self.highlight != LDrawRenderHighlightNone)
+				[renderer popHighlight];
 				
 		}	
 	}

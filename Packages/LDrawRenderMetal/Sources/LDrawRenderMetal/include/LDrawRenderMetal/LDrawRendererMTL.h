@@ -35,6 +35,10 @@ NS_ASSUME_NONNULL_BEGIN
 // Accessors
 - (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
 
+/// The color of the band around parts with an LDrawPart highlight. Orange
+/// until it is set.
+- (void) setHighlightColorRed:(float)red green:(float)green blue:(float)blue;
+
 /// Called with how long the GPU took for each frame drawn in a view, on a
 /// Metal completion thread. Nil stops it.
 - (void) setFrameGPUTimeHandler:(nullable void (^)(CFTimeInterval seconds))handler;

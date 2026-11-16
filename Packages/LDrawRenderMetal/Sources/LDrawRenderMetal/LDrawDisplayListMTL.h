@@ -71,6 +71,35 @@ void LDrawDLSessionSetPrepareTransparentLists(struct LDrawDLSession *session,
 											  LDrawDLPrepareTransparentLists _Nullable prepare);
 
 
+// The DLs a session drew under a highlight, and where, kept after its render
+// pass so the renderer can draw their band. Their DLs stay alive until the list
+// is destroyed.
+struct LDrawDLHighlightList;
+
+// Has the session hand over its highlighted DLs as it finishes, into *list,
+// which it leaves NULL when there are none. Without it, they are drawn as
+// usual and not kept.
+void LDrawDLSessionSetHighlightList(struct LDrawDLSession *session,
+									struct LDrawDLHighlightList * _Nullable * _Nullable list);
+
+// Whether any DL has this LDrawRenderHighlight.
+BOOL LDrawDLHighlightListHas(const struct LDrawDLHighlightList *list, int highlight);
+
+// The pixel rectangle, from the top left, that the DLs cover under
+// viewProjection. The whole surface when one reaches behind the eye or has no
+// box.
+CGRect LDrawDLHighlightListBounds(const struct LDrawDLHighlightList *list,
+								  simd_float4x4 viewProjection,
+								  CGSize pixelSize);
+
+// Draws the triangles of the DLs with this LDrawRenderHighlight. The caller
+// sets the pipeline and the uniforms.
+void LDrawDLHighlightListDrawTriangles(id<MTLRenderCommandEncoder>			renderEncoder,
+									   const struct LDrawDLHighlightList *	list,
+									   int									highlight);
+
+void LDrawDLHighlightListDestroy(struct LDrawDLHighlightList *list);
+
 @interface LDrawShaderRenderer (MetalWideLines)
 
 /// Draws the session's edge and conditional lines as quads of the given width.
@@ -78,6 +107,12 @@ void LDrawDLSessionSetPrepareTransparentLists(struct LDrawDLSession *session,
 
 @end
 
+
+@interface LDrawShaderRenderer (MetalHighlights)
+/// Keeps the parts drawn under a highlight in *list once the drawing is
+/// finished, for their band. The caller destroys it.
+- (void)setHighlightList:(struct LDrawDLHighlightList * _Nullable * _Nullable)list;
+@end
 
 @interface LDrawShaderRenderer (MetalTransparency)
 

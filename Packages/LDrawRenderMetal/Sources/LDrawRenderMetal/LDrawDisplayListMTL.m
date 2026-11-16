@@ -150,6 +150,8 @@ struct LDrawDL {
 	id<MTLBuffer> 			indexBuffer;		// Single buffer containing all mesh indices.
 	id<MTLBuffer>			condIndexBuffer;	// Conditional lines with their two control points, or nil.
 #endif
+	float					bounds[6];			// Least and greatest x, y and z of its vertices; unknown when the
+												// least x is above the greatest.
 	int						tex_count;			// Number of per-textures; untex case is always first if present.
 	#if WANT_STATS
 	int						vrt_count;
@@ -200,6 +202,27 @@ struct LDrawDLSortedInstanceLink {
 };
 
 
+// A DL drawn under a highlight, and where.
+struct LDrawDLHighlightItem {
+	struct LDrawDL *				dl;
+	float							transform[16];
+	int								highlight;			// an LDrawRenderHighlight, not none
+};
+
+// The session's list of them, as it draws.
+struct LDrawDLHighlightLink {
+	struct LDrawDLHighlightLink *	next;
+	struct LDrawDLHighlightItem		item;
+};
+
+// The highlighted DLs a session hands over. Each one counts as a deferred use
+// of its DL until the list is destroyed.
+struct LDrawDLHighlightList {
+	int								count;
+	struct LDrawDLHighlightItem		items[];
+};
+
+
 // One drawing session.
 struct LDrawDLSession {
 	#if WANT_STATS
@@ -234,6 +257,9 @@ struct LDrawDLSession {
 
 	struct LDrawDLWideLines				wide_lines;				// Edge and conditional lines as quads, when asked for.
 
+	struct LDrawDLHighlightLink *		highlight_head;			// What was drawn under a highlight, and where
+	struct LDrawDLHighlightList **		highlight_list;			// to hand it over; NULL keeps nothing.
+
 	// Gets lists ready for the transparent parts, when the GPU can keep them.
 	__unsafe_unretained LDrawDLPrepareTransparentLists	prepare_lists;
 	BOOL								transparent_bias;		// Transparent faces get more depth bias.
@@ -244,6 +270,21 @@ struct LDrawDLSession {
 
 
 // MARK: - Internal functions -
+
+//========== setInstanceTransform ================================================
+//
+// Purpose:	Puts a column-major transform into an instance's rows.
+//
+//================================================================================
+static void setInstanceTransform(struct InstanceInput * inst, const float t[16])
+{
+	inst->transform_x = simd_make_float4(t[0], t[4], t[8],  t[12]);
+	inst->transform_y = simd_make_float4(t[1], t[5], t[9],  t[13]);
+	inst->transform_z = simd_make_float4(t[2], t[6], t[10], t[14]);
+	inst->transform_w = simd_make_float4(t[3], t[7], t[11], t[15]);
+
+} // end setInstanceTransform
+
 
 //========== getInstanceBuffer ===================================================
 //
@@ -828,10 +869,7 @@ static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
 	struct LDrawDL *		dl	= l->dl;
 	float					alpha_scale	= depthOnly ? 0.0f : l->ghost_alpha;
 
-	instData.transform_x = simd_make_float4(l->transform[0], l->transform[4], l->transform[8],  l->transform[12]);
-	instData.transform_y = simd_make_float4(l->transform[1], l->transform[5], l->transform[9],  l->transform[13]);
-	instData.transform_z = simd_make_float4(l->transform[2], l->transform[6], l->transform[10], l->transform[14]);
-	instData.transform_w = simd_make_float4(l->transform[3], l->transform[7], l->transform[11], l->transform[15]);
+	setInstanceTransform(&instData, l->transform);
 	copy_vec4((float *)&instData.color_current, l->color);
 	copy_vec4((float *)&instData.color_complement, l->comp);
 	copy_vec4((float *)&instData.mark, l->mark);
@@ -1202,6 +1240,25 @@ static void endDeferredUse(struct LDrawDL * dl, struct LDrawDL ** doomed_head)
 } // end endDeferredUse
 
 
+//========== destroyDoomed =======================================================
+//
+// Purpose:	Destroys the DLs on a list endDeferredUse made. The encoder keeps
+//			the buffers it was given until the GPU is done.
+//
+//================================================================================
+static void destroyDoomed(struct LDrawDL * doomed_head)
+{
+	while (doomed_head)
+	{
+		struct LDrawDL * dl = doomed_head;
+
+		doomed_head = dl->next_dl;
+		LDrawDLDestroy(dl);
+	}
+
+} // end destroyDoomed
+
+
 //========== saveForInstanceDraw =================================================
 //
 // Purpose:	Save DL for later instance drawing.
@@ -1273,10 +1330,7 @@ static void immediateDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	#endif
 
 	struct InstanceInput instData;
-	instData.transform_x = simd_make_float4(transform[0], transform[4], transform[8],  transform[12]);
-	instData.transform_y = simd_make_float4(transform[1], transform[5], transform[9],  transform[13]);
-	instData.transform_z = simd_make_float4(transform[2], transform[6], transform[10], transform[14]);
-	instData.transform_w = simd_make_float4(transform[3], transform[7], transform[11], transform[15]);
+	setInstanceTransform(&instData, transform);
 	copy_vec4((float *)&instData.color_current, cur_color);
 	copy_vec4((float *)&instData.color_complement, cmp_color);
 	copy_vec4((float *)&instData.mark, mark);
@@ -1637,6 +1691,24 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 		quad_start,
 		quad_count);
 
+	// The box around the vertices, to tell where on the screen a highlighted
+	// part is.
+	const float * vertices = (const float *)vertex_ptr;
+
+	dl->bounds[0] = dl->bounds[1] = dl->bounds[2] = FLT_MAX;
+	dl->bounds[3] = dl->bounds[4] = dl->bounds[5] = -FLT_MAX;
+
+	for (int vi = 0; vi < total_vertices; ++vi)
+	{
+		for (int axis = 0; axis < 3; ++axis)
+		{
+			float value = vertices[vi * VERT_STRIDE + axis];
+
+			dl->bounds[axis]		= MIN(dl->bounds[axis], value);
+			dl->bounds[axis + 3]	= MAX(dl->bounds[axis + 3], value);
+		}
+	}
+
 	// Wide conditional lines need their control points, so they keep all four
 	// indices in a buffer of their own. Below, the index buffer keeps only the
 	// ends, for a wireframe.
@@ -1805,6 +1877,8 @@ struct LDrawDL * LDrawDLBuilderFinish(struct LDrawDLBuilder * ctx)
 	dl->instance_tail = NULL;
 	dl->instance_count = 0;
 	dl->deferred_count = 0;
+	dl->bounds[0] = 1.0f;		// unknown
+	dl->bounds[3] = 0.0f;
 
 	dl->tex_count = total_texes;
 
@@ -1976,6 +2050,8 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	#endif
 	memcpy(session->model_view,model_view,sizeof(float)*16);
 	memset(&session->wide_lines, 0, sizeof(session->wide_lines));
+	session->highlight_head = NULL;
+	session->highlight_list = NULL;
 	session->prepare_lists = nil;
 	session->transparent_bias = NO;
 	session->inst_ring = inst_ring_last;
@@ -2024,6 +2100,21 @@ void LDrawDLSessionSetPrepareTransparentLists(struct LDrawDLSession *			session,
 	session->prepare_lists = prepare;
 
 } // end LDrawDLSessionSetPrepareTransparentLists
+
+
+//========== LDrawDLSessionSetHighlightList ======================================
+//
+// Purpose:	Has the session hand over its highlighted DLs as it finishes.
+//
+//================================================================================
+void LDrawDLSessionSetHighlightList(struct LDrawDLSession *			session,
+									struct LDrawDLHighlightList **	list)
+{
+	session->highlight_list = list;
+	if (list)
+		*list = NULL;
+
+} // end LDrawDLSessionSetHighlightList
 
 
 //========== LDrawDLSessionDrawAndDestroy ========================================
@@ -2107,10 +2198,7 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 				for (inst = dl->instance_head; inst; inst = inst->next)
 				{
 					struct InstanceInput instData;
-					instData.transform_x = simd_make_float4(inst->transform[0], inst->transform[4], inst->transform[8],  inst->transform[12]);
-					instData.transform_y = simd_make_float4(inst->transform[1], inst->transform[5], inst->transform[9],  inst->transform[13]);
-					instData.transform_z = simd_make_float4(inst->transform[2], inst->transform[6], inst->transform[10], inst->transform[14]);
-					instData.transform_w = simd_make_float4(inst->transform[3], inst->transform[7], inst->transform[11], inst->transform[15]);
+					setInstanceTransform(&instData, inst->transform);
 					copy_vec4((float *)&instData.color_current, inst->color);
 					copy_vec4((float *)&instData.color_complement, inst->comp);
 					copy_vec4((float *)&instData.mark, inst->mark);
@@ -2312,13 +2400,26 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	for (l = session->ghost_head; l; l = l->next)
 		endDeferredUse(l->dl, &doomed_head);
 
-	// The encoder keeps the buffers it was given until the GPU is done.
-	while (doomed_head)
+	// The highlighted DLs go to the list, which keeps them alive.
+	if (session->highlight_head)
 	{
-		dl = doomed_head;
-		doomed_head = dl->next_dl;
-		LDrawDLDestroy(dl);
+		struct LDrawDLHighlightLink *	h;
+		int								count	= 0;
+
+		for (h = session->highlight_head; h; h = h->next)
+			++count;
+
+		struct LDrawDLHighlightList * list = malloc(sizeof(struct LDrawDLHighlightList)
+													+ sizeof(struct LDrawDLHighlightItem) * count);
+
+		list->count = 0;
+		for (h = session->highlight_head; h; h = h->next)
+			list->items[list->count++] = h->item;
+
+		*session->highlight_list = list;
 	}
+
+	destroyDoomed(doomed_head);
 
 	#if WANT_STATS
 		printf("Immediate drawing: %d batches, %d vertices.\n",session->stats.num_btch_imm, session->stats.num_vert_imm);
@@ -2417,3 +2518,160 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	}
 
 } // end LDrawDLDraw
+
+
+//========== LDrawDLHighlight ====================================================
+//
+// Purpose:	Keeps a DL drawn at the transform under a highlight, to hand over
+//			when the session finishes.
+//
+//================================================================================
+void LDrawDLHighlight(struct LDrawDLSession *	session,
+					  struct LDrawDL *			dl,
+					  const float				transform[16],
+					  int						highlight)
+{
+	if (	session->highlight_list == NULL
+		||	(highlight != LDrawRenderHighlightPrimary && highlight != LDrawRenderHighlightSecondary))
+		return;
+
+	struct LDrawDLHighlightLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLHighlightLink));
+
+	link->next				= session->highlight_head;
+	link->item.dl			= dl;
+	link->item.highlight	= highlight;
+	session->highlight_head	= link;
+	++dl->deferred_count;
+	memcpy(link->item.transform, transform, sizeof(float) * 16);
+
+} // end LDrawDLHighlight
+
+
+// MARK: - Highlight list APIs -
+
+//========== LDrawDLHighlightListHas =============================================
+//
+// Purpose:	Whether any DL in the list has this highlight.
+//
+//================================================================================
+BOOL LDrawDLHighlightListHas(const struct LDrawDLHighlightList * list, int highlight)
+{
+	for (int i = 0; i < list->count; ++i)
+		if (list->items[i].highlight == highlight)
+			return YES;
+
+	return NO;
+
+} // end LDrawDLHighlightListHas
+
+
+//========== LDrawDLHighlightListBounds ==========================================
+//
+// Purpose:	The pixel rectangle, from the top left, that the corners of the
+//			DLs' boxes cover. The whole surface when a corner is behind the
+//			eye or a box is unknown.
+//
+//================================================================================
+CGRect LDrawDLHighlightListBounds(const struct LDrawDLHighlightList *	list,
+								  simd_float4x4							viewProjection,
+								  CGSize								pixelSize)
+{
+	CGRect	whole	= CGRectMake(0.0, 0.0, pixelSize.width, pixelSize.height);
+	CGRect	covered	= CGRectNull;
+
+	for (int i = 0; i < list->count; ++i)
+	{
+		const struct LDrawDLHighlightItem *	item	= &list->items[i];
+		const float *						box		= item->dl->bounds;
+		simd_float4x4						toClip	= simd_mul(viewProjection,
+															   simd_matrix4x4_from_array_transposed(item->transform));
+
+		if (box[0] > box[3])
+			return whole;
+
+		for (int corner = 0; corner < 8; ++corner)
+		{
+			simd_float4 clip = simd_mul(toClip, simd_make_float4(box[(corner & 1) ? 3 : 0],
+																  box[(corner & 2) ? 4 : 1],
+																  box[(corner & 4) ? 5 : 2], 1.0f));
+
+			if (clip.w <= 1e-6f)
+				return whole;
+
+			CGPoint pixel = CGPointMake((clip.x / clip.w * 0.5 + 0.5) * pixelSize.width,
+										(0.5 - clip.y / clip.w * 0.5) * pixelSize.height);
+
+			covered = CGRectUnion(covered, CGRectMake(pixel.x, pixel.y, 0.0, 0.0));
+		}
+	}
+	return CGRectIsNull(covered) ? CGRectZero : covered;
+
+} // end LDrawDLHighlightListBounds
+
+
+//========== LDrawDLHighlightListDrawTriangles ===================================
+//
+// Purpose:	Draws the triangles of the DLs with this highlight, each where it
+//			was drawn. The caller sets the pipeline and the uniforms.
+//
+//================================================================================
+void LDrawDLHighlightListDrawTriangles(id<MTLRenderCommandEncoder>			renderEncoder,
+									   const struct LDrawDLHighlightList *	list,
+									   int									highlight)
+{
+	for (int i = 0; i < list->count; ++i)
+	{
+		const struct LDrawDLHighlightItem *	item	= &list->items[i];
+		struct LDrawDL *					dl		= item->dl;
+		struct LDrawDLPerTex *				tptr	= dl->texes;
+		struct InstanceInput				instData;
+
+		if (item->highlight != highlight)
+			continue;
+
+		memset(&instData, 0, sizeof(instData));
+		setInstanceTransform(&instData, item->transform);
+
+		[renderEncoder setVertexBytes:&instData length:sizeof(instData) atIndex:BufferIndexPerInstanceData];
+		[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+
+		for (int ti = 0; ti < dl->tex_count; ++ti, ++tptr)
+		{
+			if (tptr->tri_count == 0)
+				continue;
+
+			#if WANT_SMOOTH
+			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+									  indexCount:tptr->tri_count
+									   indexType:MTLIndexTypeUInt32
+									 indexBuffer:dl->indexBuffer
+							   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
+								   instanceCount:1];
+			#else
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+							  vertexStart:tptr->tri_off
+							  vertexCount:tptr->tri_count];
+			#endif
+		}
+	}
+
+} // end LDrawDLHighlightListDrawTriangles
+
+
+//========== LDrawDLHighlightListDestroy =========================================
+//
+// Purpose:	Lets go of the DLs, destroying those their owner gave up while the
+//			list kept them.
+//
+//================================================================================
+void LDrawDLHighlightListDestroy(struct LDrawDLHighlightList * list)
+{
+	struct LDrawDL * doomed_head = NULL;
+
+	for (int i = 0; i < list->count; ++i)
+		endDeferredUse(list->items[i].dl, &doomed_head);
+
+	destroyDoomed(doomed_head);
+	free(list);
+
+} // end LDrawDLHighlightListDestroy

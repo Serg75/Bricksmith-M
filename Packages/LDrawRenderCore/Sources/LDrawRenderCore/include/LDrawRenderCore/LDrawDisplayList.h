@@ -88,4 +88,13 @@ void					LDrawDLDraw(
 									float						ghost_alpha,
 									const float					mark[4]);
 
+// Notes a DL drawn at the transform under an LDrawRenderHighlight, to draw one
+// band around all the DLs of each highlight. A backend without bands ignores
+// it.
+void					LDrawDLHighlight(
+									struct LDrawDLSession *		session,
+									struct LDrawDL *			dl,
+									const float					transform[16],
+									int							highlight);
+
 #endif /* LDrawDisplayList_h */

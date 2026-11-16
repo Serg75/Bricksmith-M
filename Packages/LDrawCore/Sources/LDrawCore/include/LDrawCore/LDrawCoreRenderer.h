@@ -166,6 +166,20 @@ typedef NS_ENUM(NSInteger, LDrawRenderMarkStyle)
 };
 
 
+/// The band a renderer draws around a part's shape on the screen, strong where
+/// the part is in front and faint where something hides it.
+typedef NS_ENUM(NSInteger, LDrawRenderHighlight)
+{
+	LDrawRenderHighlightNone		= 0,
+
+	/// A wide band, for what is picked.
+	LDrawRenderHighlightPrimary		= 1,
+
+	/// A narrower, darker band, for what goes with it.
+	LDrawRenderHighlightSecondary	= 2
+};
+
+
 //------------------------------------------------------------------------------
 ///
 /// @protocol   LDrawCoreRenderer
@@ -218,6 +232,11 @@ typedef NS_ENUM(NSInteger, LDrawRenderMarkStyle)
 // innermost wins. It goes with each draw call and is never kept in a display list.
 - (void)pushMark:(const float *)mark;
 - (void)popMark;
+
+// Highlight stack. Parts drawn while a highlight is pushed get one band together; the innermost push wins. A
+// renderer without bands draws them as usual.
+- (void)pushHighlight:(LDrawRenderHighlight)highlight;
+- (void)popHighlight;
 
 // Texture stack - sets up new texturing.  When the stack is totally popped, no texturing is applied.
 - (void)pushTexture:(struct LDrawTextureSpec *)tex_spec;

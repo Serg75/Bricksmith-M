@@ -1364,6 +1364,20 @@ void LDrawDLDraw(
 } // end LDrawDLDraw
 
 
+//========== LDrawDLHighlight ====================================================
+//
+// Purpose:	Does nothing. OpenGL draws highlighted parts as usual, with no
+//			band.
+//
+//================================================================================
+void LDrawDLHighlight(struct LDrawDLSession *	session,
+					  struct LDrawDL *			dl,
+					  const float				transform[16],
+					  int						highlight)
+{
+} // end LDrawDLHighlight
+
+
 //========== LDrawDLDestroy ======================================================
 //
 // Purpose: free a display list - release GL and system memory.

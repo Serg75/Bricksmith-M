@@ -359,6 +359,22 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 @end
 
 
+@implementation LDrawShaderRenderer (MetalHighlights)
+
+//========== setHighlightList: ===================================================
+//
+// Purpose:	Keeps this drawing's highlighted parts in *list when it finishes.
+//
+//================================================================================
+- (void)setHighlightList:(struct LDrawDLHighlightList **)list
+{
+	LDrawDLSessionSetHighlightList(session, list);
+
+} // end setHighlightList:
+
+@end
+
+
 @implementation LDrawShaderRenderer (MetalTransparency)
 
 //========== setPrepareTransparentLists: =========================================
