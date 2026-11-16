@@ -93,6 +93,9 @@
 @property (nonatomic, strong) LDrawTransparentLists	*transparentLists;
 @property (nonatomic, strong) LDrawTransparentLists	*offscreenTransparentLists;
 
+// Called with each frame's GPU time, on a Metal completion thread.
+@property (nonatomic, copy) void (^frameGPUTimeHandler)(CFTimeInterval seconds);
+
 // Frames drawn on screen, and whether a check that the view is idle waits.
 @property (nonatomic, assign) NSUInteger			framesDrawn;
 @property (nonatomic, assign) BOOL					listRoomCheckPending;
@@ -663,7 +666,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	__weak LDrawRenderer		*weakSelf	= self;
 	id<MTLBuffer>				counters	= lists.frameUsesLists ? lists.counters : nil;
 	struct TransparencyUniform	uniform		= lists.uniform;
+	void						(^timed)(CFTimeInterval) = state.frameGPUTimeHandler;
 	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+		if (timed != nil && buffer.GPUEndTime > buffer.GPUStartTime) {
+			timed(buffer.GPUEndTime - buffer.GPUStartTime);
+		}
 		// A frame that ran out of room for transparent fragments is drawn
 		// again with more, unless the lists already have the most room they
 		// can.
@@ -1293,6 +1300,19 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 				 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 }
+
+
+//========== setFrameGPUTimeHandler: ===========================================
+//
+// Purpose:		Has each frame drawn in a view report how long the GPU took for
+//				it. The handler runs on a Metal completion thread.
+//
+//==============================================================================
+- (void)setFrameGPUTimeHandler:(void (^)(CFTimeInterval seconds))handler
+{
+	metalDrawState(self).frameGPUTimeHandler = handler;
+
+} // end setFrameGPUTimeHandler:
 
 
 @end

@@ -35,6 +35,10 @@ NS_ASSUME_NONNULL_BEGIN
 // Accessors
 - (void) setBackgroundColorRed:(float)red green:(float)green blue:(float)blue;
 
+/// Called with how long the GPU took for each frame drawn in a view, on a
+/// Metal completion thread. Nil stops it.
+- (void) setFrameGPUTimeHandler:(nullable void (^)(CFTimeInterval seconds))handler;
+
 // Pictures
 /// Draws the directive once, off screen, into a picture of the given size in pixels.
 /// The camera must already be set up for a surface of the same shape. Waits for the GPU.
