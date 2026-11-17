@@ -1586,10 +1586,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 } // end newImageWithPixelSize:transparent:
 
 
-//---------- newImageOfDirective:center:zoomPercentage:size:... ------[static]--
+//---------- newImageOfDirective:...cameraBounds:... -----------------[static]--
 //
-// Purpose:		A picture of a directive seen straight on with no perspective,
-//				on a clear background.
+// Purpose:		A picture of a directive on a clear background. With camera
+//				bounds it is in perspective, and centered on the box around
+//				where the centered points are drawn.
 //
 // Notes:		One renderer is kept for every picture, because making one is
 //				not cheap. It lets go of the directive afterwards.
@@ -1601,9 +1602,15 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 							 size:(CGSize)size
 							scale:(CGFloat)scale
 					 outlineWidth:(CGFloat)outlineWidth
+					 cameraBounds:(Box3)cameraBounds
+				   rotationCenter:(Point3)rotationCenter
+				   centeredPoints:(nullable NSData *)centeredPoints
 {
 	static LDrawRenderer		*renderer	= nil;
 	static LDrawPictureScroller	*scroller	= nil;
+
+	BOOL		 isPerspective	= (V3EqualBoxes(cameraBounds, InvalidBox) == NO);
+	NSUInteger	 pointCount		= centeredPoints.length / sizeof(Point3);
 
 	if (directive == nil || size.width < 1.0 || size.height < 1.0 || scale <= 0.0) {
 		return NULL;
@@ -1619,15 +1626,34 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 		[renderer setDelegate:nil withScroller:scroller];
 		[renderer setLDrawColor:[[LDrawColorLibrary sharedColorLibrary] colorForCode:LDrawCurrentColor]];
 		[renderer prepareMetal];
-		[renderer setProjectionMode:LDrawProjectionModeOrthographic];
 	}
+
+	// The renderer is shared, so each picture sets its own camera. The bounds
+	// go before the directive, which places the camera from them.
+	[renderer setProjectionMode:(isPerspective ? LDrawProjectionModePerspective : LDrawProjectionModeOrthographic)];
+	[renderer setCameraBounds:cameraBounds];
 
 	// The size first: the zoom and the scroll are worked out against it.
 	[renderer setGraphicsSurfaceSize:V2MakeSize(size.width, size.height)];
 	[renderer setLDrawDirective:directive];
+
+	if (isPerspective) {
+		[[renderer camera] setRotationCenter:rotationCenter];
+	}
+
 	[renderer setViewingAngle:ZeroPoint3];
 	[renderer setZoomPercentage:zoomPercentage];
 	[renderer scrollCenterToModelPoint:center];
+
+	// In perspective the middle of the points is not drawn in the middle of
+	// where they are drawn. A scroll moves them all alike, so center that.
+	if (isPerspective && pointCount > 0) {
+		Box2	drawn	= [renderer viewBoxForModelPoints:centeredPoints.bytes count:pointCount];
+		Point3	middle	= [renderer modelPointForPoint:V2BoxMid(drawn) depthReferencePoint:center];
+
+		[renderer scrollCenterToModelPoint:middle];
+	}
+
 	[renderer setOutlineWidth:outlineWidth];
 
 	CGSize		pixelSize	= CGSizeMake(ceil(size.width * scale), ceil(size.height * scale));
@@ -1637,7 +1663,66 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 
 	return picture;
 
+} // end newImageOfDirective:...cameraBounds:...
+
+
+//---------- newImageOfDirective:center:zoomPercentage:size:... ------[static]--
+//
+// Purpose:		A picture of a directive seen straight on with no perspective,
+//				on a clear background.
+//
+//------------------------------------------------------------------------------
++ (CGImageRef)newImageOfDirective:(LDrawDirective *)directive
+						   center:(Point3)center
+				   zoomPercentage:(CGFloat)zoomPercentage
+							 size:(CGSize)size
+							scale:(CGFloat)scale
+					 outlineWidth:(CGFloat)outlineWidth
+{
+	return [self newImageOfDirective:directive
+							  center:center
+					  zoomPercentage:zoomPercentage
+								size:size
+							   scale:scale
+						outlineWidth:outlineWidth
+						cameraBounds:InvalidBox
+					  rotationCenter:ZeroPoint3
+					  centeredPoints:nil];
+
 } // end newImageOfDirective:center:zoomPercentage:size:scale:outlineWidth:
+
+
+//---------- newPerspectiveImageOfDirective:center:... ---------------[static]--
+//
+// Purpose:		A picture of a directive in perspective, as a view draws it, on
+//				a clear background.
+//
+//------------------------------------------------------------------------------
++ (CGImageRef)newPerspectiveImageOfDirective:(LDrawDirective *)directive
+									  center:(Point3)center
+							  zoomPercentage:(CGFloat)zoomPercentage
+										size:(CGSize)size
+									   scale:(CGFloat)scale
+								outlineWidth:(CGFloat)outlineWidth
+								cameraBounds:(Box3)cameraBounds
+							  rotationCenter:(Point3)rotationCenter
+							  centeredPoints:(NSData *)centeredPoints
+{
+	if (V3EqualBoxes(cameraBounds, InvalidBox)) {
+		return NULL;
+	}
+
+	return [self newImageOfDirective:directive
+							  center:center
+					  zoomPercentage:zoomPercentage
+								size:size
+							   scale:scale
+						outlineWidth:outlineWidth
+						cameraBounds:cameraBounds
+					  rotationCenter:rotationCenter
+					  centeredPoints:centeredPoints];
+
+} // end newPerspectiveImageOfDirective:center:...
 
 
 //---------- prepareDrawingOfDirective: ------------------------------[static]--

@@ -2614,6 +2614,18 @@ NSString * const LDrawViewCameraDidChangeNotification = @"LDrawViewCameraDidChan
 }//end setCameraBounds:
 
 
+//========== rotationCenter ====================================================
+//
+// Purpose:		The model point the camera turns around.
+//
+//==============================================================================
+- (Point3) rotationCenter
+{
+	return [[self->renderer camera] rotationCenter];
+
+}//end rotationCenter
+
+
 //========== scrollModelPoint:toViewPoint: =====================================
 //
 // Purpose:		Scrolls so that the given model point lands on the given point

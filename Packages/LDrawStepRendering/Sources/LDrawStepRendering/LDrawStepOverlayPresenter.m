@@ -170,7 +170,9 @@ static Box2 BoxAroundPoints(NSData *points)
 ///
 /// @abstract   Where a step's assembly sat on its page when it was laid out:
 ///             the outline around it, as Point2 values in page inches from the
-///             page's middle, and how many page inches an LDU covered there.
+///             page's middle, and how many page inches an LDU covered at the
+///             zoom. In perspective that is the scale beside the point the
+///             camera turns around, which is what a picture's zoom gives.
 ///
 //------------------------------------------------------------------------------
 @interface LDrawStepKeptPage : NSObject
@@ -1116,7 +1118,7 @@ static Box2 BoxAroundPoints(NSData *points)
 	LDrawStepKeptPage *kept = [LDrawStepKeptPage new];
 
 	kept.outline		= inches;
-	kept.inchesPerLDU	= [self assemblyScale] / scale;
+	kept.inchesPerLDU	= [self.camera zoomPercentage] / 100.0 / scale;
 
 	[self->pageOutlines setObject:kept forKey:step];
 
@@ -1238,39 +1240,87 @@ static Box2 BoxAroundPoints(NSData *points)
 ///				where its outline is drawn now.
 ///
 /// @discussion	The parts are turned to the previous step's angle, and drawn
-///				at as many page inches an LDU as it drew them.
+///				at as many page inches an LDU as it drew them. When the camera
+///				draws in perspective, so does the picture, from where the
+///				camera stands, so it matches the parts the view draws.
 ///
 //==============================================================================
 - (nullable LDrawStepCalloutPicture *) previousStepPictureInView
 {
-	LDrawModel			*model		= self.model;
-	LDrawStepKeptPage	*kept		= [self keptPageOfPreviousStep];
-	NSUInteger			 index		= [[model steps] indexOfObjectIdenticalTo:[model visibleStep]];
-	NSData				*outline	= [self earlierOutlinePoints];
-	const Point3		*point		= outline.bytes;
-	NSUInteger			 count		= outline.length / sizeof(Point3);
-	Box3				 turned		= InvalidBox;
+	id<LDrawStepOverlayCamera>	 camera		= self.camera;
+	LDrawModel					*model		= self.model;
+	LDrawStepKeptPage			*kept		= [self keptPageOfPreviousStep];
+	NSUInteger					 index		= [[model steps] indexOfObjectIdenticalTo:[model visibleStep]];
+	NSData						*outline	= [self earlierOutlinePoints];
+	const Point3				*point		= outline.bytes;
+	NSUInteger					 count		= outline.length / sizeof(Point3);
+	Box3						 turned		= InvalidBox;
 
 	if (kept == nil || kept.inchesPerLDU <= 0.0 || count == 0 || index == NSNotFound || index == 0) {
 		return nil;
 	}
 
-	Tuple3	angle	= [LDrawStepPartListPolicy assemblyViewingAngleForStepAtIndex:index - 1 inModel:model];
-	Matrix4	view	= [LDrawStepPartListLayout viewTransformForAngle:angle];
+	Tuple3			 angle			= [LDrawStepPartListPolicy assemblyViewingAngleForStepAtIndex:index - 1
+																						  inModel:model];
+	Matrix4			 view			= [LDrawStepPartListLayout viewTransformForAngle:angle];
+	NSMutableData	*turnedPoints	= [NSMutableData dataWithLength:count * sizeof(Point3)];
+	Point3			*turnedPoint	= turnedPoints.mutableBytes;
 
 	for (NSUInteger pointIndex = 0; pointIndex < count; pointIndex++) {
-		turned = V3UnionBoxAndPoint(turned, V3MulPointByProjMatrix(point[pointIndex], view));
+		turnedPoint[pointIndex]	= V3MulPointByProjMatrix(point[pointIndex], view);
+		turned					= V3UnionBoxAndPoint(turned, turnedPoint[pointIndex]);
+	}
+
+	Box2		 rect	= BoxAroundPoints(self.previousStepOutline);
+	double		 zoom	= kept.inchesPerLDU * self->arrangedPointsPerInch * 100.0;
+	Point3		 middle	= V3Midpoint(turned.min, turned.max);
+	NSString	*key	= [NSString stringWithFormat:@"previous step %p", kept];
+
+	if ([self cameraDrawsInPerspective]) {
+		Point3 rotationCenter = V3MulPointByProjMatrix([camera rotationCenter], view);
+
+		return [LDrawStepCalloutPicture perspectivePictureOfModel:model
+													  throughStep:index - 1
+													viewTransform:view
+															 rect:rect
+												   zoomPercentage:zoom
+														   center:middle
+													 cameraBounds:[camera cameraBounds]
+												   rotationCenter:rotationCenter
+												   centeredPoints:turnedPoints
+													   subjectKey:[key stringByAppendingString:@" in perspective"]];
 	}
 
 	return [LDrawStepCalloutPicture pictureOfModel:model
 									   throughStep:index - 1
 									 viewTransform:view
-											  rect:BoxAroundPoints(self.previousStepOutline)
-									zoomPercentage:kept.inchesPerLDU * self->arrangedPointsPerInch * 100.0
-											center:V3Midpoint(turned.min, turned.max)
-										subjectKey:[NSString stringWithFormat:@"previous step %p", kept]];
+											  rect:rect
+									zoomPercentage:zoom
+											center:middle
+										subjectKey:key];
 
 }//end previousStepPictureInView
+
+
+//========== cameraDrawsInPerspective ==========================================
+///
+/// @abstract	Whether the camera draws in perspective and says where it
+///				stands, so a picture can be drawn the way it draws.
+///
+//==============================================================================
+- (BOOL) cameraDrawsInPerspective
+{
+	id<LDrawStepOverlayCamera> camera = self.camera;
+
+	if ([camera respondsToSelector:@selector(drawsInPerspective)] == NO
+		|| [camera respondsToSelector:@selector(cameraBounds)] == NO
+		|| [camera respondsToSelector:@selector(rotationCenter)] == NO) {
+		return NO;
+	}
+
+	return [camera drawsInPerspective] && V3EqualBoxes([camera cameraBounds], InvalidBox) == NO;
+
+}//end cameraDrawsInPerspective
 
 
 //========== earlierPartsRect ==================================================

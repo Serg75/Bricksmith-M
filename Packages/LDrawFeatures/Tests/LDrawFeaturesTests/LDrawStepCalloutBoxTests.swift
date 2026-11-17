@@ -320,6 +320,41 @@ extension StepPartListStaticSettings {
             #expect(first.contentKey != second.contentKey)
         }
 
+        @Test("A picture in perspective keeps the camera it is drawn with, and others have none")
+        func perspectivePictureKeepsItsCamera() throws {
+            let model = LDrawModel()
+            let rect = Box2(origin: Point2(x: 10, y: 20), size: Size2(width: 300, height: 200))
+            let center = Point3(x: 1, y: 2, z: 3)
+            let bounds = Box3(min: Point3(x: -10, y: -20, z: -30), max: Point3(x: 40, y: 50, z: 60))
+            let pivot = Point3(x: 5, y: 6, z: 7)
+            let points = [Point3(x: 1, y: 1, z: 1), Point3(x: 9, y: 9, z: 9)]
+                .withUnsafeBufferPointer { Data(buffer: $0) }
+
+            let flat = LDrawStepCalloutPicture(model: model, throughStep: 0, viewTransform: IdentityMatrix4,
+                                               rect: rect, zoomPercentage: 100, center: center,
+                                               subjectKey: "flat")
+            let deep = LDrawStepCalloutPicture.perspectivePicture(of: model, throughStep: 0,
+                                                                  viewTransform: IdentityMatrix4, rect: rect,
+                                                                  zoomPercentage: 100, center: center,
+                                                                  cameraBounds: bounds, rotationCenter: pivot,
+                                                                  centeredPoints: points, subjectKey: "deep")
+
+            #expect(flat.isPerspective == false)
+            #expect(V3EqualBoxes(flat.cameraBounds, InvalidBox) != 0)
+            #expect(flat.centeredPoints == nil)
+
+            #expect(deep.isPerspective)
+            #expect(V3EqualBoxes(deep.cameraBounds, bounds) != 0)
+            #expect(V3EqualPoints(deep.rotationCenter, pivot))
+            #expect(deep.centeredPoints == points)
+            #expect(isSame(deep.rect, rect))
+        }
+
+        private func isSame(_ one: Box2, _ other: Box2) -> Bool {
+            one.origin.x == other.origin.x && one.origin.y == other.origin.y
+                && one.size.width == other.size.width && one.size.height == other.size.height
+        }
+
         /// So the picture ghosts the steps before it when the view ghosts them.
         @Test("A step's picture keeps its own parts in a last step, shown in step display")
         func stripPictureSetsItsStepApart() throws {

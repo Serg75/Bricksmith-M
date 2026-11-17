@@ -474,6 +474,7 @@ static BOOL BoxHasArea(Box2 box)
 		self->_color				= color;
 		self->_zoomPercentage		= zoomPercentage;
 		self->_center				= center;
+		self->_cameraBounds			= InvalidBox;
 		self->_subjectKey			= [subjectKey copy];
 		self->_contentKey			= [NSString stringWithFormat:@"%@|%.2f", subjectKey, zoomPercentage];
 	}
@@ -504,6 +505,35 @@ static BOOL BoxHasArea(Box2 box)
 }//end pictureOfModel:throughStep:viewTransform:rect:...
 
 
+//---------- perspectivePictureOfModel:throughStep:viewTransform:... -[static]--
++ (instancetype) perspectivePictureOfModel:(LDrawModel *)model
+							   throughStep:(NSUInteger)stepIndex
+							 viewTransform:(Matrix4)viewTransform
+									  rect:(Box2)rect
+							zoomPercentage:(double)zoomPercentage
+									center:(Point3)center
+							  cameraBounds:(Box3)cameraBounds
+							rotationCenter:(Point3)rotationCenter
+							centeredPoints:(NSData *)centeredPoints
+								subjectKey:(NSString *)subjectKey
+{
+	LDrawStepCalloutPicture *picture = [self pictureOfModel:model
+												throughStep:stepIndex
+											  viewTransform:viewTransform
+													   rect:rect
+											 zoomPercentage:zoomPercentage
+													 center:center
+												 subjectKey:subjectKey];
+
+	picture->_cameraBounds		= cameraBounds;
+	picture->_rotationCenter	= rotationCenter;
+	picture->_centeredPoints	= [centeredPoints copy];
+
+	return picture;
+
+}//end perspectivePictureOfModel:throughStep:viewTransform:...
+
+
 //========== initWithLayout:viewTransform:file:origin:isPartsList: =============
 ///
 /// @abstract	A picture of a packed layout: its icons, and the camera that
@@ -524,6 +554,7 @@ static BOOL BoxHasArea(Box2 box)
 		self->_layout			= layout;
 		self->_isPartsList		= isPartsList;
 		self->_viewTransform	= viewTransform;
+		self->_cameraBounds		= InvalidBox;
 		self->_file				= file;
 		self->_zoomPercentage	= [LDrawStepPartListModelBuilder zoomPercentageForLayout:layout];
 		self->_center			= [LDrawStepPartListModelBuilder centerPointForLayout:layout];
@@ -572,6 +603,14 @@ static BOOL BoxHasArea(Box2 box)
 	return self->_model;
 
 }//end model
+
+
+//========== isPerspective =====================================================
+- (BOOL) isPerspective
+{
+	return V3EqualBoxes(self->_cameraBounds, InvalidBox) == NO;
+
+}//end isPerspective
 
 
 //---------- keyForLayout:viewTransform:isSized: ---------------------[static]--

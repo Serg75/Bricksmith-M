@@ -168,11 +168,17 @@ typedef NS_ENUM(NSInteger, StepPartListSelection) {
 };
 
 
-// LDrawView already has the camera calls the overlay's layout needs.
+// LDrawView already has the other camera calls the overlay's layout needs.
 @interface LDrawView (StepOverlayCamera) <LDrawStepOverlayCamera>
 @end
 
 @implementation LDrawView (StepOverlayCamera)
+
+- (BOOL) drawsInPerspective
+{
+	return [self projectionMode] == LDrawProjectionModePerspective;
+}
+
 @end
 
 

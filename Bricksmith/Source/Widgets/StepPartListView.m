@@ -662,6 +662,33 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 }//end newImageOfModel:center:zoomPercentage:size:scale:
 
 
+//========== newPerspectiveImageOfPicture:scale: ===============================
+///
+/// @abstract	Draws a picture in perspective off screen, at its size.
+///
+//==============================================================================
+- (nullable CGImageRef) newPerspectiveImageOfPicture:(LDrawStepCalloutPicture *)picture
+											   scale:(double)scale
+{
+#ifdef METAL
+	Size2 size = picture.rect.size;
+
+	return [LDrawRenderer newPerspectiveImageOfDirective:picture.model
+												  center:picture.center
+										  zoomPercentage:picture.zoomPercentage
+													size:CGSizeMake(size.width, size.height)
+												   scale:scale
+											outlineWidth:self.presentation.outlineWidth
+											cameraBounds:picture.cameraBounds
+										  rotationCenter:picture.rotationCenter
+										  centeredPoints:picture.centeredPoints ?: [NSData data]];
+#else
+	return NULL;
+#endif
+
+}//end newPerspectiveImageOfPicture:scale:
+
+
 //========== calloutPictureStoreDidUpdatePictures: =============================
 - (void) calloutPictureStoreDidUpdatePictures:(LDrawStepCalloutPictureStore *)store
 {
@@ -807,7 +834,10 @@ NSColor *StepPartListPageColor(LDrawStepPartListPresentation *presentation)
 	if (key != self.shownGhostKey && [key isEqualToString:self.shownGhostKey] == NO) {
 		CGImageRef image = NULL;
 
-		if (picture != nil) {
+		if (picture.isPerspective) {
+			image = [self newPerspectiveImageOfPicture:picture scale:scale];
+		}
+		else if (picture != nil) {
 			image = [self newImageOfModel:picture.model
 								   center:picture.center
 						   zoomPercentage:picture.zoomPercentage

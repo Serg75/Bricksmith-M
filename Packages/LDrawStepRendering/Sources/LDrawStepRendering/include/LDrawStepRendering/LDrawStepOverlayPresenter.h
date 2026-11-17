@@ -60,6 +60,14 @@ NS_ASSUME_NONNULL_BEGIN
 /// arranging is made with it.
 - (void) setViewingAngle:(Tuple3)angle;
 
+/// Whether the view draws in perspective. NO when not implemented.
+- (BOOL) drawsInPerspective;
+
+/// What places the camera in perspective: the box it stands back from, and the
+/// point it turns around. A picture drawn to match the view uses them.
+- (Box3) cameraBounds;
+- (Point3) rotationCenter;
+
 @end
 
 
@@ -262,8 +270,8 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 
 /// A picture of the previous step's assembly, while arranging: the parts of
 /// the earlier steps at that step's angle, at the size it drew them, in the
-/// middle of where it sat. Nil when that is not known, or nothing could be
-/// measured.
+/// middle of where it sat. It is in perspective when the camera is. Nil when
+/// that is not known, or nothing could be measured.
 @property (nonatomic, readonly, nullable) LDrawStepCalloutPicture *previousStepPicture;
 
 /// Whether the arranged step can be lined up with the previous one: where that

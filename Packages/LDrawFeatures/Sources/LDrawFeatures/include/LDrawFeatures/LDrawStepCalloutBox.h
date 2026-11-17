@@ -102,6 +102,22 @@ typedef struct LDrawStepCalloutArrow
 					 subjectKey:(NSString *)subjectKey
 	NS_SWIFT_NAME(init(model:throughStep:viewTransform:rect:zoomPercentage:center:subjectKey:));
 
+/// The same picture in perspective, as a view draws it: the camera stands back
+/// from `cameraBounds`, as the view has it, and turns around `rotationCenter`,
+/// a point of the turned model. The middle of the box around where
+/// `centeredPoints` are drawn goes in the middle of `rect`. They are Point3
+/// values of the turned model, and `center` only says how deep that middle is.
++ (instancetype) perspectivePictureOfModel:(LDrawModel *)model
+							   throughStep:(NSUInteger)stepIndex
+							 viewTransform:(Matrix4)viewTransform
+									  rect:(Box2)rect
+							zoomPercentage:(double)zoomPercentage
+									center:(Point3)center
+							  cameraBounds:(Box3)cameraBounds
+							rotationCenter:(Point3)rotationCenter
+							centeredPoints:(NSData *)centeredPoints
+								subjectKey:(NSString *)subjectKey;
+
 /// Where the picture goes, in the view.
 @property (nonatomic, readonly) Box2		rect;
 
@@ -109,6 +125,13 @@ typedef struct LDrawStepCalloutArrow
 @property (nonatomic, readonly) LDrawModel	*model;
 @property (nonatomic, readonly) double		zoomPercentage;
 @property (nonatomic, readonly) Point3		center;
+
+/// The perspective camera, for a picture in perspective. `cameraBounds` is
+/// InvalidBox for a picture with none, and `centeredPoints` is then nil.
+@property (nonatomic, readonly) BOOL		isPerspective;
+@property (nonatomic, readonly) Box3		cameraBounds;
+@property (nonatomic, readonly) Point3		rotationCenter;
+@property (nonatomic, readonly, nullable) NSData *centeredPoints;
 
 /// Names what the picture shows. Two pictures with the same key and size look
 /// the same, until the file changes.

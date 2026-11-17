@@ -172,6 +172,7 @@ extern NSString * const LDrawViewCameraDidChangeNotification;
 - (double) pointsPerLDUAtModelPoint:(Point3)modelPoint;
 - (Box3) cameraBounds;
 - (void) setCameraBounds:(Box3)bounds;
+- (Point3) rotationCenter;
 - (void) scrollModelPoint:(Point3)modelPoint toViewPoint:(NSPoint)viewPoint;
 + (NSColor *) backgroundColorFromUserDefaults;
 - (void) takeBackgroundColorFromUserDefaults;
