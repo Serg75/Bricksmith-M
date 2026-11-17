@@ -52,8 +52,13 @@ typedef enum BufferIndex {
 	// A lone uint: 1 while thin lines go into the lists, whose vertices do not
 	// tell them from faces.
 	BufferIndexTransparentThinLines		= 5,
-	// The band around highlighted parts, in the fragment and compute stages.
-	BufferIndexHighlightUniforms		= 6
+	// The band around highlighted parts: its uniforms, the arguments of its
+	// draw, the tiles it covers and what each tile of its area holds. Free in
+	// every stage.
+	BufferIndexHighlightUniforms		= 7,
+	BufferIndexHighlightDraw			= 8,
+	BufferIndexHighlightTiles			= 9,
+	BufferIndexHighlightClasses			= 10
 } BufferIndex;
 
 // Attribute index values shared between shader and CPU code to ensure Metal shader vertex attribute indices
@@ -156,14 +161,20 @@ typedef struct TransparencyUniform {
 
 // MARK: - Highlights -
 
-// The band around highlighted parts. It is worked out on an area of the
-// surface around them, in textures of its own. Index 0 of each pair is the
-// primary highlight, 1 the secondary.
+// The band around highlighted parts is worked out on an area of the surface
+// around them, a square tile of this many pixels at a time. A tile looks this
+// many pixels past its edges at most for the nearest part.
+#define HighlightTileSide	16
+#define HighlightReachMost	10
+
+// The band around highlighted parts. Index 0 of each pair is the primary
+// highlight, 1 the secondary.
 typedef struct HighlightUniform {
 	vector_float4	color[2];			// of the band where the part is in front
 	float			radius[2];			// of the band, in pixels
 	float			hidden_alpha[2];	// of the band where something hides the part
 	float			depth_offset[2];	// how far the band comes toward the eye, as a depth
+	vector_float2	viewport;			// the surface's size, in pixels
 	vector_int2		origin;				// of the area on the surface, in pixels
 	vector_int2		size;				// of the area, in pixels
 	int				reach;				// pixels looked at each way for the nearest part

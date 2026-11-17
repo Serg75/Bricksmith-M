@@ -99,13 +99,21 @@
 // The color of the band around highlighted parts.
 @property (nonatomic, assign) vector_float3			highlightColor;
 
-// Textures for the band: a depth mask for each highlight, its depth target,
-// and the distance to the nearest masked pixel, first along rows, then in
-// full. They only grow.
+// What the band is worked out in: a depth mask for each highlight, its depth
+// target, what each tile of the area holds, the distance to the nearest masked
+// pixel, the tiles with band in them and the arguments of the draw over those.
+// They only grow.
 @property (nonatomic, strong) NSArray<id<MTLTexture>>	*highlightMasks;
 @property (nonatomic, strong) id<MTLTexture>			highlightMaskDepth;
-@property (nonatomic, strong) id<MTLTexture>			highlightAcross;
 @property (nonatomic, strong) id<MTLTexture>			highlightNearest;
+@property (nonatomic, strong) id<MTLBuffer>				highlightClasses;
+@property (nonatomic, strong) id<MTLBuffer>				highlightTiles;
+@property (nonatomic, strong) id<MTLBuffer>				highlightDraw;
+
+// The frame's depth, kept by its render pass for the band's pass. Made once a
+// frame has a highlight, so a view that never has one does not hold it.
+@property (nonatomic, strong) id<MTLTexture>			highlightFrameDepth;
+@property (nonatomic, assign) BOOL						highlightsDrawn;
 
 // Frames drawn on screen, and whether a check that the view is idle waits.
 @property (nonatomic, assign) NSUInteger			framesDrawn;
@@ -144,8 +152,9 @@ static id<MTLRenderPipelineState>	_ghostListPipelineState;
 static id<MTLRenderPipelineState>	_ghostListWideLinePipelineState;
 static id<MTLRenderPipelineState>	_transparentResolvePipelineState;
 static id<MTLRenderPipelineState>	_highlightMaskPipelineState;
-static id<MTLComputePipelineState>	_highlightAcrossPipelineState;
-static id<MTLComputePipelineState>	_highlightDownPipelineState;
+static id<MTLComputePipelineState>	_highlightResetPipelineState;
+static id<MTLComputePipelineState>	_highlightClassifyPipelineState;
+static id<MTLComputePipelineState>	_highlightNearestPipelineState;
 static id<MTLRenderPipelineState>	_highlightBandPipelineState;
 static id<MTLDepthStencilState>		_highlightMaskDepthState;
 static id<MTLDepthStencilState>		_highlightShownDepthState;
@@ -182,9 +191,6 @@ static const CGFloat		HighlightWidths[HighlightLevelCount]		= { 3.0, 2.0 };
 static const float			HighlightShades[HighlightLevelCount]		= { 1.0f, 0.75f };
 static const float			HighlightHiddenAlphas[HighlightLevelCount]	= { 0.35f, 0.25f };
 static const vector_float3	HighlightDefaultColor						= { 1.0f, 0.55f, 0.0f };
-
-// The size of a group of threads that works out the band.
-static const NSUInteger		HighlightThreadgroupSide	= 16;
 
 
 static const void * kLDrawRendererMetalDrawStateKey = &kLDrawRendererMetalDrawStateKey;
@@ -526,9 +532,10 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 //========== setupHighlights:vertexDescriptor: =================================
 //
 // Purpose:		Makes what draws the band around highlighted parts: a pipeline
-//				that draws a highlight's mask, two that find the nearest pixel
-//				of each part, and one that draws the band in the frame's render
-//				pass, with the depth tests for the band in front and behind.
+//				that draws a highlight's mask, three that find the nearest pixel
+//				of each part and the tiles with band in them, and one that
+//				draws the band on those tiles over the finished frame, with the
+//				depth tests for the band in front and behind.
 //
 //==============================================================================
 - (void)setupHighlights:(id<MTLLibrary>)library vertexDescriptor:(MTLVertexDescriptor *)vertexDescriptor
@@ -547,27 +554,32 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 
 	id<MTLRenderPipelineState> maskPipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
 
-	id<MTLComputePipelineState> acrossPipeline =
-		[device newComputePipelineStateWithFunction:[library newFunctionWithName:@"highlightAcrossKernel"]
+	id<MTLComputePipelineState> resetPipeline =
+		[device newComputePipelineStateWithFunction:[library newFunctionWithName:@"highlightResetKernel"]
 											  error:&error];
-	id<MTLComputePipelineState> downPipeline =
-		[device newComputePipelineStateWithFunction:[library newFunctionWithName:@"highlightDownKernel"]
+	id<MTLComputePipelineState> classifyPipeline =
+		[device newComputePipelineStateWithFunction:[library newFunctionWithName:@"highlightClassifyKernel"]
+											  error:&error];
+	id<MTLComputePipelineState> nearestPipeline =
+		[device newComputePipelineStateWithFunction:[library newFunctionWithName:@"highlightNearestKernel"]
 											  error:&error];
 
-	// The band draws in the frame's render pass, over the full-surface
-	// triangle the transparent lists blend with.
+	// The band draws over the resolved frame, one sample a pixel.
 	descriptor = [MTLRenderPipelineDescriptor new];
 	descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 	descriptor.depthAttachmentPixelFormat = DepthStencilPixelFormat;
 	descriptor.stencilAttachmentPixelFormat = DepthStencilPixelFormat;
-	descriptor.sampleCount = MSAASampleCount;
-	descriptor.vertexFunction = [library newFunctionWithName:@"transparencyResolveVertexShader"];
+	descriptor.vertexFunction = [library newFunctionWithName:@"highlightBandVertexShader"];
 	descriptor.fragmentFunction = [library newFunctionWithName:@"highlightBandFragmentShader"];
 	setPartBlending(descriptor.colorAttachments[0]);
 
 	id<MTLRenderPipelineState> bandPipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
 
-	if (maskPipeline == nil || acrossPipeline == nil || downPipeline == nil || bandPipeline == nil) {
+	// A whole tile runs in one group of threads.
+	if (maskPipeline == nil || resetPipeline == nil || classifyPipeline == nil || nearestPipeline == nil
+		|| bandPipeline == nil
+		|| classifyPipeline.maxTotalThreadsPerThreadgroup < HighlightTileSide * HighlightTileSide
+		|| nearestPipeline.maxTotalThreadsPerThreadgroup < HighlightTileSide * HighlightTileSide) {
 		NSLog(@"Error occurred when creating highlight pipeline states: %@", error);
 		return;
 	}
@@ -586,8 +598,9 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 	_highlightHiddenDepthState = [device newDepthStencilStateWithDescriptor:depthDescriptor];
 
 	_highlightMaskPipelineState = maskPipeline;
-	_highlightAcrossPipelineState = acrossPipeline;
-	_highlightDownPipelineState = downPipeline;
+	_highlightResetPipelineState = resetPipeline;
+	_highlightClassifyPipelineState = classifyPipeline;
+	_highlightNearestPipelineState = nearestPipeline;
 	_highlightBandPipelineState = bandPipeline;
 
 } // end setupHighlights:vertexDescriptor:
@@ -674,9 +687,9 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 
 //========== prepareHighlightTexturesForWidth:height: ==========================
 //
-// Purpose:		Makes sure the band's textures hold an area this many pixels
-//				wide and high. They only grow, a little past what is asked, so
-//				a part that moves does not make them again each frame.
+// Purpose:		Makes sure the band's textures and tiles hold an area this many
+//				pixels wide and high. They only grow, a little past what is
+//				asked, so a part that moves does not make them again each frame.
 //
 //==============================================================================
 - (void)prepareHighlightTexturesForWidth:(NSUInteger)width height:(NSUInteger)height
@@ -709,10 +722,53 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	descriptor.pixelFormat = MTLPixelFormatRGBA32Float;
 	descriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
 	descriptor.storageMode = MTLStorageModePrivate;
-	state.highlightAcross = [device newTextureWithDescriptor:descriptor];
 	state.highlightNearest = [device newTextureWithDescriptor:descriptor];
 
+	NSUInteger tiles = ((width + HighlightTileSide - 1) / HighlightTileSide)
+					 * ((height + HighlightTileSide - 1) / HighlightTileSide);
+
+	state.highlightClasses = [device newBufferWithLength:tiles * sizeof(uint32_t)
+												 options:MTLResourceStorageModePrivate];
+	state.highlightTiles = [device newBufferWithLength:tiles * sizeof(vector_uint2)
+											   options:MTLResourceStorageModePrivate];
+	if (state.highlightDraw == nil) {
+		state.highlightDraw = [device newBufferWithLength:sizeof(MTLDrawPrimitivesIndirectArguments)
+												  options:MTLResourceStorageModePrivate];
+	}
+
 } // end prepareHighlightTexturesForWidth:height:
+
+
+//========== highlightFrameDepthForSize: =======================================
+//
+// Purpose:		The texture the frame's render pass keeps its depth in, for the
+//				band's pass, this many pixels wide and high. Nil until a frame
+//				has had a highlight.
+//
+//==============================================================================
+- (id<MTLTexture>)highlightFrameDepthForSize:(CGSize)size
+{
+	LDrawRendererMetalDrawState	*state	= metalDrawState(self);
+	id<MTLTexture>				depth	= state.highlightFrameDepth;
+
+	if (state.highlightsDrawn == NO) {
+		return nil;
+	}
+	if (depth == nil || depth.width != size.width || depth.height != size.height)
+	{
+		MTLTextureDescriptor *descriptor =
+			[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:DepthStencilPixelFormat
+															   width:size.width
+															  height:size.height
+														   mipmapped:NO];
+		descriptor.usage = MTLTextureUsageRenderTarget;
+		descriptor.storageMode = MTLStorageModePrivate;
+		depth = [MetalGPU.device newTextureWithDescriptor:descriptor];
+		state.highlightFrameDepth = depth;
+	}
+	return depth;
+
+} // end highlightFrameDepthForSize:
 
 
 //========== mtkView:drawableSizeWillChange: ===================================
@@ -1007,6 +1063,9 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	if (renderPassDescriptor == nil) {
 		return NO;
 	}
+	CGSize			pixelSize	= CGSizeMake(multisampleTexture.width, multisampleTexture.height);
+	BOOL			banded		= highlights && _highlightBandPipelineState != nil;
+	id<MTLTexture>	frameDepth	= banded ? [self highlightFrameDepthForSize:pixelSize] : nil;
 
 	renderPassDescriptor.colorAttachments[0].texture = multisampleTexture;
 	renderPassDescriptor.colorAttachments[0].resolveTexture = resolveTexture;
@@ -1018,6 +1077,12 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
 	renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionDontCare;
 	renderPassDescriptor.depthAttachment.clearDepth = 1.0;
+
+	// Whether the depth is kept is known once the parts are drawn.
+	if (frameDepth != nil) {
+		renderPassDescriptor.depthAttachment.resolveTexture = frameDepth;
+		renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionUnknown;
+	}
 
 	renderPassDescriptor.stencilAttachment.texture = depthTexture;
 	renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
@@ -1061,8 +1126,6 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 																  modelView:[camera modelView]
 																 projection:[camera projection]];
 
-	CGSize pixelSize = CGSizeMake(multisampleTexture.width, multisampleTexture.height);
-
 	[lists beginFrame];
 
 	// Kept here until the drawing is finished, since the session does not retain
@@ -1075,42 +1138,64 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[ren setBoundsOnlyDrawing:boundsOnly];
 	[self applyOutlineToShaderRenderer:ren pixelSize:pixelSize];
 	[ren setPrepareTransparentLists:prepareLists];
-	if (highlights && _highlightBandPipelineState != nil) {
+	if (banded) {
 		[ren setHighlightList:&highlightList];
 	}
 	[self->fileBeingDrawn drawSelf:ren];
 
 	[ren finishDraw];
 
-	if (highlightList != NULL) {
-		[self drawHighlightBands:highlightList encoder:renderEncoder pixelSize:pixelSize];
-		LDrawDLHighlightListDestroy(highlightList);
-	}
-
 	[self drawMarqueeWithEncoder:renderEncoder];
 
+	if (frameDepth != nil) {
+		[renderEncoder setDepthStoreAction:(highlightList != NULL) ? MTLStoreActionMultisampleResolve
+																   : MTLStoreActionDontCare];
+	}
 	[renderEncoder endEncoding];
+
+	// The first frame with a highlight has no depth kept for its band, so the
+	// band starts with the next frame.
+	if (highlightList != NULL)
+	{
+		if (frameDepth != nil) {
+			[self drawHighlightBands:highlightList
+					   commandBuffer:commandBuffer
+						colorTexture:resolveTexture
+						depthTexture:frameDepth];
+		}
+		else {
+			metalDrawState(self).highlightsDrawn = YES;
+			[self requestRedisplayLater];
+		}
+		LDrawDLHighlightListDestroy(highlightList);
+	}
 
 	return YES;
 
 } // end encodeDrawWithCommandBuffer:...
 
 
-//========== drawHighlightBands:encoder:pixelSize: =============================
+//========== drawHighlightBands:commandBuffer:colorTexture:depthTexture: =======
 //
-// Purpose:		Draws the band around the highlighted parts, on a surface of
-//				this many pixels. A command buffer of its own, committed now
-//				and so run before the frame's, draws each highlight's mask on
-//				the area around the parts and finds the nearest pixel of each
-//				part. Then the frame's render pass draws the band from that, in
-//				front of what is drawn and behind it.
+// Purpose:		Draws the band around the highlighted parts over the frame, its
+//				color and the depth its render pass kept, in a pass of its own
+//				at the end of the frame's command buffer.
+//
+// Notes:		A command buffer of its own, committed now and so run before
+//				the frame's, draws each highlight's mask on the area around the
+//				parts, finds the nearest pixel of each part and lists the tiles
+//				of the area with band in them. The frame's render pass does not
+//				wait for any of it: the masks come before it, and the rest runs
+//				beside it.
 //
 //==============================================================================
 - (void)drawHighlightBands:(struct LDrawDLHighlightList *)highlights
-				   encoder:(id<MTLRenderCommandEncoder>)renderEncoder
-				 pixelSize:(CGSize)pixelSize
+			 commandBuffer:(id<MTLCommandBuffer>)frameBuffer
+			  colorTexture:(id<MTLTexture>)colorTexture
+			  depthTexture:(id<MTLTexture>)depthTexture
 {
 	LDrawRendererMetalDrawState	*state			= metalDrawState(self);
+	CGSize						pixelSize		= CGSizeMake(colorTexture.width, colorTexture.height);
 	Size2						surfaceSize		= [self viewport].size;
 	vector_float3				color			= state.highlightColor;
 	simd_float4x4				modelView		= simd_matrix4x4_from_array_transposed([camera modelView]);
@@ -1124,10 +1209,12 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	}
 	memset(&uniform, 0, sizeof(uniform));
 
+	// A band reaches no farther than the tiles look.
 	for (index = 0; index < HighlightLevelCount; ++index)
 	{
 		has[index]					= LDrawDLHighlightListHas(highlights, LDrawRenderHighlightPrimary + index);
-		uniform.radius[index]		= HighlightWidths[index] * pixelSize.width / surfaceSize.width;
+		uniform.radius[index]		= MIN(HighlightWidths[index] * pixelSize.width / surfaceSize.width,
+										  HighlightReachMost - 1);
 		uniform.hidden_alpha[index]	= HighlightHiddenAlphas[index];
 		uniform.depth_offset[index]	= [self depthOfFaceAt45DegreesAcross:uniform.radius[index]
 															  pixelWidth:pixelSize.width];
@@ -1144,8 +1231,9 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	if (CGRectIsEmpty(area)) {
 		return;
 	}
-	uniform.origin	= simd_make_int2((int)area.origin.x, (int)area.origin.y);
-	uniform.size	= simd_make_int2((int)area.size.width, (int)area.size.height);
+	uniform.viewport	= simd_make_float2(pixelSize.width, pixelSize.height);
+	uniform.origin		= simd_make_int2((int)area.origin.x, (int)area.origin.y);
+	uniform.size		= simd_make_int2((int)area.size.width, (int)area.size.height);
 
 	[self prepareHighlightTexturesForWidth:(NSUInteger)uniform.size.x height:(NSUInteger)uniform.size.y];
 
@@ -1205,35 +1293,49 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	// stands in for it. Its band is not drawn.
 	id<MTLTexture>				primary		= state.highlightMasks[has[0] ? 0 : 1];
 	id<MTLTexture>				secondary	= state.highlightMasks[has[1] ? 1 : 0];
-	MTLSize						group		= MTLSizeMake(HighlightThreadgroupSide, HighlightThreadgroupSide, 1);
-	MTLSize						groups		= MTLSizeMake((uniform.size.x + HighlightThreadgroupSide - 1)
-															  / HighlightThreadgroupSide,
-														  (uniform.size.y + HighlightThreadgroupSide - 1)
-															  / HighlightThreadgroupSide, 1);
+	MTLSize						one			= MTLSizeMake(1, 1, 1);
+	MTLSize						tile		= MTLSizeMake(HighlightTileSide, HighlightTileSide, 1);
+	MTLSize						grid		= MTLSizeMake((uniform.size.x + HighlightTileSide - 1) / HighlightTileSide,
+														  (uniform.size.y + HighlightTileSide - 1) / HighlightTileSide,
+														  1);
 	id<MTLComputeCommandEncoder> nearestEncoder = [commandBuffer computeCommandEncoder];
 
 	nearestEncoder.label = @"Highlight Nearest Encoder";
+	[nearestEncoder setBuffer:state.highlightDraw offset:0 atIndex:BufferIndexHighlightDraw];
+	[nearestEncoder setComputePipelineState:_highlightResetPipelineState];
+	[nearestEncoder dispatchThreadgroups:one threadsPerThreadgroup:one];
 	[nearestEncoder setBytes:&uniform length:sizeof(uniform) atIndex:BufferIndexHighlightUniforms];
-	[nearestEncoder setComputePipelineState:_highlightAcrossPipelineState];
+	[nearestEncoder setBuffer:state.highlightClasses offset:0 atIndex:BufferIndexHighlightClasses];
+	[nearestEncoder setBuffer:state.highlightTiles offset:0 atIndex:BufferIndexHighlightTiles];
 	[nearestEncoder setTexture:primary atIndex:0];
 	[nearestEncoder setTexture:secondary atIndex:1];
-	[nearestEncoder setTexture:state.highlightAcross atIndex:2];
-	[nearestEncoder dispatchThreadgroups:groups threadsPerThreadgroup:group];
-	[nearestEncoder setComputePipelineState:_highlightDownPipelineState];
-	[nearestEncoder setTexture:state.highlightAcross atIndex:0];
-	[nearestEncoder setTexture:state.highlightNearest atIndex:1];
-	[nearestEncoder dispatchThreadgroups:groups threadsPerThreadgroup:group];
+	[nearestEncoder setTexture:state.highlightNearest atIndex:2];
+	[nearestEncoder setComputePipelineState:_highlightClassifyPipelineState];
+	[nearestEncoder dispatchThreadgroups:grid threadsPerThreadgroup:tile];
+	[nearestEncoder setComputePipelineState:_highlightNearestPipelineState];
+	[nearestEncoder dispatchThreadgroups:grid threadsPerThreadgroup:tile];
 	[nearestEncoder endEncoding];
 	[commandBuffer commit];
 
 	// The band, the secondary one first so the primary lies over it, each in
 	// front of what is drawn and behind it.
-	MTLScissorRect bandScissor = { (NSUInteger)area.origin.x, (NSUInteger)area.origin.y,
-								   (NSUInteger)area.size.width, (NSUInteger)area.size.height };
+	MTLRenderPassDescriptor *bandPass = [MTLRenderPassDescriptor renderPassDescriptor];
 
+	bandPass.colorAttachments[0].texture		= colorTexture;
+	bandPass.colorAttachments[0].loadAction		= MTLLoadActionLoad;
+	bandPass.colorAttachments[0].storeAction	= MTLStoreActionStore;
+	bandPass.depthAttachment.texture			= depthTexture;
+	bandPass.depthAttachment.loadAction			= MTLLoadActionLoad;
+	bandPass.depthAttachment.storeAction		= MTLStoreActionDontCare;
+	bandPass.stencilAttachment.texture			= depthTexture;
+	bandPass.stencilAttachment.loadAction		= MTLLoadActionDontCare;
+	bandPass.stencilAttachment.storeAction		= MTLStoreActionDontCare;
+
+	id<MTLRenderCommandEncoder> renderEncoder = [frameBuffer renderCommandEncoderWithDescriptor:bandPass];
+
+	renderEncoder.label = @"Highlight Band Encoder";
 	[renderEncoder setRenderPipelineState:_highlightBandPipelineState];
-	[renderEncoder setDepthBias:0.0f slopeScale:0.0f clamp:0.0f];
-	[renderEncoder setScissorRect:bandScissor];
+	[renderEncoder setVertexBuffer:state.highlightTiles offset:0 atIndex:BufferIndexHighlightTiles];
 	[renderEncoder setFragmentTexture:state.highlightNearest atIndex:0];
 
 	for (index = HighlightLevelCount - 1; index >= 0; --index)
@@ -1246,19 +1348,16 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 			uniform.level = index;
 			uniform.shown = shown;
 			[renderEncoder setDepthStencilState:shown ? _highlightShownDepthState : _highlightHiddenDepthState];
+			[renderEncoder setVertexBytes:&uniform length:sizeof(uniform) atIndex:BufferIndexHighlightUniforms];
 			[renderEncoder setFragmentBytes:&uniform length:sizeof(uniform) atIndex:BufferIndexHighlightUniforms];
-			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip
+						   indirectBuffer:state.highlightDraw
+					 indirectBufferOffset:0];
 		}
 	}
+	[renderEncoder endEncoding];
 
-	// Restore the scissor, pipeline and depth state for what follows.
-	MTLScissorRect whole = { 0, 0, (NSUInteger)pixelSize.width, (NSUInteger)pixelSize.height };
-
-	[renderEncoder setScissorRect:whole];
-	[renderEncoder setRenderPipelineState:_pipelineState];
-	[renderEncoder setDepthStencilState:_depthStencilState];
-
-} // end drawHighlightBands:encoder:pixelSize:
+} // end drawHighlightBands:commandBuffer:colorTexture:depthTexture:
 
 
 //========== applyOutlineToShaderRenderer:pixelSize: ===========================
