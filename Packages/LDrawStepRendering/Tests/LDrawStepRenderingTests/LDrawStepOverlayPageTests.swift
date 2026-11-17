@@ -1219,12 +1219,21 @@ extension StepOverlayTests {
 
         /// A step laid out on its page, then a second step after it, being
         /// arranged. The camera gives both the same assembly. The previous
-        /// step is shown unless `showsPrevious` is false.
-        private func arrangedAfterAStep(showsPrevious: Bool = true) throws
+        /// step is shown unless `showsPrevious` is false. With `firstOffset`
+        /// the first step's ASSEM PLACEMENT moves it by that share of the page.
+        private func arrangedAfterAStep(showsPrevious: Bool = true, firstOffset: Point2? = nil) throws
             -> (fixture: CalloutFixture, camera: FlatCamera, presenter: LDrawStepOverlayPresenter) {
             let shown = shown(assembly: CGSize(width: 200, height: 100))
 
             let main = shown.fixture.main
+
+            if let offset = firstOffset {
+                let step = shown.fixture.step
+                let text = String(format: "ASSEM PLACEMENT LOCAL CENTER PAGE INSIDE %.4f %.4f", offset.x, offset.y)
+
+                step.insert(lpub(LPubPlacement(), text), at: step.subdirectives().count - 1)
+                _ = shown.presenter.change(forChangedObject: step)
+            }
 
             main.addStep()
             shown.presenter.reload()
@@ -1332,6 +1341,70 @@ extension StepOverlayTests {
 
             #expect(shown.presenter.previousStepOutline.isEmpty)
             #expect(shown.presenter.canAlignArrangedStepWithPreviousStep == false)
+        }
+
+        private func guideLines(_ presenter: LDrawStepOverlayPresenter) -> [Box2] {
+            presenter.arrangedGuides.withUnsafeBytes { Array($0.bindMemory(to: Box2.self)) }
+        }
+
+        @Test("With the previous step shown, a pan snaps the step's assembly to its middle, with a guide")
+        func arrangingPanSnapsToThePreviousStep() throws {
+            let shown = try arrangedAfterAStep(firstOffset: Point2(x: 0.1, y: -0.05))
+            let presenter = shown.presenter
+            let page = middle(try #require(presenter.presentation).pageRect)
+            let step = middle(try #require(presenter.presentation).stepRect)
+            let previous = middle(boxAround(presenter.previousStepOutline))
+
+            // Its line put the previous step a tenth of the page right of the
+            // middle. This step has none, so it is in the middle.
+            #expect(abs(previous.x - page.x - 0.1 * 8.5 * 64) < 0.01)
+            #expect(isClose(step, page))
+
+            // To 3 points short of it: the step snaps there, with a line down
+            // the page.
+            shown.camera.origin.x += previous.x - step.x - 3
+            presenter.reload()
+
+            #expect(abs(middle(try #require(presenter.presentation).stepRect).x - previous.x) < 0.01)
+            #expect(abs(presenter.arrangedOffset.x - 0.1) < 0.00001)
+            #expect(guideLines(presenter).contains { $0.size.width == 0 && abs($0.origin.x - previous.x) < 0.01 })
+
+            // Hidden, the previous step is no target: a pan on goes past it.
+            presenter.showsPreviousStep = false
+            shown.camera.origin.x += 1
+            presenter.reload()
+
+            let passed = try #require(presenter.presentation).stepRect
+
+            #expect(abs(middle(passed).x - (previous.x - 2)) < 0.01)
+            #expect(guideLines(presenter).allSatisfy { $0.size.width > 0 || abs($0.origin.x - previous.x) > 1 })
+        }
+
+        @Test("The previous step's middle is no snap target on an axis where it is near the page's middle")
+        func previousStepNearThePageMiddleIsNoTarget() throws {
+            let shown = try arrangedAfterAStep(firstOffset: Point2(x: 0.005, y: -0.05))
+            let presenter = shown.presenter
+            let page = middle(try #require(presenter.presentation).pageRect)
+            let previous = middle(boxAround(presenter.previousStepOutline))
+
+            // Under 3 points right of the page's middle: only the page's
+            // middle lines show.
+            #expect(abs(previous.x - page.x - 0.005 * 8.5 * 64) < 0.01)
+            #expect(presenter.arrangedGuides.count == 2 * MemoryLayout<Box2>.size)
+
+            // 2 points right is nearer the previous step's middle, and it still
+            // snaps to the page's.
+            shown.camera.origin.x += 2
+            presenter.reload()
+            #expect(abs(presenter.arrangedOffset.x) < 0.00001)
+
+            // Down the page it is far from the page's middle, and snaps.
+            let step = middle(try #require(presenter.presentation).stepRect)
+
+            shown.camera.origin.y += previous.y - step.y - 3
+            presenter.reload()
+            #expect(abs(middle(try #require(presenter.presentation).stepRect).y - previous.y) < 0.01)
+            #expect(guideLines(presenter).contains { $0.size.height == 0 && abs($0.origin.y - previous.y) < 0.01 })
         }
 
         @Test("The previous step's outline is filled on the paper in its color")

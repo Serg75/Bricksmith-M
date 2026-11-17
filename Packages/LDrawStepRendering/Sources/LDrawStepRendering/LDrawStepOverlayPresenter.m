@@ -114,18 +114,23 @@ static Point2 FileOffsetOfModel(LDrawModel *model)
 //========== SnapDistance() ====================================================
 ///
 /// @abstract	How far to move a box along one axis so its near edge meets the
-///				near margin, its middle the page's middle, or its far edge the
-///				far margin: the shortest of those within the snap distance, or
-///				0.
+///				near margin, its middle the page's middle, its far edge the far
+///				margin, or its assembly's middle the previous step's: the
+///				shortest of those within the snap distance, or 0.
+///
+/// @discussion	A NAN previous middle is no target: its move is NAN, which is
+///				never the shortest.
 ///
 //==============================================================================
-static double SnapDistance(double low, double high, double nearMargin, double middle, double farMargin)
+static double SnapDistance(double low, double high, double nearMargin, double middle, double farMargin,
+						   double assemblyMiddle, double previousMiddle)
 {
-	double moves[3]	= { nearMargin - low, middle - (low + high) / 2.0, farMargin - high };
+	double moves[4]	= { nearMargin - low, middle - (low + high) / 2.0, farMargin - high,
+						previousMiddle - assemblyMiddle };
 	double best		= 0.0;
 	double nearest	= OFFSET_SNAP_POINTS;
 
-	for (int index = 0; index < 3; index++) {
+	for (int index = 0; index < 4; index++) {
 		if (fabs(moves[index]) < nearest) {
 			best	= moves[index];
 			nearest	= fabs(moves[index]);
@@ -772,7 +777,10 @@ static Box2 BoxAroundPoints(NSData *points)
 			// Only a pan snaps. A drag of the list or of a callout's box can
 			// move the step's box too, and the model stays put then.
 			if (isPanned) {
-				snapped = [self snappedOffsetForRead:read inPresentation:presentation pageSize:page];
+				snapped = [self snappedOffsetForRead:read
+									  inPresentation:presentation
+											assembly:host.assemblyRect
+											pageSize:page];
 			}
 
 			self->_arrangedOffset	= snapped;
@@ -801,7 +809,7 @@ static Box2 BoxAroundPoints(NSData *points)
 	self->keepsArrangedOffset	= NO;
 	[self noteArrangedCamera];
 
-	self->_arrangedGuides			= [self guidesOfPresentation:presentation];
+	self->_arrangedGuides			= [self guidesOfPresentation:presentation assembly:host.assemblyRect];
 	self->_previousStepOutline		= self.showsPreviousStep ? [self previousStepOutlineInView] : [NSData data];
 	self->_previousStepPicture		= self.showsPreviousStep ? [self previousStepPictureInView] : nil;
 	self->_isTurnedFromStepAngle	= NO;
@@ -926,19 +934,21 @@ static Box2 BoxAroundPoints(NSData *points)
 }//end snappedScale:
 
 
-//========== snappedOffsetForRead:inPresentation:pageSize: =====================
+//========== snappedOffsetForRead:inPresentation:assembly:pageSize: ============
 ///
 /// @abstract	The raw offset, snapped on each axis so the step's middle meets
-///				the page's middle, or its edge the page's margin, when it is
-///				that near.
+///				the page's middle, its edge the page's margin, or its
+///				assembly's middle the previous step's, when it is that near.
 ///
 /// @discussion	The step's box is drawn at the offset read. It moves by the
 ///				page's size times a change of offset, so where it would be at
-///				the raw offset is worked out from there.
+///				the raw offset is worked out from there. The assembly's box
+///				moves with it.
 ///
 //==============================================================================
 - (Point2) snappedOffsetForRead:(Point2)read
 				 inPresentation:(LDrawStepPartListPresentation *)presentation
+					   assembly:(Box2)assembly
 					   pageSize:(Size2)page
 {
 	Point2	raw		= self->rawArrangedOffset;
@@ -950,27 +960,65 @@ static Box2 BoxAroundPoints(NSData *points)
 		return raw;
 	}
 
-	double	shiftX	= (raw.x - read.x) * page.width;
-	double	shiftY	= (raw.y - read.y) * page.height;
-	double	inX		= margins.width * self->arrangedPointsPerInch;
-	double	inY		= margins.height * self->arrangedPointsPerInch;
-	double	moveX	= SnapDistance(V2BoxMinX(step) + shiftX, V2BoxMaxX(step) + shiftX,
-								   V2BoxMinX(paper) + inX, V2BoxMidX(paper), V2BoxMaxX(paper) - inX);
-	double	moveY	= SnapDistance(V2BoxMinY(step) + shiftY, V2BoxMaxY(step) + shiftY,
-								   V2BoxMinY(paper) + inY, V2BoxMidY(paper), V2BoxMaxY(paper) - inY);
+	Point2	previous	= [self previousAssemblyMiddleOnPage:paper];
+	double	shiftX		= (raw.x - read.x) * page.width;
+	double	shiftY		= (raw.y - read.y) * page.height;
+	double	inX			= margins.width * self->arrangedPointsPerInch;
+	double	inY			= margins.height * self->arrangedPointsPerInch;
+	double	moveX		= SnapDistance(V2BoxMinX(step) + shiftX, V2BoxMaxX(step) + shiftX,
+									   V2BoxMinX(paper) + inX, V2BoxMidX(paper), V2BoxMaxX(paper) - inX,
+									   V2BoxMidX(assembly) + shiftX, previous.x);
+	double	moveY		= SnapDistance(V2BoxMinY(step) + shiftY, V2BoxMaxY(step) + shiftY,
+									   V2BoxMinY(paper) + inY, V2BoxMidY(paper), V2BoxMaxY(paper) - inY,
+									   V2BoxMidY(assembly) + shiftY, previous.y);
 
 	return V2Make(raw.x + moveX / page.width, raw.y + moveY / page.height);
 
-}//end snappedOffsetForRead:inPresentation:pageSize:
+}//end snappedOffsetForRead:inPresentation:assembly:pageSize:
 
 
-//========== guidesOfPresentation: =============================================
+//========== previousAssemblyMiddleOnPage: =====================================
 ///
-/// @abstract	The page's middle lines and margins the step lines up with:
-///				each a Box2 with no width or no height, across the page.
+/// @abstract	The middle of the previous step's assembly in the view, for the
+///				step to snap to while that step is shown.
+///
+/// @discussion	An axis is NAN when the previous step is not shown or not
+///				known, or when its middle is within the snap distance of the
+///				page's middle, which then stands for it. Two lines that near
+///				would each pull the step away from the other.
 ///
 //==============================================================================
-- (NSData *) guidesOfPresentation:(LDrawStepPartListPresentation *)presentation
+- (Point2) previousAssemblyMiddleOnPage:(Box2)paper
+{
+	NSData	*outline	= self.showsPreviousStep ? [self previousStepOutlineInView] : nil;
+	Point2	 middle		= V2Make(NAN, NAN);
+
+	if (outline.length == 0) {
+		return middle;
+	}
+
+	Point2 drawn = V2BoxMid(BoxAroundPoints(outline));
+
+	if (fabs(drawn.x - V2BoxMidX(paper)) >= OFFSET_SNAP_POINTS) {
+		middle.x = drawn.x;
+	}
+	if (fabs(drawn.y - V2BoxMidY(paper)) >= OFFSET_SNAP_POINTS) {
+		middle.y = drawn.y;
+	}
+
+	return middle;
+
+}//end previousAssemblyMiddleOnPage:
+
+
+//========== guidesOfPresentation:assembly: ====================================
+///
+/// @abstract	The page's middle lines and margins the step lines up with, and
+///				the previous step's middle its assembly lines up with: each a
+///				Box2 with no width or no height, across the page.
+///
+//==============================================================================
+- (NSData *) guidesOfPresentation:(LDrawStepPartListPresentation *)presentation assembly:(Box2)assembly
 {
 	NSMutableData	*guides		= [NSMutableData data];
 	Box2			 step		= presentation.stepRect;
@@ -983,12 +1031,14 @@ static Box2 BoxAroundPoints(NSData *points)
 		return guides;
 	}
 
-	double across[3]	= { V2BoxMinX(paper) + inX, V2BoxMidX(paper), V2BoxMaxX(paper) - inX };
-	double steps[3]		= { V2BoxMinX(step), V2BoxMidX(step), V2BoxMaxX(step) };
-	double down[3]		= { V2BoxMinY(paper) + inY, V2BoxMidY(paper), V2BoxMaxY(paper) - inY };
-	double stepsDown[3]	= { V2BoxMinY(step), V2BoxMidY(step), V2BoxMaxY(step) };
+	// A NAN line of the previous step is never met.
+	Point2	previous		= [self previousAssemblyMiddleOnPage:paper];
+	double	across[4]		= { V2BoxMinX(paper) + inX, V2BoxMidX(paper), V2BoxMaxX(paper) - inX, previous.x };
+	double	steps[4]		= { V2BoxMinX(step), V2BoxMidX(step), V2BoxMaxX(step), V2BoxMidX(assembly) };
+	double	down[4]			= { V2BoxMinY(paper) + inY, V2BoxMidY(paper), V2BoxMaxY(paper) - inY, previous.y };
+	double	stepsDown[4]	= { V2BoxMinY(step), V2BoxMidY(step), V2BoxMaxY(step), V2BoxMidY(assembly) };
 
-	for (int index = 0; index < 3; index++) {
+	for (int index = 0; index < 4; index++) {
 		if (fabs(steps[index] - across[index]) < GUIDE_TOLERANCE_POINTS) {
 			Box2 line = V2MakeBox(across[index], V2BoxMinY(paper), 0.0, V2BoxHeight(paper));
 
@@ -1004,7 +1054,7 @@ static Box2 BoxAroundPoints(NSData *points)
 
 	return guides;
 
-}//end guidesOfPresentation:
+}//end guidesOfPresentation:assembly:
 
 
 //========== holdArrangedPageCenter ============================================

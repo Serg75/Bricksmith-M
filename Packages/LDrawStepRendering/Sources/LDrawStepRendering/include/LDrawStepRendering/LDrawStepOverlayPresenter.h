@@ -252,14 +252,18 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 /// A turn snaps to steps of 15°, as while Shift is held.
 @property (nonatomic) BOOL snapsTurnsToSteps;
 
-/// The page's guides the arranged step lines up with in the last layout, in
-/// the view: Box2 lines with no width or no height. Empty when not arranging.
+/// The page's guides the arranged step lines up with in the last layout, and
+/// the previous step's middle lines its assembly lines up with, in the view:
+/// Box2 lines with no width or no height. Empty when not arranging.
 @property (nonatomic, readonly, copy) NSData *arrangedGuides;
 
 // MARK: The previous step
 
 /// Whether the previous step is shown while arranging, as its picture or its
 /// outline. NO to begin with. Lining the step up with it works either way.
+/// While it is shown, a pan also snaps the middle of the step's assembly to
+/// the middle of the previous step's, on each axis where that is not near the
+/// page's middle.
 @property (nonatomic) BOOL showsPreviousStep;
 
 /// Where the previous step's assembly sat on its page, while arranging: the
