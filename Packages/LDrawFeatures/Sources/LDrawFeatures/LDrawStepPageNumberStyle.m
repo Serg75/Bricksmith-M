@@ -10,13 +10,14 @@
 //
 //==============================================================================
 
-#import "LDrawStepPageNumberStyle.h"
+#import <LDrawFeatures/LDrawStepPageNumberStyle.h>
 
 #import <LDrawCore/LDrawModel.h>
 #import <LDrawCore/LPubPageNumberDisplay.h>
 #import <LDrawCore/LPubPlacement.h>
 #import <LDrawFeatures/LDrawStepPartListPolicy.h>
 
+#import "LDrawStepCalloutContent.h"
 #import "LDrawStepStyleInternal.h"
 
 
@@ -38,6 +39,27 @@ static LPubPageNumberDisplay *FindSwitch(LDrawStepStyleLookup lookup, LPubPageNu
 	});
 
 }//end FindSwitch
+
+
+//========== MirroredPosition() ================================================
+///
+/// @abstract	The place on the other side of the page, left for right. LPub3D
+/// 			puts the number of an even page there when the file asks.
+///
+//==============================================================================
+static LPubPlacementPosition MirroredPosition(LPubPlacementPosition position)
+{
+	switch (position) {
+		case LPubPlacementPositionTopLeft:		return LPubPlacementPositionTopRight;
+		case LPubPlacementPositionTopRight:		return LPubPlacementPositionTopLeft;
+		case LPubPlacementPositionLeft:			return LPubPlacementPositionRight;
+		case LPubPlacementPositionRight:		return LPubPlacementPositionLeft;
+		case LPubPlacementPositionBottomLeft:	return LPubPlacementPositionBottomRight;
+		case LPubPlacementPositionBottomRight:	return LPubPlacementPositionBottomLeft;
+		default:								return position;
+	}
+
+}//end MirroredPosition
 
 
 @implementation LDrawStepPageNumberStyle
@@ -76,6 +98,7 @@ static LPubPageNumberDisplay *FindSwitch(LDrawStepStyleLookup lookup, LPubPageNu
 	self->_text			= LDrawStepReadText(lookup, LPubStyleBranchPage, LPubCalloutPartPageNumber, DEFAULT_SIZE,
 											dotInches);
 	self->_margins		= LDrawStepReadMargins(lookup, LPubStyleBranchPage, LPubCalloutPartPageNumber, unit);
+	self->_pageMargins	= LDrawStepReadMargins(lookup, LPubStyleBranchPage, LPubCalloutPartBox, unit);
 	self->_togglesSides	= FindSwitch(lookup, LPubPageNumberSwitchToggle).isOn;
 
 	self->_placement = lookup(^BOOL(LDrawDirective *directive) {
@@ -86,5 +109,41 @@ static LPubPageNumberDisplay *FindSwitch(LDrawStepStyleLookup lookup, LPubPageNu
 	return self;
 
 }//end initWithLookup:model:
+
+
+//========== rectForSize:pageNumber:onPage:pointsPerInch: ======================
+- (Box2) rectForSize:(Size2)size
+		  pageNumber:(NSUInteger)pageNumber
+			  onPage:(Box2)pageRect
+	   pointsPerInch:(double)pointsPerInch
+{
+	LPubPlacement			*placement	= self.placement;
+	LPubPlacementPosition	 position	= LPubPlacementPositionBottomRight;
+	Point2					 offset		= ZeroPoint2;
+	Size2					 margin		= V2MakeSize(MAX(self.pageMargins.width, self.margins.width) * pointsPerInch,
+													 MAX(self.pageMargins.height, self.margins.height) * pointsPerInch);
+
+	if (placement.isInsidePage) {
+		position	= placement.position;
+		offset		= placement.offset;
+	}
+
+	if (self.togglesSides && pageNumber % 2 == 0) {
+		position = MirroredPosition(position);
+	}
+
+	Point2 origin = [LDrawStepCalloutBox originForSize:size
+											  position:position
+										 justification:LPubPlacementPositionCenter
+											  isInside:YES
+												anchor:pageRect
+												margin:margin];
+
+	origin.x += V2BoxWidth(pageRect) * offset.x;
+	origin.y += V2BoxHeight(pageRect) * offset.y;
+
+	return V2MakeBox(origin.x, origin.y, size.width, size.height);
+
+}//end rectForSize:pageNumber:onPage:pointsPerInch:
 
 @end

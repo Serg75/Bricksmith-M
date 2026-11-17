@@ -20,6 +20,7 @@
 #import <LDrawFeatures/LDrawStepCallout.h>
 #import <LDrawFeatures/LDrawStepCalloutBox.h>
 #import <LDrawFeatures/LDrawStepCalloutStyle.h>
+#import <LDrawFeatures/LDrawStepPageNumberStyle.h>
 #import <LDrawFeatures/LDrawStepPageNumbers.h>
 #import <LDrawFeatures/LDrawStepPartList.h>
 #import <LDrawFeatures/LDrawStepPartListEdit.h>
@@ -29,7 +30,6 @@
 
 #import "LDrawStepCalloutContent.h"
 #import "LDrawStepCalloutFollower.h"
-#import "LDrawStepPageNumberStyle.h"
 
 
 /// Below this size there is nothing worth drawing, and a camera cannot make a
@@ -42,27 +42,6 @@ static const double MINIMUM_CONTENT_SIDE = 8.0;
 static const double ARRANGE_FRAME_OUTSET	= 6.0;
 static const double ARRANGE_HANDLE_SIDE		= 7.0;
 static const double ARRANGE_HANDLE_REACH	= 3.0;
-
-
-//========== MirroredPosition() ================================================
-///
-/// @abstract	The place on the other side of the page, left for right. LPub3D
-/// 			puts the number of an even page there when the file asks.
-///
-//==============================================================================
-static LPubPlacementPosition MirroredPosition(LPubPlacementPosition position)
-{
-	switch (position) {
-		case LPubPlacementPositionTopLeft:		return LPubPlacementPositionTopRight;
-		case LPubPlacementPositionTopRight:		return LPubPlacementPositionTopLeft;
-		case LPubPlacementPositionLeft:			return LPubPlacementPositionRight;
-		case LPubPlacementPositionRight:		return LPubPlacementPositionLeft;
-		case LPubPlacementPositionBottomLeft:	return LPubPlacementPositionBottomRight;
-		case LPubPlacementPositionBottomRight:	return LPubPlacementPositionBottomLeft;
-		default:								return position;
-	}
-
-}//end MirroredPosition
 
 
 //========== GrowBounds() ======================================================
@@ -299,13 +278,8 @@ static Point2 PlacedShare(LPubPlacementPosition position)
 
 //========== placePageNumberForModel:pageNumbers: ==============================
 ///
-/// @abstract	Finds the visible step's page number and where it goes on the
-/// 			page. With no PAGE NUMBER PLACEMENT line it goes in the bottom
-/// 			right corner.
-///
-/// @discussion	Only a place inside the page is read, since the page's header
-/// 			and footer are not drawn here. A count for another file is
-/// 			made again.
+/// @abstract	Finds the visible step's page number and where its style puts
+/// 			it on the page. A count for another file is made again.
 ///
 //==============================================================================
 - (void) placePageNumberForModel:(LDrawModel *)model pageNumbers:(nullable LDrawStepPageNumbers *)pageNumbers
@@ -332,36 +306,18 @@ static Point2 PlacedShare(LPubPlacementPosition position)
 		return;
 	}
 
-	NSString				*text		= [LDrawStepPageNumbers textForPages:pages];
-	LPubPlacement			*placement	= style.placement;
-	LPubPlacementPosition	 position	= LPubPlacementPositionBottomRight;
-	Point2					 offset		= ZeroPoint2;
-	double					 scale		= self->_pointsPerPageInch;
-	Size2					 inches		= [style.text sizeForText:text];
-	Size2					 size		= V2MakeSize(inches.width * scale, inches.height * scale);
-
-	if (placement.isInsidePage) {
-		position	= placement.position;
-		offset		= placement.offset;
-	}
-
-	if (style.togglesSides && pages.firstObject.number % 2 == 0) {
-		position = MirroredPosition(position);
-	}
-
-	Point2 origin = [LDrawStepCalloutBox originForSize:size
-											  position:position
-										 justification:LPubPlacementPositionCenter
-											  isInside:YES
-												anchor:self->_pageRect
-												margin:[self gapOnPageForMargins:style.margins]];
-
-	origin.x += V2BoxWidth(self->_pageRect) * offset.x;
-	origin.y += V2BoxHeight(self->_pageRect) * offset.y;
+	NSString	*text	= [LDrawStepPageNumbers textForPages:pages];
+	double		 scale	= self->_pointsPerPageInch;
+	Size2		 inches	= [style.text sizeForText:text];
+	Size2		 size	= V2MakeSize(inches.width * scale, inches.height * scale);
+	Box2		 rect	= [style rectForSize:size
+								  pageNumber:pages.firstObject.number
+									  onPage:self->_pageRect
+							   pointsPerInch:scale];
 
 	self->_pageNumber		= text;
 	self->_pageNumberText	= style.text;
-	self->_pageNumberRect	= V2MakeBox(origin.x, origin.y, size.width, size.height);
+	self->_pageNumberRect	= rect;
 
 }//end placePageNumberForModel:pageNumbers:
 
