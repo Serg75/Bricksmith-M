@@ -123,6 +123,15 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 /// The size of the view the overlay covers, in points.
 @property (nonatomic) Size2 viewSize;
 
+/// Where the host draws a page number of its own, in the view, or an empty
+/// box. Callout boxes keep clear of it where they can.
+@property (nonatomic) Box2 pageNumberRect;
+
+/// How many times bigger than its frame the host draws the parts list, from
+/// the corner the frame grows from, or 0. Callout boxes keep clear of the list
+/// as it is drawn.
+@property (nonatomic) double listScale;
+
 /// Keeps what centering each step measured, for this presenter and any other
 /// that shares it. Nil measures a step each time it is centered.
 @property (nonatomic, strong, nullable) LDrawStepLayoutCache *layoutCache;

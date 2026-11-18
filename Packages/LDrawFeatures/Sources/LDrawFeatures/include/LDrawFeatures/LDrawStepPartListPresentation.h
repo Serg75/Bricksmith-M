@@ -64,6 +64,13 @@ typedef struct LDrawStepPartListHostState {
 	/// box when it was not measured. Only read on the page, to place callouts
 	/// and to center the page.
 	Box2		assemblyRect;
+	/// Where the host draws a page number of its own, in the view, or an
+	/// empty box. Callout boxes keep clear of it where they can.
+	Box2		pageNumberRect;
+	/// How many times bigger than its frame the host draws the parts list,
+	/// from the corner the frame grows from. Callout boxes keep clear of the
+	/// list as it is drawn. 0 is the same as 1.
+	double		listScale;
 	/// A resize drag in progress, its axis and the size it asks for.
 	BOOL		hasPreview;
 	LPubPliAxis	previewAxis;
@@ -264,15 +271,18 @@ typedef struct LDrawStepPartListHostState {
 /// page, clear of the parts list and of the other boxes, and off the arrows.
 ///
 /// `assemblyRect` is the box around the step's assembly as the camera draws it
-/// now. `places` is as for moving the boxes. With an arrangement the boxes
+/// now, and `assemblyOutline` the convex outline around it as Point2 corners,
+/// or nil. A box keeps off that outline where it can. `places` is as for
+/// moving the boxes. With an arrangement the boxes
 /// keep their sides from one layout to the next, change them only for a gain
 /// that is worth a move, and move over a short time when they do.
 ///
 /// Does nothing off the page.
 - (void) placeCalloutBoxesAroundAssembly:(Box2)assemblyRect
+								 outline:(nullable NSData *)assemblyOutline
 								  places:(NSArray<NSData *> *)places
 							 arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
-	NS_SWIFT_NAME(placeCalloutBoxes(aroundAssembly:places:arrangement:));
+	NS_SWIFT_NAME(placeCalloutBoxes(aroundAssembly:outline:places:arrangement:));
 
 /// Puts the callouts' boxes where the file puts them, for a camera at the
 /// angle the step was laid out at. A box that had gone to another side moves

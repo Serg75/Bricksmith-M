@@ -31,6 +31,10 @@ static const double OWN_ARROW_ROOM_INCHES = 0.5;
 /// inches: the length of an arrow's head. The file may have it nearer.
 static const double LEAST_ARROW_ROOM_INCHES = 5.0 / 16.0;
 
+/// How far a box that is put by itself stays from where its arrows go, in
+/// page inches. It has no file to keep a gap from, so its arrows get more line.
+static const double AUTOMATIC_ARROW_ROOM_INCHES = 0.75;
+
 /// How much more than its margin a box keeps to where another box's arrow
 /// goes, in page inches: half the width of an arrow's head.
 static const double ARROW_HEAD_ROOM_INCHES = 1.0 / 16.0;
@@ -61,7 +65,11 @@ static const double CROSSING_COST	= 0.5;
 /// For boxes that are put by themselves: the cost of each inch a box is from
 /// what it calls out, and of each inch it reaches over the step's assembly.
 static const double REACH_COST		= 0.5;
-static const double ASSEMBLY_COST	= 1.0;
+static const double ASSEMBLY_COST	= 2.0;
+
+/// The cost of a box over the page number, which it keeps clear of where it
+/// can.
+static const double PAGE_NUMBER_COST	= 2.0;
 
 /// Boxes that cost no more than this are left as they are. Others change
 /// sides when that takes off this much, and this share of the cost.
@@ -154,7 +162,8 @@ typedef struct Segment
 ///
 /// @struct     FollowedBox
 ///
-/// @abstract   One thing on the page: a callout's box, or the parts list.
+/// @abstract   One thing on the page: a callout's box, the parts list, or the
+///             page number.
 ///
 //------------------------------------------------------------------------------
 typedef struct FollowedBox
@@ -166,13 +175,21 @@ typedef struct FollowedBox
 	/// The room it keeps to other things: its MARGINS, in points.
 	double			 margin[AxisCount];
 
-	/// NO for the parts list and for a box off the page, which stay.
+	/// NO for the parts list, the page number and a box off the page, which
+	/// stay.
 	BOOL			 moves;
 
+	/// YES for the page number. The boxes keep clear of it only where that
+	/// leaves them room.
+	BOOL			 givesWay;
+
 	/// The box around the step's assembly, for a box that is put beside it
-	/// by itself, and the room such a box keeps to where its arrows go. NULL
-	/// for a box the file places.
+	/// by itself, the corners of the outline around the assembly, and the
+	/// room such a box keeps to where its arrows go. NULL for a box the file
+	/// places.
 	const Extent	*assembly;
+	const Point2	*assemblyCorners;
+	NSUInteger		 assemblyCornerCount;
 	double			 arrowRoom;
 
 	/// YES for a box a drag holds, which is drawn where it is held.
@@ -673,7 +690,7 @@ static double OwnArrowRoom(const FollowedBox *box, NSUInteger index, Rooms rooms
 {
 	// The file has no say over a box that is put by itself.
 	if (box->assembly != NULL) {
-		return rooms.own;
+		return box->arrowRoom;
 	}
 
 	Side	side		= {0};
@@ -858,6 +875,45 @@ static void KeepClearOfArrows(FollowedBox *box, const FollowedBox *owner, const 
 }//end KeepClearOfArrows
 
 
+//========== SideOfPageNumber() ================================================
+///
+/// @abstract	The side of `other` that `one` is on, for two things that
+/// 			overlap when one of them is the page number: the side the box
+/// 			gets to with the least move that keeps it on the page. The side
+/// 			of the middles when no side does.
+///
+/// @discussion	A tall box beside the number cannot go above it, and the
+/// 			middles would still choose that side.
+///
+//==============================================================================
+static Side SideOfPageNumber(const FollowedBox *one, const FollowedBox *other)
+{
+	BOOL				 isNumberFirst	= one->givesWay;
+	const FollowedBox	*box			= isNumberFirst ? other : one;
+	const FollowedBox	*number			= isNumberFirst ? one : other;
+	Side				 side			= SideOfMiddle(one->reference, other->reference);
+	double				 leastMove		= DBL_MAX;
+
+	for (NSUInteger axis = 0; axis < AxisCount; axis++) {
+		double room		= MAX(box->margin[axis], number->margin[axis]);
+		double before	= MIN(box->start[axis], number->placed.min[axis] - room - box->size[axis]);
+		double after	= MAX(box->start[axis], number->placed.max[axis] + room);
+
+		if (before >= box->pageLow[axis] - LIMIT_SLACK && box->start[axis] - before < leastMove) {
+			leastMove	= box->start[axis] - before;
+			side		= (Side){ axis, isNumberFirst, -1.0 };
+		}
+		if (after <= box->pageHigh[axis] + LIMIT_SLACK && after - box->start[axis] < leastMove) {
+			leastMove	= after - box->start[axis];
+			side		= (Side){ axis, (isNumberFirst == NO), -1.0 };
+		}
+	}
+
+	return side;
+
+}//end SideOfPageNumber
+
+
 //========== FindOrders() ======================================================
 ///
 /// @abstract	Reads the side each thing is on of the others and of the
@@ -871,9 +927,11 @@ static void KeepClearOfArrows(FollowedBox *box, const FollowedBox *owner, const 
 /// 			are let be. On others they are put in the order of their
 /// 			middles, so that no two boxes come to lie over each other.
 ///
+/// 			`leavesOutGivingWay` finds no order with the page number.
+///
 //==============================================================================
 static NSUInteger FindOrders(FollowedBox *boxes, NSUInteger count, Rooms rooms, BOOL keepsFileGaps,
-							 BoxOrder *orders)
+							 BOOL leavesOutGivingWay, BoxOrder *orders)
 {
 	NSUInteger orderCount = 0;
 
@@ -888,6 +946,9 @@ static NSUInteger FindOrders(FollowedBox *boxes, NSUInteger count, Rooms rooms, 
 			BOOL		 isClearOfNext	= FindSide(box->reference, next->reach, &side);
 
 			if (box->moves == NO && next->moves == NO) {
+				continue;
+			}
+			if (leavesOutGivingWay && (box->givesWay || next->givesWay)) {
 				continue;
 			}
 
@@ -911,7 +972,9 @@ static NSUInteger FindOrders(FollowedBox *boxes, NSUInteger count, Rooms rooms, 
 				AddOrder(orders, &orderCount, boxes, one, other, side, keepsFileGaps);
 			}
 			else if (keepsFileGaps == NO) {
-				side = SideOfMiddle(box->reference, next->reference);
+				BOOL isNumber = (box->givesWay || next->givesWay);
+
+				side = isNumber ? SideOfPageNumber(box, next) : SideOfMiddle(box->reference, next->reference);
 
 				AddOrder(orders, &orderCount, boxes, one, other, side, keepsFileGaps);
 			}
@@ -1064,23 +1127,36 @@ static void Settle(FollowedBox *boxes, NSUInteger count, const BoxOrder *orders,
 /// @discussion	The file's sides always leave one, since the file's layout is
 /// 			on them.
 ///
+/// 			The things keep clear of the page number when that leaves them
+/// 			all a place. Otherwise it is let be.
+///
 //==============================================================================
 static BOOL FindPlaces(FollowedBox *boxes, NSUInteger count, Rooms rooms, BOOL keepsFileGaps, BoxOrder *orders)
 {
-	for (NSUInteger index = 0; index < count; index++) {
-		FollowedBox *box = &boxes[index];
+	BOOL		hasGivingWay	= NO;
+	NSUInteger	orderCount		= 0;
+	BOOL		hasRoom			= NO;
 
-		for (NSUInteger axis = 0; axis < AxisCount; axis++) {
-			box->low[axis]			= box->pageLow[axis];
-			box->high[axis]			= box->pageHigh[axis];
-			box->clearLow[axis]		= -DBL_MAX;
-			box->clearHigh[axis]	= DBL_MAX;
-			box->origin[axis]		= box->start[axis];
-		}
+	for (NSUInteger index = 0; index < count; index++) {
+		hasGivingWay = hasGivingWay || boxes[index].givesWay;
 	}
 
-	NSUInteger	orderCount	= FindOrders(boxes, count, rooms, keepsFileGaps, orders);
-	BOOL		hasRoom		= NarrowLimits(boxes, count, orders, orderCount);
+	for (NSUInteger pass = 0; pass < (hasGivingWay ? 2 : 1) && hasRoom == NO; pass++) {
+		for (NSUInteger index = 0; index < count; index++) {
+			FollowedBox *box = &boxes[index];
+
+			for (NSUInteger axis = 0; axis < AxisCount; axis++) {
+				box->low[axis]			= box->pageLow[axis];
+				box->high[axis]			= box->pageHigh[axis];
+				box->clearLow[axis]		= -DBL_MAX;
+				box->clearHigh[axis]	= DBL_MAX;
+				box->origin[axis]		= box->start[axis];
+			}
+		}
+
+		orderCount	= FindOrders(boxes, count, rooms, keepsFileGaps, (pass > 0), orders);
+		hasRoom		= NarrowLimits(boxes, count, orders, orderCount);
+	}
 
 	Settle(boxes, count, orders, orderCount);
 
@@ -1167,6 +1243,90 @@ static double DepthOver(Extent one, Extent other, double room)
 }//end DepthOver
 
 
+//========== ClipCorners() =====================================================
+///
+/// @abstract	Cuts a convex shape at a line along one axis, and keeps the
+/// 			part before it, or after it. Returns how many corners are left.
+///
+//==============================================================================
+static NSUInteger ClipCorners(const Point2 *corners, NSUInteger count, NSUInteger axis, double limit,
+							  BOOL keepsAfter, Point2 *outCorners)
+{
+	NSUInteger kept = 0;
+
+	for (NSUInteger index = 0; index < count; index++) {
+		Point2	from		= corners[index];
+		Point2	to			= corners[(index + 1) % count];
+		double	fromValue	= (axis == AxisX) ? from.x : from.y;
+		double	toValue		= (axis == AxisX) ? to.x : to.y;
+		BOOL	isFromIn	= keepsAfter ? (fromValue >= limit) : (fromValue <= limit);
+		BOOL	isToIn		= keepsAfter ? (toValue >= limit) : (toValue <= limit);
+
+		if (isFromIn) {
+			outCorners[kept++] = from;
+		}
+		if (isFromIn != isToIn) {
+			double share = (limit - fromValue) / (toValue - fromValue);
+
+			outCorners[kept++] = V2Make(from.x + (to.x - from.x) * share, from.y + (to.y - from.y) * share);
+		}
+	}
+
+	return kept;
+
+}//end ClipCorners
+
+
+//========== DepthOverShape() ==================================================
+///
+/// @abstract	How far a rectangle reaches over a convex shape: the area they
+/// 			share, over the longer side of the box around that area. For a
+/// 			rectangle over another that is the lesser of how far across and
+/// 			how far down, as DepthOver() has it.
+///
+//==============================================================================
+static double DepthOverShape(Extent extent, const Point2 *corners, NSUInteger count)
+{
+	if (count < 3) {
+		return 0.0;
+	}
+
+	// Each cut adds a corner at most.
+	Point2		*one	= malloc((count + 4) * sizeof(Point2));
+	Point2		*other	= malloc((count + 4) * sizeof(Point2));
+	NSUInteger	 kept	= count;
+	double		 area	= 0.0;
+	Extent		 shared	= { { DBL_MAX, DBL_MAX }, { -DBL_MAX, -DBL_MAX } };
+
+	memcpy(one, corners, count * sizeof(Point2));
+
+	for (NSUInteger axis = 0; axis < AxisCount && kept > 0; axis++) {
+		kept = ClipCorners(one, kept, axis, extent.min[axis], YES, other);
+		kept = ClipCorners(other, kept, axis, extent.max[axis], NO, one);
+	}
+
+	for (NSUInteger index = 0; kept >= 3 && index < kept; index++) {
+		Point2 from	= one[index];
+		Point2 to	= one[(index + 1) % kept];
+
+		area += from.x * to.y - to.x * from.y;
+
+		shared.min[AxisX] = MIN(shared.min[AxisX], from.x);
+		shared.min[AxisY] = MIN(shared.min[AxisY], from.y);
+		shared.max[AxisX] = MAX(shared.max[AxisX], from.x);
+		shared.max[AxisY] = MAX(shared.max[AxisY], from.y);
+	}
+
+	free(one);
+	free(other);
+
+	double longer = MAX(shared.max[AxisX] - shared.min[AxisX], shared.max[AxisY] - shared.min[AxisY]);
+
+	return (kept >= 3 && longer > 0.0) ? fabs(area) / 2.0 / longer : 0.0;
+
+}//end DepthOverShape
+
+
 //========== Cost() ============================================================
 ///
 /// @abstract	What is wrong with where the things have been put, in page
@@ -1181,7 +1341,10 @@ static double DepthOver(Extent one, Extent other, double room)
 ///
 /// 			A box that is put by itself has no side of the file's. It
 /// 			costs more the further it is from what it calls out, and the
-/// 			further it reaches over the assembly.
+/// 			more of the outline around the assembly it covers.
+///
+/// 			A box over the page number costs the same however far over it
+/// 			is.
 ///
 //==============================================================================
 static double Cost(const FollowedBox *boxes, NSUInteger count, Rooms rooms, BOOL keepsFileGaps,
@@ -1202,11 +1365,21 @@ static double Cost(const FollowedBox *boxes, NSUInteger count, Rooms rooms, BOOL
 
 			cost += AWAY_COST * away;
 			cost += REACH_COST * hypot(across, down);
-			cost += ASSEMBLY_COST * DepthOver(own, *box->assembly, 0.0);
+			cost += ASSEMBLY_COST * DepthOverShape(own, box->assemblyCorners, box->assemblyCornerCount);
 		}
 		else if (box->moves && box->hasMiddle) {
 			cost += AWAY_COST * away;
 			cost += (box->side != 0) ? OTHER_SIDE_COST * pointsPerPageInch : 0.0;
+		}
+
+		for (NSUInteger other = 0; box->moves && other < count; other++) {
+			const FollowedBox	*number	= &boxes[other];
+			Extent				 own	= ExtentAt(box->origin, box->size);
+			Extent				 frame	= ExtentAt(number->origin, number->size);
+
+			if (number->givesWay && DepthOver(own, frame, 0.0) > 0.0) {
+				cost += PAGE_NUMBER_COST * pointsPerPageInch;
+			}
 		}
 
 		for (NSUInteger index = 0; index < box->targetCount; index++) {
@@ -1515,7 +1688,8 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 	for (NSUInteger index = 0; index < count; index++) {
 		FollowedBox *box = &boxes[index];
 
-		// The parts list has no seat. It stays where the file puts it.
+		// The parts list and the page number have no seat. They stay where
+		// they are put.
 		if (index >= seats.count) {
 			UseFileSide(box);
 			continue;
@@ -1570,6 +1744,7 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 				to:(NSArray<NSData *> *)places
 			onPage:(Box2)pageRect
 		 listFrame:(Box2)listFrame
+   pageNumberFrame:(Box2)pageNumberFrame
  pointsPerPageInch:(double)pointsPerPageInch
 	   arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
 {
@@ -1577,15 +1752,17 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 			   from:laidOutPlaces
 				 to:places
 	 aroundAssembly:NULL
+			outline:nil
 			 onPage:pageRect
 		  listFrame:listFrame
+	pageNumberFrame:pageNumberFrame
   pointsPerPageInch:pointsPerPageInch
 		arrangement:arrangement];
 
-}//end moveBoxes:from:to:onPage:listFrame:pointsPerPageInch:arrangement:
+}//end moveBoxes:from:to:onPage:listFrame:pageNumberFrame:pointsPerPageInch:arrangement:
 
 
-//---------- placeBoxes:aroundAssembly:places:onPage:listFrame:... ---[static]--
+//---------- placeBoxes:aroundAssembly:outline:places:onPage:... -----[static]--
 ///
 /// @abstract	Puts each box beside the step's assembly by itself, where the
 /// 			file is not asked.
@@ -1593,9 +1770,11 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 //------------------------------------------------------------------------------
 + (void) placeBoxes:(NSArray<LDrawStepCalloutBox *> *)boxes
 	 aroundAssembly:(Box2)assemblyRect
+			outline:(nullable NSData *)assemblyOutline
 			 places:(NSArray<NSData *> *)places
 			 onPage:(Box2)pageRect
 		  listFrame:(Box2)listFrame
+	pageNumberFrame:(Box2)pageNumberFrame
   pointsPerPageInch:(double)pointsPerPageInch
 		arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
 {
@@ -1603,12 +1782,14 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 			   from:places
 				 to:places
 	 aroundAssembly:&assemblyRect
+			outline:assemblyOutline
 			 onPage:pageRect
 		  listFrame:listFrame
+	pageNumberFrame:pageNumberFrame
   pointsPerPageInch:pointsPerPageInch
 		arrangement:arrangement];
 
-}//end placeBoxes:aroundAssembly:places:onPage:listFrame:pointsPerPageInch:arrangement:
+}//end placeBoxes:aroundAssembly:outline:places:onPage:listFrame:pageNumberFrame:pointsPerPageInch:arrangement:
 
 
 //---------- moveBoxes:from:to:aroundAssembly:onPage:listFrame:... ---[static]--
@@ -1620,13 +1801,17 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 /// 			move. With none they go with their submodels from where the
 /// 			file puts them.
 ///
+/// 			An assembly with no outline has the box around it as one.
+///
 //------------------------------------------------------------------------------
 + (void) moveBoxes:(NSArray<LDrawStepCalloutBox *> *)boxes
 			  from:(NSArray<NSData *> *)laidOutPlaces
 				to:(NSArray<NSData *> *)places
 	aroundAssembly:(nullable const Box2 *)assemblyRect
+		   outline:(nullable NSData *)assemblyOutline
 			onPage:(Box2)pageRect
 		 listFrame:(Box2)listFrame
+   pageNumberFrame:(Box2)pageNumberFrame
  pointsPerPageInch:(double)pointsPerPageInch
 	   arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
 {
@@ -1639,7 +1824,8 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 										ARROW_HEAD_ROOM_INCHES * pointsPerPageInch };
 	NSUInteger		 boxCount		= boxes.count;
 	BOOL			 hasList		= (V2BoxWidth(listFrame) > 0.0 && V2BoxHeight(listFrame) > 0.0);
-	NSUInteger		 count			= boxCount + (hasList ? 1 : 0);
+	BOOL			 hasNumber		= (V2BoxWidth(pageNumberFrame) > 0.0 && V2BoxHeight(pageNumberFrame) > 0.0);
+	NSUInteger		 count			= boxCount + (hasList ? 1 : 0) + (hasNumber ? 1 : 0);
 	NSMutableData	*followedData	= [NSMutableData dataWithLength:count * sizeof(FollowedBox)];
 	NSMutableData	*orderData		= [NSMutableData dataWithLength:2 * count * count * sizeof(BoxOrder)];
 	NSMutableData	*lagData		= [NSMutableData dataWithLength:count * sizeof(Point2)];
@@ -1650,6 +1836,18 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 
 	if (boxCount == 0) {
 		return;
+	}
+
+	if (isAutomatic && assemblyOutline.length / sizeof(Point2) < 3) {
+		Box2	box			= *assemblyRect;
+		Point2	corners[4]	= {
+			box.origin,
+			V2Make(V2BoxMaxX(box), V2BoxMinY(box)),
+			V2Make(V2BoxMaxX(box), V2BoxMaxY(box)),
+			V2Make(V2BoxMinX(box), V2BoxMaxY(box))
+		};
+
+		assemblyOutline = [NSData dataWithBytes:corners length:sizeof(corners)];
 	}
 
 	for (NSUInteger index = 0; index < boxCount; index++) {
@@ -1669,8 +1867,10 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 		}
 
 		if (isAutomatic) {
-			followed[index].assembly	= &assembly;
-			followed[index].arrowRoom	= rooms.own;
+			followed[index].assembly			= &assembly;
+			followed[index].assemblyCorners		= assemblyOutline.bytes;
+			followed[index].assemblyCornerCount	= assemblyOutline.length / sizeof(Point2);
+			followed[index].arrowRoom			= AUTOMATIC_ARROW_ROOM_INCHES * pointsPerPageInch;
 
 			LetMoveOverPage(&followed[index], pageRect, pageMargin);
 		}
@@ -1681,6 +1881,12 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 
 	if (hasList) {
 		followed[boxCount] = MakeFollowedBox(listFrame, V2MakeSize(pageMargin, pageMargin));
+	}
+	if (hasNumber) {
+		FollowedBox *number = &followed[count - 1];
+
+		*number				= MakeFollowedBox(pageNumberFrame, V2MakeSize(pageMargin, pageMargin));
+		number->givesWay	= YES;
 	}
 
 	// Sides kept from boxes of the other kind mean nothing here.
@@ -1729,7 +1935,7 @@ static BOOL UseKeptSides(FollowedBox *boxes, NSUInteger count, NSArray<LDrawStep
 		[boxes[index] followTo:V2Add(OriginOfBox(box), lags[index]) submodelShift:SubmodelShift(box)];
 	}
 
-}//end moveBoxes:from:to:aroundAssembly:onPage:listFrame:pointsPerPageInch:arrangement:
+}//end moveBoxes:from:to:aroundAssembly:outline:onPage:listFrame:pageNumberFrame:pointsPerPageInch:arrangement:
 
 
 //---------- holdBoxes:followed:count:rooms:orders:onPage:... --------[static]--

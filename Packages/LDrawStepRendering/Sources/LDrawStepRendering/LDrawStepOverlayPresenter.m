@@ -1834,7 +1834,16 @@ static Box2 BoxAroundPoints(NSData *points)
 	// Where the file puts the boxes is not read: they go beside the assembly
 	// as the camera draws it now, at every angle.
 	if ([LDrawStepPartList placesCalloutsAutomatically]) {
-		[presentation placeCalloutBoxesAroundAssembly:[self assemblyRect]
+		Box2	 assembly	= [self assemblyRect];
+		NSData	*outline	= nil;
+
+		// assemblyRect loads the points the outline is made from, so it comes first.
+		if (self->assemblyOutline.length > 0) {
+			outline = LDrawStepConvexOutline([self.camera viewPointsForModelPoints:self->assemblyOutline]);
+		}
+
+		[presentation placeCalloutBoxesAroundAssembly:assembly
+											  outline:outline
 											   places:places
 										  arrangement:self->calloutArrangement];
 	}
@@ -1945,6 +1954,8 @@ static Box2 BoxAroundPoints(NSData *points)
 	id<LDrawStepOverlayCamera>	 camera	= self.camera;
 
 	host.viewSize		= self.viewSize;
+	host.pageNumberRect	= self.pageNumberRect;
+	host.listScale		= self.listScale;
 	host.hasPreview		= self.hasSizePreview;
 	host.previewAxis	= self.previewAxis;
 	host.previewInches	= self.previewInches;

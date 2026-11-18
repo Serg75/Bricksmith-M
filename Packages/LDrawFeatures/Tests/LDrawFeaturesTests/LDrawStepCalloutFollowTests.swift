@@ -48,8 +48,9 @@ extension StepPartListStaticSettings {
 
         /// A file whose main model shows one step on a page. The step calls
         /// sub.ldr out once for each PLACEMENT line, and places a part of its
-        /// own, so it has a parts list. The caller keeps the file.
-        private func pageModel(_ placements: [String]) -> (file: LDrawFile, model: LDrawModel) {
+        /// own, so it has a parts list. sub.ldr has `subSteps` steps. The
+        /// caller keeps the file.
+        private func pageModel(_ placements: [String], subSteps: Int = 1) -> (file: LDrawFile, model: LDrawModel) {
             let file = LDrawFile()
             let main = LDrawMPDModel.model() as! LDrawMPDModel
             main.setModelName("main.ldr")
@@ -57,7 +58,9 @@ extension StepPartListStaticSettings {
             let sub = LDrawMPDModel.model() as! LDrawMPDModel
             sub.setModelName("sub.ldr")
             file.addSubmodel(sub)
-            sub.addStep().add(part("3001.dat") as LDrawDirective)
+            for _ in 0..<subSteps {
+                sub.addStep().add(part("3001.dat") as LDrawDirective)
+            }
 
             let step = main.addStep()
             step.add(lpub("PAGE SIZE 8.5 11"))
@@ -1217,7 +1220,8 @@ extension StepPartListStaticSettings {
             let margin = 0.05 * presentation.pointsPerPageInch
 
             func placed(at aim: Point2) -> Box2 {
-                presentation.placeCalloutBoxes(aroundAssembly: assembly, places: [arrowPlaces(aim)], arrangement: nil)
+                presentation.placeCalloutBoxes(aroundAssembly: assembly, outline: nil, places: [arrowPlaces(aim)],
+                                               arrangement: nil)
                 return box.frameRect
             }
             func middle(_ frame: Box2) -> Point2 {
@@ -1241,9 +1245,9 @@ extension StepPartListStaticSettings {
             #expect(below.origin.y >= maxY(assembly) + margin - 0.001)
             #expect(abs(middle(below).x - 520) < 0.001)
 
-            // Each has room for its arrow: half an inch to where it goes, a
-            // box 10 points square about that place.
-            #expect(abs((315 - maxX(left)) - 0.5 * presentation.pointsPerPageInch) < 0.001)
+            // Each has room for its arrow: three quarters of an inch to where
+            // it goes, a box 10 points square about that place.
+            #expect(abs((315 - maxX(left)) - 0.75 * presentation.pointsPerPageInch) < 0.001)
             withExtendedLifetime(fixture.file) {}
         }
 
@@ -1260,7 +1264,7 @@ extension StepPartListStaticSettings {
 
             // All three call out something at the same place by the left edge.
             let places = (0..<3).map { _ in arrowPlaces(Point2(x: 320, y: 400)) }
-            presentation.placeCalloutBoxes(aroundAssembly: bigAssembly, places: places, arrangement: nil)
+            presentation.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil, places: places, arrangement: nil)
 
             for (index, box) in boxes.enumerated() {
                 #expect(holds(presentation.pageRect, box.frameRect))
@@ -1288,17 +1292,172 @@ extension StepPartListStaticSettings {
             let aim = Point2(x: 500, y: 600)
             let target = rect(aim.x - 5, aim.y - 5, 10, 10)
 
-            presentation.placeCalloutBoxes(aroundAssembly: full, places: [arrowPlaces(aim)], arrangement: nil)
+            presentation.placeCalloutBoxes(aroundAssembly: full, outline: nil, places: [arrowPlaces(aim)],
+                                           arrangement: nil)
 
-            // On the page, off what it calls out, and half an inch from it:
-            // room for its arrow.
+            // On the page, off what it calls out, and three quarters of an inch
+            // from it: room for its arrow.
             let frame = box.frameRect
             let across = max(target.origin.x - maxX(frame), frame.origin.x - maxX(target))
             let down = max(target.origin.y - maxY(frame), frame.origin.y - maxY(target))
 
             #expect(holds(page, frame))
             #expect(overlap(frame, target) == false)
-            #expect(abs(max(across, down) - 0.5 * presentation.pointsPerPageInch) < 0.001)
+            #expect(abs(max(across, down) - 0.75 * presentation.pointsPerPageInch) < 0.001)
+            withExtendedLifetime(fixture.file) {}
+        }
+
+        @Test("A box placed automatically goes near what it calls out where the assembly's outline leaves room")
+        func automaticBoxUsesTheEmptyCornerOfTheAssembly() throws {
+            LDrawStepPartList.setPlacesCalloutsAutomatically(true)
+            defer { LDrawStepPartList.setPlacesCalloutsAutomatically(false) }
+
+            let fixture = pageModel(["CALLOUT PLACEMENT RIGHT CENTER ASSEM OUTSIDE"])
+            let presentation = LDrawStepPartListPresentation(model: fixture.model, host: host())
+            let box = try #require(presentation.calloutBoxes.first)
+            let ppi = presentation.pointsPerPageInch
+
+            // Near the foot of the page, so there is no room below. The model
+            // fills only the lower left half of its box, and what the box
+            // calls out is on the slope.
+            let assembly = rect(300, 700, 400, 350)
+            let corners = [Point2(x: 300, y: 700), Point2(x: 700, y: 1050), Point2(x: 300, y: 1050)]
+            let outline = corners.withUnsafeBytes { Data($0) }
+            let aim = Point2(x: 560, y: 935)
+            let target = rect(aim.x - 5, aim.y - 5, 10, 10)
+
+            func gap(_ frame: Box2) -> Double {
+                max(target.origin.x - maxX(frame), frame.origin.x - maxX(target),
+                    target.origin.y - maxY(frame), frame.origin.y - maxY(target))
+            }
+
+            presentation.placeCalloutBoxes(aroundAssembly: assembly, outline: nil, places: [arrowPlaces(aim)],
+                                           arrangement: nil)
+            let besideBox = box.frameRect
+
+            presentation.placeCalloutBoxes(aroundAssembly: assembly, outline: outline, places: [arrowPlaces(aim)],
+                                           arrangement: nil)
+            let besideOutline = box.frameRect
+
+            // The box around the assembly keeps the box out of it, far from
+            // what it calls out. The outline lets it come to its arrow's room.
+            #expect(overlap(besideBox, assembly) == false)
+            #expect(gap(besideBox) > 1.0 * ppi)
+            #expect(abs(gap(besideOutline) - 0.75 * ppi) < 0.001)
+            #expect(holds(presentation.pageRect, besideOutline))
+            withExtendedLifetime(fixture.file) {}
+        }
+
+        @Test("A box placed automatically keeps clear of the parts list as the host draws it, bigger")
+        func automaticBoxKeepsClearOfTheDrawnList() throws {
+            LDrawStepPartList.setPlacesCalloutsAutomatically(true)
+            defer { LDrawStepPartList.setPlacesCalloutsAutomatically(false) }
+
+            let fixture = pageModel(["CALLOUT PLACEMENT RIGHT CENTER ASSEM OUTSIDE"])
+            let scale = 2.0
+
+            func placed(at aim: Point2, listScale: Double) throws -> (frame: Box2, list: Box2) {
+                var state = host()
+                state.listScale = listScale
+                let presentation = LDrawStepPartListPresentation(model: fixture.model, host: state)
+                let box = try #require(presentation.calloutBoxes.first)
+                presentation.placeCalloutBoxes(aroundAssembly: rect(-30, -40, 400, 300), outline: nil,
+                                               places: [arrowPlaces(aim)], arrangement: nil)
+
+                // The list as the host draws it, from the corner it grows from.
+                let frame = presentation.frameRect
+                let width = frame.size.width * scale
+                let height = frame.size.height * scale
+                let x = presentation.growsLeftward ? maxX(frame) - width : frame.origin.x
+                let y = presentation.growsUpward ? maxY(frame) - height : frame.origin.y
+                return (box.frameRect, rect(x, y, width, height))
+            }
+
+            // What the boxes call out is by the top of an assembly just below
+            // the list, at the page's top left corner.
+            let aims = [Point2(x: 0, y: -30), Point2(x: 40, y: -30), Point2(x: 80, y: -30)]
+            var overlapsAtFrameSize = 0
+
+            for aim in aims {
+                let small = try placed(at: aim, listScale: 0)
+                let drawn = try placed(at: aim, listScale: scale)
+
+                #expect(overlap(drawn.frame, drawn.list) == false, "aim \(aim.x) \(aim.y)")
+                if overlap(small.frame, small.list) {
+                    overlapsAtFrameSize += 1
+                }
+            }
+
+            // Kept clear of the frame alone, some of them would lie over it.
+            #expect(overlapsAtFrameSize > 0)
+            withExtendedLifetime(fixture.file) {}
+        }
+
+        @Test("A box placed automatically keeps clear of the host's page number where it has room")
+        func automaticBoxKeepsClearOfThePageNumber() throws {
+            LDrawStepPartList.setPlacesCalloutsAutomatically(true)
+            defer { LDrawStepPartList.setPlacesCalloutsAutomatically(false) }
+
+            let fixture = pageModel(["CALLOUT PLACEMENT RIGHT CENTER ASSEM OUTSIDE"])
+            let aim = Point2(x: 680, y: 430)
+
+            func placed(numberAt number: Box2?) throws -> (frame: Box2, page: Box2) {
+                var state = host()
+                state.pageNumberRect = number ?? rect(0, 0, 0, 0)
+                let presentation = LDrawStepPartListPresentation(model: fixture.model, host: state)
+                let box = try #require(presentation.calloutBoxes.first)
+                presentation.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil, places: [arrowPlaces(aim)],
+                                               arrangement: nil)
+                return (box.frameRect, presentation.pageRect)
+            }
+
+            // A number over the lower half of where the box goes with none.
+            let free = try placed(numberAt: nil)
+            let middleY = free.frame.origin.y + free.frame.size.height / 2
+            let number = rect(free.frame.origin.x, middleY, 20, free.frame.size.height / 2)
+            let clear = try placed(numberAt: number)
+
+            #expect(overlap(clear.frame, number) == false)
+            #expect(holds(clear.page, clear.frame))
+
+            // A number over the whole page leaves no room, so it is let be.
+            let everywhere = try placed(numberAt: free.page)
+            #expect(same(everywhere.frame.origin, free.frame.origin))
+
+            withExtendedLifetime(fixture.file) {}
+        }
+
+        @Test("A tall box that cannot get above or below the page number goes beside it")
+        func tallAutomaticBoxGoesBesideThePageNumber() throws {
+            LDrawStepPartList.setPlacesCalloutsAutomatically(true)
+            defer { LDrawStepPartList.setPlacesCalloutsAutomatically(false) }
+
+            let fixture = pageModel(["CALLOUT ALLOC VERTICAL"], subSteps: 6)
+            let aim = Point2(x: 680, y: 430)
+
+            func placed(numberAt number: Box2?) throws -> Box2 {
+                var state = host()
+                state.pageNumberRect = number ?? rect(0, 0, 0, 0)
+                let presentation = LDrawStepPartListPresentation(model: fixture.model, host: state)
+                let box = try #require(presentation.calloutBoxes.first)
+                presentation.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil, places: [arrowPlaces(aim)],
+                                               arrangement: nil)
+                return box.frameRect
+            }
+
+            // A small number under the box, a little below its middle: the
+            // middles say the box goes above it, but it has no room there, nor
+            // below.
+            let free = try placed(numberAt: nil)
+            let middle = Point2(x: free.origin.x + free.size.width / 2, y: free.origin.y + free.size.height / 2)
+            let number = rect(middle.x - 10, middle.y + 30, 20, 20)
+            let clear = try placed(numberAt: number)
+
+            // It slides along on its side of the assembly, and does not jump
+            // to another.
+            #expect(overlap(clear, number) == false)
+            #expect(abs(clear.origin.y - free.origin.y) < 0.001)
+            #expect(clear.origin.x >= maxX(bigAssembly))
             withExtendedLifetime(fixture.file) {}
         }
 
@@ -1315,7 +1474,7 @@ extension StepPartListStaticSettings {
 
             func place(_ aim: Point2, at time: Double) {
                 arrangement.time = time
-                presentation.placeCalloutBoxes(aroundAssembly: assembly, places: [arrowPlaces(aim)],
+                presentation.placeCalloutBoxes(aroundAssembly: assembly, outline: nil, places: [arrowPlaces(aim)],
                                                arrangement: arrangement)
             }
 
@@ -1363,7 +1522,8 @@ extension StepPartListStaticSettings {
 
             let automatic = LDrawStepPartListPresentation(model: fixture.model, host: host())
             arrangement.time = 10
-            automatic.placeCalloutBoxes(aroundAssembly: bigAssembly, places: [arrowPlaces(Point2(x: 320, y: 400))],
+            automatic.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil,
+                                        places: [arrowPlaces(Point2(x: 320, y: 400))],
                                         arrangement: arrangement)
             try #require(maxX(try #require(automatic.calloutBoxes.first).frameRect) < bigAssembly.origin.x)
 
@@ -1390,7 +1550,8 @@ extension StepPartListStaticSettings {
 
             LDrawStepPartList.setPlacesCalloutsAutomatically(true)
             arrangement.time = 11.5
-            automatic.placeCalloutBoxes(aroundAssembly: bigAssembly, places: [arrowPlaces(Point2(x: 320, y: 400))],
+            automatic.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil,
+                                        places: [arrowPlaces(Point2(x: 320, y: 400))],
                                         arrangement: arrangement)
             LDrawStepPartList.setPlacesCalloutsAutomatically(false)
 
@@ -1406,7 +1567,8 @@ extension StepPartListStaticSettings {
 
             let again = LDrawStepPartListPresentation(model: fixture.model, host: host())
             arrangement.time = 12
-            again.placeCalloutBoxes(aroundAssembly: bigAssembly, places: [arrowPlaces(Point2(x: 680, y: 400))],
+            again.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil, places: [arrowPlaces(Point2(x: 680,
+                                    y: 400))],
                                     arrangement: arrangement)
 
             #expect(arrangement.isMoving == false)

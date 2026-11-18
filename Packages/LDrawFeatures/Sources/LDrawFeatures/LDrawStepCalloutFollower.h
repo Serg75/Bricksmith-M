@@ -28,6 +28,10 @@ NS_ASSUME_NONNULL_BEGIN
 ///             slides along them and never jumps over one. Two boxes that
 ///             meet stop each other half way.
 ///
+///             It keeps clear of the page number too, where that leaves it
+///             room. Where it does not, the boxes go over the number, and a
+///             way of putting them that keeps it clear costs less.
+///
 ///             A box also keeps off the arrows where it can: to its side of
 ///             where another box's arrow goes, and far enough from where its
 ///             own goes for the arrow to show. The page, the list and the
@@ -57,14 +61,15 @@ NS_ASSUME_NONNULL_BEGIN
 /// has the same as it was drawn when the step was laid out. A box with no
 /// places in either does not move.
 ///
-/// `listFrame` is the parts list's frame, or an empty box when the step shows
-/// none. With no arrangement the boxes keep to the file's sides, and go to
-/// their places at once.
+/// `listFrame` is the parts list's frame, and `pageNumberFrame` the page
+/// number's, or an empty box when the page shows none. With no arrangement the
+/// boxes keep to the file's sides, and go to their places at once.
 + (void) moveBoxes:(NSArray<LDrawStepCalloutBox *> *)boxes
 			  from:(NSArray<NSData *> *)laidOutPlaces
 				to:(NSArray<NSData *> *)places
 			onPage:(Box2)pageRect
 		 listFrame:(Box2)listFrame
+   pageNumberFrame:(Box2)pageNumberFrame
  pointsPerPageInch:(double)pointsPerPageInch
 	   arrangement:(nullable LDrawStepCalloutArrangement *)arrangement;
 
@@ -73,14 +78,20 @@ NS_ASSUME_NONNULL_BEGIN
 /// that, where there is room. `assemblyRect` is the box around the assembly as
 /// the camera draws it now, and `places` is as for moving the boxes.
 ///
+/// `assemblyOutline` is the outline around the assembly, as Point2 corners of
+/// a convex shape, or nil. A box costs as much as it covers of it. With none,
+/// the box around the assembly is the outline.
+///
 /// With an arrangement the boxes keep their sides from one layout to the next,
 /// and move over a short time when they change them. With none they take the
 /// best sides there are, at once.
 + (void) placeBoxes:(NSArray<LDrawStepCalloutBox *> *)boxes
 	 aroundAssembly:(Box2)assemblyRect
+			outline:(nullable NSData *)assemblyOutline
 			 places:(NSArray<NSData *> *)places
 			 onPage:(Box2)pageRect
 		  listFrame:(Box2)listFrame
+	pageNumberFrame:(Box2)pageNumberFrame
   pointsPerPageInch:(double)pointsPerPageInch
 		arrangement:(nullable LDrawStepCalloutArrangement *)arrangement;
 

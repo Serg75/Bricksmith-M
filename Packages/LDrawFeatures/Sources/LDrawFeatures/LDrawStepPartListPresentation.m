@@ -113,6 +113,12 @@ static Point2 PlacedShare(LPubPlacementPosition position)
 	/// The file the icon model takes submodels from, when it is first asked
 	/// for.
 	__weak LDrawFile			*iconFile;
+
+	/// Where the host draws a page number of its own, in the view.
+	Box2						 hostPageNumberRect;
+
+	/// How many times bigger than its frame the host draws the list.
+	double						 hostListScale;
 }
 
 @synthesize iconModel = _iconModel;
@@ -162,8 +168,10 @@ static Point2 PlacedShare(LPubPlacementPosition position)
 	self->_calloutBoxes	= @[];
 	self->_placementKey	= @"";
 
-	self->_calloutChrome	= self->_chrome;
-	self->_pageNumberRect	= ZeroBox2;
+	self->_calloutChrome		= self->_chrome;
+	self->_pageNumberRect		= ZeroBox2;
+	self->hostPageNumberRect	= host.pageNumberRect;
+	self->hostListScale			= host.listScale;
 
 	if (model == nil) {
 		return self;
@@ -1181,15 +1189,17 @@ static Point2 PlacedShare(LPubPlacementPosition position)
 								   from:laidOutPlaces
 									 to:places
 								 onPage:self->_pageRect
-							  listFrame:self->_frameRect
+							  listFrame:[self drawnListFrame]
+						pageNumberFrame:[self pageNumberFrame]
 					  pointsPerPageInch:self->_pointsPerPageInch
 							arrangement:arrangement];
 
 }//end moveCalloutBoxesFrom:to:arrangement:
 
 
-//========== placeCalloutBoxesAroundAssembly:places:arrangement: ===============
+//========== placeCalloutBoxesAroundAssembly:outline:places:arrangement: =======
 - (void) placeCalloutBoxesAroundAssembly:(Box2)assemblyRect
+								 outline:(nullable NSData *)assemblyOutline
 								  places:(NSArray<NSData *> *)places
 							 arrangement:(nullable LDrawStepCalloutArrangement *)arrangement
 {
@@ -1199,13 +1209,57 @@ static Point2 PlacedShare(LPubPlacementPosition position)
 
 	[LDrawStepCalloutFollower placeBoxes:self->_calloutBoxes
 						  aroundAssembly:assemblyRect
+								 outline:assemblyOutline
 								  places:places
 								  onPage:self->_pageRect
-							   listFrame:self->_frameRect
+							   listFrame:[self drawnListFrame]
+						 pageNumberFrame:[self pageNumberFrame]
 					   pointsPerPageInch:self->_pointsPerPageInch
 							 arrangement:arrangement];
 
-}//end placeCalloutBoxesAroundAssembly:places:arrangement:
+}//end placeCalloutBoxesAroundAssembly:outline:places:arrangement:
+
+
+//========== drawnListFrame ====================================================
+///
+/// @abstract	The parts list the boxes keep clear of: its frame, made as much
+/// 			bigger as the host draws it, from the corner it grows from.
+///
+//==============================================================================
+- (Box2) drawnListFrame
+{
+	Box2	frame	= self->_frameRect;
+	double	scale	= self->hostListScale;
+
+	if (scale <= 0.0 || scale == 1.0) {
+		return frame;
+	}
+
+	double width	= V2BoxWidth(frame) * scale;
+	double height	= V2BoxHeight(frame) * scale;
+	double x		= self->_growsLeftward ? V2BoxMaxX(frame) - width : V2BoxMinX(frame);
+	double y		= self->_growsUpward ? V2BoxMaxY(frame) - height : V2BoxMinY(frame);
+
+	return V2MakeBox(x, y, width, height);
+
+}//end drawnListFrame
+
+
+//========== pageNumberFrame ===================================================
+///
+/// @abstract	The page number the boxes keep clear of: the one drawn here, or
+/// 			else the host's own. An empty box when there is neither.
+///
+//==============================================================================
+- (Box2) pageNumberFrame
+{
+	if (V2BoxWidth(self->_pageNumberRect) > 0.0 && V2BoxHeight(self->_pageNumberRect) > 0.0) {
+		return self->_pageNumberRect;
+	}
+
+	return self->hostPageNumberRect;
+
+}//end pageNumberFrame
 
 
 //========== restCalloutBoxesWithArrangement: ==================================
