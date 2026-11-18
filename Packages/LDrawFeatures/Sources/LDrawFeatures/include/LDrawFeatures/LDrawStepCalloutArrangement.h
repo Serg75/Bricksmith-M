@@ -43,6 +43,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// from the file's.
 - (void) reset;
 
+/// Forgets the sides taken, but not where the boxes were drawn or the moves
+/// under way. The next layout takes the best sides there are, and a box whose
+/// place changes moves there from where it was drawn.
+- (void) forgetSides;
+
 @end
 
 NS_ASSUME_NONNULL_END

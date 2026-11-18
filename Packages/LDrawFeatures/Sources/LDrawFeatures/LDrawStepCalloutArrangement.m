@@ -71,6 +71,14 @@ static const double ARRIVED_INCHES = 0.001;
 }//end reset
 
 
+//========== forgetSides =======================================================
+- (void) forgetSides
+{
+	self.usesFileSides = YES;
+
+}//end forgetSides
+
+
 //========== isMoving ==========================================================
 - (BOOL) isMoving
 {

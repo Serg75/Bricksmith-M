@@ -177,6 +177,11 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 /// nothing with no camera, or off the page.
 - (void) centerPageOnStep;
 
+/// Centers the page as -centerPageOnStep does, but the callouts keep their
+/// sides, where they were drawn and the moves under way. For a camera that
+/// goes back to the page's own view: the boxes move on from where they are.
+- (void) centerPageOnStepKeepingCallouts;
+
 /// Call when the camera zoomed, scrolled or turned. On the page everything
 /// follows the camera. Off it only the arrows do, since they point into the
 /// model. A move the presenter made in its own reload changes nothing.
@@ -189,6 +194,15 @@ typedef NS_OPTIONS(NSUInteger, LDrawStepOverlayChange) {
 
 /// Forgets what was laid out. Call it when the overlay is taken off its view.
 - (void) reset;
+
+/// Forgets where the page was drawn, so the next reload puts it at the page
+/// anchor's center even in a turned view. The callouts keep their sides and
+/// the moves under way.
+- (void) forgetPagePlace;
+
+/// Forgets the sides the callouts have taken, so the next reload puts each box
+/// in its best place. A box whose place changes moves there over a short time.
+- (void) forgetCalloutSides;
 
 /// Whether the view looks at the step from another angle than LPub3D prints
 /// it at, after a turn. Only on the page, and never while arranging, where

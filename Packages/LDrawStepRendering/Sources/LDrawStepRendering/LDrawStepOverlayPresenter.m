@@ -337,6 +337,22 @@ static Box2 BoxAroundPoints(NSData *points)
 }//end reset
 
 
+//========== forgetPagePlace ===================================================
+- (void) forgetPagePlace
+{
+	self->hasPageMiddle = NO;
+
+}//end forgetPagePlace
+
+
+//========== forgetCalloutSides ================================================
+- (void) forgetCalloutSides
+{
+	[self->calloutArrangement forgetSides];
+
+}//end forgetCalloutSides
+
+
 //========== isMovingCallouts ==================================================
 - (BOOL) isMovingCallouts
 {
@@ -1496,14 +1512,30 @@ static Box2 BoxAroundPoints(NSData *points)
 //==============================================================================
 - (void) startLayout
 {
+	[self startLayoutKeepingCallouts:NO];
+
+}//end startLayout
+
+
+//========== startLayoutKeepingCallouts: =======================================
+///
+/// @abstract	Has the step's assembly measured afresh. The callouts' sides
+///				and moves are forgotten too, unless `keepsCallouts`.
+///
+//==============================================================================
+- (void) startLayoutKeepingCallouts:(BOOL)keepsCallouts
+{
 	[self.pageAnchor forgetAssemblyRect];
 	[self.pageAnchor forgetDrawnScale];
 	[self->submodelPlaces removeAllObjects];
-	[self->calloutArrangement reset];
+
+	if (keepsCallouts == NO) {
+		[self->calloutArrangement reset];
+	}
 
 	self->layoutViewingAngle = [self.camera viewingAngle];
 
-}//end startLayout
+}//end startLayoutKeepingCallouts:
 
 
 //========== isCameraTurnedFromStepAngle =======================================
@@ -1594,6 +1626,22 @@ static Box2 BoxAroundPoints(NSData *points)
 //==============================================================================
 - (void) centerPageOnStep
 {
+	[self centerPageOnStepKeepingCallouts:NO];
+
+}//end centerPageOnStep
+
+
+//========== centerPageOnStepKeepingCallouts ===================================
+- (void) centerPageOnStepKeepingCallouts
+{
+	[self centerPageOnStepKeepingCallouts:YES];
+
+}//end centerPageOnStepKeepingCallouts
+
+
+//========== centerPageOnStepKeepingCallouts: ==================================
+- (void) centerPageOnStepKeepingCallouts:(BOOL)keepsCallouts
+{
 	LDrawModel *model = self.model;
 
 	if (self.camera == nil || [LDrawStepPartListPolicy drawsPageInModel:model] == NO) {
@@ -1603,7 +1651,7 @@ static Box2 BoxAroundPoints(NSData *points)
 	// The outline may be from before the change that asks for this.
 	self->assemblyOutline = nil;
 
-	[self startLayout];
+	[self startLayoutKeepingCallouts:keepsCallouts];
 
 	LDrawStepLayoutCache	*cache	= self.layoutCache;
 	NSString				*key	= [self centerKey];
@@ -1634,7 +1682,7 @@ static Box2 BoxAroundPoints(NSData *points)
 		}
 	}];
 
-}//end centerPageOnStep
+}//end centerPageOnStepKeepingCallouts:
 
 
 //========== centerPageOnPresentation:keepingItOnScreen: =======================

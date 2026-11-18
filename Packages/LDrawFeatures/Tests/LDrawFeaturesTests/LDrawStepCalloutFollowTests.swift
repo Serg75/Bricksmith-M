@@ -1507,6 +1507,53 @@ extension StepPartListStaticSettings {
             withExtendedLifetime(fixture.file) {}
         }
 
+        @Test("A box that forgets its side goes to the place a first layout gives it, by a move")
+        func automaticBoxForgetsItsSide() throws {
+            LDrawStepPartList.setPlacesCalloutsAutomatically(true)
+            defer { LDrawStepPartList.setPlacesCalloutsAutomatically(false) }
+
+            let fixture = pageModel(["CALLOUT PLACEMENT RIGHT CENTER ASSEM OUTSIDE"])
+            var held = 0
+
+            // What it calls out goes from the left edge to places across the assembly.
+            for x in stride(from: 440.0, through: 620.0, by: 20.0) {
+                let aim = Point2(x: x, y: 420)
+                let first = LDrawStepPartListPresentation(model: fixture.model, host: host())
+                first.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil, places: [arrowPlaces(aim)],
+                                        arrangement: LDrawStepCalloutArrangement())
+                let best = try #require(first.calloutBoxes.first).frameRect
+
+                let presentation = LDrawStepPartListPresentation(model: fixture.model, host: host())
+                let box = try #require(presentation.calloutBoxes.first)
+                let arrangement = LDrawStepCalloutArrangement()
+                func place(_ aim: Point2, at time: Double) {
+                    arrangement.time = time
+                    presentation.placeCalloutBoxes(aroundAssembly: bigAssembly, outline: nil,
+                                                   places: [arrowPlaces(aim)], arrangement: arrangement)
+                }
+                place(Point2(x: 320, y: 420), at: 10)
+                place(aim, at: 11)
+                place(aim, at: 12)
+                guard same(box.frameRect.origin, best.origin) == false else {
+                    continue
+                }
+                held += 1
+                let kept = box.frameRect
+
+                // It sets out from where it was, and arrives where a first layout puts it.
+                arrangement.forgetSides()
+                place(aim, at: 13)
+                #expect(same(box.frameRect.origin, kept.origin), "aim \(x)")
+                #expect(arrangement.isMoving, "aim \(x)")
+                place(aim, at: 14)
+                #expect(same(box.frameRect.origin, best.origin), "aim \(x)")
+            }
+
+            // Some of them were held on their side by the gain a change must bring.
+            #expect(held > 0)
+            withExtendedLifetime(fixture.file) {}
+        }
+
         @Test("Sides taken while the boxes were placed automatically are forgotten when the file places them")
         func automaticSidesAreForgotten() throws {
             let fixture = pageModel(["CALLOUT PLACEMENT RIGHT CENTER ASSEM OUTSIDE"])
