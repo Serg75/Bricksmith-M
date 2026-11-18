@@ -398,6 +398,7 @@
 		BB0300000000000000000017 /* LDrawStepEditing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000017 /* LDrawStepEditing */; };
 		BB0300000000000000000021 /* LDrawCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000021 /* LDrawCore */; };
 		BB0300000000000000000022 /* LDrawFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000022 /* LDrawFeatures */; };
+		BB0300000000000000000025 /* LDrawTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = BB0200000000000000000025 /* LDrawTestSupport */; };
 		BB11000000000000000000 /* StepPartListView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000000 /* StepPartListView.h */; };
 		BB11000000000000000001 /* StepPartListView.m in Sources */ = {isa = PBXBuildFile; fileRef = BB10000000000000000001 /* StepPartListView.m */; };
 		BB11000000000000000002 /* StepPartListChromeView.h in Headers */ = {isa = PBXBuildFile; fileRef = BB10000000000000000002 /* StepPartListChromeView.h */; };
@@ -845,6 +846,7 @@
 			files = (
 				BB0300000000000000000021 /* LDrawCore in Frameworks */,
 				BB0300000000000000000022 /* LDrawFeatures in Frameworks */,
+				BB0300000000000000000025 /* LDrawTestSupport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1738,6 +1740,7 @@
 			packageProductDependencies = (
 				BB0200000000000000000021 /* LDrawCore */,
 				BB0200000000000000000022 /* LDrawFeatures */,
+				BB0200000000000000000025 /* LDrawTestSupport */,
 			);
 			productName = UnitTests;
 			productReference = 95D021ED29B1F482001F2B4D /* UnitTests.xctest */;
@@ -2963,6 +2966,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
 			productName = LDrawFeatures;
+		};
+		BB0200000000000000000025 /* LDrawTestSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0100000000000000000001 /* XCLocalSwiftPackageReference ".." */;
+			productName = LDrawTestSupport;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

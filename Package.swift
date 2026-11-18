@@ -26,6 +26,9 @@ let package = Package(
         .library(name: "LDrawRebrickable", targets: ["LDrawRebrickable"]),
         // Updates of an LDraw folder from LDraw's part library. Uses the network.
         .library(name: "LDrawLibraryUpdate", targets: ["LDrawLibraryUpdate"]),
+        // Test helpers for the Mac app's unit tests, which build some of the packages' test
+        // files. It uses Swift Testing, so only a test bundle can link it.
+        .library(name: "LDrawTestSupport", targets: ["LDrawTestSupport"]),
     ],
     targets: [
         .target(
@@ -120,7 +123,7 @@ let package = Package(
                 .linkedLibrary("z"),
             ]
         ),
-        // Helpers for the test targets. No product uses it.
+        // Helpers for the test targets.
         .target(
             name: "LDrawTestSupport",
             path: "Packages/LDrawTestSupport/Sources/LDrawTestSupport"
