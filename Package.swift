@@ -20,7 +20,6 @@ let package = Package(
         .library(name: "LDrawStepRendering", targets: ["LDrawStepRendering"]),
         // What a host that edits callouts adds to that.
         .library(name: "LDrawStepEditing", targets: ["LDrawStepEditing"]),
-        .library(name: "LDrawConnectivity", targets: ["LDrawConnectivity"]),
         // Inventories, part availability, and the parts limit built from them. No network.
         .library(name: "LDrawInventory", targets: ["LDrawInventory"]),
         // Rebrickable's downloads, read into LDrawInventory's types. Uses the network.
@@ -93,12 +92,6 @@ let package = Package(
             name: "LDrawStepEditing",
             dependencies: ["LDrawCore", "LDrawFeatures"],
             path: "Packages/LDrawStepEditing/Sources/LDrawStepEditing",
-            publicHeadersPath: "include"
-        ),
-        .target(
-            name: "LDrawConnectivity",
-            dependencies: ["LDrawCore"],
-            path: "Packages/LDrawConnectivity/Sources/LDrawConnectivity",
             publicHeadersPath: "include"
         ),
         .target(
@@ -182,14 +175,6 @@ let package = Package(
             name: "LDrawLibraryUpdateTests",
             dependencies: ["LDrawLibraryUpdate", "LDrawTestSupport"],
             path: "Packages/LDrawLibraryUpdate/Tests/LDrawLibraryUpdateTests"
-        ),
-        .testTarget(
-            name: "LDrawConnectivityTests",
-            dependencies: ["LDrawConnectivity", "LDrawCore"],
-            path: "Packages/LDrawConnectivity/Tests/LDrawConnectivityTests",
-            resources: [
-                .copy("Fixtures"),
-            ]
         ),
     ]
 )
