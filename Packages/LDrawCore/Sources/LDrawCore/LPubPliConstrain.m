@@ -221,9 +221,6 @@ static NSString * const		COLUMNS_KEY	= @"columns";
 	self->_inches	= other->_inches;
 	self->_columns	= other->_columns;
 
-	// Then the text, in the form LPub3D writes.
-	[self updateCommandString];
-
 }//end adoptPropertiesFromCommand:
 
 
@@ -232,7 +229,7 @@ static NSString * const		COLUMNS_KEY	= @"columns";
 
 //========== constraintDescription =============================================
 ///
-/// @abstract	The mode and its argument, as they are written into the file.
+/// @abstract	The mode and its argument, as an edit writes them into the file.
 ///
 /// @discussion	Four decimals, matching LPub3D's page-size precision.
 ///

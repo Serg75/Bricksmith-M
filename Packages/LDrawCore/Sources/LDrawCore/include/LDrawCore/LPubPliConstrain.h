@@ -59,7 +59,8 @@ static inline LPubPliConstrainMode LPubPliConstrainModeForAxis(LPubPliAxis axis)
 /// @abstract   LPub PLI CONSTRAIN command: how the parts list box is packed.
 ///
 /// @discussion WIDTH and HEIGHT are read and written as inches, even in a DPCM
-///             file.
+///             file. A line read from a file or typed keeps its text; setting a
+///             property writes the line again, in the form LPub3D writes.
 ///
 //------------------------------------------------------------------------------
 @interface LPubPliConstrain : LPubCommand

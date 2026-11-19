@@ -8,9 +8,9 @@
 //  of its three branches, RESOLUTION, and PAGE SIZE / ORIENTATION.
 //
 //  A line we do not understand, including a bad spelling of one we do, stays
-//  a generic LPubCommand and is written back unchanged. CONSTRAIN, which we
-//  write, is written back in the form LPub3D writes. The other metas we
-//  understand keep their text as typed.
+//  a generic LPubCommand and is written back unchanged. The metas we
+//  understand keep their text as typed too, until a property is set: then
+//  CONSTRAIN, which we write, is written in the form LPub3D writes.
 //
 //  The fixtures use no type-1 lines. Parsing one loads the referenced file
 //  through LDrawPartLibrary, which needs a renderer the UnitTests target does
@@ -111,15 +111,24 @@ struct LPubPliMetaTests {
         }
     }
 
-    /// We write the canonical spelling, not the one we read. Four decimals is
-    /// the precision LPub3D uses.
-    @Test("A loosely written value is canonicalized on write")
-    func constrainCanonicalizesTheValue() throws {
-        var output = try written("0 !LPUB PLI CONSTRAIN WIDTH 2")
-        #expect(output == "0 !LPUB PLI CONSTRAIN WIDTH 2.0000")
+    /// Older LPub versions wrote six digits, and a value may be typed by hand.
+    @Test("A value written another way is written back as it was")
+    func constrainKeepsTheValueAsWritten() throws {
+        for line in ["0 !LPUB PLI CONSTRAIN WIDTH 2",
+                     "0 !LPUB PLI CONSTRAIN LOCAL HEIGHT .5",
+                     "0 !LPUB PLI CONSTRAIN LOCAL HEIGHT 0.876471"] {
+            let output = try written(line)
+            #expect(output == line)
+        }
+    }
 
-        output = try written("0 !LPUB PLI CONSTRAIN LOCAL HEIGHT .5")
-        #expect(output == "0 !LPUB PLI CONSTRAIN LOCAL HEIGHT 0.5000")
+    @Test("Setting a value read with six digits writes four")
+    func constrainSetterWritesFourDecimals() throws {
+        let constrain = try #require(parse("0 !LPUB PLI CONSTRAIN LOCAL HEIGHT 0.876471") as? LPubPliConstrain)
+
+        #expect(constrain.inches == 0.876471)
+        constrain.inches = 0.9
+        #expect(constrain.write() == "0 !LPUB PLI CONSTRAIN LOCAL HEIGHT 0.9000")
     }
 
     @Test("Editing a property rewrites the line")
@@ -151,7 +160,7 @@ struct LPubPliMetaTests {
 
         #expect(duplicate.inches == 2.5)
         #expect(duplicate.scope == .local)
-        #expect(duplicate.write() == "0 !LPUB PLI CONSTRAIN LOCAL WIDTH 2.5000")
+        #expect(duplicate.write() == "0 !LPUB PLI CONSTRAIN LOCAL WIDTH 2.5")
     }
 
     // MARK: - SHOW
@@ -561,7 +570,7 @@ struct LPubPliMetaTests {
         #expect(replacement.mode == .width)
         #expect(replacement.inches == 3)
         #expect(replacement.scope == .local)
-        #expect(replacement.write() == "0 !LPUB PLI CONSTRAIN LOCAL WIDTH 3.0000")
+        #expect(replacement.write() == "0 !LPUB PLI CONSTRAIN LOCAL WIDTH 3")
     }
 
     @Test("A CONSTRAIN retyped into text it does not parse becomes a plain command, word for word")
@@ -751,13 +760,13 @@ struct LPubPliMetaTests {
     // MARK: - Raw text edits
 
     /// A run of spaces counts as one delimiter, so the line still parses.
-    /// CONSTRAIN is then written back in its canonical form.
     @Test("Extra spaces between tokens still parse")
     func extraSpacesStillParse() throws {
-        let constrain = try #require(parse("0 !LPUB PLI   CONSTRAIN   LOCAL   WIDTH   2.5") as? LPubPliConstrain)
+        let line = "0 !LPUB PLI   CONSTRAIN   LOCAL   WIDTH   2.5"
+        let constrain = try #require(parse(line) as? LPubPliConstrain)
 
         #expect(constrain.mode == .width)
-        #expect(constrain.write() == "0 !LPUB PLI CONSTRAIN LOCAL WIDTH 2.5000")
+        #expect(constrain.write() == line)
     }
 
     /// LPub3D rewrites a line only when its user changes the setting.

@@ -196,8 +196,7 @@ static LPubMetaScope ScopeForKeyword(NSString *keyword)
 //==============================================================================
 - (BOOL) finishParsing:(NSScanner *)scanner
 {
-	// The line as typed, the same as an edit in the inspector. The setter
-	// parses it again, so CONSTRAIN still writes its own form.
+	// The line as typed, the same as an edit in the inspector.
 	self.lPubCommandString = [[scanner string] substringFromIndex:[scanner scanLocation]];
 
 	return YES;

@@ -3,8 +3,7 @@
 //  UnitTests
 //
 //  Opening and saving a file written by LPub3D must not change its metas.
-//  CONSTRAIN is written back in LPub3D's own spelling, and the other metas keep
-//  their text as it was, so a file already in that form comes out unchanged.
+//  Every meta keeps its text as it was, whichever LPub version wrote it.
 //
 //  The fixture uses type-2 lines in place of parts. Parsing a type-1 line loads
 //  the referenced file through LDrawPartLibrary, which needs a renderer the
@@ -21,7 +20,8 @@ import LDrawCore
 struct LPubPliRoundTripTests {
 
     /// Real LPub3D PLI metas: the ones we parse, in every scope, and a few
-    /// that we do not parse.
+    /// that we do not parse. The HEIGHT has six digits, as older LPub
+    /// versions wrote it.
     private static let fixture = """
         0 Parts List Fixture
         0 Name: main.ldr
@@ -43,6 +43,7 @@ struct LPubPliRoundTripTests {
         0 !LPUB PLI END
         2 24 0 20 0 20 20 0
         0 STEP
+        0 !LPUB PLI CONSTRAIN LOCAL HEIGHT 0.876471
         0 !LPUB PLI SHOW LOCAL FALSE
         0 !LPUB PLI BEGIN SUB 3070b.dat 4
         2 24 0 0 0 0 0 20
@@ -112,7 +113,7 @@ struct LPubPliRoundTripTests {
         }
 
         // The header metas land in the model's first step with the rest.
-        #expect(constrains == 3)
+        #expect(constrains == 4)
         #expect(shows == 2)
         // BEGIN IGN, its END, and the END that closes the SUB range. An END on
         // its own reads as an IGN terminator.
