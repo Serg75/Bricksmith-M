@@ -20,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawShaderRenderer
+/// @category   LDrawShaderRenderer (Draw)
 ///
 /// @abstract   Renderer hooks implemented by LDrawRenderMetal and
 ///             LDrawRenderOpenGL categories on LDrawShaderRenderer.

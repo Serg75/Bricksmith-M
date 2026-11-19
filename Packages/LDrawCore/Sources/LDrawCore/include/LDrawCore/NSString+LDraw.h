@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      NSString
+/// @category   NSString (LDraw)
 ///
 /// @abstract   Handy string utilities.
 ///

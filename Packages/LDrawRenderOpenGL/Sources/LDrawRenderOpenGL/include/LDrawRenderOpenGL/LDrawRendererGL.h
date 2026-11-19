@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawRenderer
+/// @category   LDrawRenderer (OpenGL)
 ///
 /// @abstract   Draws an LDrawFile with OpenGL.
 ///

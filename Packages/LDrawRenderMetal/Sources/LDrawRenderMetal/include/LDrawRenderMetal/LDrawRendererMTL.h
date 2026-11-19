@@ -19,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawRenderer
+/// @category   LDrawRenderer (Metal)
 ///
 /// @abstract   Draws an LDrawFile with Metal.
 ///

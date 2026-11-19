@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      NSScanner
+/// @category   NSScanner (LDraw)
 ///
 /// @abstract   Extends functionality for NSScanner.
 ///

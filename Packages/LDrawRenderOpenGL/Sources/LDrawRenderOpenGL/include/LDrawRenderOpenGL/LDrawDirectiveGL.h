@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawDirective
+/// @category   LDrawDirective (OpenGL)
 ///
 /// @abstract   OpenGL drawing category on LDrawDirective.
 ///

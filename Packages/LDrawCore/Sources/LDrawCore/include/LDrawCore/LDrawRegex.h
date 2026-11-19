@@ -14,7 +14,7 @@
 
 //------------------------------------------------------------------------------
 ///
-/// @class      NSString
+/// @category   NSString (LDrawRegex)
 ///
 /// @abstract   Foundation-only NSString regex helpers used by the LDraw parser
 ///             and LSynth code. Replaces RegexKitLite for SPM and ARC builds.

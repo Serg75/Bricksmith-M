@@ -22,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawShaderRenderer
+/// @category   LDrawShaderRenderer (OpenGL)
 ///
 /// @abstract   an implementation of the LDrawCoreRenderer API using GL shaders.
 ///             The renderer maintains a stack view of OpenGL state; as

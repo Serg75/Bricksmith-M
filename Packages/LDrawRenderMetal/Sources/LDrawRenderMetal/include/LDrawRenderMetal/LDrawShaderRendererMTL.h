@@ -18,7 +18,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 //------------------------------------------------------------------------------
 ///
-/// @class      LDrawShaderRenderer
+/// @category   LDrawShaderRenderer (Metal)
 ///
 /// @abstract   an implementation of the LDrawCoreRenderer API using shaders.
 ///
