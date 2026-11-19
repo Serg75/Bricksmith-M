@@ -44,8 +44,12 @@
 // On LPub3D's page, puts the callouts' boxes by itself and does not read where
 // the file puts them. Off by default.
 #define STEP_CALLOUTS_PLACED_AUTOMATICALLY_KEY		@"Step Callouts Placed Automatically"
-/// Path to LPub3D's PLI control file. Absent means LPub3D's own file, if it is
-/// installed.
+/// Where the parts list reads its part orientations: 0 for the file Bricksmith
+/// ships, 1 for LPub3D's own, 2 for the chosen file. Absent means the chosen
+/// file if there is one, else Bricksmith's.
+#define STEP_PART_LIST_ORIENTATIONS_SOURCE_KEY		@"Step Part List Orientations Source"
+/// Path to the PLI control file the user chose. Kept when another source is
+/// picked, so the menu can offer it again.
 #define STEP_PART_LIST_ORIENTATIONS_FILE_KEY		@"Step Part List Orientations File"
 // The parts limit, as -[LDrawPartLimit dictionaryRepresentation] gives it.
 // Absent means no limit.

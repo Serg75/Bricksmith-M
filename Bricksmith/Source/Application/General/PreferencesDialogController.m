@@ -61,6 +61,18 @@ static NSString * const PreferencesPaneLSynth	= @"PreferencesTabLSynth";
 static const CGFloat kSidebarWidth		= 180;
 static const CGFloat kMinWindowHeight	= 320;
 
+// Where the parts list reads its part orientations, as stored under
+// STEP_PART_LIST_ORIENTATIONS_SOURCE_KEY and used as menu tags.
+typedef NS_ENUM(NSInteger, StepPartListOrientationsSource)
+{
+	StepPartListOrientationsBricksmith	= 0,
+	StepPartListOrientationsLPub		= 1,
+	StepPartListOrientationsFile		= 2
+};
+
+// The tag of the menu item that opens a file chooser. Never stored.
+static const NSInteger kStepPartListOrientationsChooseTag = -1;
+
 static inline NSData *archivedData(id object) {
     return [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:nil];
 }
@@ -298,6 +310,7 @@ static NSArray<NSNumber *> *MarkColorComponents(NSColor *color)
 	NSSwitch		*stepPartListLPubScaleSwitch;
 	NSSwitch		*stepPageBoldOutlinesSwitch;
 	NSSwitch		*stepCalloutsAutomaticSwitch;
+	NSPopUpButton	*stepPartListOrientationsPopUp;
 	NSTextField		*stepPartListOrientationsField;
 
 	// Parts Pane
@@ -797,10 +810,8 @@ PreferencesDialogController *preferencesDialog = nil;
 	NSString	*showListTitle		= NSLocalizedString(@"Show the step's parts list in Steps view mode", nil);
 	NSTextField	*percentLabel		= [PreferencesForm unitLabelWithString:@"%"];
 	NSTextField	*orientationsNote	= nil;
-	NSButton	*chooseButton		= nil;
-	NSButton	*defaultButton		= nil;
+	CGFloat		 orientationsWidth	= 0;
 	NSView		*transparencyGroup	= nil;
-	NSView		*orientationsGroup	= nil;
 	NSView		*goesBackRow		= nil;
 	NSView		*hideRow			= nil;
 	NSView		*ghostGroupsRow		= nil;
@@ -852,18 +863,27 @@ PreferencesDialogController *preferencesDialog = nil;
 	stepCalloutsAutomaticSwitch = [PreferencesForm switchWithTarget:self
 															 action:@selector(stepCalloutsAutomaticChanged:)];
 
-	chooseButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Choose…", nil)
-											 target:self
-											 action:@selector(chooseStepPartListOrientations:)];
-	defaultButton = [PreferencesForm buttonWithTitle:NSLocalizedString(@"Default", nil)
-											  target:self
-											  action:@selector(useDefaultStepPartListOrientations:)];
-	orientationsGroup = [PreferencesForm controlGroup:@[chooseButton, defaultButton]];
+	// The chosen file is added when the values are shown.
+	stepPartListOrientationsPopUp = [PreferencesForm popUpWithTitles:@[NSLocalizedString(@"Bricksmith", nil),
+																	   NSLocalizedString(@"LPub3D", nil),
+																	   NSLocalizedString(@"Choose File…", nil)]
+																tags:@[@(StepPartListOrientationsBricksmith),
+																	   @(StepPartListOrientationsLPub),
+																	   @(kStepPartListOrientationsChooseTag)]
+															  target:self
+															  action:@selector(stepPartListOrientationsChanged:)];
+	[stepPartListOrientationsPopUp setAutoenablesItems:NO];
+	// A fixed width, so a long file name is cut short instead of squeezing the
+	// note, whose wrap width is set from the menu's width.
+	[[stepPartListOrientationsPopUp cell] setLineBreakMode:NSLineBreakByTruncatingMiddle];
+	orientationsWidth = [stepPartListOrientationsPopUp fittingSize].width;
+	[[[stepPartListOrientationsPopUp widthAnchor] constraintEqualToConstant:orientationsWidth] setActive:YES];
 	orientationsRow = [PreferencesForm rowWithTitle:NSLocalizedString(@"Part orientations", nil)
 											   note:nil
-											control:orientationsGroup
+											control:stepPartListOrientationsPopUp
 										  noteField:&orientationsNote];
 	stepPartListOrientationsField = orientationsNote;
+	[stepPartListOrientationsField setSelectable:YES];
 
 	goesBackRow		= [PreferencesForm rowWithTitle:goesBackTitle control:stepSelectionGoesBackSwitch];
 	hideRow			= [PreferencesForm rowWithTitle:NSLocalizedString(@"Hide in Steps view mode", nil)
@@ -2021,15 +2041,42 @@ PreferencesDialogController *preferencesDialog = nil;
 }//end stepCalloutsAutomaticChanged:
 
 
-//========== chooseStepPartListOrientations: ===================================
+//========== stepPartListOrientationsChanged: ==================================
 //
-// Purpose:		Picks the PLI control file the parts list orients its parts by.
+// Purpose:		Switches the file the parts list orients its parts by, or opens
+//				a chooser for one.
 //
 //==============================================================================
-- (IBAction) chooseStepPartListOrientations:(id)sender
+- (IBAction) stepPartListOrientationsChanged:(id)sender
 {
-	NSOpenPanel	*chooser	= [NSOpenPanel openPanel];
-	NSString	*current	= [[self class] stepPartListOrientationsPath];
+	NSInteger tag = [[stepPartListOrientationsPopUp selectedItem] tag];
+
+	if(tag == kStepPartListOrientationsChooseTag)
+	{
+		[self chooseStepPartListOrientations];
+		return;
+	}
+
+	[[NSUserDefaults standardUserDefaults] setInteger:tag forKey:STEP_PART_LIST_ORIENTATIONS_SOURCE_KEY];
+
+	[[self class] loadStepPartListOrientations];
+	[self showStepPartListOrientations];
+	[self postStepPartListDidChange];
+
+}//end stepPartListOrientationsChanged:
+
+
+//========== chooseStepPartListOrientations ====================================
+//
+// Purpose:		Picks a PLI control file and uses it. A cancel puts the menu
+//				back on the file in use.
+//
+//==============================================================================
+- (void) chooseStepPartListOrientations
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	NSOpenPanel		*chooser		= [NSOpenPanel openPanel];
+	NSString		*current		= [[self class] stepPartListOrientationsPath];
 
 	[chooser setCanChooseFiles:YES];
 	[chooser setCanChooseDirectories:NO];
@@ -2040,60 +2087,69 @@ PreferencesDialogController *preferencesDialog = nil;
 		[chooser setDirectoryURL:[NSURL fileURLWithPath:[current stringByDeletingLastPathComponent]]];
 
 	if([chooser runModal] != NSModalResponseOK || [[chooser URLs] count] == 0)
+	{
+		[self showStepPartListOrientations];
 		return;
+	}
 
-	[[NSUserDefaults standardUserDefaults] setObject:[[[chooser URLs] objectAtIndex:0] path]
-											  forKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
-
-	[[self class] loadStepPartListOrientations];
-	[self showStepPartListOrientations];
-	[self postStepPartListDidChange];
-
-}//end chooseStepPartListOrientations:
-
-
-//========== useDefaultStepPartListOrientations: ===============================
-//
-// Purpose:		Goes back to LPub3D's own control file, if it is installed.
-//
-//==============================================================================
-- (IBAction) useDefaultStepPartListOrientations:(id)sender
-{
-	[[NSUserDefaults standardUserDefaults] removeObjectForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+	[userDefaults setObject:[[[chooser URLs] objectAtIndex:0] path] forKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+	[userDefaults setInteger:StepPartListOrientationsFile forKey:STEP_PART_LIST_ORIENTATIONS_SOURCE_KEY];
 
 	[[self class] loadStepPartListOrientations];
 	[self showStepPartListOrientations];
 	[self postStepPartListDidChange];
 
-}//end useDefaultStepPartListOrientations:
+}//end chooseStepPartListOrientations
 
 
 //========== showStepPartListOrientations ======================================
 //
-// Purpose:		Says which control file is in use, and whether it was read.
+// Purpose:		Fills the menu, selects the file in use, and shows its path and
+//				how many parts it orients, or why it gives none.
 //
 //==============================================================================
 - (void) showStepPartListOrientations
 {
-	NSUserDefaults				*userDefaults	= [NSUserDefaults standardUserDefaults];
-	NSString					*path			= [[self class] stepPartListOrientationsPath];
-	LDrawPartListOrientations	*orientations	= [LDrawStepPartList partOrientations];
-	BOOL						 fileWasChosen	= ([[userDefaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY] length] > 0);
-	NSString					*text			= nil;
+	NSUserDefaults					*defaults		= [NSUserDefaults standardUserDefaults];
+	NSPopUpButton					*popUp			= stepPartListOrientationsPopUp;
+	NSMenu							*menu			= [popUp menu];
+	NSString						*chosenPath		= [defaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+	NSString						*lpubPath		= [LDrawPartListOrientations lpubDefaultFilePath];
+	StepPartListOrientationsSource	 source			= [[self class] stepPartListOrientationsSource];
+	NSString						*path			= [[self class] stepPartListOrientationsPath];
+	LDrawPartListOrientations		*orientations	= [LDrawStepPartList partOrientations];
+	NSMenuItem						*lpubItem		= [menu itemWithTag:StepPartListOrientationsLPub];
+	NSMenuItem						*item			= nil;
+	NSString						*text			= nil;
+
+	// Items are added to the menu, not the button, which would drop one that
+	// has the same title as another.
+	while([popUp numberOfItems] > 2)
+		[popUp removeItemAtIndex:2];
+	[menu addItem:[NSMenuItem separatorItem]];
+
+	if([chosenPath length] > 0)
+	{
+		item = [menu addItemWithTitle:[chosenPath lastPathComponent] action:NULL keyEquivalent:@""];
+		[item setTag:StepPartListOrientationsFile];
+		[item setToolTip:chosenPath];
+	}
+
+	item = [menu addItemWithTitle:NSLocalizedString(@"Choose File…", nil) action:NULL keyEquivalent:@""];
+	[item setTag:kStepPartListOrientationsChooseTag];
+
+	[lpubItem setEnabled:(lpubPath != nil)];
+	[lpubItem setToolTip:lpubPath];
+	[popUp selectItemWithTag:source];
 
 	if(path == nil)
 		text = NSLocalizedString(@"StepPartListOrientationsNone", nil);
 	else if(orientations == nil)
 		text = [NSString stringWithFormat:NSLocalizedString(@"StepPartListOrientationsUnreadableFormat", nil),
-				[path lastPathComponent]];
+				[path stringByAbbreviatingWithTildeInPath]];
 	else
-	{
-		NSString *format = fileWasChosen ? NSLocalizedString(@"StepPartListOrientationsChosenFormat", nil)
-										 : NSLocalizedString(@"StepPartListOrientationsDefaultFormat", nil);
-
-		text = [NSString stringWithFormat:format, [path lastPathComponent],
-				(unsigned long)[orientations count]];
-	}
+		text = [NSString stringWithFormat:NSLocalizedString(@"StepPartListOrientationsCountFormat", nil),
+				(unsigned long)[orientations count], [path stringByAbbreviatingWithTildeInPath]];
 
 	[stepPartListOrientationsField setStringValue:text];
 	[stepPartListOrientationsField setToolTip:path];
@@ -2870,20 +2926,54 @@ PreferencesDialogController *preferencesDialog = nil;
 }//end ensureDefaults
 
 
+//---------- stepPartListOrientationsSource --------------------------[static]--
+//
+// Purpose:		Which control file is in use. Bricksmith's own when nothing
+//				valid is stored.
+//
+//------------------------------------------------------------------------------
++ (StepPartListOrientationsSource) stepPartListOrientationsSource
+{
+	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
+	BOOL			 hasChosenFile	= ([[userDefaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY] length] > 0);
+	NSInteger		 source			= [userDefaults integerForKey:STEP_PART_LIST_ORIENTATIONS_SOURCE_KEY];
+
+	// A file chosen before there was a source setting stays in use.
+	if([userDefaults objectForKey:STEP_PART_LIST_ORIENTATIONS_SOURCE_KEY] == nil)
+		return hasChosenFile ? StepPartListOrientationsFile : StepPartListOrientationsBricksmith;
+
+	switch(source)
+	{
+		case StepPartListOrientationsLPub:
+			return StepPartListOrientationsLPub;
+		case StepPartListOrientationsFile:
+			return hasChosenFile ? StepPartListOrientationsFile : StepPartListOrientationsBricksmith;
+		default:
+			return StepPartListOrientationsBricksmith;
+	}
+
+}//end stepPartListOrientationsSource
+
+
 //---------- stepPartListOrientationsPath ----------------------------[static]--
 //
-// Purpose:		The control file in use: the one chosen, else LPub3D's own.
+// Purpose:		The control file in use, or nil when LPub3D's is picked but not
+//				installed.
 //
 //------------------------------------------------------------------------------
 + (NSString *) stepPartListOrientationsPath
 {
-	NSUserDefaults	*userDefaults	= [NSUserDefaults standardUserDefaults];
-	NSString		*chosenPath		= [userDefaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+	NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
 
-	if([chosenPath length] > 0)
-		return chosenPath;
-
-	return [LDrawPartListOrientations lpubDefaultFilePath];
+	switch([self stepPartListOrientationsSource])
+	{
+		case StepPartListOrientationsLPub:
+			return [LDrawPartListOrientations lpubDefaultFilePath];
+		case StepPartListOrientationsFile:
+			return [userDefaults stringForKey:STEP_PART_LIST_ORIENTATIONS_FILE_KEY];
+		default:
+			return [[NSBundle mainBundle] pathForResource:@"pli" ofType:@"mpd"];
+	}
 
 }//end stepPartListOrientationsPath
 

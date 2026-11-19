@@ -152,6 +152,8 @@
 		18B32A6D2B9A0F0B00A97084 /* InspectionLPubRemoveGroup.h in Headers */ = {isa = PBXBuildFile; fileRef = 95DFF98C298F165300E7BF76 /* InspectionLPubRemoveGroup.h */; };
 		2BB59F4309FEFE960077A885 /* AMSProgressBar.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BB5975E09FEFD250077A885 /* AMSProgressBar.framework */; };
 		2BF2E2CD0AB0FBB50026D5DB /* MLCad.ini in Resources */ = {isa = PBXBuildFile; fileRef = 2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */; };
+		4C5E0C5CA6A3A4506513270E /* pli.mpd in Resources */ = {isa = PBXBuildFile; fileRef = 4C5E269EF2A74DE452E6B438 /* pli.mpd */; };
+		4C5E892FD23F0824128B2F33 /* pli.mpd in Resources */ = {isa = PBXBuildFile; fileRef = 4C5E269EF2A74DE452E6B438 /* pli.mpd */; };
 		2BF2E3030AB0FC5E0026D5DB /* MovePanel.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */; };
 		2BF2E3040AB0FC5E0026D5DB /* MovePanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BF2E3000AB0FC5E0026D5DB /* MovePanel.m */; };
 		2BF2E3050AB0FC5E0026D5DB /* RotationPanelController.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF2E3010AB0FC5E0026D5DB /* RotationPanelController.h */; };
@@ -693,6 +695,7 @@
 		2B1C603A09FF00B3001EE8FA /* AMSProgressBar.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AMSProgressBar.framework; path = ../AMSProgressBar/build/Release/AMSProgressBar.framework; sourceTree = SOURCE_ROOT; };
 		2BB5975809FEFD250077A885 /* AMSProgressBar.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AMSProgressBar.xcodeproj; path = ../AMSProgressBar/AMSProgressBar.xcodeproj; sourceTree = SOURCE_ROOT; };
 		2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = MLCad.ini; sourceTree = "<group>"; };
+		4C5E269EF2A74DE452E6B438 /* pli.mpd */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = pli.mpd; sourceTree = "<group>"; };
 		2BF2E2FF0AB0FC5E0026D5DB /* MovePanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MovePanel.h; sourceTree = "<group>"; };
 		2BF2E3000AB0FC5E0026D5DB /* MovePanel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MovePanel.m; sourceTree = "<group>"; };
 		2BF2E3010AB0FC5E0026D5DB /* RotationPanelController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RotationPanelController.h; sourceTree = "<group>"; };
@@ -1191,6 +1194,7 @@
 				0B2FAE5F101972DF007BA948 /* Bum.ldr */,
 				0B9907620DD7EDBB003F6B13 /* LDConfig.ldr */,
 				2BF2E2CC0AB0FBB50026D5DB /* MLCad.ini */,
+				4C5E269EF2A74DE452E6B438 /* pli.mpd */,
 				0BC6AACC0987296700505A88 /* Help */,
 				0B04E9461093BB4200E201EE /* Interface */,
 				0BA3BE421772B3E10087579B /* LDraw */,
@@ -1827,6 +1831,7 @@
 				0BA3BE5E1772B3E10087579B /* LDraw in Resources */,
 				95D8939316550B6400AA055B /* Legonian Ruler.pdf in Resources */,
 				2BF2E2CD0AB0FBB50026D5DB /* MLCad.ini in Resources */,
+				4C5E0C5CA6A3A4506513270E /* pli.mpd in Resources */,
 				0B9FE55008AD971E0046511D /* InfoPlist.strings in Resources */,
 				0B9FE56608AD97280046511D /* Credits.rtf in Resources */,
 				0BC6AAEB0987296700505A88 /* Help in Resources */,
@@ -1875,6 +1880,7 @@
 				956D9BFA2A30768000FA956B /* Legonian Ruler.pdf in Resources */,
 				956D9CAD2A30ADC400FA956B /* LDrawViewAccessories.xib in Resources */,
 				956D9BFB2A30768000FA956B /* MLCad.ini in Resources */,
+				4C5E892FD23F0824128B2F33 /* pli.mpd in Resources */,
 				956D9BFD2A30768000FA956B /* InfoPlist.strings in Resources */,
 				956D9BFE2A30768000FA956B /* Credits.rtf in Resources */,
 				956D9BFF2A30768000FA956B /* Help in Resources */,
