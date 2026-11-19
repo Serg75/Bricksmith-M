@@ -391,7 +391,7 @@ int floatNearGrid(double v, double grid, double epsi)
 {
 	if([self isOmitted] == NO)
 	{
-		BOOL	drawAsGhost		= (self->_groupVisibility == LDrawGroupVisibilityGhosted);
+		BOOL	drawAsGhost		= (self->_groupVisibility == LDrawGroupVisibilityGhosted || self->_faded);
 		float	mark[4];
 		BOOL	isMarked		= [self getLimitMark:mark];
 		BOOL	isDimmed		= NO;
@@ -998,6 +998,22 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 	}
 
 }//end setGroupVisibility:
+
+
+//========== setFaded: =========================================================
+///
+/// @abstract	Sets whether the part draws faint. Only how it draws changes.
+///
+//==============================================================================
+- (void) setFaded:(BOOL)faded
+{
+	if(self->_faded != faded)
+	{
+		self->_faded = faded;
+		[self invalCache:DisplayList];
+	}
+
+}//end setFaded:
 
 
 //========== isOmitted =========================================================

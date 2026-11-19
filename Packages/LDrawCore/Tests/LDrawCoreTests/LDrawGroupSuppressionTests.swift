@@ -528,4 +528,36 @@ final class LDrawGroupSuppressionTests {
         #expect(hose.groupVisibility == .ghosted)
         #expect(hose.isOmitted == false)
     }
+
+    // MARK: - A fade the host sets
+    //
+    // It draws like a ghost, but it is the host's: the removals never touch it.
+
+    @Test("Working out the removals again leaves a faded part faded")
+    func removalsLeaveAFadeAlone() throws {
+        pinPreferences(ghost: true)
+        let model = placeholderSwapModel()
+        let doors = try placeholder(of: model)
+        let ungrouped = try #require(directives(inStep: 1, of: model).first as? LDrawPart)
+        model.setStepDisplay(false)
+
+        doors.isFaded = true
+        ungrouped.isFaded = true
+        model.updateGroupSuppressionIfNeeded()
+
+        #expect(doors.groupVisibility == .ghosted)
+        #expect(doors.isFaded == true)
+        #expect(ungrouped.groupVisibility == .visible)
+        #expect(ungrouped.isFaded == true)
+    }
+
+    @Test("A faded part is still drawn and picked, and a copy of it is not faded")
+    func fadedPartIsNotOmitted() throws {
+        let part = LDrawPart()
+        part.isFaded = true
+
+        #expect(part.isOmitted == false)
+        #expect(part.groupVisibility == .visible)
+        #expect(try #require(part.copy() as? LDrawPart).isFaded == false)
+    }
 }

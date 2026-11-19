@@ -78,6 +78,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// one band around all of it. Neither saved nor copied.
 @property (nonatomic) LDrawRenderHighlight highlight;
 
+/// Whether the part draws faint, at the ghost alpha, as the host chooses: for
+/// example to set back what lies outside the part of a model being worked on.
+/// A submodel fades with all its parts. The model never changes it, and the
+/// part's bounds and picking stay as they are. Neither saved nor copied.
+@property (nonatomic, getter=isFaded) BOOL faded;
+
 /// The style of the parts limit's marks. The host sets it from its settings,
 /// then redraws. With LDrawRenderMarkNone no part is marked.
 + (LDrawRenderMarkStyle) limitMarkStyle;
