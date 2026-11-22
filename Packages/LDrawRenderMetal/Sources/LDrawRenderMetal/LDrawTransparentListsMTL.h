@@ -19,7 +19,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LDrawTransparentLists : NSObject
 
 /// YES when the GPU can keep the lists. They need raster order groups, and a
-/// tile shader to empty them inside the render pass.
+/// tile shader to empty them inside the render pass: an Apple GPU from the A12
+/// on, and on iOS version 17 or later.
 + (BOOL)isSupported;
 
 /// YES when the lists can have more room than a frame drawn with this uniform

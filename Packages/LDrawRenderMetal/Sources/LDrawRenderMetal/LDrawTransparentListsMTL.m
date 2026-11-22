@@ -76,14 +76,21 @@ static const NSUInteger	FramesBeforeShrinking		= 30;
 // Purpose:		Whether the GPU can keep the lists. A pixel's fragments must
 //				be in its list before the blend reads it, and a tile shader
 //				empties the lists inside the render pass. That takes an Apple
-//				GPU.
+//				GPU from the A12 on, and on iOS version 17 or later.
+//
+// Notes:		An A11 with iOS 16 has the features, but the list shaders read
+//				outside their buffers there, and the system then drops every
+//				frame of the app.
 //
 //------------------------------------------------------------------------------
 + (BOOL)isSupported
 {
 	id<MTLDevice> device = MetalGPU.device;
 
-	return [device areRasterOrderGroupsSupported] && [device supportsFamily:MTLGPUFamilyApple4];
+	if (@available(iOS 17.0, *)) {
+		return [device areRasterOrderGroupsSupported] && [device supportsFamily:MTLGPUFamilyApple5];
+	}
+	return NO;
 
 } // end isSupported
 
