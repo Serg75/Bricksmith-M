@@ -17,6 +17,18 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// The domain of the errors a renderer makes itself, beside Metal's own.
+extern NSErrorDomain const LDrawRendererErrorDomain;
+
+typedef NS_ERROR_ENUM(LDrawRendererErrorDomain, LDrawRendererError) {
+	/// A picture could not get the memory for its texture or its pixels.
+	LDrawRendererErrorPictureMemory		= 1,
+	/// A picture's drawing could not be encoded.
+	LDrawRendererErrorPictureNotEncoded	= 2,
+	/// The GPU failed without an error from Metal.
+	LDrawRendererErrorGPUFailed			= 3,
+};
+
 //------------------------------------------------------------------------------
 ///
 /// @category   LDrawRenderer (Metal)
@@ -42,6 +54,15 @@ NS_ASSUME_NONNULL_BEGIN
 /// Called with how long the GPU took for each frame drawn in a view, on a
 /// Metal completion thread. Nil stops it.
 - (void) setFrameGPUTimeHandler:(nullable void (^)(CFTimeInterval seconds))handler;
+
+/// Called on the main thread when the GPU fails a frame drawn in a view or an
+/// off-screen picture, or a picture cannot be made. `picture` tells which. One
+/// handler serves every renderer. Nil stops it.
++ (void) setGPUErrorHandler:(nullable void (^)(NSError *error, BOOL picture))handler;
+
+/// Whether transparent parts are drawn with per-pixel lists on this device.
+/// Without them they are blended one at a time.
++ (BOOL) drawsTransparentPartsWithLists;
 
 // Pictures
 /// Draws the directive once, off screen, into a picture of the given size in pixels.

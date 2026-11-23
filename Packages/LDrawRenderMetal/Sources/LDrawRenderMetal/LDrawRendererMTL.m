@@ -137,7 +137,11 @@
 #define DEBUG_DRAWING				0
 #define SIMPLIFICATION_THRESHOLD	0.3 // seconds
 
+NSErrorDomain const LDrawRendererErrorDomain = @"LDrawRendererErrorDomain";
+
 static id<MTLCommandQueue>			_commandQueue;
+// Read and written on the main thread only.
+static void							(^_gpuErrorHandler)(NSError *error, BOOL picture);
 static id<MTLRenderPipelineState>	_pipelineState;
 static id<MTLRenderPipelineState>	_wideLinePipelineState;
 static id<MTLRenderPipelineState>	_marqueePipelineState;
@@ -191,6 +195,40 @@ static const CGFloat		HighlightWidths[HighlightLevelCount]		= { 3.0, 2.0 };
 static const float			HighlightShades[HighlightLevelCount]		= { 1.0f, 0.75f };
 static const float			HighlightHiddenAlphas[HighlightLevelCount]	= { 0.35f, 0.25f };
 static const vector_float3	HighlightDefaultColor						= { 1.0f, 0.55f, 0.0f };
+
+
+
+//---------- rendererError() --------------------------------------------------
+//
+// Purpose:		An error in the renderer's own domain.
+//
+//------------------------------------------------------------------------------
+static NSError *rendererError(LDrawRendererError code, NSString *description)
+{
+	return [NSError errorWithDomain:LDrawRendererErrorDomain
+							   code:code
+						   userInfo:@{NSLocalizedDescriptionKey: description}];
+
+} // end rendererError
+
+
+//---------- reportGPUError() -------------------------------------------------
+//
+// Purpose:		Passes a failure to the handler on the main thread. A failure
+//				without an error from Metal gets one of the renderer's own.
+//
+//------------------------------------------------------------------------------
+static void reportGPUError(NSError *error, BOOL picture)
+{
+	NSError *reported = error ?: rendererError(LDrawRendererErrorGPUFailed, @"The GPU failed.");
+
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (_gpuErrorHandler != nil) {
+			_gpuErrorHandler(reported, picture);
+		}
+	});
+
+} // end reportGPUError
 
 
 static const void * kLDrawRendererMetalDrawStateKey = &kLDrawRendererMetalDrawStateKey;
@@ -880,6 +918,9 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	struct TransparencyUniform	uniform		= lists.uniform;
 	void						(^timed)(CFTimeInterval) = state.frameGPUTimeHandler;
 	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+		if (buffer.status == MTLCommandBufferStatusError) {
+			reportGPUError(buffer.error, NO);
+		}
 		if (timed != nil && buffer.GPUEndTime > buffer.GPUStartTime) {
 			timed(buffer.GPUEndTime - buffer.GPUStartTime);
 		}
@@ -1495,6 +1536,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 													   options:MTLResourceStorageModeShared];
 	MTLClearColor	clearColor		= transparent ? MTLClearColorMake(0, 0, 0, 0) : [self clearColor];
 
+	if (resolveTexture == nil || pixels == nil) {
+		reportGPUError(rendererError(LDrawRendererErrorPictureMemory, @"No memory for the picture."), YES);
+		return NULL;
+	}
+
 	[self createOffscreenTexturesForSize:pixelSize];
 	LDrawRendererMetalDrawState * state = metalDrawState(self);
 
@@ -1524,6 +1570,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 											  highlights:NO];
 		if (encoded == NO) {
 			dispatch_semaphore_signal(_inFlightSemaphore);
+			reportGPUError(rendererError(LDrawRendererErrorPictureNotEncoded, @"The picture was not encoded."), YES);
 			return NULL;
 		}
 
@@ -1547,6 +1594,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 		[commandBuffer waitUntilCompleted];
 
 		if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+			reportGPUError(commandBuffer.error, YES);
 			return NULL;
 		}
 
@@ -1846,6 +1894,32 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	metalDrawState(self).frameGPUTimeHandler = handler;
 
 } // end setFrameGPUTimeHandler:
+
+
+//---------- setGPUErrorHandler: ------------------------------------[static]--
+//
+// Purpose:		Sets the handler every renderer calls when the GPU fails a
+//				frame or a picture. Call it on the main thread.
+//
+//------------------------------------------------------------------------------
++ (void)setGPUErrorHandler:(void (^)(NSError *error, BOOL picture))handler
+{
+	_gpuErrorHandler = [handler copy];
+
+} // end setGPUErrorHandler:
+
+
+//---------- drawsTransparentPartsWithLists -------------------------[static]--
+//
+// Purpose:		Whether transparent parts go into per-pixel lists on this
+//				device, or are blended one at a time.
+//
+//------------------------------------------------------------------------------
++ (BOOL)drawsTransparentPartsWithLists
+{
+	return [LDrawTransparentLists isSupported];
+
+} // end drawsTransparentPartsWithLists
 
 
 @end
