@@ -389,4 +389,17 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 
 } // end setPrepareTransparentLists:
 
+
+//========== setFacingPipeline:facePipeline: =====================================
+//
+// Purpose:	Without the lists, draws each transparent part's far faces before
+//			its near ones.
+//
+//================================================================================
+- (void)setFacingPipeline:(id<MTLRenderPipelineState>)facing facePipeline:(id<MTLRenderPipelineState>)face
+{
+	LDrawDLSessionSetFacingPipelines(session, facing, face);
+
+} // end setFacingPipeline:facePipeline:
+
 @end

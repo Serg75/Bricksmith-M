@@ -29,6 +29,17 @@ typedef NS_ERROR_ENUM(LDrawRendererErrorDomain, LDrawRendererError) {
 	LDrawRendererErrorGPUFailed			= 3,
 };
 
+/// How frames drawn in a view blend transparent parts.
+typedef NS_ENUM(NSInteger, LDrawTransparencySorting) {
+	/// Sorted per pixel in the lists, on a GPU that can keep them.
+	LDrawTransparencySortingFull,
+	/// The same with fewer layers sorted and the rest averaged. It costs about
+	/// half as much and looks the same unless a pixel has many layers.
+	LDrawTransparencySortingFast,
+	/// One part at a time, which costs least.
+	LDrawTransparencySortingOff,
+};
+
 //------------------------------------------------------------------------------
 ///
 /// @category   LDrawRenderer (Metal)
@@ -54,6 +65,10 @@ typedef NS_ERROR_ENUM(LDrawRendererErrorDomain, LDrawRendererError) {
 /// Called with how long the GPU took for each frame drawn in a view, on a
 /// Metal completion thread. Nil stops it.
 - (void) setFrameGPUTimeHandler:(nullable void (^)(CFTimeInterval seconds))handler;
+
+/// How frames drawn in a view blend transparent parts. Full until it is set.
+/// Pictures always sort them fully where the GPU can.
+- (void) setTransparencySorting:(LDrawTransparencySorting)sorting;
 
 /// Called on the main thread when the GPU fails a frame drawn in a view or an
 /// off-screen picture, or a picture cannot be made. `picture` tells which. One

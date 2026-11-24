@@ -52,6 +52,9 @@ typedef enum BufferIndex {
 	// A lone uint: 1 while thin lines go into the lists, whose vertices do not
 	// tell them from faces.
 	BufferIndexTransparentThinLines		= 5,
+	// A lone uint in the fragment stage: 1 while a transparent part blended
+	// without the lists draws its faces turned toward the eye, 0 for the rest.
+	BufferIndexTransparentFacing		= 6,
 	// The band around highlighted parts: its uniforms, the arguments of its
 	// draw, the tiles it covers and what each tile of its area holds. Free in
 	// every stage.

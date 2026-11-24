@@ -93,6 +93,10 @@
 @property (nonatomic, strong) LDrawTransparentLists	*transparentLists;
 @property (nonatomic, strong) LDrawTransparentLists	*offscreenTransparentLists;
 
+// How frames drawn in a view blend transparent parts. Without the lists, the
+// lists keep their buffers for when they are used again.
+@property (nonatomic, assign) LDrawTransparencySorting	viewSorting;
+
 // Called with each frame's GPU time, on a Metal completion thread.
 @property (nonatomic, copy) void (^frameGPUTimeHandler)(CFTimeInterval seconds);
 
@@ -143,6 +147,8 @@ static id<MTLCommandQueue>			_commandQueue;
 // Read and written on the main thread only.
 static void							(^_gpuErrorHandler)(NSError *error, BOOL picture);
 static id<MTLRenderPipelineState>	_pipelineState;
+// Transparent faces blended without the lists, in two passes by which way they face.
+static id<MTLRenderPipelineState>	_transparentFacingPipelineState;
 static id<MTLRenderPipelineState>	_wideLinePipelineState;
 static id<MTLRenderPipelineState>	_marqueePipelineState;
 // Empty per-pixel lists, put transparent parts into them, and blend them. Nil
@@ -155,6 +161,7 @@ static id<MTLRenderPipelineState>	_ghostPrepassWideLinePipelineState;
 static id<MTLRenderPipelineState>	_ghostListPipelineState;
 static id<MTLRenderPipelineState>	_ghostListWideLinePipelineState;
 static id<MTLRenderPipelineState>	_transparentResolvePipelineState;
+static id<MTLRenderPipelineState>	_transparentResolveFastPipelineState;
 static id<MTLRenderPipelineState>	_highlightMaskPipelineState;
 static id<MTLComputePipelineState>	_highlightResetPipelineState;
 static id<MTLComputePipelineState>	_highlightClassifyPipelineState;
@@ -358,6 +365,14 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
 
+	// The same, keeping only the faces turned one way. Nil leaves the faces in
+	// the order their mesh has them.
+	pipelineDescriptor.fragmentFunction = [defaultLibrary newFunctionWithName:@"transparentFacingFragmentShader"];
+	_transparentFacingPipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	if (!_transparentFacingPipelineState) {
+		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+	}
+
 	// Wide lines blend the same way and draw to the same targets. Their shader
 	// reads the vertices itself, so there is no vertex descriptor.
 	pipelineDescriptor.vertexFunction = [defaultLibrary newFunctionWithName:@"wideLineVertexShader"];
@@ -548,9 +563,15 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 
 	id<MTLRenderPipelineState> resolvePipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
 
+	descriptor.fragmentFunction = [library newFunctionWithName:@"transparencyResolveFastFragmentShader"];
+
+	id<MTLRenderPipelineState> resolveFastPipeline = [device newRenderPipelineStateWithDescriptor:descriptor
+																							 error:&error];
+
 	if (	clearPipeline == nil || listPipeline == nil || wideLinePipeline == nil
 		||	ghostPrepassPipeline == nil || ghostPrepassWideLinePipeline == nil
-		||	ghostPipeline == nil || ghostWideLinePipeline == nil || resolvePipeline == nil) {
+		||	ghostPipeline == nil || ghostWideLinePipeline == nil || resolvePipeline == nil
+		||	resolveFastPipeline == nil) {
 		NSLog(@"Error occurred when creating transparency pipeline states: %@", error);
 		return;
 	}
@@ -563,6 +584,7 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 	_ghostListPipelineState = ghostPipeline;
 	_ghostListWideLinePipelineState = ghostWideLinePipeline;
 	_transparentResolvePipelineState = resolvePipeline;
+	_transparentResolveFastPipelineState = resolveFastPipeline;
 
 } // end setupTransparency:vertexDescriptor:
 
@@ -884,7 +906,10 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[self createTexturesForSize:view.drawableSize];
 
 	LDrawRendererMetalDrawState	*state	= metalDrawState(self);
-	LDrawTransparentLists		*lists	= transparentListsOfState(state, NO);
+	BOOL						usesLists	= state.viewSorting != LDrawTransparencySortingOff;
+	LDrawTransparentLists		*lists		= usesLists ? transparentListsOfState(state, NO) : nil;
+
+	lists.sortsFewerLayers = state.viewSorting == LDrawTransparencySortingFast;
 
 	if ([self encodeDrawWithCommandBuffer:commandBuffer
 					   multisampleTexture:state.msaaColorTexture
@@ -1179,6 +1204,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[ren setBoundsOnlyDrawing:boundsOnly];
 	[self applyOutlineToShaderRenderer:ren pixelSize:pixelSize];
 	[ren setPrepareTransparentLists:prepareLists];
+	[ren setFacingPipeline:_transparentFacingPipelineState facePipeline:_pipelineState];
 	if (banded) {
 		[ren setHighlightList:&highlightList];
 	}
@@ -1459,7 +1485,8 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 		settings->ghost_prepass_wide_line_pipeline	= _ghostPrepassWideLinePipelineState;
 		settings->ghost_pipeline					= _ghostListPipelineState;
 		settings->ghost_wide_line_pipeline			= _ghostListWideLinePipelineState;
-		settings->resolve_pipeline					= _transparentResolvePipelineState;
+		settings->resolve_pipeline					= lists.sortsFewerLayers ? _transparentResolveFastPipelineState
+																			 : _transparentResolvePipelineState;
 		settings->face_pipeline						= facePipeline;
 		settings->heads								= lists.heads;
 		settings->fragments							= lists.fragments;
@@ -1894,6 +1921,28 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	metalDrawState(self).frameGPUTimeHandler = handler;
 
 } // end setFrameGPUTimeHandler:
+
+
+//========== setTransparencySorting: ===========================================
+//
+// Purpose:		How frames drawn in a view blend transparent parts: sorted per
+//				pixel in the lists, the same with fewer layers sorted, or one
+//				part at a time. Full until it is set. A GPU that cannot keep the
+//				lists always blends one part at a time.
+//
+//==============================================================================
+- (void)setTransparencySorting:(LDrawTransparencySorting)sorting
+{
+	LDrawRendererMetalDrawState *state = metalDrawState(self);
+
+	if (state.viewSorting == sorting) {
+		return;
+	}
+	state.viewSorting = sorting;
+
+	[self->delegate LDrawRendererNeedsRedisplay:self];
+
+} // end setTransparencySorting:
 
 
 //---------- setGPUErrorHandler: ------------------------------------[static]--

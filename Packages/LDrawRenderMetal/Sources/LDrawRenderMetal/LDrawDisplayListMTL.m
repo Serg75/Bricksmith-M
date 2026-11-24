@@ -249,6 +249,9 @@ struct LDrawDLSession {
 	struct LDrawDLSortedInstanceLink *	sorted_head;			// Linked list + count for DLs being drawn later to Z sort.
 	int									sort_count;
 
+	struct LDrawDLSortedInstanceLink *	faded_head;				// Ghosts in a transparent color, with count: drawn
+	int									faded_count;			// with the transparent parts, after the other ghosts.
+
 	struct LDrawDLSortedInstanceLink *	ghost_head;				// Linked list of ghosted DLs, drawn last with a depth
 																// prepass so their interiors do not show through.
 
@@ -263,6 +266,11 @@ struct LDrawDLSession {
 	// Gets lists ready for the transparent parts, when the GPU can keep them.
 	__unsafe_unretained LDrawDLPrepareTransparentLists	prepare_lists;
 	BOOL								transparent_bias;		// Transparent faces get more depth bias.
+
+	// Without lists, a transparent part's faces go in two passes by which way
+	// they face, through the first pipeline; the second is put back after.
+	__unsafe_unretained id<MTLRenderPipelineState>	facing_pipeline;
+	__unsafe_unretained id<MTLRenderPipelineState>	face_pipeline;
 
 	id<MTLTexture>						current_bound_texture;
 };
@@ -842,6 +850,85 @@ static void drawLines(id<MTLRenderCommandEncoder>	renderEncoder,
 #endif
 
 
+//========== setDeferredInstance =================================================
+//
+// Purpose:	Sets one deferred instance's transform, colors, alpha scale and
+//			mesh for the draws that follow.
+//
+//================================================================================
+static void setDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
+								struct LDrawDLSortedInstanceLink *	l,
+								float								alpha_scale)
+{
+	struct InstanceInput instData;
+
+	setInstanceTransform(&instData, l->transform);
+	copy_vec4((float *)&instData.color_current, l->color);
+	copy_vec4((float *)&instData.color_complement, l->comp);
+	copy_vec4((float *)&instData.mark, l->mark);
+
+	[renderEncoder setVertexBytes:&alpha_scale
+						   length:sizeof(alpha_scale)
+						  atIndex:BufferIndexGhostAlpha];
+
+	[renderEncoder setVertexBytes:&instData
+						   length:sizeof(instData)
+						  atIndex:BufferIndexPerInstanceData];
+
+	[renderEncoder setVertexBuffer:l->dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
+
+} // end setDeferredInstance
+
+
+// What drawDeferredTexture draws.
+enum { DeferredLines = 1, DeferredFaces = 2 };
+
+
+//========== drawDeferredTexture =================================================
+//
+// Purpose:	Draws the lines, the faces or both of the part of a deferred
+//			instance's mesh that has this texture.
+//
+//================================================================================
+static void drawDeferredTexture(id<MTLRenderCommandEncoder>			renderEncoder,
+								struct LDrawDLSession *				session,
+								struct LDrawDLSortedInstanceLink *	l,
+								struct LDrawDLPerTex *				tptr,
+								int									what)
+{
+	struct LDrawDL * dl = l->dl;
+
+	if (tptr->spec.tex_obj)
+		setup_tex_spec(&tptr->spec, session, renderEncoder);
+	else
+		setup_tex_spec(&l->spec, session, renderEncoder);
+
+	#if WANT_SMOOTH
+	if (what & DeferredLines)
+		drawLines(renderEncoder, session, dl, tptr, 1);
+
+	if ((what & DeferredFaces) && tptr->tri_count)
+		[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+								  indexCount:tptr->tri_count
+								   indexType:MTLIndexTypeUInt32
+								 indexBuffer:dl->indexBuffer
+						   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
+							   instanceCount:1];
+	#else
+	if ((what & DeferredLines) && tptr->line_count)
+		[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
+						  vertexStart:tptr->line_off
+						  vertexCount:tptr->line_count];
+
+	if ((what & DeferredFaces) && tptr->tri_count)
+		[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+						  vertexStart:tptr->tri_off
+						  vertexCount:tptr->tri_count];
+	#endif
+
+} // end drawDeferredTexture
+
+
 //========== drawDeferredInstance =================================================
 //
 // Purpose:	Draw one deferred instance -- a transparent part or a ghost -- one
@@ -865,66 +952,60 @@ static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
 								 struct LDrawDLSortedInstanceLink *		l,
 								 BOOL									depthOnly)
 {
-	struct InstanceInput	instData;
-	struct LDrawDL *		dl	= l->dl;
-	float					alpha_scale	= depthOnly ? 0.0f : l->ghost_alpha;
+	struct LDrawDL *	dl	= l->dl;
+	int					t;
 
-	setInstanceTransform(&instData, l->transform);
-	copy_vec4((float *)&instData.color_current, l->color);
-	copy_vec4((float *)&instData.color_complement, l->comp);
-	copy_vec4((float *)&instData.mark, l->mark);
+	setDeferredInstance(renderEncoder, l, depthOnly ? 0.0f : l->ghost_alpha);
 
-	[renderEncoder setVertexBytes:&alpha_scale
-						   length:sizeof(alpha_scale)
-						  atIndex:BufferIndexGhostAlpha];
-
-	[renderEncoder setVertexBytes:&instData
-						   length:sizeof(instData)
-						  atIndex:BufferIndexPerInstanceData];
-
-	[renderEncoder setVertexBuffer:dl->vertexBuffer offset:0 atIndex:BufferIndexInstanceInvariantData];
-
-	struct LDrawDLPerTex *	tptr	= dl->texes;
-	int						t;
-
-	for (t = 0; t < dl->tex_count; ++t, ++tptr)
-	{
-		if (tptr->spec.tex_obj)
-			setup_tex_spec(&tptr->spec, session, renderEncoder);
-		else
-			setup_tex_spec(&l->spec, session, renderEncoder);
-
-		#if WANT_SMOOTH
-		drawLines(renderEncoder, session, dl, tptr, 1);
-
-		if (tptr->tri_count)
-			[renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-									  indexCount:tptr->tri_count
-									   indexType:MTLIndexTypeUInt32
-									 indexBuffer:dl->indexBuffer
-							   indexBufferOffset:tptr->tri_off * sizeof(uint32_t)
-								   instanceCount:1];
-		#else
-		if (tptr->line_count)
-			[renderEncoder drawPrimitives:MTLPrimitiveTypeLine
-							  vertexStart:tptr->line_off
-							  vertexCount:tptr->line_count];
-
-		if (tptr->tri_count)
-			[renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-							  vertexStart:tptr->tri_off
-							  vertexCount:tptr->tri_count];
-		#endif
-	}
+	for (t = 0; t < dl->tex_count; ++t)
+		drawDeferredTexture(renderEncoder, session, l, dl->texes + t, DeferredLines | DeferredFaces);
 
 } // end drawDeferredInstance
 
 
+//========== drawInFacingPasses ===================================================
+//
+// Purpose:	Draws one transparent part without the lists: the faces turned away
+//			from the eye, then its lines, then the faces turned toward it. Its
+//			near surface then blends over its far one, as in the lists, and a
+//			line in front lies under one layer of faces, not all of them.
+//
+//================================================================================
+static void drawInFacingPasses(id<MTLRenderCommandEncoder>			renderEncoder,
+							   struct LDrawDLSession *				session,
+							   struct LDrawDLSortedInstanceLink *	l)
+{
+	struct LDrawDL *	dl	= l->dl;
+	uint32_t			towardEye;
+	int					t;
+
+	setDeferredInstance(renderEncoder, l, l->ghost_alpha);
+
+	for (towardEye = 0; towardEye < 2; ++towardEye)
+	{
+		[renderEncoder setRenderPipelineState:session->facing_pipeline];
+		[renderEncoder setFragmentBytes:&towardEye length:sizeof(towardEye) atIndex:BufferIndexTransparentFacing];
+
+		for (t = 0; t < dl->tex_count; ++t)
+			drawDeferredTexture(renderEncoder, session, l, dl->texes + t, DeferredFaces);
+
+		[renderEncoder setRenderPipelineState:session->face_pipeline];
+
+		if (towardEye == 0)
+		{
+			for (t = 0; t < dl->tex_count; ++t)
+				drawDeferredTexture(renderEncoder, session, l, dl->texes + t, DeferredLines);
+		}
+	}
+
+} // end drawInFacingPasses
+
+
 //========== copyWithEyeDepth ====================================================
 //
-// Purpose:	Copies a list of deferred instances into an array from the
-//			session's pool, each with the eye-space Z of its origin as its
-//			eval, for sorting.
+// Purpose:	Copies a list of deferred instances into an array from p on,
+//			each with the eye-space Z of its origin as its eval, for sorting.
+//			Returns where the copies end.
 //
 // Notes:	The copy carries everything across; only eval, which shares
 //			storage with the list pointer, is new.
@@ -932,10 +1013,8 @@ static void drawDeferredInstance(id<MTLRenderCommandEncoder>			renderEncoder,
 //================================================================================
 static struct LDrawDLSortedInstanceLink * copyWithEyeDepth(struct LDrawDLSession *				session,
 														   struct LDrawDLSortedInstanceLink *	head,
-														   int									count)
+														   struct LDrawDLSortedInstanceLink *	p)
 {
-	struct LDrawDLSortedInstanceLink *	arr			= LDrawPoolAllocate(session->alloc, sizeof(*arr) * count);
-	struct LDrawDLSortedInstanceLink *	p			= arr;
 	simd_float4x4						modelView	= simd_matrix4x4_from_array(session->model_view);
 	struct LDrawDLSortedInstanceLink *	l;
 
@@ -947,15 +1026,16 @@ static struct LDrawDLSortedInstanceLink * copyWithEyeDepth(struct LDrawDLSession
 		p->eval = simd_mul(modelView, origin).z;
 	}
 
-	return arr;
+	return p;
 
 } // end copyWithEyeDepth
 
 
 //========== fillTransparentLists ================================================
 //
-// Purpose:	Puts every fragment of the transparent parts into its pixel's
-//			list. resolveTransparentLists blends them.
+// Purpose:	Puts every fragment of these transparent parts into its pixel's
+//			list. resolveTransparentLists blends them. The first fill empties
+//			the lists; a later one adds to them.
 //
 // Notes:	The parts can go in any order, and a part's faces show through
 //			each other whichever is drawn first.
@@ -963,16 +1043,23 @@ static struct LDrawDLSortedInstanceLink * copyWithEyeDepth(struct LDrawDLSession
 //================================================================================
 static void fillTransparentLists(id<MTLRenderCommandEncoder>			renderEncoder,
 								 struct LDrawDLSession *				session,
-								 const struct LDrawDLTransparentLists *	lists)
+								 const struct LDrawDLTransparentLists *	lists,
+								 struct LDrawDLSortedInstanceLink *		head,
+								 BOOL									empties)
 {
 	struct LDrawDLWideLines				wideLines	= session->wide_lines;
 	struct LDrawDLSortedInstanceLink *	l;
 
 	// Each tile empties its lists before its first fragment goes in.
-	[renderEncoder setRenderPipelineState:lists->clear_pipeline];
-	[renderEncoder setTileBuffer:lists->heads offset:0 atIndex:BufferIndexTransparentHeads];
-	[renderEncoder setTileBytes:&lists->uniform length:sizeof(lists->uniform) atIndex:BufferIndexTransparencyUniforms];
-	[renderEncoder dispatchThreadsPerTile:MTLSizeMake(renderEncoder.tileWidth, renderEncoder.tileHeight, 1)];
+	if (empties)
+	{
+		[renderEncoder setRenderPipelineState:lists->clear_pipeline];
+		[renderEncoder setTileBuffer:lists->heads offset:0 atIndex:BufferIndexTransparentHeads];
+		[renderEncoder setTileBytes:&lists->uniform
+							 length:sizeof(lists->uniform)
+							atIndex:BufferIndexTransparencyUniforms];
+		[renderEncoder dispatchThreadsPerTile:MTLSizeMake(renderEncoder.tileWidth, renderEncoder.tileHeight, 1)];
+	}
 
 	[renderEncoder setRenderPipelineState:lists->list_pipeline];
 	[renderEncoder setDepthStencilState:transparentDepthState()];
@@ -992,7 +1079,7 @@ static void fillTransparentLists(id<MTLRenderCommandEncoder>			renderEncoder,
 	setFaceDepthBias(renderEncoder, session);
 	setThinLines(renderEncoder, session, 0);
 
-	for (l = session->sorted_head; l; l = l->next)
+	for (l = head; l; l = l->next)
 		drawDeferredInstance(renderEncoder, session, l, NO);
 
 	session->wide_lines = wideLines;
@@ -1026,15 +1113,27 @@ static void resolveTransparentLists(id<MTLRenderCommandEncoder>				renderEncoder
 //========== sortedTransparentParts ==============================================
 //
 // Purpose:	The session's transparent parts as an array, far to near by their
-//			origins.
+//			origins, and with withFaded the ghosts in a transparent color among
+//			them. NULL when there are none.
 //
 //================================================================================
-static struct LDrawDLSortedInstanceLink * sortedTransparentParts(struct LDrawDLSession * session)
+static struct LDrawDLSortedInstanceLink * sortedTransparentParts(struct LDrawDLSession *	session,
+																 BOOL						withFaded,
+																 int *						count)
 {
-	struct LDrawDLSortedInstanceLink * arr = copyWithEyeDepth(session, session->sorted_head, session->sort_count);
+	*count = session->sort_count + (withFaded ? session->faded_count : 0);
+
+	if (*count == 0)
+		return NULL;
+
+	struct LDrawDLSortedInstanceLink * arr = LDrawPoolAllocate(session->alloc, sizeof(*arr) * *count);
+	struct LDrawDLSortedInstanceLink * end = copyWithEyeDepth(session, session->sorted_head, arr);
+
+	if (withFaded)
+		copyWithEyeDepth(session, session->faded_head, end);
 
 	// Ascending eye-space Z is far to near.
-	qsort(arr,session->sort_count,sizeof(struct LDrawDLSortedInstanceLink),compare_sorted_link);
+	qsort(arr, *count, sizeof(struct LDrawDLSortedInstanceLink), compare_sorted_link);
 
 	return arr;
 
@@ -1043,8 +1142,8 @@ static struct LDrawDLSortedInstanceLink * sortedTransparentParts(struct LDrawDLS
 
 //========== drawTransparentSorted ===============================================
 //
-// Purpose:	Draws the transparent parts one at a time, in the order of this
-//			array from sortedTransparentParts. For a GPU without the lists.
+// Purpose:	Draws count transparent parts one at a time, in the order of
+//			this array from sortedTransparentParts. For a GPU without the lists.
 //			The depth state picks which of their fragments blend. With
 //			depthOnly none do, and the draw only runs the depth state.
 //
@@ -1052,12 +1151,14 @@ static struct LDrawDLSortedInstanceLink * sortedTransparentParts(struct LDrawDLS
 //			the parts behind it. Parts that overlap can blend in the wrong
 //			order, and lines that lie on each other blend twice. Lines that
 //			wrote depth would hide the faces drawn after them, which shows as
-//			a light seam along every line.
+//			a light seam along every line. With the facing pipelines, a
+//			part's far faces blend before its near ones.
 //
 //================================================================================
 static void drawTransparentSorted(id<MTLRenderCommandEncoder>			renderEncoder,
 								  struct LDrawDLSession *				session,
 								  struct LDrawDLSortedInstanceLink *	sorted,
+								  int									count,
 								  id<MTLDepthStencilState>				depthState,
 								  BOOL									depthOnly)
 {
@@ -1066,8 +1167,13 @@ static void drawTransparentSorted(id<MTLRenderCommandEncoder>			renderEncoder,
 	setFaceDepthBias(renderEncoder, session);
 
 	int lc;
-	for (lc = 0; lc < session->sort_count; ++lc)
-		drawDeferredInstance(renderEncoder, session, sorted + lc, depthOnly);
+	for (lc = 0; lc < count; ++lc)
+	{
+		if (depthOnly == NO && session->facing_pipeline != nil)
+			drawInFacingPasses(renderEncoder, session, sorted + lc);
+		else
+			drawDeferredInstance(renderEncoder, session, sorted + lc, depthOnly);
+	}
 
 	[renderEncoder setDepthStencilState:defaultDepthState()];
 	session->transparent_bias = NO;
@@ -1113,7 +1219,8 @@ static void setGhostPipelines(id<MTLRenderCommandEncoder>	renderEncoder,
 static void drawGhosts(id<MTLRenderCommandEncoder>				renderEncoder,
 					   struct LDrawDLSession *					session,
 					   const struct LDrawDLTransparentLists *	lists,
-					   struct LDrawDLSortedInstanceLink *		sortedTransparent)
+					   struct LDrawDLSortedInstanceLink *		sortedTransparent,
+					   int										sortedCount)
 {
 	struct LDrawDLWideLines				wideLines	= session->wide_lines;
 	struct LDrawDLSortedInstanceLink *	l;
@@ -1121,7 +1228,8 @@ static void drawGhosts(id<MTLRenderCommandEncoder>				renderEncoder,
 	if (sortedTransparent)
 	{
 		[renderEncoder setStencilReferenceValue:HIDDEN_STENCIL_COUNT_BITS];
-		drawTransparentSorted(renderEncoder, session, sortedTransparent, hiddenTransparentCountDepthState(), YES);
+		drawTransparentSorted(renderEncoder, session, sortedTransparent, sortedCount,
+							  hiddenTransparentCountDepthState(), YES);
 
 		[renderEncoder setStencilReferenceValue:GHOST_STENCIL_MARK];
 		[renderEncoder setDepthStencilState:ghostMarkingPrepassDepthState()];
@@ -1141,7 +1249,8 @@ static void drawGhosts(id<MTLRenderCommandEncoder>				renderEncoder,
 
 	if (sortedTransparent)
 	{
-		drawTransparentSorted(renderEncoder, session, sortedTransparent, transparentBehindGhostDepthState(), NO);
+		drawTransparentSorted(renderEncoder, session, sortedTransparent, sortedCount,
+							  transparentBehindGhostDepthState(), NO);
 		[renderEncoder setStencilReferenceValue:0];
 	}
 
@@ -1177,22 +1286,32 @@ static void drawGhosts(id<MTLRenderCommandEncoder>				renderEncoder,
 //			link type and this function.
 //
 //================================================================================
+// Where saveForDeferredDraw keeps a part: with the transparent parts, the
+// ghosts, or the ghosts in a transparent color.
+enum DeferredList { DeferredSorted, DeferredGhost, DeferredFaded };
+
 static void saveForDeferredDraw(struct LDrawDLSession *		session,
 								struct LDrawDL *			dl,
 								struct LDrawTextureSpec *	spec,
 								const float 				cur_color[4],
 								const float 				cmp_color[4],
 								const float					transform[16],
-								BOOL						is_ghost,
+								enum DeferredList			list,
 								float						ghost_alpha,
 								const float					mark[4])
 {
 	struct LDrawDLSortedInstanceLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLSortedInstanceLink));
 
-	if (is_ghost)
+	if (list == DeferredGhost)
 	{
 		link->next = session->ghost_head;
 		session->ghost_head = link;
+	}
+	else if (list == DeferredFaded)
+	{
+		link->next = session->faded_head;
+		session->faded_head = link;
+		session->faded_count++;
 	}
 	else
 	{
@@ -2044,6 +2163,8 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	session->total_instance_count = 0;
 	session->sorted_head = NULL;
 	session->ghost_head = NULL;
+	session->faded_head = NULL;
+	session->faded_count = 0;
 	session->sort_count = 0;
 	#if WANT_STATS
 	memset(&session->stats,0,sizeof(session->stats));
@@ -2054,6 +2175,8 @@ struct LDrawDLSession * LDrawDLSessionCreate(const float model_view[16])
 	session->highlight_list = NULL;
 	session->prepare_lists = nil;
 	session->transparent_bias = NO;
+	session->facing_pipeline = nil;
+	session->face_pipeline = nil;
 	session->inst_ring = inst_ring_last;
 	// each session picks up a new buffer in the ring of instance buffers.
 	inst_ring_last = (inst_ring_last+1)%INST_RING_BUFFER_COUNT;
@@ -2100,6 +2223,24 @@ void LDrawDLSessionSetPrepareTransparentLists(struct LDrawDLSession *			session,
 	session->prepare_lists = prepare;
 
 } // end LDrawDLSessionSetPrepareTransparentLists
+
+
+//========== LDrawDLSessionSetFacingPipelines ====================================
+//
+// Purpose:	Has transparent parts blended without the lists draw their faces
+//			in two passes by which way they face, through facing, and put
+//			face back after. Without them a part's faces blend in the order
+//			its mesh has them.
+//
+//================================================================================
+void LDrawDLSessionSetFacingPipelines(struct LDrawDLSession *		session,
+									  id<MTLRenderPipelineState>	facing,
+									  id<MTLRenderPipelineState>	face)
+{
+	session->facing_pipeline	= facing;
+	session->face_pipeline		= face;
+
+} // end LDrawDLSessionSetFacingPipelines
 
 
 //========== LDrawDLSessionSetHighlightList ======================================
@@ -2367,34 +2508,51 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	// front of a ghost or behind it, and blends in its place. With lists,
 	// ghosts go in between filling them and blending them.
 
+	// Ghosts in a transparent color come after the other ghosts, so a ghost in
+	// front hides them as it hides other ghosts, and they do not hide the
+	// ghosts behind them.
+
 	struct LDrawDLSortedInstanceLink *	l;
-	struct LDrawDLSortedInstanceLink *	sorted		= NULL;
+	struct LDrawDLSortedInstanceLink *	sorted		= NULL;		// the transparent parts
+	struct LDrawDLSortedInstanceLink *	sortedAll	= NULL;		// and the faded ghosts
+	int									sortedCount	= 0;
+	int									allCount	= 0;
 	struct LDrawDLTransparentLists		lists;
 	BOOL								hasLists	= NO;
 
-	if (session->sorted_head)
+	if (session->sorted_head || session->faded_head)
 	{
 		hasLists = session->prepare_lists && session->prepare_lists(&lists);
 
 		if (hasLists == NO)
-			sorted = sortedTransparentParts(session);
+		{
+			sorted		= sortedTransparentParts(session, NO, &sortedCount);
+			sortedAll	= session->faded_head ? sortedTransparentParts(session, YES, &allCount) : sorted;
+			allCount	= session->faded_head ? allCount : sortedCount;
+		}
 	}
 
 	if (hasLists)
-		fillTransparentLists(renderEncoder, session, &lists);
+		fillTransparentLists(renderEncoder, session, &lists, session->sorted_head, YES);
 
 	if (session->ghost_head)
-		drawGhosts(renderEncoder, session, hasLists ? &lists : NULL, sorted);
+		drawGhosts(renderEncoder, session, hasLists ? &lists : NULL, sorted, sortedCount);
+
+	if (hasLists && session->faded_head)
+		fillTransparentLists(renderEncoder, session, &lists, session->faded_head, NO);
 
 	// What drawGhosts left: the transparent faces in front of the ghosts and
 	// where there is no ghost.
-	if (sorted)
-		drawTransparentSorted(renderEncoder, session, sorted, transparentDepthState(), NO);
+	if (sortedAll)
+		drawTransparentSorted(renderEncoder, session, sortedAll, allCount, transparentDepthState(), NO);
 
 	if (hasLists)
 		resolveTransparentLists(renderEncoder, &lists);
 
 	for (l = session->sorted_head; l; l = l->next)
+		endDeferredUse(l->dl, &doomed_head);
+
+	for (l = session->faded_head; l; l = l->next)
 		endDeferredUse(l->dl, &doomed_head);
 
 	for (l = session->ghost_head; l; l = l->next)
@@ -2480,9 +2638,18 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 	// as a whole, so its interior does not show through the way a transparent
 	// brick's does. Wireframe wins, since that is the selection cue -- and it
 	// draws at full strength, because a faint cue is no cue.
+	//
+	// A ghost in a transparent color goes with the transparent parts instead,
+	// fainter. In the ghost pass it would hide the ghosts behind it, and look
+	// like a solid part.
 	if (ghost_id != 0 && !is_wire_frame)
 	{
-		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, YES, ghost_alpha, mark);
+		BOOL transparentColor =		(dl->flags & dl_has_meta)
+								&&	(	LDrawRenderColorIsTranslucent(cur_color[3])
+									 ||	LDrawRenderColorIsTranslucent(cmp_color[3]));
+
+		saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform,
+							transparentColor ? DeferredFaded : DeferredGhost, ghost_alpha, mark);
 		return;
 	}
 
@@ -2496,7 +2663,7 @@ void LDrawDLDraw(id<MTLRenderCommandEncoder>	renderEncoder,
 			// 1. There is alpha baked into our meshes permanently or
 			// 2. Our mesh uses meta colors and the current meta colors have alpha.
 
-			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, NO, 1.0f, mark);
+			saveForDeferredDraw(session, dl, spec, cur_color, cmp_color, transform, DeferredSorted, 1.0f, mark);
 			return;
 		}
 

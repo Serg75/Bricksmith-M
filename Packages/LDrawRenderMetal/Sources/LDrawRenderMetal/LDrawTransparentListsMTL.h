@@ -27,6 +27,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// had. When they cannot, drawing again does not help.
 + (BOOL)canGrowBeyondUniform:(struct TransparencyUniform)uniform;
 
+/// Whether the frames that use these lists blend them with fewer layers sorted.
+@property (nonatomic, assign) BOOL sortsFewerLayers;
+
 /// Starts a frame, which has found no transparent parts yet.
 - (void)beginFrame;
 

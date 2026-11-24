@@ -70,6 +70,13 @@ typedef BOOL (^LDrawDLPrepareTransparentLists)(struct LDrawDLTransparentLists *l
 void LDrawDLSessionSetPrepareTransparentLists(struct LDrawDLSession *session,
 											  LDrawDLPrepareTransparentLists _Nullable prepare);
 
+// Has transparent parts blended without the lists draw their far faces before
+// their near ones, through facing, and put face back after. The renderer keeps
+// the pipelines, so the session does not retain them.
+void LDrawDLSessionSetFacingPipelines(struct LDrawDLSession *session,
+									  id<MTLRenderPipelineState> _Nullable facing,
+									  id<MTLRenderPipelineState> _Nullable face);
+
 
 // The DLs a session drew under a highlight, and where, kept after its render
 // pass so the renderer can draw their band. Their DLs stay alive until the list
@@ -120,6 +127,11 @@ void LDrawDLHighlightListDestroy(struct LDrawDLHighlightList *list);
 /// them one at a time without it. The block must stay alive until the drawing
 /// is finished.
 - (void)setPrepareTransparentLists:(LDrawDLPrepareTransparentLists _Nullable)prepare;
+
+/// Without the lists, draws each transparent part's far faces before its near
+/// ones, through facing, and puts face back after.
+- (void)setFacingPipeline:(id<MTLRenderPipelineState> _Nullable)facing
+			 facePipeline:(id<MTLRenderPipelineState> _Nullable)face;
 
 @end
 

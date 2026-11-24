@@ -397,6 +397,27 @@ fragment FragmentOutput fragmentShader(FragmentInput in [[stage_in]],
 	return out;
 }
 
+// A face of a transparent part blended without the lists, in one of two
+// passes: the fragments turned away from the eye, then the ones turned toward
+// it. The normal decides, as it does for the light, so a part's near surface
+// blends over its far one whichever way its triangles wind. Its own pipeline,
+// so the discard does not slow the opaque parts.
+fragment FragmentOutput transparentFacingFragmentShader(
+	FragmentInput				in			[[stage_in]],
+	constant FragmentUniform&	uni			[[buffer(BufferIndexFragmentUniforms)]],
+	constant uint&				towardEye	[[buffer(BufferIndexTransparentFacing)]],
+	texture2d<float>			tex			[[texture(0)]])
+{
+	if ((dot(in.normal_eye, in.view_eye) > 0.0) != (towardEye != 0))
+		discard_fragment();
+
+	FragmentOutput out;
+
+	out.frag_color = partColor(in, uni, tex);
+
+	return out;
+}
+
 
 
 // MARK: - Outlines -
@@ -917,11 +938,11 @@ vertex ResolveVertexOutput transparencyResolveVertexShader(uint vid [[vertex_id]
 	return out;
 }
 
-// The most fragments a sample sorts by depth. They stay in registers. The ones
-// behind them are blended as one layer of their average color.
+// The most fragments a sample sorts by depth, and fewer for the fast blend.
+// They stay in registers. The ones behind them are blended as one layer of
+// their average color.
 constant uint TRANSPARENT_SORTED_MAX	= 16;
-// The layers a sample blends: the sorted fragments and the one behind them.
-constant uint TRANSPARENT_LAYER_MAX		= TRANSPARENT_SORTED_MAX + 1;
+constant uint TRANSPARENT_SORTED_FAST	= 4;
 // The hues a sample keeps apart, one in each component of a float4. Layers
 // of further hues go in depth order.
 constant uint TRANSPARENT_HUE_MAX		= 4;
@@ -1009,31 +1030,33 @@ static bool isSameHue(float3 a, float3 b)
 // blue looks dark. Layers of one hue blend as plain blending does. It runs per
 // sample, so a sample a fragment does not cover keeps what is drawn there.
 // Lines that lie on each other count once. A ghost blends in depth order with
-// every layer.
-fragment float4 transparencyResolveFragmentShader(
-	ResolveVertexOutput				in			[[stage_in]],
-	uint							sample		[[sample_id]],
-	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
-	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
-	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+// every layer. It sorts SortedMax fragments in registers; the ones behind them
+// blend as one layer of their average color.
+template <uint SortedMax>
+static float4 resolveTransparentSample(uint2							pixel,
+									   uint								sampleBit,
+									   device atomic_uint				*heads,
+									   device TransparentFragment		*fragments,
+									   constant TransparencyUniform&	uniform)
 {
-	uint2	pixel		= uint2(in.position.xy);
-	uint	index		= atomic_load_explicit(&heads[pixel.y * uniform.width + pixel.x], memory_order_relaxed);
-	uint	sampleBit	= 1u << sample;
+	// The layers a sample blends: the sorted fragments and the one behind them.
+	constexpr uint LayerMax = SortedMax + 1;
+
+	uint index = atomic_load_explicit(&heads[pixel.y * uniform.width + pixel.x], memory_order_relaxed);
 
 	if (index == TransparentListEnd)
 		return float4(0.0);
 
 	// The nearest fragments, nearest first, and free places after them. x is
 	// the depth, y the color.
-	uint2	sorted[TRANSPARENT_SORTED_MAX];
+	uint2	sorted[SortedMax];
 
 	// The layer behind them: the colors times their alphas with the alphas in
 	// w, and how much light gets through it.
 	float4	far			= float4(0.0);
 	float	farLight	= 1.0;
 
-	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+	for (uint i = 0; i < SortedMax; ++i)
 		sorted[i] = uint2(TRANSPARENT_SORTED_FREE, 0);
 
 	for (uint visited = 0; index != TransparentListEnd && visited < TRANSPARENT_LIST_MAX; ++visited)
@@ -1051,7 +1074,7 @@ fragment float4 transparencyResolveFragmentShader(
 		// The fragment takes its place and the ones behind it move back one.
 		// Every place is visited, so the array stays in registers.
 		#pragma unroll
-		for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+		for (uint i = 0; i < SortedMax; ++i)
 		{
 			bool	inFront	= sorted[i].x == TRANSPARENT_SORTED_FREE || isBefore(entry, sorted[i]);
 			uint2	kept	= inFront ? entry : sorted[i];
@@ -1074,13 +1097,13 @@ fragment float4 transparencyResolveFragmentShader(
 	// go by color. A run spans no more than a tie, so a chain of close surfaces
 	// does not become one. Which run each is in is worked out from the depths
 	// first, so the order does not depend on the order the fragments came in.
-	uint run[TRANSPARENT_SORTED_MAX];
+	uint run[SortedMax];
 	uint runDepth = sorted[0].x >> 8;
 
 	run[0] = 0;
 
 	#pragma unroll
-	for (uint i = 1; i < TRANSPARENT_SORTED_MAX; ++i)
+	for (uint i = 1; i < SortedMax; ++i)
 	{
 		uint	depth	= sorted[i].x >> 8;
 		bool	tied	= (	sorted[i].x != TRANSPARENT_SORTED_FREE
@@ -1090,12 +1113,12 @@ fragment float4 transparencyResolveFragmentShader(
 		runDepth	= tied ? runDepth : depth;
 	}
 
-	for (uint pass = 1; pass < TRANSPARENT_SORTED_MAX; ++pass)
+	for (uint pass = 1; pass < SortedMax; ++pass)
 	{
 		bool swapped = false;
 
 		#pragma unroll
-		for (uint i = 1; i < TRANSPARENT_SORTED_MAX; ++i)
+		for (uint i = 1; i < SortedMax; ++i)
 		{
 			if (run[i] == run[i - 1] && sorted[i].y < sorted[i - 1].y)
 			{
@@ -1121,7 +1144,7 @@ fragment float4 transparencyResolveFragmentShader(
 
 	// A fragment that does not blend loses its color, which has an alpha of 0.
 	#pragma unroll
-	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+	for (uint i = 0; i < SortedMax; ++i)
 	{
 		if (sorted[i].x == TRANSPARENT_SORTED_FREE)
 			break;
@@ -1175,13 +1198,13 @@ fragment float4 transparencyResolveFragmentShader(
 		}
 	}
 
-	float4 layers[TRANSPARENT_LAYER_MAX];
+	float4 layers[LayerMax];
 
 	#pragma unroll
-	for (uint i = 0; i < TRANSPARENT_SORTED_MAX; ++i)
+	for (uint i = 0; i < SortedMax; ++i)
 		layers[i] = unpack_unorm4x8_to_float(sorted[i].y);
 
-	layers[TRANSPARENT_SORTED_MAX] = float4(0.0);
+	layers[SortedMax] = float4(0.0);
 
 	if (far.w > 0.0 && surface.a == 0.0)
 	{
@@ -1194,8 +1217,8 @@ fragment float4 transparencyResolveFragmentShader(
 		else
 		{
 			// An average has no one hue, so it keeps its place.
-			layers[TRANSPARENT_SORTED_MAX]	= farLayer;
-			inPlace							|= 1u << TRANSPARENT_SORTED_MAX;
+			layers[SortedMax]	= farLayer;
+			inPlace							|= 1u << SortedMax;
 		}
 	}
 
@@ -1204,7 +1227,7 @@ fragment float4 transparencyResolveFragmentShader(
 	// depth order with every layer: a gray, a ghost, which is not plastic, the
 	// average behind the sorted ones, or one past the last hue kept. Lines get
 	// a hue below. For each hue, its brightest value in each channel.
-	uint	hue[TRANSPARENT_LAYER_MAX];
+	uint	hue[LayerMax];
 	float3	hueColors[TRANSPARENT_HUE_MAX];
 	float3	hueTop[TRANSPARENT_HUE_MAX];
 	uint	hueCount	= 0;
@@ -1217,7 +1240,7 @@ fragment float4 transparencyResolveFragmentShader(
 	}
 
 	#pragma unroll
-	for (uint k = 0; k < TRANSPARENT_LAYER_MAX; ++k)
+	for (uint k = 0; k < LayerMax; ++k)
 	{
 		hue[k] = 0;
 
@@ -1258,7 +1281,7 @@ fragment float4 transparencyResolveFragmentShader(
 	uint below = 0;		// the hue of the nearest face behind
 
 	#pragma unroll
-	for (int k = TRANSPARENT_SORTED_MAX - 1; k >= 0; --k)
+	for (int k = SortedMax - 1; k >= 0; --k)
 	{
 		if (layers[k].a == 0.0)
 			continue;
@@ -1285,7 +1308,7 @@ fragment float4 transparencyResolveFragmentShader(
 	// all of its layers there together, when that hue's brightest value in
 	// the channel is smaller. With one hue, that is plain blending.
 	#pragma unroll
-	for (uint k = 0; k < TRANSPARENT_LAYER_MAX; ++k)
+	for (uint k = 0; k < LayerMax; ++k)
 	{
 		if (layers[k].a == 0.0)
 			continue;
@@ -1303,7 +1326,7 @@ fragment float4 transparencyResolveFragmentShader(
 			newStretch = false;
 
 			#pragma unroll
-			for (uint j = k; j < TRANSPARENT_LAYER_MAX; ++j)
+			for (uint j = k; j < LayerMax; ++j)
 			{
 				if (open && layers[j].a > 0.0)
 				{
@@ -1358,6 +1381,31 @@ fragment float4 transparencyResolveFragmentShader(
 	light *= 1.0 - surface.a;
 
 	return float4(color, 1.0 - light);
+}
+
+fragment float4 transparencyResolveFragmentShader(
+	ResolveVertexOutput				in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+{
+	return resolveTransparentSample<TRANSPARENT_SORTED_MAX>(uint2(in.position.xy), 1u << sample, heads, fragments,
+															 uniform);
+}
+
+// The same with fewer fragments sorted, for frames drawn while the camera
+// moves. It costs about half as much, and looks the same where a sample has no
+// more layers than it sorts.
+fragment float4 transparencyResolveFastFragmentShader(
+	ResolveVertexOutput				in			[[stage_in]],
+	uint							sample		[[sample_id]],
+	device atomic_uint				*heads		[[buffer(BufferIndexTransparentHeads), raster_order_group(0)]],
+	device TransparentFragment		*fragments	[[buffer(BufferIndexTransparentFragments), raster_order_group(0)]],
+	constant TransparencyUniform&	uniform		[[buffer(BufferIndexTransparencyUniforms)]])
+{
+	return resolveTransparentSample<TRANSPARENT_SORTED_FAST>(uint2(in.position.xy), 1u << sample, heads, fragments,
+															  uniform);
 }
 
 
