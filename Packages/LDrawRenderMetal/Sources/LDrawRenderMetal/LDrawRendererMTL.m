@@ -147,6 +147,12 @@ static id<MTLCommandQueue>			_commandQueue;
 // Read and written on the main thread only.
 static void							(^_gpuErrorHandler)(NSError *error, BOOL picture);
 static id<MTLRenderPipelineState>	_pipelineState;
+// The same with blending off, for the opaque parts.
+static id<MTLRenderPipelineState>	_opaquePipelineState;
+// Faces and thin lines, and wide lines, drawing only depth and stencil: the
+// ghosts' depth prepass without the lists.
+static id<MTLRenderPipelineState>	_ghostDepthPipelineState;
+static id<MTLRenderPipelineState>	_ghostDepthWideLinePipelineState;
 // Transparent faces blended without the lists, in two passes by which way they face.
 static id<MTLRenderPipelineState>	_transparentFacingPipelineState;
 static id<MTLRenderPipelineState>	_wideLinePipelineState;
@@ -274,6 +280,34 @@ static LDrawTransparentLists * transparentListsOfState(LDrawRendererMetalDrawSta
 	return state.transparentLists;
 }
 
+// A pipeline with the descriptor's vertex shader that draws only depth and
+// stencil, so the GPU shades nothing. The descriptor is left as it was.
+static id<MTLRenderPipelineState> newDepthOnlyPipeline(id<MTLDevice>					device,
+													   id<MTLLibrary>					library,
+													   MTLRenderPipelineDescriptor		*descriptor)
+{
+	id<MTLFunction>								fragment		= descriptor.fragmentFunction;
+	MTLRenderPipelineColorAttachmentDescriptor	*color			= descriptor.colorAttachments[0];
+	MTLColorWriteMask							writeMask		= color.writeMask;
+	BOOL										blending		= color.blendingEnabled;
+	NSError										*error			= nil;
+
+	descriptor.fragmentFunction = [library newFunctionWithName:@"ghostPrepassFragmentShader"];
+	color.writeMask = MTLColorWriteMaskNone;
+	color.blendingEnabled = NO;
+
+	id<MTLRenderPipelineState> pipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
+	if (!pipeline) {
+		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+	}
+
+	descriptor.fragmentFunction = fragment;
+	color.writeMask = writeMask;
+	color.blendingEnabled = blending;
+
+	return pipeline;
+}
+
 // How parts and ghosts blend onto what is drawn: the color by its alpha, and
 // the alpha as it is.
 static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAttachment)
@@ -365,6 +399,17 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
 
+	// The same with blending off, for the opaque parts. A tile-based GPU then
+	// shades only the nearest face at each pixel, however many are drawn.
+	pipelineDescriptor.colorAttachments[0].blendingEnabled = NO;
+	_opaquePipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+	if (!_opaquePipelineState) {
+		NSLog(@"Error occurred when creating render pipeline state: %@", error);
+	}
+	setPartBlending(pipelineDescriptor.colorAttachments[0]);
+
+	_ghostDepthPipelineState = newDepthOnlyPipeline(device, defaultLibrary, pipelineDescriptor);
+
 	// The same, keeping only the faces turned one way. Nil leaves the faces in
 	// the order their mesh has them.
 	pipelineDescriptor.fragmentFunction = [defaultLibrary newFunctionWithName:@"transparentFacingFragmentShader"];
@@ -383,6 +428,8 @@ static void setPartBlending(MTLRenderPipelineColorAttachmentDescriptor *colorAtt
 	if (!_wideLinePipelineState) {
 		NSLog(@"Error occurred when creating render pipeline state: %@", error);
 	}
+
+	_ghostDepthWideLinePipelineState = newDepthOnlyPipeline(device, defaultLibrary, pipelineDescriptor);
 
 	// Create a depth stencil state
 	MTLDepthStencilDescriptor *depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
@@ -1205,6 +1252,8 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[self applyOutlineToShaderRenderer:ren pixelSize:pixelSize];
 	[ren setPrepareTransparentLists:prepareLists];
 	[ren setFacingPipeline:_transparentFacingPipelineState facePipeline:_pipelineState];
+	[ren setOpaquePipeline:_opaquePipelineState];
+	[ren setGhostDepthPipeline:_ghostDepthPipelineState wideLinePipeline:_ghostDepthWideLinePipelineState];
 	if (banded) {
 		[ren setHighlightList:&highlightList];
 	}
@@ -1943,6 +1992,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 } // end setTransparencySorting:
+
 
 
 //---------- setGPUErrorHandler: ------------------------------------[static]--

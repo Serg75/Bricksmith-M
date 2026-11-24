@@ -402,4 +402,29 @@ static NSUInteger					_dragHandleVertexCount		= 0;
 
 } // end setFacingPipeline:facePipeline:
 
+
+//========== setOpaquePipeline: ==================================================
+//
+// Purpose:	Draws the opaque parts through this pipeline.
+//
+//================================================================================
+- (void)setOpaquePipeline:(id<MTLRenderPipelineState>)opaque
+{
+	LDrawDLSessionSetOpaquePipeline(session, opaque);
+
+} // end setOpaquePipeline:
+
+
+//========== setGhostDepthPipeline:wideLinePipeline: =============================
+//
+// Purpose:	Draws the ghosts' depth prepass without the lists through these.
+//
+//================================================================================
+- (void)setGhostDepthPipeline:(id<MTLRenderPipelineState>)face
+			 wideLinePipeline:(id<MTLRenderPipelineState>)wideLine
+{
+	LDrawDLSessionSetGhostDepthPipelines(session, face, wideLine);
+
+} // end setGhostDepthPipeline:wideLinePipeline:
+
 @end

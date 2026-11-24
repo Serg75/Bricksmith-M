@@ -272,6 +272,15 @@ struct LDrawDLSession {
 	__unsafe_unretained id<MTLRenderPipelineState>	facing_pipeline;
 	__unsafe_unretained id<MTLRenderPipelineState>	face_pipeline;
 
+	// The opaque parts are drawn through this one when it is set, and the face
+	// pipeline put back after them.
+	__unsafe_unretained id<MTLRenderPipelineState>	opaque_pipeline;
+
+	// The ghosts' depth prepass without the lists, drawing only depth and
+	// stencil.
+	__unsafe_unretained id<MTLRenderPipelineState>	ghost_depth_pipeline;
+	__unsafe_unretained id<MTLRenderPipelineState>	ghost_depth_wide_line_pipeline;
+
 	id<MTLTexture>						current_bound_texture;
 };
 
@@ -1239,13 +1248,26 @@ static void drawGhosts(id<MTLRenderCommandEncoder>				renderEncoder,
 		[renderEncoder setDepthStencilState:defaultDepthState()];
 	}
 
+	// Without the lists, the prepass has pipelines of its own only when the
+	// face pipeline can be put back after it.
+	BOOL depthPipelines = (!lists && session->ghost_depth_pipeline && session->face_pipeline);
+
 	// The lists are still bound from filling them.
 	if (lists)
 		setGhostPipelines(renderEncoder, session, lists->ghost_prepass_pipeline,
 						  lists->ghost_prepass_wide_line_pipeline);
+	else if (depthPipelines)
+		setGhostPipelines(renderEncoder, session, session->ghost_depth_pipeline,
+						  session->ghost_depth_wide_line_pipeline);
 
 	for (l = session->ghost_head; l; l = l->next)
 		drawDeferredInstance(renderEncoder, session, l, YES);
+
+	if (depthPipelines)
+	{
+		session->wide_lines = wideLines;
+		[renderEncoder setRenderPipelineState:session->face_pipeline];
+	}
 
 	if (sortedTransparent)
 	{
@@ -2243,6 +2265,36 @@ void LDrawDLSessionSetFacingPipelines(struct LDrawDLSession *		session,
 } // end LDrawDLSessionSetFacingPipelines
 
 
+//========== LDrawDLSessionSetOpaquePipeline =====================================
+//
+// Purpose:	Has the opaque parts drawn through this pipeline, which blends
+//			nothing, so a tile-based GPU shades only their nearest faces.
+//
+//================================================================================
+void LDrawDLSessionSetOpaquePipeline(struct LDrawDLSession *		session,
+									 id<MTLRenderPipelineState>		opaque)
+{
+	session->opaque_pipeline = opaque;
+
+} // end LDrawDLSessionSetOpaquePipeline
+
+
+//========== LDrawDLSessionSetGhostDepthPipelines ================================
+//
+// Purpose:	Has the ghosts' depth prepass without the lists drawn through
+//			these, which draw only depth and stencil.
+//
+//================================================================================
+void LDrawDLSessionSetGhostDepthPipelines(struct LDrawDLSession *		session,
+										  id<MTLRenderPipelineState>	face,
+										  id<MTLRenderPipelineState>	wideLine)
+{
+	session->ghost_depth_pipeline			= face;
+	session->ghost_depth_wide_line_pipeline	= wideLine;
+
+} // end LDrawDLSessionSetGhostDepthPipelines
+
+
 //========== LDrawDLSessionSetHighlightList ======================================
 //
 // Purpose:	Has the session hand over its highlighted DLs as it finishes.
@@ -2274,6 +2326,12 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 	struct LDrawDL * doomed_head = NULL;
 
 	// INSTANCED DRAWING CASE
+
+	// Only with a face pipeline to put back: the passes after need blending.
+	BOOL opaqueSwitched = (session->dl_head && session->opaque_pipeline && session->face_pipeline);
+
+	if (opaqueSwitched)
+		[renderEncoder setRenderPipelineState:session->opaque_pipeline];
 
 	if (session->dl_head)
 	{
@@ -2503,6 +2561,9 @@ void LDrawDLSessionDrawAndDestroy(id<MTLRenderCommandEncoder> renderEncoder, str
 			#endif
 		}
 	}
+
+	if (opaqueSwitched)
+		[renderEncoder setRenderPipelineState:session->face_pipeline];
 
 	// MAIN LOOP 3: transparent and ghosted parts. A transparent part may be in
 	// front of a ghost or behind it, and blends in its place. With lists,

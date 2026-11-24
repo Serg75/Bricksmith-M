@@ -871,8 +871,8 @@ static float4 addGhostFragment(TransparentLists lists, float4 color, float depth
 	return float4(0.0);
 }
 
-// The ghosts' depth prepass in a frame with lists. It draws no color, and
-// runs once for a pixel, not for each sample.
+// The ghosts' depth prepass. It draws no color, and runs once for a pixel,
+// not for each sample.
 fragment void ghostPrepassFragmentShader()
 {
 }

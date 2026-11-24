@@ -77,6 +77,19 @@ void LDrawDLSessionSetFacingPipelines(struct LDrawDLSession *session,
 									  id<MTLRenderPipelineState> _Nullable facing,
 									  id<MTLRenderPipelineState> _Nullable face);
 
+// Has the opaque parts drawn through this pipeline, and the face pipeline put
+// back after them. Nil draws them through the pipeline bound already. The
+// renderer keeps it, so the session does not retain it.
+void LDrawDLSessionSetOpaquePipeline(struct LDrawDLSession *session,
+									 id<MTLRenderPipelineState> _Nullable opaque);
+
+// Has the ghosts' depth prepass without the lists drawn through these, which
+// draw only depth and stencil. Nil draws it through the face pipeline at an
+// alpha of 0. The renderer keeps them, so the session does not retain them.
+void LDrawDLSessionSetGhostDepthPipelines(struct LDrawDLSession *session,
+										  id<MTLRenderPipelineState> _Nullable face,
+										  id<MTLRenderPipelineState> _Nullable wideLine);
+
 
 // The DLs a session drew under a highlight, and where, kept after its render
 // pass so the renderer can draw their band. Their DLs stay alive until the list
@@ -132,6 +145,15 @@ void LDrawDLHighlightListDestroy(struct LDrawDLHighlightList *list);
 /// ones, through facing, and puts face back after.
 - (void)setFacingPipeline:(id<MTLRenderPipelineState> _Nullable)facing
 			 facePipeline:(id<MTLRenderPipelineState> _Nullable)face;
+
+/// Draws the opaque parts through this pipeline, and puts the face pipeline
+/// back after them. Nil draws them through the one bound already.
+- (void)setOpaquePipeline:(id<MTLRenderPipelineState> _Nullable)opaque;
+
+/// Draws the ghosts' depth prepass without the lists through these, which
+/// draw only depth and stencil.
+- (void)setGhostDepthPipeline:(id<MTLRenderPipelineState> _Nullable)face
+			 wideLinePipeline:(id<MTLRenderPipelineState> _Nullable)wideLine;
 
 @end
 
