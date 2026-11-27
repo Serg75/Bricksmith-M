@@ -44,14 +44,17 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 // Purpose:		Returns the global color library available to all LDraw objects. 
 //				The colors are dynamically read from ldconfig.ldr. 
 //
+// Notes:		Made once, as parts may be read on several threads at once.
+//
 //------------------------------------------------------------------------------
 + (LDrawColorLibrary *)sharedColorLibrary
 {
-	NSString    *ldconfigPath   = nil;
-	LDrawFile   *ldconfigFile   = nil;
+	static dispatch_once_t	once;
 
-	if (sharedColorLibrary == nil)
-	{
+	dispatch_once(&once, ^{
+		NSString    *ldconfigPath   = nil;
+		LDrawFile   *ldconfigFile   = nil;
+
 		//---------- Read colors in ldconfig.ldr -------------------------------
 		
 		// Read it in.
@@ -101,7 +104,7 @@ static LDrawColorLibrary	*sharedColorLibrary	= nil;
 			blendedColor = [LDrawColor blendedColorForCode:counter];
 			[sharedColorLibrary addPrivateColor:blendedColor];
 		}
-	}
+	});
 	
 	return sharedColorLibrary;
 	

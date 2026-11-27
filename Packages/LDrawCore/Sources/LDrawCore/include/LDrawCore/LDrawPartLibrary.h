@@ -160,6 +160,9 @@ extern NSString	*Category_Subparts;
 // Finding Parts
 - (void)loadImageForName:(NSString *)imageName inGroup:(nullable dispatch_group_t)parentGroup;
 - (void)loadModelForName:(NSString *)name inGroup:(nullable dispatch_group_t)parentGroup;
+/// Loads the parts not loaded yet, and the parts they use, on several threads
+/// at once. Returns when all are loaded.
+- (void)loadModelsForNames:(NSArray<NSString *> *)partNames;
 - (nullable CGImageRef)imageForTextureName:(NSString *)imageName;
 - (nullable CGImageRef)imageForTexture:(LDrawTexture *)texture;
 - (nullable CGImageRef)imageFromNeighboringFileForTexture:(LDrawTexture *)texture;

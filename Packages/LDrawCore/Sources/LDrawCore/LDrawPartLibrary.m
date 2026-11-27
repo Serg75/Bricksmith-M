@@ -75,8 +75,44 @@ NSString	*Category_Moved 			= @"Moved";
 NSString	*Category_Primitives		= @"Primitives";
 NSString	*Category_Subparts			= @"Subparts";
 
+/// A part being read: the thread reading it, and a group it leaves when done.
+@interface LDrawPartLoad : NSObject
+@property (nonatomic, readonly) NSThread			*thread;
+@property (nonatomic, readonly) dispatch_group_t	group;
+@end
+
+
+@implementation LDrawPartLoad
+
+- (instancetype)init
+{
+	self = [super init];
+	if (self != nil)
+	{
+		_thread	= [NSThread currentThread];
+		_group	= dispatch_group_create();
+		dispatch_group_enter(_group);
+	}
+	return self;
+}
+
+@end
+
+
+// How long a part waits for another thread reading a part it uses. Only a
+// cycle of parts, each waiting for the next, would wait this long.
+static const int64_t PartLoadWaitSeconds = 10;
+
+
 @interface LDrawPartLibrary ()
 {
+	// Guards loadedFiles and every record below, as parts load on several
+	// threads at once.
+	NSObject												*loadLock;
+
+	// The parts being read now, by name.
+	NSMutableDictionary<NSString *, LDrawPartLoad *>		*loading;
+
 	// Each loaded part, and the names of the parts its file uses. Loaded parts
 	// are flattened, so this is the only record of what they are made of.
 	NSMutableDictionary<NSString *, NSSet<NSString *> *>	*usedPartNames;
@@ -90,7 +126,6 @@ NSString	*Category_Subparts			= @"Subparts";
 
 	// Parts no file was found for, so a model that uses one many times looks
 	// for it once. Emptied when the catalog is set or files are checked.
-	// Under @synchronized on itself, as parts may load on another queue.
 	NSMutableSet<NSString *>								*missingNames;
 
 	// The update the LDraw folder holds. A load checks the saved catalog
@@ -169,6 +204,8 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	loadedPaths					= [NSMutableDictionary dictionaryWithCapacity:400];
 	staleNames					= [NSMutableSet set];
 	missingNames				= [NSMutableSet set];
+	loadLock					= [[NSObject alloc] init];
+	loading						= [NSMutableDictionary dictionary];
 	loadedImages				= [[NSMutableDictionary alloc] init];
 	optimizedRepresentations    = [NSMutableDictionary dictionaryWithCapacity:400];
 	optimizedTextures			= [[NSMutableDictionary alloc] init];
@@ -626,7 +663,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	partCatalog = newCatalog;
 	
 	// A part missing from the old catalog's folder may be in this one.
-	@synchronized(self->missingNames)
+	@synchronized(self->loadLock)
 	{
 		[self->missingNames removeAllObjects];
 	}
@@ -894,22 +931,65 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 // Purpose:		This is a thread-safe method which causes the model of the given 
 //				name to be loaded out of the LDraw folder. 
 //
+// Notes:		A part another thread is reading is waited for, not read again.
+//				One this thread is reading already, as a file that uses itself,
+//				is left.
+//
 //==============================================================================
 - (void)loadModelForName:(NSString *)partName
 				 inGroup:(dispatch_group_t)parentGroup
 {
+	LDrawPartLoad	*other	= nil;
+	LDrawPartLoad	*mine	= nil;
+
 	(void)parentGroup;
-	@synchronized(self->missingNames)
+	@synchronized(self->loadLock)
 	{
-		if ([self->missingNames containsObject:partName])
+		// A part whose file changed is read again here, so the part file
+		// being read is flattened with the new one.
+		if ([self->missingNames containsObject:partName]
+			|| ([self->loadedFiles objectForKey:partName] != nil && [self->staleNames containsObject:partName] == NO))
+		{
 			return;
+		}
+		other = [self->loading objectForKey:partName];
+		if (other == nil)
+		{
+			mine = [[LDrawPartLoad alloc] init];
+			[self->loading setObject:mine forKey:partName];
+		}
 	}
-	// A part whose file changed is read again here, so the part file being
-	// read is flattened with the new one.
-	if ([self->loadedFiles objectForKey:partName] == nil || [self->staleNames containsObject:partName])
-		[self readModelNamed:partName];
+	if (other != nil)
+	{
+		if (other.thread != [NSThread currentThread])
+			dispatch_group_wait(other.group, dispatch_time(DISPATCH_TIME_NOW, PartLoadWaitSeconds * NSEC_PER_SEC));
+		return;
+	}
+
+	[self readModelNamed:partName];
+
+	@synchronized(self->loadLock)
+	{
+		[self->loading removeObjectForKey:partName];
+	}
+	dispatch_group_leave(mine.group);
 
 } // end loadModelForName:
+
+
+//========== loadModelsForNames: ===============================================
+//
+// Purpose:		Loads the parts not loaded yet, and the parts they use, on
+//				several threads at once. Returns when all are loaded.
+//
+//==============================================================================
+- (void)loadModelsForNames:(NSArray<NSString *> *)partNames
+{
+	dispatch_apply(partNames.count, DISPATCH_APPLY_AUTO, ^(size_t index) {
+		[self loadModelForName:partNames[index] inGroup:NULL];
+	});
+
+} // end loadModelsForNames:
 
 
 //========== imageForTextureName: ==============================================
@@ -1075,8 +1155,6 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 //				This method can only find parts in the LDraw folder; it returns 
 //				nil if fed an MPD submodel name.
 //
-//				NOT THREAD SAFE!
-//
 // Notes:		The part is looked up by the name specified in the part command. 
 //				For regular parts and primitives, this is simply the filename 
 //				as found in LDraw/parts or LDraw/p. But for subparts found in 
@@ -1089,13 +1167,25 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 {
 	// Has it already been parsed? A part whose file changed is still returned,
 	// so documents draw it until all changed parts are read.
-	LDrawModel *model = [self->loadedFiles objectForKey:imageName];
+	LDrawModel	*model		= nil;
+	BOOL		 missing	= NO;
+
+	@synchronized(self->loadLock)
+	{
+		model	= [self->loadedFiles objectForKey:imageName];
+		missing	= [self->missingNames containsObject:imageName];
+	}
 
 	// This case is only hit when a library part uses another library part, e.g.
 	// a brick grabs a collection-of-studs part.
-	if (model == nil)
-		model = [self readModelNamed:imageName];
-
+	if (model == nil && missing == NO)
+	{
+		[self loadModelForName:imageName inGroup:NULL];
+		@synchronized(self->loadLock)
+		{
+			model = [self->loadedFiles objectForKey:imageName];
+		}
+	}
 	return model;
 	
 } // end modelForName
@@ -1148,7 +1238,10 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 //==============================================================================
 - (LDrawModel *)modelForNameThreadSafe:(NSString *)imageName
 {
-	return [self->loadedFiles objectForKey:imageName];
+	@synchronized(self->loadLock)
+	{
+		return [self->loadedFiles objectForKey:imageName];
+	}
 }
 
 
@@ -1169,9 +1262,15 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 //==============================================================================
 - (void)markPartsWhoseFilesChangedWithCompletionHandler:(void (^)(NSSet<NSString *> *partNames))handler
 {
-	NSDictionary	*paths		= [self->loadedPaths copy];
-	NSDictionary	*uses		= [self->usedPartNames copy];
+	NSDictionary	*paths		= nil;
+	NSDictionary	*uses		= nil;
 	LDrawPaths		*settings	= [[LDrawPaths sharedPaths] copy];
+
+	@synchronized(self->loadLock)
+	{
+		paths	= [self->loadedPaths copy];
+		uses	= [self->usedPartNames copy];
+	}
 
 	dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
 		NSSet *changed = [[self class] partNamesWhoseFilesChanged:paths uses:uses paths:settings];
@@ -1179,13 +1278,16 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 		// The users are found from the parts loaded now, since a part read
 		// meanwhile may use a changed one.
 		dispatch_async(dispatch_get_main_queue(), ^{
-			// A part missing before may have a file now.
-			@synchronized(self->missingNames)
+			NSSet *stale = nil;
+
+			@synchronized(self->loadLock)
 			{
+				// A part missing before may have a file now.
 				[self->missingNames removeAllObjects];
+				[self->staleNames unionSet:[[self class] partNamesUsingPartNames:changed uses:self->usedPartNames]];
+				stale = [self->staleNames copy];
 			}
-			[self->staleNames unionSet:[[self class] partNamesUsingPartNames:changed uses:self->usedPartNames]];
-			handler([self->staleNames copy]);
+			handler(stale);
 		});
 	});
 
@@ -1200,7 +1302,10 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 - (LDrawModel *)freshModelForName:(NSString *)partName
 {
 	[self loadModelForName:partName inGroup:NULL];
-	return [self->loadedFiles objectForKey:partName];
+	@synchronized(self->loadLock)
+	{
+		return [self->loadedFiles objectForKey:partName];
+	}
 
 } // end freshModelForName:
 
@@ -1213,8 +1318,11 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 //==============================================================================
 - (void)dropStaleParts
 {
-	[self forgetPartNames:[self->staleNames allObjects]];
-	[self->staleNames removeAllObjects];
+	@synchronized(self->loadLock)
+	{
+		[self forgetPartNames:[self->staleNames allObjects]];
+		[self->staleNames removeAllObjects];
+	}
 
 } // end dropStaleParts
 
@@ -1226,9 +1334,12 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 //==============================================================================
 - (void)forgetPartNames:(NSArray<NSString *> *)partNames
 {
-	[self->loadedFiles removeObjectsForKeys:partNames];
-	[self->usedPartNames removeObjectsForKeys:partNames];
-	[self->loadedPaths removeObjectsForKeys:partNames];
+	@synchronized(self->loadLock)
+	{
+		[self->loadedFiles removeObjectsForKeys:partNames];
+		[self->usedPartNames removeObjectsForKeys:partNames];
+		[self->loadedPaths removeObjectsForKeys:partNames];
+	}
 
 } // end forgetPartNames:
 
@@ -1408,13 +1519,16 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	NSMutableSet	*used		= [NSMutableSet set];
 
 	// Unmarked first, so a file that uses itself is not read again.
-	[self->staleNames removeObject:partName];
+	@synchronized(self->loadLock)
+	{
+		[self->staleNames removeObject:partName];
+	}
 
 	if (partPath == nil)
 	{
-		[self forgetPartNames:@[partName]];
-		@synchronized(self->missingNames)
+		@synchronized(self->loadLock)
 		{
+			[self forgetPartNames:@[partName]];
 			[self->missingNames addObject:partName];
 		}
 		return nil;
@@ -1438,14 +1552,17 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	// without disconnecting it from its file is pretty dodgy and it would 
 	// be easy to code a bug in.
 
-	if (model != nil)
+	@synchronized(self->loadLock)
 	{
-		[self->loadedFiles setObject:model forKey:partName];
-		[self->usedPartNames setObject:[used copy] forKey:partName];
-		[self->loadedPaths setObject:partPath forKey:partName];
+		if (model != nil)
+		{
+			[self->loadedFiles setObject:model forKey:partName];
+			[self->usedPartNames setObject:[used copy] forKey:partName];
+			[self->loadedPaths setObject:partPath forKey:partName];
+		}
+		else
+			[self forgetPartNames:@[partName]];
 	}
-	else
-		[self forgetPartNames:@[partName]];
 
 	return model;
 

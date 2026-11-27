@@ -20,6 +20,7 @@
 #import <LDrawCore/LDrawKeys.h>
 #import <LDrawCore/LDrawMPDModel.h>
 #import <LDrawCore/LDrawPart.h>
+#import <LDrawCore/LDrawPartLibrary.h>
 #import <LDrawCore/LDrawUtilities.h>
 #import <LDrawCore/LDrawPartReport.h>
 #import <LDrawCore/NSString+LDraw.h>
@@ -83,12 +84,44 @@
 	LDrawFile   *newFile    = nil;
 	NSArray     *lines      = [fileContents separateByLine];
 	
+	// The library parts first, several at once, so the parse finds them read.
+	[[LDrawPartLibrary sharedPartLibraryIfRegistered] loadModelsForNames:[self partNamesInLines:lines]];
+	
 	newFile = [[LDrawFile alloc] initWithLines:lines
 									   inRange:NSMakeRange(0, [lines count]) ];
 	
 	return newFile;
 	
 }//end parseFromFileContents:allowThreads:
+
+
+//---------- partNamesInLines: ---------------------------------------[static]--
+//
+// Purpose:		The names the part lines use, as a part reads its name: the rest
+//				of the line after its 14 fields, in lowercase.
+//
+//------------------------------------------------------------------------------
++ (NSArray<NSString *> *) partNamesInLines:(NSArray<NSString *> *)lines
+{
+	NSMutableSet<NSString *> *names = [NSMutableSet set];
+	
+	for (NSString *line in lines)
+	{
+		NSString	*rest	= line;
+		NSString	*name	= nil;
+		
+		if ([[LDrawUtilities readNextField:line remainder:&rest] integerValue] != 1)
+			continue;
+		for (NSUInteger field = 1; field < 14; field++)
+			[LDrawUtilities readNextField:rest remainder:&rest];
+		
+		name = [[rest stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] lowercaseString];
+		if (name.length > 0)
+			[names addObject:name];
+	}
+	return [names allObjects];
+	
+}//end partNamesInLines:
 
 
 #pragma mark -
