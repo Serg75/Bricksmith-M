@@ -1517,17 +1517,21 @@ kernel void highlightResetKernel(device HighlightBandDraw *draw [[buffer(BufferI
 }
 
 // What a tile of the area holds, one bit each: pixels of the primary part, and
-// pixels outside it, then the same for the secondary part.
+// pixels outside it, then the same for the secondary and the tertiary part. A
+// highlight no part has is outside everywhere.
 constant uint HIGHLIGHT_PRIMARY_IN		= 1;
 constant uint HIGHLIGHT_PRIMARY_OUT		= 2;
 constant uint HIGHLIGHT_SECONDARY_IN	= 4;
 constant uint HIGHLIGHT_SECONDARY_OUT	= 8;
+constant uint HIGHLIGHT_TERTIARY_IN		= 16;
+constant uint HIGHLIGHT_TERTIARY_OUT	= 32;
 
 // What each tile of the area holds, so the nearest pixels are looked for only
 // where a band can be.
 kernel void highlightClassifyKernel(
 	texture2d<float, access::read>	primary		[[texture(0)]],
 	texture2d<float, access::read>	secondary	[[texture(1)]],
+	texture2d<float, access::read>	tertiary	[[texture(2)]],
 	constant HighlightUniform&		uni			[[buffer(BufferIndexHighlightUniforms)]],
 	device uint						*classes	[[buffer(BufferIndexHighlightClasses)]],
 	uint2							tile		[[threadgroup_position_in_grid]],
@@ -1535,18 +1539,17 @@ kernel void highlightClassifyKernel(
 	uint2							at			[[thread_position_in_grid]],
 	uint							index		[[thread_index_in_threadgroup]])
 {
-	threadgroup bool	held[4];
+	threadgroup bool	held[6];
 
-	if (index < 4) {
+	if (index < 6) {
 		held[index] = false;
 	}
 	threadgroup_barrier(mem_flags::mem_threadgroup);
 
 	if (at.x < uint(uni.size.x) && at.y < uint(uni.size.y)) {
-		held[(primary.read(at).r < HIGHLIGHT_NONE) ? 0 : 1] = true;
-		if (uni.has_secondary) {
-			held[(secondary.read(at).r < HIGHLIGHT_NONE) ? 2 : 3] = true;
-		}
+		held[(uni.has[0] && primary.read(at).r < HIGHLIGHT_NONE) ? 0 : 1] = true;
+		held[(uni.has[1] && secondary.read(at).r < HIGHLIGHT_NONE) ? 2 : 3] = true;
+		held[(uni.has[2] && tertiary.read(at).r < HIGHLIGHT_NONE) ? 4 : 5] = true;
 	}
 	threadgroup_barrier(mem_flags::mem_threadgroup);
 
@@ -1554,7 +1557,9 @@ kernel void highlightClassifyKernel(
 		classes[tile.y * grid.x + tile.x] = (held[0] ? HIGHLIGHT_PRIMARY_IN : 0)
 										  | (held[1] ? HIGHLIGHT_PRIMARY_OUT : 0)
 										  | (held[2] ? HIGHLIGHT_SECONDARY_IN : 0)
-										  | (held[3] ? HIGHLIGHT_SECONDARY_OUT : 0);
+										  | (held[3] ? HIGHLIGHT_SECONDARY_OUT : 0)
+										  | (held[4] ? HIGHLIGHT_TERTIARY_IN : 0)
+										  | (held[5] ? HIGHLIGHT_TERTIARY_OUT : 0);
 	}
 }
 
@@ -1573,6 +1578,8 @@ kernel void highlightNearestKernel(
 	texture2d<float, access::read>	primary		[[texture(0)]],
 	texture2d<float, access::read>	secondary	[[texture(1)]],
 	texture2d<float, access::write>	nearest		[[texture(2)]],
+	texture2d<float, access::read>	tertiary	[[texture(3)]],
+	texture2d<float, access::write>	nearestMore	[[texture(4)]],
 	constant HighlightUniform&		uni			[[buffer(BufferIndexHighlightUniforms)]],
 	device HighlightBandDraw		*draw		[[buffer(BufferIndexHighlightDraw)]],
 	device uint2					*tiles		[[buffer(BufferIndexHighlightTiles)]],
@@ -1582,8 +1589,8 @@ kernel void highlightNearestKernel(
 	uint2							local		[[thread_position_in_threadgroup]],
 	uint							index		[[thread_index_in_threadgroup]])
 {
-	threadgroup float	masks[2][HIGHLIGHT_SPAN][HIGHLIGHT_SPAN];
-	threadgroup float2	along[2][HIGHLIGHT_SPAN][HighlightTileSide];	// distance along the row, depth
+	threadgroup float	masks[3][HIGHLIGHT_SPAN][HIGHLIGHT_SPAN];
+	threadgroup float2	along[3][HIGHLIGHT_SPAN][HighlightTileSide];	// distance along the row, depth
 	threadgroup bool	banded;
 
 	// The reach is less than a tile, so only the tiles next to this one can
@@ -1599,8 +1606,10 @@ kernel void highlightNearestKernel(
 	bool first	= (own & HIGHLIGHT_PRIMARY_OUT) && (around & HIGHLIGHT_PRIMARY_IN);
 	bool second	= (own & HIGHLIGHT_PRIMARY_OUT) && (own & HIGHLIGHT_SECONDARY_OUT)
 				  && (around & HIGHLIGHT_SECONDARY_IN);
+	bool third	= (own & HIGHLIGHT_PRIMARY_OUT) && (own & HIGHLIGHT_SECONDARY_OUT) && (own & HIGHLIGHT_TERTIARY_OUT)
+				  && (around & HIGHLIGHT_TERTIARY_IN);
 
-	if (first == false && second == false) {
+	if (first == false && second == false && third == false) {
 		return;
 	}
 	int		reach	= uni.reach;
@@ -1621,6 +1630,9 @@ kernel void highlightNearestKernel(
 		if (second) {
 			masks[1][cell / span][cell % span] = inArea ? secondary.read(uint2(at)).r : HIGHLIGHT_NONE;
 		}
+		if (third) {
+			masks[2][cell / span][cell % span] = inArea ? tertiary.read(uint2(at)).r : HIGHLIGHT_NONE;
+		}
 	}
 	threadgroup_barrier(mem_flags::mem_threadgroup);
 
@@ -1629,6 +1641,7 @@ kernel void highlightNearestKernel(
 		int		column	= cell % HighlightTileSide;
 		float2	one		= float2(HIGHLIGHT_FAR, HIGHLIGHT_NONE);
 		float2	other	= float2(HIGHLIGHT_FAR, HIGHLIGHT_NONE);
+		float2	last	= float2(HIGHLIGHT_FAR, HIGHLIGHT_NONE);
 
 		for (int step = -reach; step <= reach; step++) {
 			float away = abs(float(step));
@@ -1647,19 +1660,28 @@ kernel void highlightNearestKernel(
 					other = float2(away, depth);
 				}
 			}
+			if (third) {
+				float depth = masks[2][row][reach + column + step];
+
+				if (depth < HIGHLIGHT_NONE && away < last.x) {
+					last = float2(away, depth);
+				}
+			}
 		}
 		along[0][row][column] = one;
 		along[1][row][column] = other;
+		along[2][row][column] = last;
 	}
 	threadgroup_barrier(mem_flags::mem_threadgroup);
 
-	float2	square	= float2(HIGHLIGHT_FAR * HIGHLIGHT_FAR);
-	float2	depth	= float2(HIGHLIGHT_NONE);
+	float3	square	= float3(HIGHLIGHT_FAR * HIGHLIGHT_FAR);
+	float3	depth	= float3(HIGHLIGHT_NONE);
 
 	for (int step = -reach; step <= reach; step++) {
 		float	down	= float(step * step);
 		float2	one		= along[0][reach + int(local.y) + step][local.x];
 		float2	other	= along[1][reach + int(local.y) + step][local.x];
+		float2	last	= along[2][reach + int(local.y) + step][local.x];
 
 		if (one.x < HIGHLIGHT_FAR && one.x * one.x + down < square.x) {
 			square.x	= one.x * one.x + down;
@@ -1669,21 +1691,30 @@ kernel void highlightNearestKernel(
 			square.y	= other.x * other.x + down;
 			depth.y		= other.y;
 		}
+		if (last.x < HIGHLIGHT_FAR && last.x * last.x + down < square.z) {
+			square.z	= last.x * last.x + down;
+			depth.z		= last.y;
+		}
 	}
 	int2	at		= int2(tile) * HighlightTileSide + int2(local);
-	float2	away	= sqrt(square);
+	float3	away	= sqrt(square);
 
 	if (at.x < uni.size.x && at.y < uni.size.y) {
-		// Without its band here, the primary part still keeps the secondary
-		// band off itself.
-		if (first == false && primary.read(uint2(at)).r < HIGHLIGHT_NONE) {
+		// Without their bands here, the primary and secondary parts still
+		// keep the bands below theirs off themselves.
+		if (first == false && uni.has[0] && primary.read(uint2(at)).r < HIGHLIGHT_NONE) {
 			away.x = 0.0;
 		}
+		if (second == false && uni.has[1] && secondary.read(uint2(at)).r < HIGHLIGHT_NONE) {
+			away.y = 0.0;
+		}
 		nearest.write(float4(away.x, depth.x, away.y, depth.y), uint2(at));
+		nearestMore.write(float4(away.z, depth.z, 0.0, 0.0), uint2(at));
 
 		// Any band at all, whatever hides it.
 		if ((away.x > 0.5 && away.x <= uni.radius[0] + 0.5)
-			|| (away.y > 0.5 && away.y <= uni.radius[1] + 0.5 && away.x > 0.5)) {
+			|| (away.y > 0.5 && away.y <= uni.radius[1] + 0.5 && away.x > 0.5)
+			|| (away.z > 0.5 && away.z <= uni.radius[2] + 0.5 && away.x > 0.5 && away.y > 0.5)) {
 			banded = true;
 		}
 	}
@@ -1720,24 +1751,28 @@ struct HighlightBandOutput {
 // toward the eye, so the depth test tells whether the part's edge is in front
 // of what is drawn there.
 fragment HighlightBandOutput highlightBandFragmentShader(
-	ResolveVertexOutput				in		[[stage_in]],
-	texture2d<float, access::read>	nearest	[[texture(0)]],
-	constant HighlightUniform&		uni		[[buffer(BufferIndexHighlightUniforms)]])
+	ResolveVertexOutput				in			[[stage_in]],
+	texture2d<float, access::read>	nearest		[[texture(0)]],
+	texture2d<float, access::read>	nearestMore	[[texture(1)]],
+	constant HighlightUniform&		uni			[[buffer(BufferIndexHighlightUniforms)]])
 {
 	HighlightBandOutput	out;
-	float4				near	= nearest.read(uint2(int2(in.position.xy) - uni.origin));
-	float				away	= (uni.level == 0) ? near.x : near.z;
+	uint2				pixel	= uint2(int2(in.position.xy) - uni.origin);
+	float4				near	= nearest.read(pixel);
+	float2				more	= nearestMore.read(pixel).xy;
+	float				away	= (uni.level == 0) ? near.x : (uni.level == 1) ? near.z : more.x;
 	float				radius	= uni.radius[uni.level];
 
-	// Inside the part, or past the band. The secondary band stays off the
-	// primary part.
-	if (away < 0.5 || away > radius + 0.5 || (uni.level == 1 && near.x < 0.5)) {
+	// Inside the part, or past the band. Each band stays off the parts of the
+	// bands above it.
+	if (away < 0.5 || away > radius + 0.5 || (uni.level >= 1 && near.x < 0.5) || (uni.level == 2 && near.z < 0.5)) {
 		discard_fragment();
 	}
 	float alpha = saturate(radius + 0.5 - away) * (uni.shown ? 1.0 : uni.hidden_alpha[uni.level]);
+	float depth = (uni.level == 0) ? near.y : (uni.level == 1) ? near.w : more.y;
 
 	out.color = float4(uni.color[uni.level].rgb, alpha);
-	out.depth = max(((uni.level == 0) ? near.y : near.w) - uni.depth_offset[uni.level], 0.0);
+	out.depth = max(depth - uni.depth_offset[uni.level], 0.0);
 
 	return out;
 }

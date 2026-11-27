@@ -100,8 +100,9 @@
 // Called with each frame's GPU time, on a Metal completion thread.
 @property (nonatomic, copy) void (^frameGPUTimeHandler)(CFTimeInterval seconds);
 
-// The color of the band around highlighted parts.
+// The color of the band around highlighted parts, and of the tertiary band.
 @property (nonatomic, assign) vector_float3			highlightColor;
+@property (nonatomic, assign) vector_float3			tertiaryHighlightColor;
 
 // What the band is worked out in: a depth mask for each highlight, its depth
 // target, what each tile of the area holds, the distance to the nearest masked
@@ -110,6 +111,7 @@
 @property (nonatomic, strong) NSArray<id<MTLTexture>>	*highlightMasks;
 @property (nonatomic, strong) id<MTLTexture>			highlightMaskDepth;
 @property (nonatomic, strong) id<MTLTexture>			highlightNearest;
+@property (nonatomic, strong) id<MTLTexture>			highlightNearestMore;	// the tertiary highlight's
 @property (nonatomic, strong) id<MTLBuffer>				highlightClasses;
 @property (nonatomic, strong) id<MTLBuffer>				highlightTiles;
 @property (nonatomic, strong) id<MTLBuffer>				highlightDraw;
@@ -202,12 +204,13 @@ static const NSTimeInterval ListRoomIdleSeconds = 2.0;
 // The band around highlighted parts, indexed by highlight minus one: its width
 // in points, how bright its color is, and its alpha where something hides the
 // part. Where the part is in front the band is opaque. The color is the
-// host's, or this orange.
-enum : int { HighlightLevelCount = 2 };
-static const CGFloat		HighlightWidths[HighlightLevelCount]		= { 3.0, 2.0 };
-static const float			HighlightShades[HighlightLevelCount]		= { 1.0f, 0.75f };
-static const float			HighlightHiddenAlphas[HighlightLevelCount]	= { 0.35f, 0.25f };
+// host's, or this orange; the tertiary band has its own, or this teal.
+enum : int { HighlightLevelCount = 3 };
+static const CGFloat		HighlightWidths[HighlightLevelCount]		= { 3.0, 2.0, 2.0 };
+static const float			HighlightShades[HighlightLevelCount]		= { 1.0f, 0.75f, 1.0f };
+static const float			HighlightHiddenAlphas[HighlightLevelCount]	= { 0.35f, 0.25f, 0.25f };
 static const vector_float3	HighlightDefaultColor						= { 1.0f, 0.55f, 0.0f };
+static const vector_float3	TertiaryHighlightDefaultColor				= { 0.2f, 0.75f, 0.8f };
 
 
 
@@ -253,6 +256,7 @@ static LDrawRendererMetalDrawState * metalDrawState(LDrawRenderer * renderer)
 	{
 		state = [LDrawRendererMetalDrawState new];
 		state.highlightColor = HighlightDefaultColor;
+		state.tertiaryHighlightColor = TertiaryHighlightDefaultColor;
 		objc_setAssociatedObject(renderer, kLDrawRendererMetalDrawStateKey, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 	}
 	return state;
@@ -819,6 +823,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 	descriptor.storageMode = MTLStorageModePrivate;
 	state.highlightMasks = @[ [device newTextureWithDescriptor:descriptor],
+							  [device newTextureWithDescriptor:descriptor],
 							  [device newTextureWithDescriptor:descriptor] ];
 
 	descriptor.pixelFormat = MTLPixelFormatDepth32Float;
@@ -830,6 +835,8 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	descriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
 	descriptor.storageMode = MTLStorageModePrivate;
 	state.highlightNearest = [device newTextureWithDescriptor:descriptor];
+	descriptor.pixelFormat = MTLPixelFormatRG32Float;
+	state.highlightNearestMore = [device newTextureWithDescriptor:descriptor];
 
 	NSUInteger tiles = ((width + HighlightTileSide - 1) / HighlightTileSide)
 					 * ((height + HighlightTileSide - 1) / HighlightTileSide);
@@ -1334,10 +1341,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 		uniform.hidden_alpha[index]	= HighlightHiddenAlphas[index];
 		uniform.depth_offset[index]	= [self depthOfFaceAt45DegreesAcross:uniform.radius[index]
 															  pixelWidth:pixelSize.width];
-		uniform.color[index]		= simd_make_float4(color * HighlightShades[index], 1.0f);
+		uniform.color[index]		= simd_make_float4(((index == 2) ? state.tertiaryHighlightColor : color)
+													   * HighlightShades[index], 1.0f);
+		uniform.has[index]			= has[index];
 	}
-	uniform.reach			= (int)ceilf(MAX(uniform.radius[0], uniform.radius[1])) + 1;
-	uniform.has_secondary	= has[1];
+	uniform.reach = (int)ceilf(MAX(uniform.radius[0], MAX(uniform.radius[1], uniform.radius[2]))) + 1;
 
 	// The parts and the band around them, on the surface.
 	CGRect area = LDrawDLHighlightListBounds(highlights, simd_mul(projection, modelView), pixelSize);
@@ -1405,10 +1413,11 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 		[maskEncoder endEncoding];
 	}
 
-	// A mask with no part in it is not drawn this frame, so the other one
-	// stands in for it. Its band is not drawn.
-	id<MTLTexture>				primary		= state.highlightMasks[has[0] ? 0 : 1];
-	id<MTLTexture>				secondary	= state.highlightMasks[has[1] ? 1 : 0];
+	// A mask with no part in it is not drawn this frame, so the kernels read
+	// it only for the highlights the uniform says are there.
+	id<MTLTexture>				primary		= state.highlightMasks[0];
+	id<MTLTexture>				secondary	= state.highlightMasks[1];
+	id<MTLTexture>				tertiary	= state.highlightMasks[2];
 	MTLSize						one			= MTLSizeMake(1, 1, 1);
 	MTLSize						tile		= MTLSizeMake(HighlightTileSide, HighlightTileSide, 1);
 	MTLSize						grid		= MTLSizeMake((uniform.size.x + HighlightTileSide - 1) / HighlightTileSide,
@@ -1425,16 +1434,19 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[nearestEncoder setBuffer:state.highlightTiles offset:0 atIndex:BufferIndexHighlightTiles];
 	[nearestEncoder setTexture:primary atIndex:0];
 	[nearestEncoder setTexture:secondary atIndex:1];
-	[nearestEncoder setTexture:state.highlightNearest atIndex:2];
+	[nearestEncoder setTexture:tertiary atIndex:2];
 	[nearestEncoder setComputePipelineState:_highlightClassifyPipelineState];
 	[nearestEncoder dispatchThreadgroups:grid threadsPerThreadgroup:tile];
+	[nearestEncoder setTexture:state.highlightNearest atIndex:2];
+	[nearestEncoder setTexture:tertiary atIndex:3];
+	[nearestEncoder setTexture:state.highlightNearestMore atIndex:4];
 	[nearestEncoder setComputePipelineState:_highlightNearestPipelineState];
 	[nearestEncoder dispatchThreadgroups:grid threadsPerThreadgroup:tile];
 	[nearestEncoder endEncoding];
 	[commandBuffer commit];
 
-	// The band, the secondary one first so the primary lies over it, each in
-	// front of what is drawn and behind it.
+	// The bands, the tertiary one first and the primary last so each lies
+	// over the ones below it, each in front of what is drawn and behind it.
 	MTLRenderPassDescriptor *bandPass = [MTLRenderPassDescriptor renderPassDescriptor];
 
 	bandPass.colorAttachments[0].texture		= colorTexture;
@@ -1453,6 +1465,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[renderEncoder setRenderPipelineState:_highlightBandPipelineState];
 	[renderEncoder setVertexBuffer:state.highlightTiles offset:0 atIndex:BufferIndexHighlightTiles];
 	[renderEncoder setFragmentTexture:state.highlightNearest atIndex:0];
+	[renderEncoder setFragmentTexture:state.highlightNearestMore atIndex:1];
 
 	for (index = HighlightLevelCount - 1; index >= 0; --index)
 	{
@@ -1957,6 +1970,21 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	[self->delegate LDrawRendererNeedsRedisplay:self];
 
 } // end setHighlightColorRed:green:blue:
+
+
+//========== setTertiaryHighlightColorRed:green:blue: ==========================
+//
+// Purpose:		Sets the color of the band around parts with the tertiary
+//				highlight.
+//
+//==============================================================================
+- (void)setTertiaryHighlightColorRed:(float)red green:(float)green blue:(float)blue
+{
+	metalDrawState(self).tertiaryHighlightColor = simd_make_float3(red, green, blue);
+
+	[self->delegate LDrawRendererNeedsRedisplay:self];
+
+} // end setTertiaryHighlightColorRed:green:blue:
 
 
 //========== setFrameGPUTimeHandler: ===========================================

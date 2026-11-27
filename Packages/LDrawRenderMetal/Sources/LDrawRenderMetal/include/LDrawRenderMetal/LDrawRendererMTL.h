@@ -62,6 +62,10 @@ typedef NS_ENUM(NSInteger, LDrawTransparencySorting) {
 /// until it is set.
 - (void) setHighlightColorRed:(float)red green:(float)green blue:(float)blue;
 
+/// The color of the band around parts with the tertiary highlight. Teal until
+/// it is set.
+- (void) setTertiaryHighlightColorRed:(float)red green:(float)green blue:(float)blue;
+
 /// Called with how long the GPU took for each frame drawn in a view, on a
 /// Metal completion thread. Nil stops it.
 - (void) setFrameGPUTimeHandler:(nullable void (^)(CFTimeInterval seconds))handler;

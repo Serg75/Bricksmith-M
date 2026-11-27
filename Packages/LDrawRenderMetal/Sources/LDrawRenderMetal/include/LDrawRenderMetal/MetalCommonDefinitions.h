@@ -170,20 +170,20 @@ typedef struct TransparencyUniform {
 #define HighlightTileSide	16
 #define HighlightReachMost	10
 
-// The band around highlighted parts. Index 0 of each pair is the primary
-// highlight, 1 the secondary.
+// The band around highlighted parts. Index 0 of each array is the primary
+// highlight, 1 the secondary and 2 the tertiary.
 typedef struct HighlightUniform {
-	vector_float4	color[2];			// of the band where the part is in front
-	float			radius[2];			// of the band, in pixels
-	float			hidden_alpha[2];	// of the band where something hides the part
-	float			depth_offset[2];	// how far the band comes toward the eye, as a depth
+	vector_float4	color[3];			// of the band where the part is in front
+	float			radius[3];			// of the band, in pixels
+	float			hidden_alpha[3];	// of the band where something hides the part
+	float			depth_offset[3];	// how far the band comes toward the eye, as a depth
+	int				has[3];				// 0 when no part has that highlight
 	vector_float2	viewport;			// the surface's size, in pixels
 	vector_int2		origin;				// of the area on the surface, in pixels
 	vector_int2		size;				// of the area, in pixels
 	int				reach;				// pixels looked at each way for the nearest part
-	int				level;				// the highlight a draw is for, 0 or 1
+	int				level;				// the highlight a draw is for, 0 to 2
 	int				shown;				// 1 for the band in front, 0 for the one behind
-	int				has_secondary;		// 0 when no part has the secondary highlight
 } HighlightUniform;
 
 

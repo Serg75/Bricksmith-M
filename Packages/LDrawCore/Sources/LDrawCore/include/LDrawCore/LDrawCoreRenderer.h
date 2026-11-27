@@ -176,7 +176,10 @@ typedef NS_ENUM(NSInteger, LDrawRenderHighlight)
 	LDrawRenderHighlightPrimary		= 1,
 
 	/// A narrower, darker band, for what goes with it.
-	LDrawRenderHighlightSecondary	= 2
+	LDrawRenderHighlightSecondary	= 2,
+
+	/// A narrow band in a color of its own, for what belongs with it.
+	LDrawRenderHighlightTertiary	= 3
 };
 
 

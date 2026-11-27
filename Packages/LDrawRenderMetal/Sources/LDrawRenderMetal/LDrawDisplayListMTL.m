@@ -2760,7 +2760,7 @@ void LDrawDLHighlight(struct LDrawDLSession *	session,
 					  int						highlight)
 {
 	if (	session->highlight_list == NULL
-		||	(highlight != LDrawRenderHighlightPrimary && highlight != LDrawRenderHighlightSecondary))
+		||	highlight < LDrawRenderHighlightPrimary || highlight > LDrawRenderHighlightTertiary)
 		return;
 
 	struct LDrawDLHighlightLink * link = LDrawPoolAllocate(session->alloc, sizeof(struct LDrawDLHighlightLink));
