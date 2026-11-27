@@ -70,6 +70,11 @@ typedef NS_ENUM(NSInteger, LDrawTransparencySorting) {
 /// Metal completion thread. Nil stops it.
 - (void) setFrameGPUTimeHandler:(nullable void (^)(CFTimeInterval seconds))handler;
 
+/// Draws every part as itself: none faint, banded or marked. For a picture of
+/// a model, which shows the model rather than how a view draws it. Off until
+/// it is set.
+- (void) setDrawsPartsPlain:(BOOL)plain;
+
 /// How frames drawn in a view blend transparent parts. Full until it is set.
 /// Pictures always sort them fully where the GPU can.
 - (void) setTransparencySorting:(LDrawTransparencySorting)sorting;

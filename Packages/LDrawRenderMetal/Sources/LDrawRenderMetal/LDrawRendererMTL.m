@@ -97,6 +97,9 @@
 // lists keep their buffers for when they are used again.
 @property (nonatomic, assign) LDrawTransparencySorting	viewSorting;
 
+// Every part drawn as itself: none faint, banded or marked.
+@property (nonatomic, assign) BOOL						partsPlain;
+
 // Called with each frame's GPU time, on a Metal completion thread.
 @property (nonatomic, copy) void (^frameGPUTimeHandler)(CFTimeInterval seconds);
 
@@ -1256,6 +1259,7 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	struct LDrawDLHighlightList *highlightList = NULL;
 
 	[ren setBoundsOnlyDrawing:boundsOnly];
+	[ren setDrawsPartsPlain:metalDrawState(self).partsPlain];
 	[self applyOutlineToShaderRenderer:ren pixelSize:pixelSize];
 	[ren setPrepareTransparentLists:prepareLists];
 	[ren setFacingPipeline:_transparentFacingPipelineState facePipeline:_pipelineState];
@@ -1998,6 +2002,19 @@ static id<MTLTexture> newMultisampleTexture(MTLPixelFormat format, CGSize size, 
 	metalDrawState(self).frameGPUTimeHandler = handler;
 
 } // end setFrameGPUTimeHandler:
+
+
+//========== setDrawsPartsPlain: ===============================================
+//
+// Purpose:		Draws every part as itself: none faint, banded or marked. Off
+//				until it is set.
+//
+//==============================================================================
+- (void)setDrawsPartsPlain:(BOOL)plain
+{
+	metalDrawState(self).partsPlain = plain;
+
+} // end setDrawsPartsPlain:
 
 
 //========== setTransparencySorting: ===========================================

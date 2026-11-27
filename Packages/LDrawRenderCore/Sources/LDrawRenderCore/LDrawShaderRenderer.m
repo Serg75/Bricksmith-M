@@ -107,6 +107,18 @@ static void set_line_color4fv(float * c, float storage[4])
 }
 
 
+//========== setDrawsPartsPlain: ===============================================
+//
+// Purpose:		Draws every part as itself. Faint parts, bands and marks are
+//				still pushed and popped, but change nothing.
+//
+//==============================================================================
+- (void)setDrawsPartsPlain:(BOOL)plain
+{
+	partsPlain = plain;
+}
+
+
 //========== pushMatrix: =========================================================
 //
 // Purpose: accumulate a transform temporarily.  The transform will be 'grabbed'
@@ -363,8 +375,8 @@ static void set_line_color4fv(float * c, float storage[4])
 {
 	assert(ghost_stack_top < COLOR_STACK_DEPTH);
 
-	float	alpha		= [self alphaModulationNow] * factor;
-	int		ghost_id	= (ghost_stack_top == 0) ? ++ghost_serial : [self ghostIdNow];
+	float	alpha		= [self alphaModulationNow] * (partsPlain ? 1.0f : factor);
+	int		ghost_id	= (ghost_stack_top == 0 && partsPlain == NO) ? ++ghost_serial : [self ghostIdNow];
 
 	ghost_stack[ghost_stack_top].alpha = alpha;
 	ghost_stack[ghost_stack_top].ghost_id = ghost_id;
@@ -407,9 +419,11 @@ static void set_line_color4fv(float * c, float storage[4])
 //================================================================================
 - (void)pushMark:(const float *)mark
 {
+	static const float noMark[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
 	assert(mark_stack_top < COLOR_STACK_DEPTH);
 
-	memcpy(mark_stack + mark_stack_top * 4, mark, sizeof(float) * 4);
+	memcpy(mark_stack + mark_stack_top * 4, partsPlain ? noMark : mark, sizeof(float) * 4);
 	++mark_stack_top;
 
 } // end pushMark:
@@ -450,7 +464,7 @@ static void set_line_color4fv(float * c, float storage[4])
 {
 	assert(highlight_stack_top < COLOR_STACK_DEPTH);
 
-	highlight_stack[highlight_stack_top] = highlight;
+	highlight_stack[highlight_stack_top] = partsPlain ? LDrawRenderHighlightNone : highlight;
 	++highlight_stack_top;
 
 } // end pushHighlight:

@@ -84,6 +84,7 @@ struct	LDrawDragHandleInstance;
 
 	int								wire_frame_count;								// wire frame stack is just a count.
 	BOOL							boundsOnlyDrawing;								// fast interaction: draw AABBs only.
+	BOOL							partsPlain;										// no part faint, banded or marked.
 
 
 	struct LDrawTextureSpec			tex_stack[TEXTURE_STACK_DEPTH];					// Texture stack from push/pop texture.
@@ -131,6 +132,10 @@ struct	LDrawDragHandleInstance;
 }
 
 - (void)setBoundsOnlyDrawing:(BOOL)boundsOnly;
+
+/// Draws every part as itself: none faint, banded or marked. For a picture of
+/// a model, which shows the model rather than how a view draws it.
+- (void)setDrawsPartsPlain:(BOOL)plain;
 
 @end
 
