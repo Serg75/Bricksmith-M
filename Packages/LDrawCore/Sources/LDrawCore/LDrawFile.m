@@ -667,9 +667,17 @@
 	[self updateModelLookupTable];
 	
 	// Post a notification on ourself that a model was added - missing parts need
-	// to know this to re-check whether they match this model.
-	[[NSNotificationCenter defaultCenter]
-			postNotificationName:LDrawMPDSubModelAdded object:self ];
+	// to know this to re-check whether they match this model. The name lets
+	// each of them skip a model it does not reference.
+	NSString		*name	= nil;
+	NSDictionary	*info	= nil;
+	
+	if([directive isKindOfClass:[LDrawMPDModel class]])
+		name = [[(LDrawMPDModel *)directive modelName] lowercaseString];
+	if(name.length > 0)
+		info = @{LDrawMPDSubModelAddedNameKey: name};
+	
+	[[NSNotificationCenter defaultCenter] postNotificationName:LDrawMPDSubModelAdded object:self userInfo:info];
 	
 }//end insertDirective:atIndex:
 

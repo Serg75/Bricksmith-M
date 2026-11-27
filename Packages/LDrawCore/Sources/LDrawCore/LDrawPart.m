@@ -1747,11 +1747,20 @@ To work, this needs to multiply the modelViewGLMatrix by the part transform.
 //				aren't fonud, we unresolve so that we can get a shot at
 //				re-resolving to the newly added part.
 //
+// Notes:		A model with another name cannot resolve us, so we stay as we
+//				are. Unresolving removes us as an observer, which is slow with
+//				thousands of missing parts listening.
+//
 //==============================================================================
 - (void) addedMPDModel:(NSNotification *)notification
 {
-	if(cacheType == LDrawPartTypeNotFound)
+	NSString *addedName = [[notification userInfo] objectForKey:LDrawMPDSubModelAddedNameKey];
+	
+	if(cacheType == LDrawPartTypeNotFound
+	   && (addedName == nil || [addedName isEqualToString:referenceName]))
+	{
 		[self unresolvePart];
+	}
 }//end addedMPDModel
 
 

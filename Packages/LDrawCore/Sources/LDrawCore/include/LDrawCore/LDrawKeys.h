@@ -160,8 +160,10 @@
 #define LDrawStepPartListDidChangeNotification			@"LDrawStepPartListDidChangeNotification"
 
 //A model was added to a document.  Note that the object
-// for this notification is the LDrawFile that was edited!
+// for this notification is the LDrawFile that was edited! The userInfo holds
+// the model's name in lowercase under LDrawMPDSubModelAddedNameKey.
 #define LDrawMPDSubModelAdded							@"LDrawMPDSubModelAdded"
+#define LDrawMPDSubModelAddedNameKey					@"LDrawMPDSubModelAddedName"
 
 // Library parts were read again, or the catalog was rebuilt. Documents need to
 // tell their parts to re-resolve their references. The host posts it.
