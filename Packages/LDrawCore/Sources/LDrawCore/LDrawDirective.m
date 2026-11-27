@@ -51,7 +51,6 @@
 {
 	self = [super init];
 	
-	enclosingDirective = nil;
     iconName = @"";
 	observers = [[LDrawFastSet alloc] init];
 	return self;
@@ -564,7 +563,11 @@
 //==============================================================================
 - (void)setEnclosingDirective:(LDrawContainer *)newParent
 {
-	enclosingDirective = newParent;
+	// A weak store to or from nil takes a lock that all threads share, so
+	// skip it when nothing changes.
+	if (newParent || enclosingDirective) {
+		enclosingDirective = newParent;
+	}
 	
 } // end setEnclosingDirective:
 
@@ -794,9 +797,8 @@
 	// The block must not retain self while it is being freed.
 	__unsafe_unretained LDrawDirective *dying = self;
 
-	[observers enumerateValuesUsingBlock:^(NSValue *o) {
-		id<LDrawObserver> oo = [o pointerValue];
-		[oo observableSaysGoodbyeCruelWorld:dying];
+	[observers enumerateObjectsUsingBlock:^(id<LDrawObserver> observer) {
+		[observer observableSaysGoodbyeCruelWorld:dying];
 	}];
 }
 
@@ -812,9 +814,8 @@
 {
 	// An observer often stops observing when told, as a part does when its
 	// submodel leaves the file.
-	[observers enumerateValuesUsingBlock:^(NSValue *o) {
-		id<LDrawObserver> oo = [o pointerValue];
-		[oo receiveMessage:msg who:self];
+	[observers enumerateObjectsUsingBlock:^(id<LDrawObserver> observer) {
+		[observer receiveMessage:msg who:self];
 	}];
 }
 
@@ -838,9 +839,8 @@
 	{
 		invalFlags |= newFlags;
 
-		[observers enumerateValuesUsingBlock:^(NSValue *o) {
-			id<LDrawObserver> oo = [o pointerValue];
-			[oo statusInvalidated:newFlags who:self];
+		[observers enumerateObjectsUsingBlock:^(id<LDrawObserver> observer) {
+			[observer statusInvalidated:newFlags who:self];
 		}];
 	}
 }

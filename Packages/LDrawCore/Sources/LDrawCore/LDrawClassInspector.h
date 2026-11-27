@@ -24,7 +24,10 @@ NS_ASSUME_NONNULL_BEGIN
 //------------------------------------------------------------------------------
 @interface LDrawClassInspector : NSObject
 
+/// All subclasses of the class, from the binary it is built into.
 + (NSArray<Class> *)subclassesFor:(Class)parentClass;
+
+/// The direct subclasses of the class, from the binary it is built into.
 + (NSArray<Class> *)firstLevelSubclassesFor:(Class)parentClass;
 
 @end

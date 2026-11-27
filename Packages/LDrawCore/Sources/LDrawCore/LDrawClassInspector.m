@@ -15,106 +15,74 @@
 
 @implementation LDrawClassInspector
 
+//---------- classesBesideClass: -------------------------------------[static]--
+///
+/// @abstract	Returns the classes built into the same binary as the given
+///				class. Looking only there is fast; asking for every class
+///				loads all classes of all system frameworks first.
+///
+//------------------------------------------------------------------------------
++ (NSArray<Class> *)classesBesideClass:(Class)aClass
+{
+	const char		*image		= class_getImageName(aClass);
+	unsigned int	count		= 0;
+	const char		**names		= image ? objc_copyClassNamesForImage(image, &count) : NULL;
+	NSMutableArray	*classes	= [NSMutableArray arrayWithCapacity:count];
+
+	for (unsigned int i = 0; i < count; i++) {
+		Class found = objc_getClass(names[i]);
+		if (found) {
+			[classes addObject:found];
+		}
+	}
+	free(names);
+	return classes;
+
+}//end classesBesideClass:
+
+
 //---------- subclassesFor: ------------------------------------------[static]--
 ///
-/// @abstract	Returns all subclsses for a given class.
+/// @abstract	Returns all subclasses of a given class that are built into the
+///				same binary as it.
 ///
 //------------------------------------------------------------------------------
 + (NSArray<Class> *)subclassesFor:(Class)parentClass
 {
-	int numClasses = objc_getClassList(NULL, 0);
-
-	// According to the docs of objc_getClassList we should check
-	// if numClasses is bigger than 0.
-	if (numClasses <= 0) {
-		return [NSMutableArray array];
-	}
-
-	int memSize = sizeof(Class) * numClasses;
-	Class *classes = (__unsafe_unretained Class *)malloc(memSize);
-
-	if (classes == NULL && memSize) {
-		return [NSMutableArray array];
-	}
-
-	numClasses = objc_getClassList(classes, numClasses);
-
 	NSMutableArray<Class> *result = [NSMutableArray new];
 
-	for (NSInteger i = 0; i < numClasses; i++) {
-		Class superClass = classes[i];
+	for (Class aClass in [self classesBesideClass:parentClass]) {
+		Class superClass = class_getSuperclass(aClass);
 
-		// Don't add the parent class to list of sublcasses
-		if (superClass == parentClass) {
-			continue;
-		}
-
-		// Using a do while loop, like pointed out in Cocoa with Love,
-		// can lead to EXC_I386_GPFLT, which stands for General
-		// Protection Fault and means we are doing something we
-		// shouldn't do. It's safer to use a regular while loop to
-		// check if superClass is valid.
 		while (superClass && superClass != parentClass) {
 			superClass = class_getSuperclass(superClass);
 		}
-
 		if (superClass) {
-			[result addObject:classes[i]];
+			[result addObject:aClass];
 		}
 	}
-
-	free(classes);
-
 	return result;
-	
+
 }//end subclassesFor:
 
 
 //---------- firstLevelSubclassesFor: --------------------------------[static]--
 ///
-/// @abstract	Returns only direct subclsses for a given class.
+/// @abstract	Returns only the direct subclasses of a given class that are
+///				built into the same binary as it.
 ///
 //------------------------------------------------------------------------------
 + (NSArray<Class> *)firstLevelSubclassesFor:(Class)parentClass
 {
-	int numClasses = objc_getClassList(NULL, 0);
-
-	// According to the docs of objc_getClassList we should check
-	// if numClasses is bigger than 0.
-	if (numClasses <= 0) {
-		return [NSMutableArray array];
-	}
-
-	int memSize = sizeof(Class) * numClasses;
-	Class *classes = (__unsafe_unretained Class *)malloc(memSize);
-
-	if (classes == NULL && memSize) {
-		return [NSMutableArray array];
-	}
-
-	numClasses = objc_getClassList(classes, numClasses);
-
 	NSMutableArray<Class> *result = [NSMutableArray new];
 
-	for (NSInteger i = 0; i < numClasses; i++) {
-		Class superClass = classes[i];
-
-		// Don't add the parent class to list of sublcasses
-		if (superClass == parentClass) {
-			continue;
-		}
-
-		superClass = class_getSuperclass(superClass);
-
-		if (superClass && superClass == parentClass) {
-			[result addObject:classes[i]];
+	for (Class aClass in [self classesBesideClass:parentClass]) {
+		if (class_getSuperclass(aClass) == parentClass) {
+			[result addObject:aClass];
 		}
 	}
-
-	free(classes);
-
 	return result;
-	
+
 }//end firstLevelSubclassesFor:
 
 @end

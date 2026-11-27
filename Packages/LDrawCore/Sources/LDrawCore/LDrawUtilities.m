@@ -250,6 +250,21 @@ static NSString				*defaultAuthor		= @"anonymous";
 } // end parseColorFromField:
 
 
+//---------- IsWhitespace() ------------------------------------------[static]--
+//
+// Purpose:		Whether the character is in the whitespace set. ASCII is
+//				checked directly, since asking the set is slower.
+//
+//------------------------------------------------------------------------------
+static inline BOOL IsWhitespace(unichar character, NSCharacterSet *whitespace)
+{
+	if (character < 0x80)
+		return character == ' ' || (character >= '\t' && character <= '\r');
+	
+	return [whitespace characterIsMember:character];
+}
+
+
 //---------- readNextField:remainder: --------------------------------[static]--
 //
 // Purpose:		Given the portion of the LDraw line, read the first available 
@@ -277,33 +292,35 @@ static NSString				*defaultAuthor		= @"anonymous";
 + (NSString *)readNextField:(NSString *) partialDirective
 				  remainder:(NSString * _Nullable * _Nullable) remainder
 {
-	NSCharacterSet	*whitespaceCharacterSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
-	NSRange			 rangeOfNextWhiteSpace;
-	NSString		*fieldContents			= nil;
+	NSCharacterSet			*whitespace	= [NSCharacterSet whitespaceAndNewlineCharacterSet];
+	CFStringInlineBuffer	buffer;
+	NSUInteger				start		= 0;
+	NSUInteger				end			= [partialDirective length];
+	NSUInteger				fieldEnd	= 0;
 	
-	// First, remove any heading whitespace.
-	partialDirective		= [partialDirective stringByTrimmingCharactersInSet:whitespaceCharacterSet];
-	// Find the beginning of the next field separation
-	rangeOfNextWhiteSpace	= [partialDirective rangeOfCharacterFromSet:whitespaceCharacterSet];
-	
-	// The text between the beginning and the next field separator is the first 
-	// field (what we are after).
-	if (rangeOfNextWhiteSpace.location != NSNotFound)
+	if (partialDirective == nil)
 	{
-		fieldContents = [partialDirective substringToIndex:rangeOfNextWhiteSpace.location];
-		// See if they want the rest of the line, sans the field we just parsed.
 		if (remainder != NULL)
-			*remainder = [partialDirective substringFromIndex:rangeOfNextWhiteSpace.location];
+			*remainder = nil;
+		return nil;
 	}
-	else
-	{
-		// There was no subsequent field separator; we must be at the end of the line.
-		fieldContents = partialDirective;
-		if (remainder != NULL)
-			*remainder = [NSString string];
-	}
+	CFStringInitInlineBuffer((__bridge CFStringRef)partialDirective, &buffer, CFRangeMake(0, end));
 	
-	return fieldContents;
+	// Leave out the whitespace around the line, then find where the first
+	// field ends.
+	while (start < end && IsWhitespace(CFStringGetCharacterFromInlineBuffer(&buffer, start), whitespace))
+		start++;
+	while (end > start && IsWhitespace(CFStringGetCharacterFromInlineBuffer(&buffer, end - 1), whitespace))
+		end--;
+	fieldEnd = start;
+	while (fieldEnd < end && !IsWhitespace(CFStringGetCharacterFromInlineBuffer(&buffer, fieldEnd), whitespace))
+		fieldEnd++;
+	
+	// The rest of the line keeps the whitespace before its first field.
+	if (remainder != NULL)
+		*remainder = [partialDirective substringWithRange:NSMakeRange(fieldEnd, end - fieldEnd)];
+	
+	return [partialDirective substringWithRange:NSMakeRange(start, fieldEnd - start)];
 } // end readNextField
 
 

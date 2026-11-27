@@ -197,10 +197,12 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
             //
             // '0 SYNTH' directives
             //
+            // Each check looks at the parser state before the slower regex.
+            //
 
             // 0 SYNTH BEGIN <SYNTH_TYPE> <COLOR>
-            if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+BEGIN\\s+(\\S+?)\\s+(\\S+)"] &&
-                parserState == LDrawLSynthParserReadyToParse)  {
+            if (parserState == LDrawLSynthParserReadyToParse &&
+                [currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+BEGIN\\s+(\\S+?)\\s+(\\S+)"]) {
 
                 NSArray *paramMatches = [currentLine arrayOfCaptureComponentsMatchedByRegex:@"0\\s+SYNTH\\s+BEGIN\\s+(\\S+?)\\s+(\\S+)"];
 
@@ -215,28 +217,28 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
             }
 
             // 0 SYNTH END - Synthesized parts may or may not be present
-            else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+END"] &&
-                    (parserState == LDrawLSynthParserParsingConstraints ||
-                     parserState == LDrawLSynthParserSynthesizedFinished)) {
+            else if ((parserState == LDrawLSynthParserParsingConstraints ||
+                      parserState == LDrawLSynthParserSynthesizedFinished) &&
+                     [currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+END"]) {
                 parserState = LDrawLSynthParserFinished;
             }
 
             // 0 SYNTH SHOW or
             // 0 SYNTH HIDE
-            else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+(?:SHOW|HIDE)"] &&
-               parserState == LDrawLSynthParserParsingBegun) {
+            else if (parserState == LDrawLSynthParserParsingBegun &&
+                     [currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+(?:SHOW|HIDE)"]) {
                 parserState = LDrawLSynthParserParsingConstraints;
             }
 
             // 0 SYNTH SYNTHESIZED BEGIN - start of synthesized constraints
-            else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+SYNTHESIZED\\s+BEGIN"] &&
-                    parserState == LDrawLSynthParserParsingConstraints) {
+            else if (parserState == LDrawLSynthParserParsingConstraints &&
+                     [currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+SYNTHESIZED\\s+BEGIN"]) {
                 parserState = LDrawLSynthParserParsingSynthesized;
             }
 
             // 0 SYNTH SYNTHESIZED BEGIN - end of synthesized constraints
-            else if ([currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+SYNTHESIZED\\s+END"] &&
-                    parserState == LDrawLSynthParserParsingSynthesized) {
+            else if (parserState == LDrawLSynthParserParsingSynthesized &&
+                     [currentLine isMatchedByRegex:@"0\\s+SYNTH\\s+SYNTHESIZED\\s+END"]) {
                 parserState = LDrawLSynthParserSynthesizedFinished;
             }
 
@@ -258,10 +260,10 @@ static id<LDrawLSynthRuntimeSource> runtime_source = nil;
             // '1 XXX' Part directives - constraints or synthesized parts
             //
 
-            else if ([currentLine isMatchedByRegex:@"^1\\s+"] &&
-                     (parserState == LDrawLSynthParserParsingBegun ||
+            else if ((parserState == LDrawLSynthParserParsingBegun ||
                       parserState == LDrawLSynthParserParsingConstraints ||
-                      parserState == LDrawLSynthParserParsingSynthesized)) {
+                      parserState == LDrawLSynthParserParsingSynthesized) &&
+                     [currentLine isMatchedByRegex:@"^1\\s+"]) {
 
                 // Either way, create a part
                 CommandClass = [LDrawUtilities classForDirectiveBeginningWithLine:currentLine];
