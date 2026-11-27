@@ -88,6 +88,11 @@ NSString	*Category_Subparts			= @"Subparts";
 	// draw them, and are read again when a part file uses them.
 	NSMutableSet<NSString *>								*staleNames;
 
+	// Parts no file was found for, so a model that uses one many times looks
+	// for it once. Emptied when the catalog is set or files are checked.
+	// Under @synchronized on itself, as parts may load on another queue.
+	NSMutableSet<NSString *>								*missingNames;
+
 	// The update the LDraw folder holds. A load checks the saved catalog
 	// against it, and a scan stamps it into the new one.
 	NSString												*libraryRelease;
@@ -163,6 +168,7 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	usedPartNames				= [NSMutableDictionary dictionaryWithCapacity:400];
 	loadedPaths					= [NSMutableDictionary dictionaryWithCapacity:400];
 	staleNames					= [NSMutableSet set];
+	missingNames				= [NSMutableSet set];
 	loadedImages				= [[NSMutableDictionary alloc] init];
 	optimizedRepresentations    = [NSMutableDictionary dictionaryWithCapacity:400];
 	optimizedTextures			= [[NSMutableDictionary alloc] init];
@@ -619,6 +625,12 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 {
 	partCatalog = newCatalog;
 	
+	// A part missing from the old catalog's folder may be in this one.
+	@synchronized(self->missingNames)
+	{
+		[self->missingNames removeAllObjects];
+	}
+	
 	// Inform any open parts browsers of the change.
 	[[NSNotificationCenter defaultCenter] 
 			postNotificationName: LDrawPartLibraryDidChangeNotification
@@ -887,6 +899,11 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 				 inGroup:(dispatch_group_t)parentGroup
 {
 	(void)parentGroup;
+	@synchronized(self->missingNames)
+	{
+		if ([self->missingNames containsObject:partName])
+			return;
+	}
 	// A part whose file changed is read again here, so the part file being
 	// read is flattened with the new one.
 	if ([self->loadedFiles objectForKey:partName] == nil || [self->staleNames containsObject:partName])
@@ -1162,6 +1179,11 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 		// The users are found from the parts loaded now, since a part read
 		// meanwhile may use a changed one.
 		dispatch_async(dispatch_get_main_queue(), ^{
+			// A part missing before may have a file now.
+			@synchronized(self->missingNames)
+			{
+				[self->missingNames removeAllObjects];
+			}
 			[self->staleNames unionSet:[[self class] partNamesUsingPartNames:changed uses:self->usedPartNames]];
 			handler([self->staleNames copy]);
 		});
@@ -1391,6 +1413,10 @@ static LDrawPartLibrary *PartLibrary_sharedInstance = nil;
 	if (partPath == nil)
 	{
 		[self forgetPartNames:@[partName]];
+		@synchronized(self->missingNames)
+		{
+			[self->missingNames addObject:partName];
+		}
 		return nil;
 	}
 
